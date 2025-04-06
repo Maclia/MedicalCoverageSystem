@@ -17,8 +17,8 @@ import { formatCurrency } from "@/utils/format";
 
 export default function Premiums() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [companyFilter, setCompanyFilter] = useState<string>("");
-  const [periodFilter, setPeriodFilter] = useState<string>("");
+  const [companyFilter, setCompanyFilter] = useState<string>("all");
+  const [periodFilter, setPeriodFilter] = useState<string>("all");
   
   const { data: premiums, isLoading: isLoadingPremiums } = useQuery({
     queryKey: ['/api/premiums'],
@@ -33,8 +33,8 @@ export default function Premiums() {
   });
   
   const filteredPremiums = premiums?.filter(premium => {
-    const matchesCompany = !companyFilter || premium.companyId.toString() === companyFilter;
-    const matchesPeriod = !periodFilter || premium.periodId.toString() === periodFilter;
+    const matchesCompany = companyFilter === "all" || premium.companyId.toString() === companyFilter;
+    const matchesPeriod = periodFilter === "all" || premium.periodId.toString() === periodFilter;
     return matchesCompany && matchesPeriod;
   }) || [];
 
@@ -106,7 +106,7 @@ export default function Premiums() {
                   <SelectValue placeholder="All Companies" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Companies</SelectItem>
+                  <SelectItem value="all">All Companies</SelectItem>
                   {companies?.map((company) => (
                     <SelectItem key={company.id} value={company.id.toString()}>
                       {company.name}
@@ -120,7 +120,7 @@ export default function Premiums() {
                   <SelectValue placeholder="All Periods" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Periods</SelectItem>
+                  <SelectItem value="all">All Periods</SelectItem>
                   {periods?.map((period) => (
                     <SelectItem key={period.id} value={period.id.toString()}>
                       {period.name}

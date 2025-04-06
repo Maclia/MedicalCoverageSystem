@@ -38,8 +38,8 @@ export default function DependentList() {
     const fullName = `${dependent.firstName} ${dependent.lastName}`;
     
     const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPrincipal = principalFilter === "all" || !principalFilter || dependent.principalId.toString() === principalFilter;
-    const matchesType = typeFilter === "all" || !typeFilter || dependent.dependentType === typeFilter;
+    const matchesPrincipal = principalFilter === "all" || dependent.principalId.toString() === principalFilter;
+    const matchesType = typeFilter === "all" || dependent.dependentType === typeFilter;
     
     return matchesSearch && matchesPrincipal && matchesType;
   });

@@ -34,7 +34,7 @@ export default function MemberList() {
   const filteredMembers = members?.filter(member => {
     const matchesSearch = `${member.firstName} ${member.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            member.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCompany = companyFilter === "all" || !companyFilter || member.companyId.toString() === companyFilter;
+    const matchesCompany = companyFilter === "all" || member.companyId.toString() === companyFilter;
     return member.memberType === 'principal' && matchesSearch && matchesCompany;
   }) || [];
 
