@@ -311,7 +311,6 @@ export default function MemberDashboard() {
             </TabsList>
           </Tabs>
         </CardHeader>
-        
         <CardContent className="pt-6">
           {/* Benefits Tab */}
           <TabsContent value="benefits" className="mt-0">
