@@ -18,6 +18,7 @@ import {
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
+import * as premiumCalculator from "./utils/premiumCalculator";
 import { addDays, differenceInYears, parseISO } from "date-fns";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -376,6 +377,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ error: "Failed to create dependent member" });
       }
+    }
+  });
+  
+  // Delete a member
+  app.delete("/api/members/:id", async (req, res) => {
+    try {
+      if (!storage.deleteMember) {
+        return res.status(501).json({ error: 'Member deletion is not supported by the current storage implementation' });
+      }
+      
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid member ID' });
+      }
+      
+      // Get member before deletion for premium recalculation
+      const member = await storage.getMember(id);
+      if (!member) {
+        return res.status(404).json({ error: 'Member not found' });
+      }
+      
+      // Check if member has any claims
+      const memberClaims = await storage.getClaimsByMember(id);
+      if (memberClaims && memberClaims.length > 0) {
+        return res.status(400).json({ 
+          error: `Cannot delete member with ID ${id} as they have ${memberClaims.length} active claim(s)`,
+          claims: memberClaims
+        });
+      }
+      
+      // For principal members, check if they have dependents
+      if (member.memberType === 'principal') {
+        const dependents = await storage.getDependentsByPrincipal(id);
+        if (dependents && dependents.length > 0) {
+          return res.status(400).json({ 
+            error: `Cannot delete principal member with ID ${id} as they have ${dependents.length} dependent(s). Delete dependents first.`,
+            dependents: dependents
+          });
+        }
+      }
+      
+      // Store company ID for premium recalculation
+      const companyId = member.companyId;
+      
+      // Delete the member
+      const deletedMember = await storage.deleteMember(id);
+      if (!deletedMember) {
+        return res.status(404).json({ error: 'Member not found or could not be deleted' });
+      }
+      
+      // Recalculate premiums after member deletion
+      try {
+        const premium = await premiumCalculator.calculatePremiumAdjustmentForMemberDeletion(
+          storage, 
+          companyId,
+          member
+        );
+        
+        if (premium) {
+          // Create the premium adjustment
+          const newPremium = await storage.createPremium(premium);
+          console.log('Premium recalculated after member deletion:', newPremium);
+        }
+      } catch (premiumError) {
+        console.error('Error recalculating premium after member deletion:', premiumError);
+        // We don't fail the request if premium recalculation fails, but we log it
+      }
+      
+      res.json({ 
+        message: 'Member deleted successfully',
+        member: deletedMember
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ error: `Failed to delete member: ${errorMessage}` });
     }
   });
 

@@ -28,6 +28,7 @@ export interface IStorage {
   getPrincipalMembersByCompany(companyId: number): Promise<Member[]>;
   getDependentsByPrincipal(principalId: number): Promise<Member[]>;
   createMember(member: InsertMember): Promise<Member>;
+  deleteMember?(id: number): Promise<Member | undefined>; // Optional - only implemented in DatabaseStorage
   
   // Period methods
   getPeriods(): Promise<Period[]>;
@@ -77,7 +78,8 @@ export interface IStorage {
   
   // Medical Personnel methods
   getMedicalPersonnel(): Promise<MedicalPersonnel[]>;
-  getMedicalPersonnel(id: number): Promise<MedicalPersonnel | undefined>;
+  getMedicalPersonnelById?(id: number): Promise<MedicalPersonnel | undefined>; // Used by DatabaseStorage
+  getMedicalPersonnel?(id: number): Promise<MedicalPersonnel | undefined>; // Used by MemStorage - deprecate later
   getMedicalPersonnelByInstitution(institutionId: number): Promise<MedicalPersonnel[]>;
   getMedicalPersonnelByType(type: string): Promise<MedicalPersonnel[]>;
   getMedicalPersonnelByApprovalStatus(status: string): Promise<MedicalPersonnel[]>;
@@ -786,4 +788,7 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+import { DatabaseStorage } from './databaseStorage';
+
+// If using DATABASE_URL, use DatabaseStorage, otherwise use MemStorage
+export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();

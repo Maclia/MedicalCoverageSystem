@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, differenceInYears } from "date-fns";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,7 @@ export default function DependentList() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special Needs</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -96,6 +98,9 @@ export default function DependentList() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Skeleton className="h-5 w-16 rounded-full" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Skeleton className="h-8 w-28" />
                     </td>
                   </tr>
                 ))}
@@ -177,6 +182,7 @@ export default function DependentList() {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special Needs</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -216,6 +222,14 @@ export default function DependentList() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <StatusBadge status="active" />
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <Button variant="outline" size="sm" asChild className="mr-2">
+                            <Link href={`/member-dashboard/${dependent.id}`}>
+                              <i className="material-icons mr-1 text-xs">dashboard</i>
+                              View Dashboard
+                            </Link>
+                          </Button>
                         </td>
                       </tr>
                     );

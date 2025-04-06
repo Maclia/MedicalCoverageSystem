@@ -15,6 +15,7 @@ import MedicalInstitutions from "@/pages/MedicalInstitutions";
 import MedicalPersonnel from "@/pages/MedicalPersonnel";
 import PanelDocumentation from "@/pages/PanelDocumentation";
 import Claims from "@/pages/Claims";
+import MemberDashboard from "@/pages/MemberDashboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -33,6 +34,7 @@ function Router() {
         <Route path="/medical-personnel" component={MedicalPersonnel} />
         <Route path="/panel-documentation" component={PanelDocumentation} />
         <Route path="/claims" component={Claims} />
+        <Route path="/member-dashboard/:id" component={MemberDashboard} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
