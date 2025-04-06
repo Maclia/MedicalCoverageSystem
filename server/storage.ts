@@ -6,6 +6,7 @@ import {
   Premium, InsertPremium,
   Benefit, InsertBenefit,
   CompanyBenefit, InsertCompanyBenefit,
+  CompanyPeriod, InsertCompanyPeriod,
   Region, InsertRegion,
   MedicalInstitution, InsertMedicalInstitution,
   MedicalPersonnel, InsertMedicalPersonnel,
@@ -62,6 +63,13 @@ export interface IStorage {
   getCompanyBenefitsByPremium(premiumId: number): Promise<CompanyBenefit[]>;
   createCompanyBenefit(companyBenefit: InsertCompanyBenefit): Promise<CompanyBenefit>;
   
+  // Company Period methods
+  getCompanyPeriods(): Promise<CompanyPeriod[]>;
+  getCompanyPeriod(id: number): Promise<CompanyPeriod | undefined>;
+  getCompanyPeriodsByCompany(companyId: number): Promise<CompanyPeriod[]>;
+  getCompanyPeriodsByPeriod(periodId: number): Promise<CompanyPeriod[]>;
+  createCompanyPeriod(companyPeriod: InsertCompanyPeriod): Promise<CompanyPeriod>;
+  
   // Region methods
   getRegions(): Promise<Region[]>;
   getRegion(id: number): Promise<Region | undefined>;
@@ -116,6 +124,7 @@ export class MemStorage implements IStorage {
   private premiums: Map<number, Premium>;
   private benefits: Map<number, Benefit>;
   private companyBenefits: Map<number, CompanyBenefit>;
+  private companyPeriods: Map<number, CompanyPeriod>;
   private regions: Map<number, Region>;
   private medicalInstitutions: Map<number, MedicalInstitution>;
   private medicalPersonnel: Map<number, MedicalPersonnel>;
@@ -129,6 +138,7 @@ export class MemStorage implements IStorage {
   private premiumId: number;
   private benefitId: number;
   private companyBenefitId: number;
+  private companyPeriodId: number;
   private regionId: number;
   private medicalInstitutionId: number;
   private medicalPersonnelId: number;
@@ -143,6 +153,7 @@ export class MemStorage implements IStorage {
     this.premiums = new Map();
     this.benefits = new Map();
     this.companyBenefits = new Map();
+    this.companyPeriods = new Map();
     this.regions = new Map();
     this.medicalInstitutions = new Map();
     this.medicalPersonnel = new Map();
@@ -156,6 +167,7 @@ export class MemStorage implements IStorage {
     this.premiumId = 1;
     this.benefitId = 1;
     this.companyBenefitId = 1;
+    this.companyPeriodId = 1;
     this.regionId = 1;
     this.medicalInstitutionId = 1;
     this.medicalPersonnelId = 1;
@@ -509,6 +521,38 @@ export class MemStorage implements IStorage {
     };
     this.companyBenefits.set(id, newCompanyBenefit);
     return newCompanyBenefit;
+  }
+
+  // Company Period methods
+  async getCompanyPeriods(): Promise<CompanyPeriod[]> {
+    return Array.from(this.companyPeriods.values());
+  }
+  
+  async getCompanyPeriod(id: number): Promise<CompanyPeriod | undefined> {
+    return this.companyPeriods.get(id);
+  }
+  
+  async getCompanyPeriodsByCompany(companyId: number): Promise<CompanyPeriod[]> {
+    return Array.from(this.companyPeriods.values()).filter(
+      companyPeriod => companyPeriod.companyId === companyId
+    );
+  }
+  
+  async getCompanyPeriodsByPeriod(periodId: number): Promise<CompanyPeriod[]> {
+    return Array.from(this.companyPeriods.values()).filter(
+      companyPeriod => companyPeriod.periodId === periodId
+    );
+  }
+  
+  async createCompanyPeriod(companyPeriod: InsertCompanyPeriod): Promise<CompanyPeriod> {
+    const id = this.companyPeriodId++;
+    const newCompanyPeriod: CompanyPeriod = {
+      ...companyPeriod,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.companyPeriods.set(id, newCompanyPeriod);
+    return newCompanyPeriod;
   }
 
   // Region methods

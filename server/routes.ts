@@ -10,6 +10,7 @@ import {
   insertPremiumSchema,
   insertBenefitSchema,
   insertCompanyBenefitSchema,
+  insertCompanyPeriodSchema,
   insertRegionSchema,
   insertMedicalInstitutionSchema,
   insertMedicalPersonnelSchema,
@@ -1195,6 +1196,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ error: "Failed to process claim payment" });
       }
+    }
+  });
+
+  // Company Periods
+  app.get("/api/company-periods", async (req, res) => {
+    try {
+      let companyPeriods;
+      if (req.query.companyId) {
+        companyPeriods = await storage.getCompanyPeriodsByCompany(Number(req.query.companyId));
+      } else if (req.query.periodId) {
+        companyPeriods = await storage.getCompanyPeriodsByPeriod(Number(req.query.periodId));
+      } else {
+        companyPeriods = await storage.getCompanyPeriods();
+      }
+      
+      // Enhance company periods with related data
+      const enhancedCompanyPeriods = await Promise.all(
+        companyPeriods.map(async (cp) => {
+          const company = await storage.getCompany(cp.companyId);
+          const period = await storage.getPeriod(cp.periodId);
+          
+          return {
+            ...cp,
+            companyName: company?.name,
+            periodName: period?.name,
+            periodType: period?.type,
+            periodStatus: period?.status,
+            startDate: period?.startDate,
+            endDate: period?.endDate
+          };
+        })
+      );
+      
+      res.json(enhancedCompanyPeriods);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch company periods" });
+    }
+  });
+
+  app.get("/api/company-periods/:id", async (req, res) => {
+    try {
+      const companyPeriod = await storage.getCompanyPeriod(Number(req.params.id));
+      if (!companyPeriod) {
+        return res.status(404).json({ error: "Company period not found" });
+      }
+      
+      // Get related data
+      const company = await storage.getCompany(companyPeriod.companyId);
+      const period = await storage.getPeriod(companyPeriod.periodId);
+      
+      const enhancedCompanyPeriod = {
+        ...companyPeriod,
+        companyDetails: company,
+        periodDetails: period
+      };
+      
+      res.json(enhancedCompanyPeriod);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch company period" });
+    }
+  });
+
+  app.post("/api/company-periods", validateRequest(insertCompanyPeriodSchema), async (req, res) => {
+    try {
+      // Verify if company exists
+      const company = await storage.getCompany(req.body.companyId);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      
+      // Verify if period exists
+      const period = await storage.getPeriod(req.body.periodId);
+      if (!period) {
+        return res.status(404).json({ error: "Period not found" });
+      }
+      
+      // Create company period
+      const companyPeriod = await storage.createCompanyPeriod(req.body);
+      res.status(201).json(companyPeriod);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create company period" });
     }
   });
 

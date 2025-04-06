@@ -6,6 +6,7 @@ import { z } from "zod";
 export const memberTypeEnum = pgEnum('member_type', ['principal', 'dependent']);
 export const dependentTypeEnum = pgEnum('dependent_type', ['spouse', 'child']);
 export const periodStatusEnum = pgEnum('period_status', ['active', 'inactive', 'upcoming', 'expired']);
+export const periodTypeEnum = pgEnum('period_type', ['short_term', 'long_term', 'standard']);
 export const benefitCategoryEnum = pgEnum('benefit_category', ['medical', 'dental', 'vision', 'wellness', 'hospital', 'prescription', 'emergency', 'maternity', 'specialist', 'other']);
 export const institutionTypeEnum = pgEnum('institution_type', ['hospital', 'clinic', 'laboratory', 'imaging', 'pharmacy', 'specialist', 'general']);
 export const personnelTypeEnum = pgEnum('personnel_type', ['doctor', 'nurse', 'specialist', 'technician', 'pharmacist', 'therapist', 'other']);
@@ -49,6 +50,8 @@ export const periods = pgTable("periods", {
   startDate: date("start_date").notNull(),
   endDate: date("end_date").notNull(),
   status: periodStatusEnum("status").notNull(),
+  periodType: periodTypeEnum("period_type").default("standard").notNull(),
+  description: text("description"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -65,6 +68,19 @@ export const premiumRates = pgTable("premium_rates", {
 });
 
 // Premiums table
+// Company Periods table (links companies to specific periods)
+export const companyPeriods = pgTable("company_periods", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  periodId: integer("period_id").references(() => periods.id).notNull(),
+  isActive: boolean("is_active").default(true),
+  adjustmentFactor: real("adjustment_factor").default(1.0), // Company-specific adjustment factor for premiums
+  customStartDate: date("custom_start_date"), // Custom start date if different from period start
+  customEndDate: date("custom_end_date"), // Custom end date if different from period end
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const premiums = pgTable("premiums", {
   id: serial("id").primaryKey(),
   companyId: integer("company_id").references(() => companies.id).notNull(),
@@ -156,6 +172,11 @@ export const insertBenefitSchema = createInsertSchema(benefits).omit({
 });
 
 export const insertCompanyBenefitSchema = createInsertSchema(companyBenefits).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCompanyPeriodSchema = createInsertSchema(companyPeriods).omit({
   id: true,
   createdAt: true,
 });
@@ -334,3 +355,6 @@ export type InsertPanelDocumentation = z.infer<typeof insertPanelDocumentationSc
 
 export type Claim = typeof claims.$inferSelect;
 export type InsertClaim = z.infer<typeof insertClaimSchema>;
+
+export type CompanyPeriod = typeof companyPeriods.$inferSelect;
+export type InsertCompanyPeriod = z.infer<typeof insertCompanyPeriodSchema>;

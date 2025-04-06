@@ -281,6 +281,42 @@ export class DatabaseStorage implements IStorage {
     return newCompanyBenefit;
   }
   
+  // Company Periods
+  async getCompanyPeriods(): Promise<schema.CompanyPeriod[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select().from(schema.companyPeriods);
+  }
+  
+  async getCompanyPeriod(id: number): Promise<schema.CompanyPeriod | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [companyPeriod] = await db.select()
+      .from(schema.companyPeriods)
+      .where(eq(schema.companyPeriods.id, id));
+    return companyPeriod;
+  }
+  
+  async getCompanyPeriodsByCompany(companyId: number): Promise<schema.CompanyPeriod[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.companyPeriods)
+      .where(eq(schema.companyPeriods.companyId, companyId));
+  }
+  
+  async getCompanyPeriodsByPeriod(periodId: number): Promise<schema.CompanyPeriod[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.companyPeriods)
+      .where(eq(schema.companyPeriods.periodId, periodId));
+  }
+  
+  async createCompanyPeriod(companyPeriod: schema.InsertCompanyPeriod): Promise<schema.CompanyPeriod> {
+    if (!db) throw new Error('Database not connected');
+    const [newCompanyPeriod] = await db.insert(schema.companyPeriods)
+      .values(companyPeriod)
+      .returning();
+    return newCompanyPeriod;
+  }
+  
   // Regions
   async getRegions(): Promise<schema.Region[]> {
     if (!db) throw new Error('Database not connected');
