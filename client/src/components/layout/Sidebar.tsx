@@ -13,6 +13,15 @@ const mainLinks: SidebarLink[] = [
   { path: "/companies", label: "Companies", icon: "business" },
   { path: "/members", label: "Members", icon: "people" },
   { path: "/premiums", label: "Premiums", icon: "payments" },
+  { path: "/benefits", label: "Benefits", icon: "medical_services" },
+];
+
+const medicalPanelLinks: SidebarLink[] = [
+  { path: "/regions", label: "Regions", icon: "explore" },
+  { path: "/medical-institutions", label: "Institutions", icon: "local_hospital" },
+  { path: "/medical-personnel", label: "Personnel", icon: "person" },
+  { path: "/panel-documentation", label: "Documentation", icon: "folder" },
+  { path: "/claims", label: "Claims", icon: "receipt_long" },
 ];
 
 const managementLinks: SidebarLink[] = [
@@ -34,6 +43,26 @@ export default function Sidebar() {
           Main
         </div>
         {mainLinks.map((link) => (
+          <Link 
+            key={link.path} 
+            href={link.path}
+          >
+            <a 
+              className={cn(
+                "flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50",
+                location === link.path && "bg-primary-50 border-l-4 border-primary"
+              )}
+            >
+              <i className="material-icons text-lg mr-3 text-neutral-500">{link.icon}</i>
+              {link.label}
+            </a>
+          </Link>
+        ))}
+        
+        <div className="px-4 mt-6 mb-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider">
+          Medical Panel
+        </div>
+        {medicalPanelLinks.map((link) => (
           <Link 
             key={link.path} 
             href={link.path}

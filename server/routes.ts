@@ -7,7 +7,14 @@ import {
   insertDependentMemberSchema, 
   insertPeriodSchema, 
   insertPremiumRateSchema, 
-  insertPremiumSchema 
+  insertPremiumSchema,
+  insertBenefitSchema,
+  insertCompanyBenefitSchema,
+  insertRegionSchema,
+  insertMedicalInstitutionSchema,
+  insertMedicalPersonnelSchema,
+  insertPanelDocumentationSchema,
+  insertClaimSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -371,6 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const principalMembers = members.filter(m => m.memberType === 'principal');
       const dependents = members.filter(m => m.memberType === 'dependent');
       const premiums = await storage.getPremiums();
+      const benefits = await storage.getBenefits();
       
       const activePeriod = await storage.getActivePeriod();
       
@@ -411,6 +419,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         principalMembers: principalMembers.length,
         dependents: dependents.length,
         activePremiums: totalPremiumValue,
+        totalBenefits: benefits.length,
         activePeriod,
         recentRegistrations
       };
@@ -418,6 +427,419 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(stats);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch dashboard statistics" });
+    }
+  });
+
+  // Benefits
+  app.get("/api/benefits", async (req, res) => {
+    try {
+      let benefits;
+      if (req.query.category) {
+        benefits = await storage.getBenefitsByCategory(req.query.category as string);
+      } else if (req.query.standard === 'true') {
+        benefits = await storage.getStandardBenefits();
+      } else {
+        benefits = await storage.getBenefits();
+      }
+      res.json(benefits);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch benefits" });
+    }
+  });
+
+  app.get("/api/benefits/:id", async (req, res) => {
+    try {
+      const benefit = await storage.getBenefit(Number(req.params.id));
+      if (!benefit) {
+        return res.status(404).json({ error: "Benefit not found" });
+      }
+      res.json(benefit);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch benefit" });
+    }
+  });
+
+  app.post("/api/benefits", validateRequest(insertBenefitSchema), async (req, res) => {
+    try {
+      const benefit = await storage.createBenefit(req.body);
+      res.status(201).json(benefit);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create benefit" });
+    }
+  });
+
+  // Company Benefits
+  app.get("/api/company-benefits", async (req, res) => {
+    try {
+      let companyBenefits;
+      if (req.query.companyId) {
+        companyBenefits = await storage.getCompanyBenefitsByCompany(Number(req.query.companyId));
+      } else if (req.query.premiumId) {
+        companyBenefits = await storage.getCompanyBenefitsByPremium(Number(req.query.premiumId));
+      } else {
+        companyBenefits = await storage.getCompanyBenefits();
+      }
+      
+      // Enhance company benefits with related data
+      const enhancedCompanyBenefits = await Promise.all(
+        companyBenefits.map(async (cb) => {
+          const benefit = await storage.getBenefit(cb.benefitId);
+          const company = await storage.getCompany(cb.companyId);
+          const premium = await storage.getPremium(cb.premiumId);
+          
+          return {
+            ...cb,
+            benefitName: benefit?.name,
+            benefitCategory: benefit?.category,
+            companyName: company?.name,
+            premiumPeriodId: premium?.periodId
+          };
+        })
+      );
+      
+      res.json(enhancedCompanyBenefits);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch company benefits" });
+    }
+  });
+
+  app.get("/api/company-benefits/:id", async (req, res) => {
+    try {
+      const companyBenefit = await storage.getCompanyBenefit(Number(req.params.id));
+      if (!companyBenefit) {
+        return res.status(404).json({ error: "Company benefit not found" });
+      }
+      
+      // Get related data
+      const benefit = await storage.getBenefit(companyBenefit.benefitId);
+      const company = await storage.getCompany(companyBenefit.companyId);
+      const premium = await storage.getPremium(companyBenefit.premiumId);
+      
+      const enhancedCompanyBenefit = {
+        ...companyBenefit,
+        benefitDetails: benefit,
+        companyName: company?.name,
+        premiumDetails: premium
+      };
+      
+      res.json(enhancedCompanyBenefit);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch company benefit" });
+    }
+  });
+
+  app.post("/api/company-benefits", validateRequest(insertCompanyBenefitSchema), async (req, res) => {
+    try {
+      // Verify if benefit exists
+      const benefit = await storage.getBenefit(req.body.benefitId);
+      if (!benefit) {
+        return res.status(404).json({ error: "Benefit not found" });
+      }
+      
+      // Verify if company exists
+      const company = await storage.getCompany(req.body.companyId);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      
+      // Verify if premium exists
+      const premium = await storage.getPremium(req.body.premiumId);
+      if (!premium) {
+        return res.status(404).json({ error: "Premium not found" });
+      }
+      
+      // Create company benefit
+      const companyBenefit = await storage.createCompanyBenefit(req.body);
+      res.status(201).json(companyBenefit);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create company benefit" });
+    }
+  });
+
+  // Region routes
+  app.get("/api/regions", async (req, res) => {
+    try {
+      const regions = await storage.getRegions();
+      res.json(regions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch regions" });
+    }
+  });
+
+  app.get("/api/regions/:id", async (req, res) => {
+    try {
+      const region = await storage.getRegion(Number(req.params.id));
+      if (!region) {
+        return res.status(404).json({ error: "Region not found" });
+      }
+      res.json(region);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch region" });
+    }
+  });
+
+  app.post("/api/regions", validateRequest(insertRegionSchema), async (req, res) => {
+    try {
+      const region = await storage.createRegion(req.body);
+      res.status(201).json(region);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create region" });
+    }
+  });
+
+  // Medical Institution routes
+  app.get("/api/medical-institutions", async (req, res) => {
+    try {
+      let institutions;
+      if (req.query.regionId) {
+        institutions = await storage.getMedicalInstitutionsByRegion(Number(req.query.regionId));
+      } else if (req.query.type) {
+        institutions = await storage.getMedicalInstitutionsByType(req.query.type as string);
+      } else if (req.query.approvalStatus) {
+        institutions = await storage.getMedicalInstitutionsByApprovalStatus(req.query.approvalStatus as string);
+      } else {
+        institutions = await storage.getMedicalInstitutions();
+      }
+      res.json(institutions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch medical institutions" });
+    }
+  });
+
+  app.get("/api/medical-institutions/:id", async (req, res) => {
+    try {
+      const institution = await storage.getMedicalInstitution(Number(req.params.id));
+      if (!institution) {
+        return res.status(404).json({ error: "Medical institution not found" });
+      }
+      res.json(institution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch medical institution" });
+    }
+  });
+
+  app.post("/api/medical-institutions", validateRequest(insertMedicalInstitutionSchema), async (req, res) => {
+    try {
+      const institution = await storage.createMedicalInstitution(req.body);
+      res.status(201).json(institution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create medical institution" });
+    }
+  });
+
+  app.patch("/api/medical-institutions/:id/approval", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, validUntil } = req.body;
+      
+      if (!id || !status) {
+        return res.status(400).json({ error: "ID and status are required" });
+      }
+      
+      const institution = await storage.updateMedicalInstitutionApproval(
+        Number(id), 
+        status, 
+        validUntil ? new Date(validUntil) : undefined
+      );
+      
+      res.json(institution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update medical institution approval" });
+    }
+  });
+
+  // Medical Personnel routes
+  app.get("/api/medical-personnel", async (req, res) => {
+    try {
+      let personnel;
+      if (req.query.institutionId) {
+        personnel = await storage.getMedicalPersonnelByInstitution(Number(req.query.institutionId));
+      } else if (req.query.type) {
+        personnel = await storage.getMedicalPersonnelByType(req.query.type as string);
+      } else if (req.query.approvalStatus) {
+        personnel = await storage.getMedicalPersonnelByApprovalStatus(req.query.approvalStatus as string);
+      } else {
+        personnel = await storage.getMedicalPersonnel();
+      }
+      res.json(personnel);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch medical personnel" });
+    }
+  });
+
+  app.get("/api/medical-personnel/:id", async (req, res) => {
+    try {
+      const personnel = await storage.getMedicalPersonnel(Number(req.params.id));
+      if (!personnel) {
+        return res.status(404).json({ error: "Medical personnel not found" });
+      }
+      res.json(personnel);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch medical personnel" });
+    }
+  });
+
+  app.post("/api/medical-personnel", validateRequest(insertMedicalPersonnelSchema), async (req, res) => {
+    try {
+      const personnel = await storage.createMedicalPersonnel(req.body);
+      res.status(201).json(personnel);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create medical personnel" });
+    }
+  });
+
+  app.patch("/api/medical-personnel/:id/approval", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, validUntil } = req.body;
+      
+      if (!id || !status) {
+        return res.status(400).json({ error: "ID and status are required" });
+      }
+      
+      const personnel = await storage.updateMedicalPersonnelApproval(
+        Number(id), 
+        status, 
+        validUntil ? new Date(validUntil) : undefined
+      );
+      
+      res.json(personnel);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update medical personnel approval" });
+    }
+  });
+
+  // Panel Documentation routes
+  app.get("/api/panel-documentation", async (req, res) => {
+    try {
+      let documentation;
+      if (req.query.institutionId) {
+        documentation = await storage.getPanelDocumentationsByInstitution(Number(req.query.institutionId));
+      } else if (req.query.personnelId) {
+        documentation = await storage.getPanelDocumentationsByPersonnel(Number(req.query.personnelId));
+      } else if (req.query.isVerified !== undefined) {
+        documentation = await storage.getPanelDocumentationsByVerificationStatus(req.query.isVerified === 'true');
+      } else {
+        documentation = await storage.getPanelDocumentations();
+      }
+      res.json(documentation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch panel documentation" });
+    }
+  });
+
+  app.get("/api/panel-documentation/:id", async (req, res) => {
+    try {
+      const documentation = await storage.getPanelDocumentation(Number(req.params.id));
+      if (!documentation) {
+        return res.status(404).json({ error: "Panel documentation not found" });
+      }
+      res.json(documentation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch panel documentation" });
+    }
+  });
+
+  app.post("/api/panel-documentation", validateRequest(insertPanelDocumentationSchema), async (req, res) => {
+    try {
+      const documentation = await storage.createPanelDocumentation(req.body);
+      res.status(201).json(documentation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create panel documentation" });
+    }
+  });
+
+  app.patch("/api/panel-documentation/:id/verify", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { verifiedBy, notes } = req.body;
+      
+      if (!id || !verifiedBy) {
+        return res.status(400).json({ error: "ID and verifiedBy are required" });
+      }
+      
+      const documentation = await storage.verifyPanelDocumentation(Number(id), verifiedBy, notes);
+      res.json(documentation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to verify panel documentation" });
+    }
+  });
+
+  // Claims routes
+  app.get("/api/claims", async (req, res) => {
+    try {
+      let claims;
+      if (req.query.institutionId) {
+        claims = await storage.getClaimsByInstitution(Number(req.query.institutionId));
+      } else if (req.query.personnelId) {
+        claims = await storage.getClaimsByPersonnel(Number(req.query.personnelId));
+      } else if (req.query.memberId) {
+        claims = await storage.getClaimsByMember(Number(req.query.memberId));
+      } else if (req.query.status) {
+        claims = await storage.getClaimsByStatus(req.query.status as string);
+      } else {
+        claims = await storage.getClaims();
+      }
+      res.json(claims);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch claims" });
+    }
+  });
+
+  app.get("/api/claims/:id", async (req, res) => {
+    try {
+      const claim = await storage.getClaim(Number(req.params.id));
+      if (!claim) {
+        return res.status(404).json({ error: "Claim not found" });
+      }
+      res.json(claim);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch claim" });
+    }
+  });
+
+  app.post("/api/claims", validateRequest(insertClaimSchema), async (req, res) => {
+    try {
+      const claim = await storage.createClaim(req.body);
+      res.status(201).json(claim);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create claim" });
+    }
+  });
+
+  app.patch("/api/claims/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status, reviewerNotes } = req.body;
+      
+      if (!id || !status) {
+        return res.status(400).json({ error: "ID and status are required" });
+      }
+      
+      const claim = await storage.updateClaimStatus(Number(id), status, reviewerNotes);
+      res.json(claim);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update claim status" });
+    }
+  });
+
+  app.patch("/api/claims/:id/payment", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { paymentReference } = req.body;
+      
+      if (!id || !paymentReference) {
+        return res.status(400).json({ error: "ID and payment reference are required" });
+      }
+      
+      const claim = await storage.processClaimPayment(Number(id), paymentReference);
+      res.json(claim);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to process claim payment" });
+      }
     }
   });
 

@@ -9,6 +9,12 @@ import Members from "@/pages/Members";
 import Dependents from "@/pages/Dependents";
 import Premiums from "@/pages/Premiums";
 import Periods from "@/pages/Periods";
+import Benefits from "@/pages/Benefits";
+import Regions from "@/pages/Regions";
+import MedicalInstitutions from "@/pages/MedicalInstitutions";
+import MedicalPersonnel from "@/pages/MedicalPersonnel";
+import PanelDocumentation from "@/pages/PanelDocumentation";
+import Claims from "@/pages/Claims";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +27,12 @@ function Router() {
         <Route path="/dependents" component={Dependents} />
         <Route path="/premiums" component={Premiums} />
         <Route path="/periods" component={Periods} />
+        <Route path="/benefits" component={Benefits} />
+        <Route path="/regions" component={Regions} />
+        <Route path="/medical-institutions" component={MedicalInstitutions} />
+        <Route path="/medical-personnel" component={MedicalPersonnel} />
+        <Route path="/panel-documentation" component={PanelDocumentation} />
+        <Route path="/claims" component={Claims} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

@@ -6,6 +6,11 @@ import { z } from "zod";
 export const memberTypeEnum = pgEnum('member_type', ['principal', 'dependent']);
 export const dependentTypeEnum = pgEnum('dependent_type', ['spouse', 'child']);
 export const periodStatusEnum = pgEnum('period_status', ['active', 'inactive', 'upcoming', 'expired']);
+export const benefitCategoryEnum = pgEnum('benefit_category', ['medical', 'dental', 'vision', 'wellness', 'hospital', 'prescription', 'emergency', 'maternity', 'specialist', 'other']);
+export const institutionTypeEnum = pgEnum('institution_type', ['hospital', 'clinic', 'laboratory', 'imaging', 'pharmacy', 'specialist', 'general']);
+export const personnelTypeEnum = pgEnum('personnel_type', ['doctor', 'nurse', 'specialist', 'technician', 'pharmacist', 'therapist', 'other']);
+export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected', 'suspended']);
+export const claimStatusEnum = pgEnum('claim_status', ['submitted', 'under_review', 'approved', 'rejected', 'paid']);
 
 // Companies table
 export const companies = pgTable("companies", {
@@ -74,6 +79,32 @@ export const premiums = pgTable("premiums", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Benefits table (defined by insurance company)
+export const benefits = pgTable("benefits", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  category: benefitCategoryEnum("category").notNull(), 
+  coverageDetails: text("coverage_details").notNull(),
+  limitAmount: real("limit_amount"),
+  hasWaitingPeriod: boolean("has_waiting_period").default(false),
+  waitingPeriodDays: integer("waiting_period_days"),
+  isStandard: boolean("is_standard").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Company Benefits table (chosen by companies)
+export const companyBenefits = pgTable("company_benefits", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  benefitId: integer("benefit_id").references(() => benefits.id).notNull(),
+  premiumId: integer("premium_id").references(() => premiums.id).notNull(),
+  isActive: boolean("is_active").default(true),
+  additionalCoverage: boolean("additional_coverage").default(false),
+  additionalCoverageDetails: text("additional_coverage_details"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
@@ -96,6 +127,16 @@ export const insertPremiumRateSchema = createInsertSchema(premiumRates).omit({
 });
 
 export const insertPremiumSchema = createInsertSchema(premiums).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBenefitSchema = createInsertSchema(benefits).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCompanyBenefitSchema = createInsertSchema(companyBenefits).omit({
   id: true,
   createdAt: true,
 });
@@ -136,3 +177,141 @@ export type InsertPremiumRate = z.infer<typeof insertPremiumRateSchema>;
 
 export type Premium = typeof premiums.$inferSelect;
 export type InsertPremium = z.infer<typeof insertPremiumSchema>;
+
+export type Benefit = typeof benefits.$inferSelect;
+export type InsertBenefit = z.infer<typeof insertBenefitSchema>;
+
+// Regions table
+export const regions = pgTable("regions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  country: text("country").notNull(),
+  state: text("state").notNull(),
+  city: text("city"),
+  postalCode: text("postal_code"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Medical Institutions table
+export const medicalInstitutions = pgTable("medical_institutions", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  type: institutionTypeEnum("type").notNull(),
+  registrationNumber: text("registration_number").notNull().unique(),
+  regionId: integer("region_id").references(() => regions.id).notNull(),
+  address: text("address").notNull(),
+  contactPerson: text("contact_person").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone").notNull(),
+  approvalStatus: approvalStatusEnum("approval_status").default("pending").notNull(),
+  approvalDate: timestamp("approval_date"),
+  validUntil: timestamp("valid_until"),
+  website: text("website"),
+  description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Medical Personnel table
+export const medicalPersonnel = pgTable("medical_personnel", {
+  id: serial("id").primaryKey(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  type: personnelTypeEnum("type").notNull(),
+  licenseNumber: text("license_number").notNull().unique(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  specialization: text("specialization"),
+  email: text("email").notNull(),
+  phone: text("phone").notNull(),
+  approvalStatus: approvalStatusEnum("approval_status").default("pending").notNull(),
+  approvalDate: timestamp("approval_date"),
+  validUntil: timestamp("valid_until"),
+  qualifications: text("qualifications").notNull(),
+  yearsOfExperience: integer("years_of_experience").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Documentation for medical panel
+export const panelDocumentation = pgTable("panel_documentation", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id),
+  personnelId: integer("personnel_id").references(() => medicalPersonnel.id),
+  documentType: text("document_type").notNull(), // license, certification, accreditation
+  documentName: text("document_name").notNull(),
+  documentPath: text("document_path"), // file path or URL
+  expiryDate: timestamp("expiry_date"),
+  isVerified: boolean("is_verified").default(false),
+  verificationDate: timestamp("verification_date"),
+  verifiedBy: text("verified_by"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Claims submitted by medical panels
+export const claims = pgTable("claims", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  personnelId: integer("personnel_id").references(() => medicalPersonnel.id),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  benefitId: integer("benefit_id").references(() => benefits.id).notNull(),
+  claimDate: timestamp("claim_date").defaultNow().notNull(),
+  serviceDate: timestamp("service_date").notNull(),
+  amount: real("amount").notNull(),
+  description: text("description").notNull(),
+  diagnosis: text("diagnosis").notNull(),
+  treatmentDetails: text("treatment_details"),
+  status: claimStatusEnum("status").default("submitted").notNull(),
+  reviewDate: timestamp("review_date"),
+  reviewerNotes: text("reviewer_notes"),
+  paymentDate: timestamp("payment_date"),
+  paymentReference: text("payment_reference"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for new entities
+export const insertRegionSchema = createInsertSchema(regions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMedicalInstitutionSchema = createInsertSchema(medicalInstitutions).omit({
+  id: true,
+  approvalDate: true,
+  createdAt: true,
+});
+
+export const insertMedicalPersonnelSchema = createInsertSchema(medicalPersonnel).omit({
+  id: true,
+  approvalDate: true,
+  createdAt: true,
+});
+
+export const insertPanelDocumentationSchema = createInsertSchema(panelDocumentation).omit({
+  id: true,
+  verificationDate: true,
+  createdAt: true,
+});
+
+export const insertClaimSchema = createInsertSchema(claims).omit({
+  id: true,
+  reviewDate: true,
+  paymentDate: true,
+  createdAt: true,
+});
+
+export type CompanyBenefit = typeof companyBenefits.$inferSelect;
+export type InsertCompanyBenefit = z.infer<typeof insertCompanyBenefitSchema>;
+
+export type Region = typeof regions.$inferSelect;
+export type InsertRegion = z.infer<typeof insertRegionSchema>;
+
+export type MedicalInstitution = typeof medicalInstitutions.$inferSelect;
+export type InsertMedicalInstitution = z.infer<typeof insertMedicalInstitutionSchema>;
+
+export type MedicalPersonnel = typeof medicalPersonnel.$inferSelect;
+export type InsertMedicalPersonnel = z.infer<typeof insertMedicalPersonnelSchema>;
+
+export type PanelDocumentation = typeof panelDocumentation.$inferSelect;
+export type InsertPanelDocumentation = z.infer<typeof insertPanelDocumentationSchema>;
+
+export type Claim = typeof claims.$inferSelect;
+export type InsertClaim = z.infer<typeof insertClaimSchema>;

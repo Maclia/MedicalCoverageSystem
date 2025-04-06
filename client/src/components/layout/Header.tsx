@@ -22,6 +22,18 @@ export default function Header({ toggleSidebar }: HeaderProps) {
         return "Premiums";
       case "/periods":
         return "Periods";
+      case "/benefits":
+        return "Benefits";
+      case "/regions":
+        return "Regions";
+      case "/medical-institutions":
+        return "Medical Institutions";
+      case "/medical-personnel":
+        return "Medical Personnel";
+      case "/panel-documentation":
+        return "Panel Documentation";
+      case "/claims":
+        return "Claims";
       case "/reports":
         return "Reports";
       case "/settings":
