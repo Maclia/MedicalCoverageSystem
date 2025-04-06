@@ -34,7 +34,7 @@ export default function MemberList() {
   const filteredMembers = members?.filter(member => {
     const matchesSearch = `${member.firstName} ${member.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) || 
                            member.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCompany = !companyFilter || member.companyId.toString() === companyFilter;
+    const matchesCompany = companyFilter === "all" || !companyFilter || member.companyId.toString() === companyFilter;
     return member.memberType === 'principal' && matchesSearch && matchesCompany;
   }) || [];
 
@@ -131,7 +131,7 @@ export default function MemberList() {
                   <SelectValue placeholder="All Companies" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Companies</SelectItem>
+                  <SelectItem value="all">All Companies</SelectItem>
                   {companies?.map((company) => (
                     <SelectItem key={company.id} value={company.id.toString()}>
                       {company.name}

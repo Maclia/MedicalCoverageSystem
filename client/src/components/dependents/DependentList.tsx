@@ -38,8 +38,8 @@ export default function DependentList() {
     const fullName = `${dependent.firstName} ${dependent.lastName}`;
     
     const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPrincipal = !principalFilter || dependent.principalId.toString() === principalFilter;
-    const matchesType = !typeFilter || dependent.dependentType === typeFilter;
+    const matchesPrincipal = principalFilter === "all" || !principalFilter || dependent.principalId.toString() === principalFilter;
+    const matchesType = typeFilter === "all" || !typeFilter || dependent.dependentType === typeFilter;
     
     return matchesSearch && matchesPrincipal && matchesType;
   });
@@ -138,7 +138,7 @@ export default function DependentList() {
                   <SelectValue placeholder="All Principals" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Principals</SelectItem>
+                  <SelectItem value="all">All Principals</SelectItem>
                   {principals?.map((principal) => (
                     <SelectItem key={principal.id} value={principal.id.toString()}>
                       {principal.firstName} {principal.lastName}
@@ -151,7 +151,7 @@ export default function DependentList() {
                   <SelectValue placeholder="All Types" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Types</SelectItem>
+                  <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="spouse">Spouse</SelectItem>
                   <SelectItem value="child">Child</SelectItem>
                 </SelectContent>
