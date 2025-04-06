@@ -641,4 +641,264 @@ export class DatabaseStorage implements IStorage {
       .returning();
     return paidClaim;
   }
+
+  // Premium Payment methods
+  async getPremiumPayments(): Promise<schema.PremiumPayment[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select().from(schema.premiumPayments);
+  }
+  
+  async getPremiumPayment(id: number): Promise<schema.PremiumPayment | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [payment] = await db.select()
+      .from(schema.premiumPayments)
+      .where(eq(schema.premiumPayments.id, id));
+    return payment;
+  }
+  
+  async getPremiumPaymentsByCompany(companyId: number): Promise<schema.PremiumPayment[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.premiumPayments)
+      .where(eq(schema.premiumPayments.companyId, companyId));
+  }
+  
+  async getPremiumPaymentsByPremium(premiumId: number): Promise<schema.PremiumPayment[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.premiumPayments)
+      .where(eq(schema.premiumPayments.premiumId, premiumId));
+  }
+  
+  async getPremiumPaymentsByStatus(status: string): Promise<schema.PremiumPayment[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.premiumPayments)
+      .where(eq(schema.premiumPayments.status as any, status));
+  }
+  
+  async createPremiumPayment(payment: schema.InsertPremiumPayment): Promise<schema.PremiumPayment> {
+    if (!db) throw new Error('Database not connected');
+    const [newPayment] = await db.insert(schema.premiumPayments)
+      .values(payment)
+      .returning();
+    return newPayment;
+  }
+  
+  async updatePremiumPaymentStatus(id: number, status: string): Promise<schema.PremiumPayment> {
+    if (!db) throw new Error('Database not connected');
+    const [updatedPayment] = await db.update(schema.premiumPayments)
+      .set({
+        status: status as any
+      })
+      .where(eq(schema.premiumPayments.id, id))
+      .returning();
+    return updatedPayment;
+  }
+  
+  // Claim Payment methods
+  async getClaimPayments(): Promise<schema.ClaimPayment[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select().from(schema.claimPayments);
+  }
+  
+  async getClaimPayment(id: number): Promise<schema.ClaimPayment | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [payment] = await db.select()
+      .from(schema.claimPayments)
+      .where(eq(schema.claimPayments.id, id));
+    return payment;
+  }
+  
+  async getClaimPaymentsByClaim(claimId: number): Promise<schema.ClaimPayment[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.claimPayments)
+      .where(eq(schema.claimPayments.claimId, claimId));
+  }
+  
+  async getClaimPaymentsByMember(memberId: number): Promise<schema.ClaimPayment[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.claimPayments)
+      .where(eq(schema.claimPayments.memberId, memberId));
+  }
+  
+  async getClaimPaymentsByInstitution(institutionId: number): Promise<schema.ClaimPayment[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.claimPayments)
+      .where(eq(schema.claimPayments.institutionId, institutionId));
+  }
+  
+  async getClaimPaymentsByStatus(status: string): Promise<schema.ClaimPayment[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.claimPayments)
+      .where(eq(schema.claimPayments.status as any, status));
+  }
+  
+  async createClaimPayment(payment: schema.InsertClaimPayment): Promise<schema.ClaimPayment> {
+    if (!db) throw new Error('Database not connected');
+    const [newPayment] = await db.insert(schema.claimPayments)
+      .values(payment)
+      .returning();
+    return newPayment;
+  }
+  
+  async updateClaimPaymentStatus(id: number, status: string): Promise<schema.ClaimPayment> {
+    if (!db) throw new Error('Database not connected');
+    const [updatedPayment] = await db.update(schema.claimPayments)
+      .set({
+        status: status as any
+      })
+      .where(eq(schema.claimPayments.id, id))
+      .returning();
+    return updatedPayment;
+  }
+  
+  // Provider Disbursement methods
+  async getProviderDisbursements(): Promise<schema.ProviderDisbursement[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select().from(schema.providerDisbursements);
+  }
+  
+  async getProviderDisbursement(id: number): Promise<schema.ProviderDisbursement | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [disbursement] = await db.select()
+      .from(schema.providerDisbursements)
+      .where(eq(schema.providerDisbursements.id, id));
+    return disbursement;
+  }
+  
+  async getProviderDisbursementsByInstitution(institutionId: number): Promise<schema.ProviderDisbursement[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.providerDisbursements)
+      .where(eq(schema.providerDisbursements.institutionId, institutionId));
+  }
+  
+  async getProviderDisbursementsByStatus(status: string): Promise<schema.ProviderDisbursement[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.providerDisbursements)
+      .where(eq(schema.providerDisbursements.status as any, status));
+  }
+  
+  async createProviderDisbursement(disbursement: schema.InsertProviderDisbursement): Promise<schema.ProviderDisbursement> {
+    if (!db) throw new Error('Database not connected');
+    const [newDisbursement] = await db.insert(schema.providerDisbursements)
+      .values(disbursement)
+      .returning();
+    return newDisbursement;
+  }
+  
+  async updateProviderDisbursementStatus(id: number, status: string): Promise<schema.ProviderDisbursement> {
+    if (!db) throw new Error('Database not connected');
+    const [updatedDisbursement] = await db.update(schema.providerDisbursements)
+      .set({
+        status: status as any
+      })
+      .where(eq(schema.providerDisbursements.id, id))
+      .returning();
+    return updatedDisbursement;
+  }
+  
+  // Disbursement Item methods
+  async getDisbursementItems(): Promise<schema.DisbursementItem[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select().from(schema.disbursementItems);
+  }
+  
+  async getDisbursementItem(id: number): Promise<schema.DisbursementItem | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [item] = await db.select()
+      .from(schema.disbursementItems)
+      .where(eq(schema.disbursementItems.id, id));
+    return item;
+  }
+  
+  async getDisbursementItemsByDisbursement(disbursementId: number): Promise<schema.DisbursementItem[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.disbursementItems)
+      .where(eq(schema.disbursementItems.disbursementId, disbursementId));
+  }
+  
+  async getDisbursementItemsByClaim(claimId: number): Promise<schema.DisbursementItem[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.disbursementItems)
+      .where(eq(schema.disbursementItems.claimId, claimId));
+  }
+  
+  async createDisbursementItem(item: schema.InsertDisbursementItem): Promise<schema.DisbursementItem> {
+    if (!db) throw new Error('Database not connected');
+    const [newItem] = await db.insert(schema.disbursementItems)
+      .values(item)
+      .returning();
+    return newItem;
+  }
+  
+  async updateDisbursementItemStatus(id: number, status: string): Promise<schema.DisbursementItem> {
+    if (!db) throw new Error('Database not connected');
+    const [updatedItem] = await db.update(schema.disbursementItems)
+      .set({
+        status: status as any
+      })
+      .where(eq(schema.disbursementItems.id, id))
+      .returning();
+    return updatedItem;
+  }
+  
+  // Insurance Balance methods
+  async getInsuranceBalances(): Promise<schema.InsuranceBalance[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select().from(schema.insuranceBalances);
+  }
+  
+  async getInsuranceBalance(id: number): Promise<schema.InsuranceBalance | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [balance] = await db.select()
+      .from(schema.insuranceBalances)
+      .where(eq(schema.insuranceBalances.id, id));
+    return balance;
+  }
+  
+  async getInsuranceBalanceByPeriod(periodId: number): Promise<schema.InsuranceBalance | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [balance] = await db.select()
+      .from(schema.insuranceBalances)
+      .where(eq(schema.insuranceBalances.periodId, periodId));
+    return balance;
+  }
+  
+  async createInsuranceBalance(balance: schema.InsertInsuranceBalance): Promise<schema.InsuranceBalance> {
+    if (!db) throw new Error('Database not connected');
+    const [newBalance] = await db.insert(schema.insuranceBalances)
+      .values(balance)
+      .returning();
+    return newBalance;
+  }
+  
+  async updateInsuranceBalance(
+    id: number, 
+    totalPremiums: number, 
+    totalClaims: number, 
+    pendingClaims: number, 
+    activeBalance: number
+  ): Promise<schema.InsuranceBalance> {
+    if (!db) throw new Error('Database not connected');
+    const [updatedBalance] = await db.update(schema.insuranceBalances)
+      .set({
+        totalPremiums,
+        totalClaims,
+        pendingClaims,
+        activeBalance,
+        lastUpdated: new Date()
+      })
+      .where(eq(schema.insuranceBalances.id, id))
+      .returning();
+    return updatedBalance;
+  }
 }

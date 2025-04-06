@@ -15,7 +15,12 @@ import {
   insertMedicalInstitutionSchema,
   insertMedicalPersonnelSchema,
   insertPanelDocumentationSchema,
-  insertClaimSchema
+  insertClaimSchema,
+  insertPremiumPaymentSchema,
+  insertClaimPaymentSchema,
+  insertProviderDisbursementSchema,
+  insertDisbursementItemSchema,
+  insertInsuranceBalanceSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -1320,6 +1325,532 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.status(400).json({ error: error.message });
       } else {
         res.status(500).json({ error: "Failed to process claim payment" });
+      }
+    }
+  });
+
+  // Premium Payments
+  app.get("/api/premium-payments", async (req, res) => {
+    try {
+      let payments;
+      if (req.query.companyId) {
+        payments = await storage.getPremiumPaymentsByCompany(Number(req.query.companyId));
+      } else if (req.query.premiumId) {
+        payments = await storage.getPremiumPaymentsByPremium(Number(req.query.premiumId));
+      } else if (req.query.status) {
+        payments = await storage.getPremiumPaymentsByStatus(req.query.status as string);
+      } else {
+        payments = await storage.getPremiumPayments();
+      }
+      
+      // Enhance premium payments with related data
+      const enhancedPayments = await Promise.all(
+        payments.map(async (payment) => {
+          const company = await storage.getCompany(payment.companyId);
+          const premium = await storage.getPremium(payment.premiumId);
+          
+          return {
+            ...payment,
+            companyName: company ? company.name : 'Unknown',
+            premiumPeriod: premium ? {
+              periodId: premium.periodId,
+              total: premium.total
+            } : null
+          };
+        })
+      );
+      
+      res.json(enhancedPayments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch premium payments" });
+    }
+  });
+
+  app.get("/api/premium-payments/:id", async (req, res) => {
+    try {
+      const payment = await storage.getPremiumPayment(Number(req.params.id));
+      if (!payment) {
+        return res.status(404).json({ error: "Premium payment not found" });
+      }
+      
+      // Get related data
+      const company = await storage.getCompany(payment.companyId);
+      const premium = await storage.getPremium(payment.premiumId);
+      
+      const enhancedPayment = {
+        ...payment,
+        companyName: company ? company.name : 'Unknown',
+        premiumPeriod: premium ? {
+          periodId: premium.periodId,
+          total: premium.total
+        } : null
+      };
+      
+      res.json(enhancedPayment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch premium payment" });
+    }
+  });
+
+  app.post("/api/premium-payments", validateRequest(insertPremiumPaymentSchema), async (req, res) => {
+    try {
+      // Validate if premium exists
+      const premium = await storage.getPremium(req.body.premiumId);
+      if (!premium) {
+        return res.status(404).json({ error: "Premium not found" });
+      }
+      
+      // Validate if company exists
+      const company = await storage.getCompany(req.body.companyId);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      
+      // Create premium payment
+      const payment = await storage.createPremiumPayment(req.body);
+      
+      // If payment status is 'completed', update the premium
+      if (payment.status === 'completed') {
+        // In a real application, you would update the premium status as paid
+        // For now, we're just recording the payment
+        console.log(`Premium ${premium.id} has been paid.`);
+      }
+      
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create premium payment" });
+      }
+    }
+  });
+
+  app.patch("/api/premium-payments/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!id || !status) {
+        return res.status(400).json({ error: "ID and status are required" });
+      }
+      
+      const payment = await storage.updatePremiumPaymentStatus(Number(id), status);
+      res.json(payment);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to update premium payment status" });
+      }
+    }
+  });
+
+  // Claim Payments
+  app.get("/api/claim-payments", async (req, res) => {
+    try {
+      let payments;
+      if (req.query.claimId) {
+        payments = await storage.getClaimPaymentsByClaim(Number(req.query.claimId));
+      } else if (req.query.memberId) {
+        payments = await storage.getClaimPaymentsByMember(Number(req.query.memberId));
+      } else if (req.query.institutionId) {
+        payments = await storage.getClaimPaymentsByInstitution(Number(req.query.institutionId));
+      } else if (req.query.status) {
+        payments = await storage.getClaimPaymentsByStatus(req.query.status as string);
+      } else {
+        payments = await storage.getClaimPayments();
+      }
+      
+      // Enhance claim payments with related data
+      const enhancedPayments = await Promise.all(
+        payments.map(async (payment) => {
+          const member = await storage.getMember(payment.memberId);
+          const claim = await storage.getClaim(payment.claimId);
+          const institution = await storage.getMedicalInstitution(payment.institutionId);
+          
+          return {
+            ...payment,
+            memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+            claimAmount: claim ? claim.amount : 0,
+            institutionName: institution ? institution.name : 'Unknown'
+          };
+        })
+      );
+      
+      res.json(enhancedPayments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch claim payments" });
+    }
+  });
+
+  app.get("/api/claim-payments/:id", async (req, res) => {
+    try {
+      const payment = await storage.getClaimPayment(Number(req.params.id));
+      if (!payment) {
+        return res.status(404).json({ error: "Claim payment not found" });
+      }
+      
+      // Get related data
+      const member = await storage.getMember(payment.memberId);
+      const claim = await storage.getClaim(payment.claimId);
+      const institution = await storage.getMedicalInstitution(payment.institutionId);
+      
+      const enhancedPayment = {
+        ...payment,
+        memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+        claimAmount: claim ? claim.amount : 0,
+        institutionName: institution ? institution.name : 'Unknown'
+      };
+      
+      res.json(enhancedPayment);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch claim payment" });
+    }
+  });
+
+  app.post("/api/claim-payments", validateRequest(insertClaimPaymentSchema), async (req, res) => {
+    try {
+      // Validate if claim exists
+      const claim = await storage.getClaim(req.body.claimId);
+      if (!claim) {
+        return res.status(404).json({ error: "Claim not found" });
+      }
+      
+      // Validate if claim has been approved
+      if (claim.status !== 'approved' && claim.status !== 'paid') {
+        return res.status(400).json({ error: "Claim must be approved before payment can be processed" });
+      }
+      
+      // Validate if member exists
+      const member = await storage.getMember(req.body.memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      
+      // Validate if institution exists
+      const institution = await storage.getMedicalInstitution(req.body.institutionId);
+      if (!institution) {
+        return res.status(404).json({ error: "Medical institution not found" });
+      }
+      
+      // Create claim payment
+      const payment = await storage.createClaimPayment(req.body);
+      
+      // If payment status is 'completed', update the claim
+      if (payment.status === 'completed' && claim.status !== 'paid') {
+        await storage.processClaimPayment(claim.id, payment.paymentReference);
+      }
+      
+      res.status(201).json(payment);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create claim payment" });
+      }
+    }
+  });
+
+  app.patch("/api/claim-payments/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!id || !status) {
+        return res.status(400).json({ error: "ID and status are required" });
+      }
+      
+      const payment = await storage.updateClaimPaymentStatus(Number(id), status);
+      
+      // If status is now 'completed', update the associated claim
+      if (status === 'completed') {
+        const claimPayment = await storage.getClaimPayment(Number(id));
+        if (claimPayment) {
+          const claim = await storage.getClaim(claimPayment.claimId);
+          if (claim && claim.status !== 'paid') {
+            await storage.processClaimPayment(claim.id, claimPayment.paymentReference);
+          }
+        }
+      }
+      
+      res.json(payment);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to update claim payment status" });
+      }
+    }
+  });
+
+  // Provider Disbursements
+  app.get("/api/provider-disbursements", async (req, res) => {
+    try {
+      let disbursements;
+      if (req.query.institutionId) {
+        disbursements = await storage.getProviderDisbursementsByInstitution(Number(req.query.institutionId));
+      } else if (req.query.status) {
+        disbursements = await storage.getProviderDisbursementsByStatus(req.query.status as string);
+      } else {
+        disbursements = await storage.getProviderDisbursements();
+      }
+      
+      // Enhance disbursements with related data
+      const enhancedDisbursements = await Promise.all(
+        disbursements.map(async (disbursement) => {
+          const institution = await storage.getMedicalInstitution(disbursement.institutionId);
+          
+          // Get disbursement items if available
+          const items = await storage.getDisbursementItemsByDisbursement(disbursement.id);
+          
+          return {
+            ...disbursement,
+            institutionName: institution ? institution.name : 'Unknown',
+            itemCount: items.length,
+            itemsTotal: items.reduce((sum, item) => sum + item.amount, 0)
+          };
+        })
+      );
+      
+      res.json(enhancedDisbursements);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch provider disbursements" });
+    }
+  });
+
+  app.get("/api/provider-disbursements/:id", async (req, res) => {
+    try {
+      const disbursement = await storage.getProviderDisbursement(Number(req.params.id));
+      if (!disbursement) {
+        return res.status(404).json({ error: "Provider disbursement not found" });
+      }
+      
+      // Get related data
+      const institution = await storage.getMedicalInstitution(disbursement.institutionId);
+      
+      // Get disbursement items
+      const items = await storage.getDisbursementItemsByDisbursement(disbursement.id);
+      
+      // Get claim details for each item
+      const itemsWithClaims = await Promise.all(
+        items.map(async (item) => {
+          const claim = await storage.getClaim(item.claimId);
+          const member = claim ? await storage.getMember(claim.memberId) : null;
+          
+          return {
+            ...item,
+            claim: claim ? {
+              id: claim.id,
+              serviceDate: claim.serviceDate,
+              amount: claim.amount,
+              status: claim.status
+            } : null,
+            memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown'
+          };
+        })
+      );
+      
+      const enhancedDisbursement = {
+        ...disbursement,
+        institutionName: institution ? institution.name : 'Unknown',
+        items: itemsWithClaims,
+        itemCount: items.length,
+        itemsTotal: items.reduce((sum, item) => sum + item.amount, 0)
+      };
+      
+      res.json(enhancedDisbursement);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch provider disbursement" });
+    }
+  });
+
+  app.post("/api/provider-disbursements", validateRequest(insertProviderDisbursementSchema), async (req, res) => {
+    try {
+      // Validate if institution exists
+      const institution = await storage.getMedicalInstitution(req.body.institutionId);
+      if (!institution) {
+        return res.status(404).json({ error: "Medical institution not found" });
+      }
+      
+      // Create disbursement
+      const disbursement = await storage.createProviderDisbursement(req.body);
+      
+      res.status(201).json(disbursement);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create provider disbursement" });
+      }
+    }
+  });
+
+  app.post("/api/disbursement-items", validateRequest(insertDisbursementItemSchema), async (req, res) => {
+    try {
+      // Validate if disbursement exists
+      const disbursement = await storage.getProviderDisbursement(req.body.disbursementId);
+      if (!disbursement) {
+        return res.status(404).json({ error: "Provider disbursement not found" });
+      }
+      
+      // Validate if claim exists
+      const claim = await storage.getClaim(req.body.claimId);
+      if (!claim) {
+        return res.status(404).json({ error: "Claim not found" });
+      }
+      
+      // Create disbursement item
+      const item = await storage.createDisbursementItem(req.body);
+      
+      res.status(201).json(item);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create disbursement item" });
+      }
+    }
+  });
+
+  app.patch("/api/provider-disbursements/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body;
+      
+      if (!id || !status) {
+        return res.status(400).json({ error: "ID and status are required" });
+      }
+      
+      const disbursement = await storage.updateProviderDisbursementStatus(Number(id), status);
+      
+      // If status is changed to 'completed', update all items status
+      if (status === 'completed') {
+        const items = await storage.getDisbursementItemsByDisbursement(Number(id));
+        
+        // Update each item's status to 'completed'
+        for (const item of items) {
+          await storage.updateDisbursementItemStatus(item.id, 'completed');
+        }
+      }
+      
+      res.json(disbursement);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to update provider disbursement status" });
+      }
+    }
+  });
+
+  // Insurance Balances
+  app.get("/api/insurance-balances", async (req, res) => {
+    try {
+      let balances;
+      if (req.query.periodId) {
+        const balance = await storage.getInsuranceBalanceByPeriod(Number(req.query.periodId));
+        balances = balance ? [balance] : [];
+      } else {
+        balances = await storage.getInsuranceBalances();
+      }
+      
+      // Enhance balances with period information
+      const enhancedBalances = await Promise.all(
+        balances.map(async (balance) => {
+          const period = await storage.getPeriod(balance.periodId);
+          
+          return {
+            ...balance,
+            periodName: period ? period.name : 'Unknown',
+            periodStart: period ? period.startDate : null,
+            periodEnd: period ? period.endDate : null
+          };
+        })
+      );
+      
+      res.json(enhancedBalances);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch insurance balances" });
+    }
+  });
+
+  app.get("/api/insurance-balances/:id", async (req, res) => {
+    try {
+      const balance = await storage.getInsuranceBalance(Number(req.params.id));
+      if (!balance) {
+        return res.status(404).json({ error: "Insurance balance not found" });
+      }
+      
+      // Get related period
+      const period = await storage.getPeriod(balance.periodId);
+      
+      const enhancedBalance = {
+        ...balance,
+        periodName: period ? period.name : 'Unknown',
+        periodStart: period ? period.startDate : null,
+        periodEnd: period ? period.endDate : null
+      };
+      
+      res.json(enhancedBalance);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch insurance balance" });
+    }
+  });
+
+  app.post("/api/insurance-balances", validateRequest(insertInsuranceBalanceSchema), async (req, res) => {
+    try {
+      // Validate if period exists
+      const period = await storage.getPeriod(req.body.periodId);
+      if (!period) {
+        return res.status(404).json({ error: "Period not found" });
+      }
+      
+      // Check if balance already exists for this period
+      const existingBalance = await storage.getInsuranceBalanceByPeriod(req.body.periodId);
+      if (existingBalance) {
+        return res.status(400).json({ error: "Balance already exists for this period" });
+      }
+      
+      // Create balance
+      const balance = await storage.createInsuranceBalance(req.body);
+      
+      res.status(201).json(balance);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create insurance balance" });
+      }
+    }
+  });
+
+  app.patch("/api/insurance-balances/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { totalPremiums, totalClaims, pendingClaims, activeBalance } = req.body;
+      
+      if (!id || totalPremiums === undefined || totalClaims === undefined || 
+          pendingClaims === undefined || activeBalance === undefined) {
+        return res.status(400).json({ 
+          error: "ID, totalPremiums, totalClaims, pendingClaims, and activeBalance are required" 
+        });
+      }
+      
+      const balance = await storage.updateInsuranceBalance(
+        Number(id), 
+        Number(totalPremiums), 
+        Number(totalClaims), 
+        Number(pendingClaims), 
+        Number(activeBalance)
+      );
+      
+      res.json(balance);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to update insurance balance" });
       }
     }
   });

@@ -13,7 +13,12 @@ import {
   PanelDocumentation, InsertPanelDocumentation,
   Claim, InsertClaim,
   AgeBandedRate, InsertAgeBandedRate,
-  FamilyRate, InsertFamilyRate
+  FamilyRate, InsertFamilyRate,
+  PremiumPayment, InsertPremiumPayment,
+  ClaimPayment, InsertClaimPayment,
+  ProviderDisbursement, InsertProviderDisbursement,
+  DisbursementItem, InsertDisbursementItem,
+  InsuranceBalance, InsertInsuranceBalance
 } from "@shared/schema";
 
 // Storage interface
@@ -127,6 +132,48 @@ export interface IStorage {
   createClaim(claim: InsertClaim): Promise<Claim>;
   updateClaimStatus(id: number, status: string, reviewerNotes?: string): Promise<Claim>;
   processClaimPayment(id: number, paymentReference: string): Promise<Claim>;
+  
+  // Premium Payment methods
+  getPremiumPayments(): Promise<PremiumPayment[]>;
+  getPremiumPayment(id: number): Promise<PremiumPayment | undefined>;
+  getPremiumPaymentsByCompany(companyId: number): Promise<PremiumPayment[]>;
+  getPremiumPaymentsByPremium(premiumId: number): Promise<PremiumPayment[]>;
+  getPremiumPaymentsByStatus(status: string): Promise<PremiumPayment[]>;
+  createPremiumPayment(payment: InsertPremiumPayment): Promise<PremiumPayment>;
+  updatePremiumPaymentStatus(id: number, status: string): Promise<PremiumPayment>;
+  
+  // Claim Payment methods
+  getClaimPayments(): Promise<ClaimPayment[]>;
+  getClaimPayment(id: number): Promise<ClaimPayment | undefined>;
+  getClaimPaymentsByClaim(claimId: number): Promise<ClaimPayment[]>;
+  getClaimPaymentsByMember(memberId: number): Promise<ClaimPayment[]>;
+  getClaimPaymentsByInstitution(institutionId: number): Promise<ClaimPayment[]>;
+  getClaimPaymentsByStatus(status: string): Promise<ClaimPayment[]>;
+  createClaimPayment(payment: InsertClaimPayment): Promise<ClaimPayment>;
+  updateClaimPaymentStatus(id: number, status: string): Promise<ClaimPayment>;
+  
+  // Provider Disbursement methods
+  getProviderDisbursements(): Promise<ProviderDisbursement[]>;
+  getProviderDisbursement(id: number): Promise<ProviderDisbursement | undefined>;
+  getProviderDisbursementsByInstitution(institutionId: number): Promise<ProviderDisbursement[]>;
+  getProviderDisbursementsByStatus(status: string): Promise<ProviderDisbursement[]>;
+  createProviderDisbursement(disbursement: InsertProviderDisbursement): Promise<ProviderDisbursement>;
+  updateProviderDisbursementStatus(id: number, status: string): Promise<ProviderDisbursement>;
+  
+  // Disbursement Item methods
+  getDisbursementItems(): Promise<DisbursementItem[]>;
+  getDisbursementItem(id: number): Promise<DisbursementItem | undefined>;
+  getDisbursementItemsByDisbursement(disbursementId: number): Promise<DisbursementItem[]>;
+  getDisbursementItemsByClaim(claimId: number): Promise<DisbursementItem[]>;
+  createDisbursementItem(item: InsertDisbursementItem): Promise<DisbursementItem>;
+  updateDisbursementItemStatus(id: number, status: string): Promise<DisbursementItem>;
+  
+  // Insurance Balance methods
+  getInsuranceBalances(): Promise<InsuranceBalance[]>;
+  getInsuranceBalance(id: number): Promise<InsuranceBalance | undefined>;
+  getInsuranceBalanceByPeriod(periodId: number): Promise<InsuranceBalance | undefined>;
+  createInsuranceBalance(balance: InsertInsuranceBalance): Promise<InsuranceBalance>;
+  updateInsuranceBalance(id: number, totalPremiums: number, totalClaims: number, pendingClaims: number, activeBalance: number): Promise<InsuranceBalance>;
 }
 
 // In-memory storage implementation
@@ -146,6 +193,11 @@ export class MemStorage implements IStorage {
   private claims: Map<number, Claim>;
   private ageBandedRates: Map<number, AgeBandedRate>;
   private familyRates: Map<number, FamilyRate>;
+  private premiumPayments: Map<number, PremiumPayment>;
+  private claimPayments: Map<number, ClaimPayment>;
+  private providerDisbursements: Map<number, ProviderDisbursement>;
+  private disbursementItems: Map<number, DisbursementItem>;
+  private insuranceBalances: Map<number, InsuranceBalance>;
   
   private companyId: number;
   private memberId: number;
@@ -162,6 +214,11 @@ export class MemStorage implements IStorage {
   private claimId: number;
   private ageBandedRateId: number;
   private familyRateId: number;
+  private premiumPaymentId: number;
+  private claimPaymentId: number;
+  private providerDisbursementId: number;
+  private disbursementItemId: number;
+  private insuranceBalanceId: number;
   
   constructor() {
     this.companies = new Map();
@@ -179,6 +236,11 @@ export class MemStorage implements IStorage {
     this.claims = new Map();
     this.ageBandedRates = new Map();
     this.familyRates = new Map();
+    this.premiumPayments = new Map();
+    this.claimPayments = new Map();
+    this.providerDisbursements = new Map();
+    this.disbursementItems = new Map();
+    this.insuranceBalances = new Map();
     
     this.companyId = 1;
     this.memberId = 1;
@@ -195,6 +257,11 @@ export class MemStorage implements IStorage {
     this.claimId = 1;
     this.ageBandedRateId = 1;
     this.familyRateId = 1;
+    this.premiumPaymentId = 1;
+    this.claimPaymentId = 1; 
+    this.providerDisbursementId = 1;
+    this.disbursementItemId = 1;
+    this.insuranceBalanceId = 1;
     
     // Initialize with a default active period, rates, and benefits
     this.initializeDefaultData();
@@ -903,6 +970,267 @@ export class MemStorage implements IStorage {
     
     this.claims.set(id, updatedClaim);
     return updatedClaim;
+  }
+
+  // Premium Payment methods
+  async getPremiumPayments(): Promise<PremiumPayment[]> {
+    return Array.from(this.premiumPayments.values());
+  }
+  
+  async getPremiumPayment(id: number): Promise<PremiumPayment | undefined> {
+    return this.premiumPayments.get(id);
+  }
+  
+  async getPremiumPaymentsByCompany(companyId: number): Promise<PremiumPayment[]> {
+    return Array.from(this.premiumPayments.values()).filter(
+      payment => payment.companyId === companyId
+    );
+  }
+  
+  async getPremiumPaymentsByPremium(premiumId: number): Promise<PremiumPayment[]> {
+    return Array.from(this.premiumPayments.values()).filter(
+      payment => payment.premiumId === premiumId
+    );
+  }
+  
+  async getPremiumPaymentsByStatus(status: string): Promise<PremiumPayment[]> {
+    return Array.from(this.premiumPayments.values()).filter(
+      payment => payment.status === status
+    );
+  }
+  
+  async createPremiumPayment(payment: InsertPremiumPayment): Promise<PremiumPayment> {
+    const id = this.premiumPaymentId++;
+    const newPayment: PremiumPayment = {
+      ...payment,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.premiumPayments.set(id, newPayment);
+    return newPayment;
+  }
+  
+  async updatePremiumPaymentStatus(id: number, status: string): Promise<PremiumPayment> {
+    const payment = this.premiumPayments.get(id);
+    if (!payment) {
+      throw new Error(`Premium Payment with ID ${id} not found`);
+    }
+    
+    const updatedPayment: PremiumPayment = {
+      ...payment,
+      status,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.premiumPayments.set(id, updatedPayment);
+    return updatedPayment;
+  }
+  
+  // Claim Payment methods
+  async getClaimPayments(): Promise<ClaimPayment[]> {
+    return Array.from(this.claimPayments.values());
+  }
+  
+  async getClaimPayment(id: number): Promise<ClaimPayment | undefined> {
+    return this.claimPayments.get(id);
+  }
+  
+  async getClaimPaymentsByClaim(claimId: number): Promise<ClaimPayment[]> {
+    return Array.from(this.claimPayments.values()).filter(
+      payment => payment.claimId === claimId
+    );
+  }
+  
+  async getClaimPaymentsByMember(memberId: number): Promise<ClaimPayment[]> {
+    return Array.from(this.claimPayments.values()).filter(
+      payment => payment.memberId === memberId
+    );
+  }
+  
+  async getClaimPaymentsByInstitution(institutionId: number): Promise<ClaimPayment[]> {
+    return Array.from(this.claimPayments.values()).filter(
+      payment => payment.institutionId === institutionId
+    );
+  }
+  
+  async getClaimPaymentsByStatus(status: string): Promise<ClaimPayment[]> {
+    return Array.from(this.claimPayments.values()).filter(
+      payment => payment.status === status
+    );
+  }
+  
+  async createClaimPayment(payment: InsertClaimPayment): Promise<ClaimPayment> {
+    const id = this.claimPaymentId++;
+    const newPayment: ClaimPayment = {
+      ...payment,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.claimPayments.set(id, newPayment);
+    return newPayment;
+  }
+  
+  async updateClaimPaymentStatus(id: number, status: string): Promise<ClaimPayment> {
+    const payment = this.claimPayments.get(id);
+    if (!payment) {
+      throw new Error(`Claim Payment with ID ${id} not found`);
+    }
+    
+    const updatedPayment: ClaimPayment = {
+      ...payment,
+      status,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.claimPayments.set(id, updatedPayment);
+    return updatedPayment;
+  }
+  
+  // Provider Disbursement methods
+  async getProviderDisbursements(): Promise<ProviderDisbursement[]> {
+    return Array.from(this.providerDisbursements.values());
+  }
+  
+  async getProviderDisbursement(id: number): Promise<ProviderDisbursement | undefined> {
+    return this.providerDisbursements.get(id);
+  }
+  
+  async getProviderDisbursementsByInstitution(institutionId: number): Promise<ProviderDisbursement[]> {
+    return Array.from(this.providerDisbursements.values()).filter(
+      disbursement => disbursement.institutionId === institutionId
+    );
+  }
+  
+  async getProviderDisbursementsByStatus(status: string): Promise<ProviderDisbursement[]> {
+    return Array.from(this.providerDisbursements.values()).filter(
+      disbursement => disbursement.status === status
+    );
+  }
+  
+  async createProviderDisbursement(disbursement: InsertProviderDisbursement): Promise<ProviderDisbursement> {
+    const id = this.providerDisbursementId++;
+    const newDisbursement: ProviderDisbursement = {
+      ...disbursement,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.providerDisbursements.set(id, newDisbursement);
+    return newDisbursement;
+  }
+  
+  async updateProviderDisbursementStatus(id: number, status: string): Promise<ProviderDisbursement> {
+    const disbursement = this.providerDisbursements.get(id);
+    if (!disbursement) {
+      throw new Error(`Provider Disbursement with ID ${id} not found`);
+    }
+    
+    const updatedDisbursement: ProviderDisbursement = {
+      ...disbursement,
+      status,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.providerDisbursements.set(id, updatedDisbursement);
+    return updatedDisbursement;
+  }
+  
+  // Disbursement Item methods
+  async getDisbursementItems(): Promise<DisbursementItem[]> {
+    return Array.from(this.disbursementItems.values());
+  }
+  
+  async getDisbursementItem(id: number): Promise<DisbursementItem | undefined> {
+    return this.disbursementItems.get(id);
+  }
+  
+  async getDisbursementItemsByDisbursement(disbursementId: number): Promise<DisbursementItem[]> {
+    return Array.from(this.disbursementItems.values()).filter(
+      item => item.disbursementId === disbursementId
+    );
+  }
+  
+  async getDisbursementItemsByClaim(claimId: number): Promise<DisbursementItem[]> {
+    return Array.from(this.disbursementItems.values()).filter(
+      item => item.claimId === claimId
+    );
+  }
+  
+  async createDisbursementItem(item: InsertDisbursementItem): Promise<DisbursementItem> {
+    const id = this.disbursementItemId++;
+    const newItem: DisbursementItem = {
+      ...item,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.disbursementItems.set(id, newItem);
+    return newItem;
+  }
+  
+  async updateDisbursementItemStatus(id: number, status: string): Promise<DisbursementItem> {
+    const item = this.disbursementItems.get(id);
+    if (!item) {
+      throw new Error(`Disbursement Item with ID ${id} not found`);
+    }
+    
+    const updatedItem: DisbursementItem = {
+      ...item,
+      status,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.disbursementItems.set(id, updatedItem);
+    return updatedItem;
+  }
+  
+  // Insurance Balance methods
+  async getInsuranceBalances(): Promise<InsuranceBalance[]> {
+    return Array.from(this.insuranceBalances.values());
+  }
+  
+  async getInsuranceBalance(id: number): Promise<InsuranceBalance | undefined> {
+    return this.insuranceBalances.get(id);
+  }
+  
+  async getInsuranceBalanceByPeriod(periodId: number): Promise<InsuranceBalance | undefined> {
+    return Array.from(this.insuranceBalances.values()).find(
+      balance => balance.periodId === periodId
+    );
+  }
+  
+  async createInsuranceBalance(balance: InsertInsuranceBalance): Promise<InsuranceBalance> {
+    const id = this.insuranceBalanceId++;
+    const newBalance: InsuranceBalance = {
+      ...balance,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.insuranceBalances.set(id, newBalance);
+    return newBalance;
+  }
+  
+  async updateInsuranceBalance(
+    id: number, 
+    totalPremiums: number, 
+    totalClaims: number, 
+    pendingClaims: number, 
+    activeBalance: number
+  ): Promise<InsuranceBalance> {
+    const balance = this.insuranceBalances.get(id);
+    if (!balance) {
+      throw new Error(`Insurance Balance with ID ${id} not found`);
+    }
+    
+    const updatedBalance: InsuranceBalance = {
+      ...balance,
+      totalPremiums,
+      totalClaims,
+      pendingClaims,
+      activeBalance,
+      updatedAt: new Date().toISOString()
+    };
+    
+    this.insuranceBalances.set(id, updatedBalance);
+    return updatedBalance;
   }
 }
 

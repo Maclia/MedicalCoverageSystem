@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
 import {
+  Building,
+  Stethoscope
+} from "lucide-react";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -248,11 +252,12 @@ export default function CompanyDetail() {
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="benefits">Benefits</TabsTrigger>
               <TabsTrigger value="members">Members</TabsTrigger>
               <TabsTrigger value="payments">Payments</TabsTrigger>
+              <TabsTrigger value="medical-panels">Medical Panels</TabsTrigger>
             </TabsList>
             
             <TabsContent value="overview" className="pt-4">
@@ -405,6 +410,7 @@ export default function CompanyDetail() {
                           <th className="text-left py-3 px-4 font-medium">Amount Paid</th>
                           <th className="text-left py-3 px-4 font-medium">Balance</th>
                           <th className="text-left py-3 px-4 font-medium">Status</th>
+                          <th className="text-left py-3 px-4 font-medium">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -423,6 +429,13 @@ export default function CompanyDetail() {
                                   {balance > 0 ? "OUTSTANDING" : "PAID"}
                                 </Badge>
                               </td>
+                              <td className="py-3 px-4">
+                                {balance > 0 && (
+                                  <Button variant="outline" size="sm">
+                                    Pay Now
+                                  </Button>
+                                )}
+                              </td>
                             </tr>
                           );
                         })}
@@ -435,6 +448,123 @@ export default function CompanyDetail() {
                     <Button variant="link" className="mt-2">Record your first payment</Button>
                   </div>
                 )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="medical-panels" className="pt-4">
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Approved Medical Panels</h3>
+                  <Button variant="outline" size="sm">View All Providers</Button>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Approved Hospitals</CardTitle>
+                      <CardDescription>Hospital facilities covered by your insurance</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {/* Demo data - replace with actual data */}
+                        {Array.from({length: 3}).map((_, i) => (
+                          <div key={`hospital-${i}`} className="flex items-start space-x-3 p-3 border rounded-md">
+                            <div className="bg-blue-100 p-2 rounded-md">
+                              <Building className="h-5 w-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-sm">
+                                {["General Hospital", "Central Medical Center", "Metropolitan Hospital"][i]}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {["General Care", "Specialized Care", "Emergency Services"][i]}
+                              </p>
+                              <Badge className="mt-1" variant="outline">Approved</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-lg">Approved Clinics</CardTitle>
+                      <CardDescription>Clinics and medical centers in your network</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {/* Demo data - replace with actual data */}
+                        {Array.from({length: 3}).map((_, i) => (
+                          <div key={`clinic-${i}`} className="flex items-start space-x-3 p-3 border rounded-md">
+                            <div className="bg-green-100 p-2 rounded-md">
+                              <Stethoscope className="h-5 w-5 text-green-600" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-sm">
+                                {["City Health Clinic", "Family Care Center", "Wellness Medical Group"][i]}
+                              </h4>
+                              <p className="text-xs text-muted-foreground">
+                                {["Primary Care", "Family Medicine", "Preventive Care"][i]}
+                              </p>
+                              <Badge className="mt-1" variant="outline">Approved</Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg">Approved Medical Personnel</CardTitle>
+                    <CardDescription>Doctors and specialists in your network</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {/* Demo data - replace with actual data */}
+                      {Array.from({length: 6}).map((_, i) => (
+                        <div key={`doctor-${i}`} className="flex items-start space-x-3 p-3 border rounded-md">
+                          <AvatarWithInitials 
+                            name={[
+                              "Dr. Sarah Johnson",
+                              "Dr. Michael Lee",
+                              "Dr. Emily Chen",
+                              "Dr. James Wilson",
+                              "Dr. Maria Rodriguez",
+                              "Dr. David Kim"
+                            ][i]} 
+                            size="md"
+                          />
+                          <div>
+                            <h4 className="font-medium text-sm">
+                              {[
+                                "Dr. Sarah Johnson",
+                                "Dr. Michael Lee",
+                                "Dr. Emily Chen",
+                                "Dr. James Wilson",
+                                "Dr. Maria Rodriguez",
+                                "Dr. David Kim"
+                              ][i]}
+                            </h4>
+                            <p className="text-xs text-muted-foreground">
+                              {[
+                                "Cardiology",
+                                "Pediatrics",
+                                "Dermatology",
+                                "Orthopedics",
+                                "Gastroenterology",
+                                "Neurology"
+                              ][i]}
+                            </p>
+                            <Badge className="mt-1" variant="outline">Approved</Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </Tabs>

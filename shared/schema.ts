@@ -397,3 +397,128 @@ export type InsertAgeBandedRate = z.infer<typeof insertAgeBandedRateSchema>;
 
 export type FamilyRate = typeof familyRates.$inferSelect;
 export type InsertFamilyRate = z.infer<typeof insertFamilyRateSchema>;
+
+// Payment types enum
+export const paymentTypeEnum = pgEnum('payment_type', ['premium', 'claim', 'disbursement']);
+export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'completed', 'failed', 'cancelled']);
+export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
+
+// Premium Payments table
+export const premiumPayments = pgTable("premium_payments", {
+  id: serial("id").primaryKey(),
+  premiumId: integer("premium_id").references(() => premiums.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  amount: real("amount").notNull(),
+  paymentDate: timestamp("payment_date").defaultNow().notNull(),
+  paymentMethod: paymentMethodEnum("payment_method").notNull(),
+  paymentReference: text("payment_reference").notNull(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  transactionId: text("transaction_id"),
+  paymentDetails: text("payment_details"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Claim Payments table
+export const claimPayments = pgTable("claim_payments", {
+  id: serial("id").primaryKey(),
+  claimId: integer("claim_id").references(() => claims.id).notNull(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  amount: real("amount").notNull(),
+  paymentDate: timestamp("payment_date").defaultNow().notNull(),
+  paymentMethod: paymentMethodEnum("payment_method").notNull(),
+  paymentReference: text("payment_reference").notNull(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  transactionId: text("transaction_id"),
+  notes: text("notes"),
+  approvedBy: text("approved_by").notNull(),
+  approvalDate: timestamp("approval_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Disbursements table
+export const providerDisbursements = pgTable("provider_disbursements", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  totalAmount: real("total_amount").notNull(),
+  paidAmount: real("paid_amount").default(0).notNull(),
+  pendingAmount: real("pending_amount").notNull(),
+  disbursementDate: timestamp("disbursement_date").defaultNow().notNull(),
+  paymentMethod: paymentMethodEnum("payment_method").notNull(),
+  paymentReference: text("payment_reference").notNull(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  transactionId: text("transaction_id"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Disbursement Items (links disbursements to claims)
+export const disbursementItems = pgTable("disbursement_items", {
+  id: serial("id").primaryKey(),
+  disbursementId: integer("disbursement_id").references(() => providerDisbursements.id).notNull(),
+  claimId: integer("claim_id").references(() => claims.id).notNull(),
+  amount: real("amount").notNull(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insurance balance tracking
+export const insuranceBalances = pgTable("insurance_balances", {
+  id: serial("id").primaryKey(),
+  periodId: integer("period_id").references(() => periods.id).notNull(),
+  totalPremiums: real("total_premiums").default(0).notNull(),
+  totalClaims: real("total_claims").default(0).notNull(),
+  pendingClaims: real("pending_claims").default(0).notNull(),
+  activeBalance: real("active_balance").default(0).notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for payment tables
+export const insertPremiumPaymentSchema = createInsertSchema(premiumPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClaimPaymentSchema = createInsertSchema(claimPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderDisbursementSchema = createInsertSchema(providerDisbursements).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDisbursementItemSchema = createInsertSchema(disbursementItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertInsuranceBalanceSchema = createInsertSchema(insuranceBalances).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for payment entities
+export type PremiumPayment = typeof premiumPayments.$inferSelect;
+export type InsertPremiumPayment = z.infer<typeof insertPremiumPaymentSchema>;
+
+export type ClaimPayment = typeof claimPayments.$inferSelect;
+export type InsertClaimPayment = z.infer<typeof insertClaimPaymentSchema>;
+
+export type ProviderDisbursement = typeof providerDisbursements.$inferSelect;
+export type InsertProviderDisbursement = z.infer<typeof insertProviderDisbursementSchema>;
+
+export type DisbursementItem = typeof disbursementItems.$inferSelect;
+export type InsertDisbursementItem = z.infer<typeof insertDisbursementItemSchema>;
+
+export type InsuranceBalance = typeof insuranceBalances.$inferSelect;
+export type InsertInsuranceBalance = z.infer<typeof insertInsuranceBalanceSchema>;
