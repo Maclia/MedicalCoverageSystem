@@ -21,6 +21,12 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatDate } from "@/utils/format";
 import { CompanyBenefit, Company } from "@shared/schema";
 
@@ -29,6 +35,9 @@ type EnhancedCompanyBenefit = CompanyBenefit & {
   benefitCategory?: string;
   companyName?: string;
   premiumPeriodId?: number;
+  limitAmount?: number;
+  limitClause?: string | null;
+  coverageRate?: number;
 };
 
 export default function CompanyBenefitList() {
@@ -88,6 +97,8 @@ export default function CompanyBenefitList() {
               <TableHead>Company</TableHead>
               <TableHead>Benefit</TableHead>
               <TableHead>Category</TableHead>
+              <TableHead>Limit Amount</TableHead>
+              <TableHead>Coverage Rate</TableHead>
               <TableHead>Added Date</TableHead>
               <TableHead>Additional Coverage</TableHead>
             </TableRow>
@@ -104,6 +115,40 @@ export default function CompanyBenefitList() {
                     <Badge variant="outline" className="capitalize">
                       {benefit.benefitCategory}
                     </Badge>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {benefit.limitAmount ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="border-b border-dotted border-gray-400 cursor-help">
+                            ${Number(benefit.limitAmount).toFixed(2)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          {benefit.limitClause ? (
+                            <div>
+                              <strong>Limit Clause:</strong>
+                              <p className="text-xs mt-1">{benefit.limitClause}</p>
+                            </div>
+                          ) : (
+                            "Standard limitation applies"
+                          )}
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : (
+                    <span>No Limit</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {benefit.coverageRate ? (
+                    <Badge variant={benefit.coverageRate >= 100 ? "default" : "outline"}>
+                      {benefit.coverageRate}%
+                    </Badge>
+                  ) : (
+                    "100%"
                   )}
                 </TableCell>
                 <TableCell>{formatDate(benefit.createdAt)}</TableCell>

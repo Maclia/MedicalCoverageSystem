@@ -118,6 +118,9 @@ export const companyBenefits = pgTable("company_benefits", {
   isActive: boolean("is_active").default(true),
   additionalCoverage: boolean("additional_coverage").default(false),
   additionalCoverageDetails: text("additional_coverage_details"),
+  limitAmount: real("limit_amount"), // Custom limit amount per company
+  limitClause: text("limit_clause"), // Limit clause text/description
+  coverageRate: real("coverage_rate").default(100.0), // Coverage rate in percentage (e.g., 80% coverage)
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

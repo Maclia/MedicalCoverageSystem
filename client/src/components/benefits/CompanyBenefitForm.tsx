@@ -26,13 +26,18 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
+import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 
 // Extend the schema with any additional validation
 const formSchema = insertCompanyBenefitSchema.extend({
   // Add any custom validations here
-  companyId: z.coerce.number(),
-  benefitId: z.coerce.number(),
-  premiumId: z.coerce.number()
+  companyId: z.coerce.number().positive("Company is required"),
+  benefitId: z.coerce.number().positive("Benefit is required"),
+  premiumId: z.coerce.number().positive("Premium is required"),
+  limitAmount: z.coerce.number().min(0, "Limit amount must be positive"),
+  limitClause: z.string().optional(),
+  coverageRate: z.coerce.number().min(1, "Coverage rate must be at least 1%").max(100, "Coverage rate cannot exceed 100%")
 });
 
 type CompanyBenefitFormValues = z.infer<typeof formSchema>;
@@ -65,7 +70,10 @@ export default function CompanyBenefitForm({ onSuccess }: CompanyBenefitFormProp
     premiumId: 0,
     isActive: true,
     additionalCoverage: false,
-    additionalCoverageDetails: ""
+    additionalCoverageDetails: "",
+    limitAmount: 0,
+    limitClause: "",
+    coverageRate: 100.0
   };
 
   const form = useForm<CompanyBenefitFormValues>({
@@ -293,6 +301,71 @@ export default function CompanyBenefitForm({ onSuccess }: CompanyBenefitFormProp
                 )}
               />
             )}
+
+            <Separator className="col-span-full my-2" />
+            <h3 className="col-span-full text-lg font-semibold">Custom Benefit Limits</h3>
+            
+            <FormField
+              control={form.control}
+              name="limitAmount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Benefit Limit Amount</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={100}
+                      placeholder="Enter limit amount (0 for no limit)"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.valueAsNumber)}
+                    />
+                  </FormControl>
+                  <FormDescription>The maximum amount covered by this benefit (0 for unlimited)</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="limitClause"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Limit Clause</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      placeholder="Enter any specific limit clauses or conditions"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>Special conditions or clauses for this benefit's limits</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="coverageRate"
+              render={({ field }) => (
+                <FormItem className="col-span-full">
+                  <FormLabel>Coverage Rate: {field.value}%</FormLabel>
+                  <FormControl>
+                    <Slider
+                      defaultValue={[field.value]}
+                      min={1}
+                      max={100}
+                      step={1}
+                      onValueChange={(vals) => field.onChange(vals[0])}
+                    />
+                  </FormControl>
+                  <FormDescription>The percentage of the benefit cost that will be covered (standard is 100%)</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
           </div>
         )}
         
