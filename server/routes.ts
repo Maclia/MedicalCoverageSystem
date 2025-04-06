@@ -84,6 +84,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch members" });
     }
   });
+  
+  // Add endpoint for getting members by company ID in URL path
+  app.get("/api/members/company/:companyId", async (req, res) => {
+    try {
+      const companyId = Number(req.params.companyId);
+      if (isNaN(companyId)) {
+        return res.status(400).json({ error: "Invalid company ID" });
+      }
+      
+      const members = await storage.getMembersByCompany(companyId);
+      
+      // Get company details for reference
+      const company = await storage.getCompany(companyId);
+      if (!company) {
+        return res.status(404).json({ error: "Company not found" });
+      }
+      
+      // Enhance members with company and dependent information
+      const enhancedMembers = await Promise.all(
+        members.map(async (member) => {
+          const result = { 
+            ...member,
+            companyName: company.name 
+          };
+          
+          // If this is a principal member, count the dependents
+          if (member.memberType === 'principal') {
+            const dependents = await storage.getDependentsByPrincipal(member.id);
+            return {
+              ...result,
+              dependentCount: dependents.length
+            };
+          }
+          
+          // If this is a dependent, get principal info
+          if (member.memberType === 'dependent' && member.principalId) {
+            const principal = await storage.getMember(member.principalId);
+            return {
+              ...result,
+              principalName: principal ? `${principal.firstName} ${principal.lastName}` : 'Unknown'
+            };
+          }
+          
+          return result;
+        })
+      );
+      
+      res.json(enhancedMembers);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch member" });
+    }
+  });
 
   app.get("/api/members/principal", async (req, res) => {
     try {
@@ -556,6 +608,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to fetch premiums" });
     }
   });
+  
+  // Add endpoint for getting premiums by company ID in URL path
+  app.get("/api/premiums/company/:companyId", async (req, res) => {
+    try {
+      const companyId = Number(req.params.companyId);
+      if (isNaN(companyId)) {
+        return res.status(400).json({ error: "Invalid company ID" });
+      }
+      
+      const premiums = await storage.getPremiumsByCompany(companyId);
+      
+      // Enhance premiums with period data
+      const enhancedPremiums = await Promise.all(
+        premiums.map(async (premium) => {
+          const period = await storage.getPeriod(premium.periodId);
+          
+          return {
+            ...premium,
+            periodName: period?.name,
+            periodStartDate: period?.startDate,
+            periodEndDate: period?.endDate,
+            periodStatus: period?.status
+          };
+        })
+      );
+      
+      res.json(enhancedPremiums);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch premium" });
+    }
+  });
 
   app.get("/api/premiums/:id", async (req, res) => {
     try {
@@ -783,6 +866,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
             benefitCategory: benefit?.category,
             companyName: company?.name,
             premiumPeriodId: premium?.periodId
+          };
+        })
+      );
+      
+      res.json(enhancedCompanyBenefits);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch company benefits" });
+    }
+  });
+  
+  // Add endpoint for getting company benefits by company ID in URL path
+  app.get("/api/company-benefits/company/:companyId", async (req, res) => {
+    try {
+      const companyId = Number(req.params.companyId);
+      if (isNaN(companyId)) {
+        return res.status(400).json({ error: "Invalid company ID" });
+      }
+      
+      const companyBenefits = await storage.getCompanyBenefitsByCompany(companyId);
+      
+      // Enhance company benefits with related data
+      const enhancedCompanyBenefits = await Promise.all(
+        companyBenefits.map(async (cb) => {
+          const benefit = await storage.getBenefit(cb.benefitId);
+          
+          return {
+            ...cb,
+            benefitName: benefit?.name,
+            benefitDescription: benefit?.description,
+            benefitCategory: benefit?.category,
+            coverageDetails: benefit?.coverageDetails,
+            limitAmount: benefit?.limitAmount
           };
         })
       );
@@ -1220,6 +1335,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         companyPeriods = await storage.getCompanyPeriods();
       }
+      
+      // Enhance company periods with related data
+      const enhancedCompanyPeriods = await Promise.all(
+        companyPeriods.map(async (cp) => {
+          const company = await storage.getCompany(cp.companyId);
+          const period = await storage.getPeriod(cp.periodId);
+          
+          return {
+            ...cp,
+            companyName: company?.name,
+            periodName: period?.name,
+            periodType: period?.type,
+            periodStatus: period?.status,
+            startDate: period?.startDate,
+            endDate: period?.endDate
+          };
+        })
+      );
+      
+      res.json(enhancedCompanyPeriods);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch company periods" });
+    }
+  });
+  
+  // Add endpoint for getting company periods by company ID in URL path
+  app.get("/api/company-periods/company/:companyId", async (req, res) => {
+    try {
+      const companyId = Number(req.params.companyId);
+      if (isNaN(companyId)) {
+        return res.status(400).json({ error: "Invalid company ID" });
+      }
+      
+      const companyPeriods = await storage.getCompanyPeriodsByCompany(companyId);
       
       // Enhance company periods with related data
       const enhancedCompanyPeriods = await Promise.all(

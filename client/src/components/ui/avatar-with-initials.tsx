@@ -1,40 +1,55 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { cn } from "@/lib/utils";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 interface AvatarWithInitialsProps {
   name: string;
-  image?: string;
-  size?: "sm" | "md" | "lg";
-  className?: string;
+  size?: "sm" | "md" | "lg" | "xl";
   bgColor?: string;
+  textColor?: string;
+  className?: string;
 }
 
 export function AvatarWithInitials({
   name,
-  image,
   size = "md",
-  className,
   bgColor = "bg-primary",
+  textColor = "text-primary-foreground",
+  className,
 }: AvatarWithInitialsProps) {
-  // Generate initials from name
-  const initials = name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
-
-  // Determine size class
-  const sizeClass = 
-    size === "sm" 
-      ? "h-8 w-8 text-xs" 
-      : size === "lg" 
-        ? "h-12 w-12 text-lg" 
-        : "h-10 w-10 text-sm";
-
+  // Extract initials from name
+  const getInitials = (name: string) => {
+    if (!name) return "";
+    
+    const parts = name.split(" ").filter(Boolean);
+    if (parts.length === 0) return "";
+    
+    if (parts.length === 1) {
+      return parts[0].charAt(0).toUpperCase();
+    }
+    
+    // Get first letter of first and last name
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+  
+  // Map size to tailwind classes
+  const sizeClasses = {
+    sm: "h-8 w-8 text-xs",
+    md: "h-10 w-10 text-sm",
+    lg: "h-16 w-16 text-lg",
+    xl: "h-24 w-24 text-2xl"
+  };
+  
+  const initials = getInitials(name);
+  
   return (
-    <Avatar className={`${sizeClass} ${className}`}>
-      {image && <AvatarImage src={image} alt={name} />}
-      <AvatarFallback className={`${bgColor} text-white`}>
+    <Avatar className={cn(sizeClasses[size], className)}>
+      <AvatarFallback 
+        className={cn(
+          "font-semibold", 
+          bgColor, 
+          textColor
+        )}
+      >
         {initials}
       </AvatarFallback>
     </Avatar>
