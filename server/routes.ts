@@ -459,22 +459,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Periods
   app.get("/api/periods", async (req, res) => {
     try {
+      console.log('GET /api/periods: Calling storage.getPeriods()');
+      console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+      console.log('Storage implementation type:', storage.constructor.name);
       const periods = await storage.getPeriods();
+      console.log('Periods fetched successfully:', periods.length);
       res.json(periods);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch periods" });
+      console.error('Error fetching periods:', error);
+      res.status(500).json({ error: "Failed to fetch periods", details: error.message });
     }
   });
 
   app.get("/api/periods/active", async (req, res) => {
     try {
+      console.log('GET /api/periods/active: Calling storage.getActivePeriod()');
+      console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
+      console.log('Storage implementation type:', storage.constructor.name);
       const period = await storage.getActivePeriod();
+      console.log('Active period fetched:', period ? 'found' : 'not found');
       if (!period) {
         return res.status(404).json({ error: "No active period found" });
       }
       res.json(period);
     } catch (error) {
-      res.status(500).json({ error: "Failed to fetch active period" });
+      console.error('Error fetching active period:', error);
+      res.status(500).json({ error: "Failed to fetch active period", details: error.message });
     }
   });
 
