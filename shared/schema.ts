@@ -12,6 +12,7 @@ export const institutionTypeEnum = pgEnum('institution_type', ['hospital', 'clin
 export const personnelTypeEnum = pgEnum('personnel_type', ['doctor', 'nurse', 'specialist', 'technician', 'pharmacist', 'therapist', 'other']);
 export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected', 'suspended']);
 export const claimStatusEnum = pgEnum('claim_status', ['submitted', 'under_review', 'approved', 'rejected', 'paid']);
+export const premiumRateTypeEnum = pgEnum('premium_rate_type', ['standard', 'age_banded', 'family_size']);
 
 // Companies table
 export const companies = pgTable("companies", {
@@ -59,11 +60,33 @@ export const periods = pgTable("periods", {
 export const premiumRates = pgTable("premium_rates", {
   id: serial("id").primaryKey(),
   periodId: integer("period_id").references(() => periods.id).notNull(),
+  rateType: premiumRateTypeEnum("rate_type").default("standard").notNull(),
   principalRate: real("principal_rate").notNull(),
   spouseRate: real("spouse_rate").notNull(),
   childRate: real("child_rate").notNull(),
   specialNeedsRate: real("special_needs_rate").notNull(),
   taxRate: real("tax_rate").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Age banded premium rates table
+export const ageBandedRates = pgTable("age_banded_rates", {
+  id: serial("id").primaryKey(),
+  premiumRateId: integer("premium_rate_id").references(() => premiumRates.id).notNull(),
+  minAge: integer("min_age").notNull(),
+  maxAge: integer("max_age").notNull(),
+  rate: real("rate").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Family premium rates table
+export const familyRates = pgTable("family_rates", {
+  id: serial("id").primaryKey(),
+  premiumRateId: integer("premium_rate_id").references(() => premiumRates.id).notNull(),
+  familySize: integer("family_size").notNull(), // 1 = M (Principal only), 2 = M+1, 3 = M+2, etc.
+  description: text("description"), // e.g., "Principal + 1 Dependent", "Principal + 2 Dependents"
+  rate: real("rate").notNull(),
+  maxDependents: integer("max_dependents"), // Maximum number of dependents covered at this rate
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -177,6 +200,16 @@ export const insertCompanyBenefitSchema = createInsertSchema(companyBenefits).om
 });
 
 export const insertCompanyPeriodSchema = createInsertSchema(companyPeriods).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAgeBandedRateSchema = createInsertSchema(ageBandedRates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFamilyRateSchema = createInsertSchema(familyRates).omit({
   id: true,
   createdAt: true,
 });
@@ -358,3 +391,9 @@ export type InsertClaim = z.infer<typeof insertClaimSchema>;
 
 export type CompanyPeriod = typeof companyPeriods.$inferSelect;
 export type InsertCompanyPeriod = z.infer<typeof insertCompanyPeriodSchema>;
+
+export type AgeBandedRate = typeof ageBandedRates.$inferSelect;
+export type InsertAgeBandedRate = z.infer<typeof insertAgeBandedRateSchema>;
+
+export type FamilyRate = typeof familyRates.$inferSelect;
+export type InsertFamilyRate = z.infer<typeof insertFamilyRateSchema>;

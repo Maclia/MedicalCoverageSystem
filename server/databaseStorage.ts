@@ -173,6 +173,64 @@ export class DatabaseStorage implements IStorage {
     return newRate;
   }
   
+  // Age Banded Rates
+  async getAgeBandedRates(): Promise<schema.AgeBandedRate[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select().from(schema.ageBandedRates);
+  }
+  
+  async getAgeBandedRatesByPremiumRate(premiumRateId: number): Promise<schema.AgeBandedRate[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.ageBandedRates)
+      .where(eq(schema.ageBandedRates.premiumRateId, premiumRateId));
+  }
+  
+  async getAgeBandedRate(id: number): Promise<schema.AgeBandedRate | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [rate] = await db.select()
+      .from(schema.ageBandedRates)
+      .where(eq(schema.ageBandedRates.id, id));
+    return rate;
+  }
+  
+  async createAgeBandedRate(ageBandedRate: schema.InsertAgeBandedRate): Promise<schema.AgeBandedRate> {
+    if (!db) throw new Error('Database not connected');
+    const [newRate] = await db.insert(schema.ageBandedRates)
+      .values(ageBandedRate)
+      .returning();
+    return newRate;
+  }
+  
+  // Family Rates
+  async getFamilyRates(): Promise<schema.FamilyRate[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select().from(schema.familyRates);
+  }
+  
+  async getFamilyRatesByPremiumRate(premiumRateId: number): Promise<schema.FamilyRate[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.familyRates)
+      .where(eq(schema.familyRates.premiumRateId, premiumRateId));
+  }
+  
+  async getFamilyRate(id: number): Promise<schema.FamilyRate | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [rate] = await db.select()
+      .from(schema.familyRates)
+      .where(eq(schema.familyRates.id, id));
+    return rate;
+  }
+  
+  async createFamilyRate(familyRate: schema.InsertFamilyRate): Promise<schema.FamilyRate> {
+    if (!db) throw new Error('Database not connected');
+    const [newRate] = await db.insert(schema.familyRates)
+      .values(familyRate)
+      .returning();
+    return newRate;
+  }
+  
   // Premiums
   async getPremiums(): Promise<schema.Premium[]> {
     if (!db) throw new Error('Database not connected');

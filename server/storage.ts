@@ -11,7 +11,9 @@ import {
   MedicalInstitution, InsertMedicalInstitution,
   MedicalPersonnel, InsertMedicalPersonnel,
   PanelDocumentation, InsertPanelDocumentation,
-  Claim, InsertClaim
+  Claim, InsertClaim,
+  AgeBandedRate, InsertAgeBandedRate,
+  FamilyRate, InsertFamilyRate
 } from "@shared/schema";
 
 // Storage interface
@@ -41,6 +43,18 @@ export interface IStorage {
   getPremiumRates(): Promise<PremiumRate[]>;
   getPremiumRateByPeriod(periodId: number): Promise<PremiumRate | undefined>;
   createPremiumRate(premiumRate: InsertPremiumRate): Promise<PremiumRate>;
+  
+  // Age banded rate methods
+  getAgeBandedRates(): Promise<AgeBandedRate[]>;
+  getAgeBandedRatesByPremiumRate(premiumRateId: number): Promise<AgeBandedRate[]>;
+  getAgeBandedRate(id: number): Promise<AgeBandedRate | undefined>;
+  createAgeBandedRate(ageBandedRate: InsertAgeBandedRate): Promise<AgeBandedRate>;
+  
+  // Family rate methods
+  getFamilyRates(): Promise<FamilyRate[]>;
+  getFamilyRatesByPremiumRate(premiumRateId: number): Promise<FamilyRate[]>;
+  getFamilyRate(id: number): Promise<FamilyRate | undefined>;
+  createFamilyRate(familyRate: InsertFamilyRate): Promise<FamilyRate>;
   
   // Premium methods
   getPremiums(): Promise<Premium[]>;
@@ -130,6 +144,8 @@ export class MemStorage implements IStorage {
   private medicalPersonnel: Map<number, MedicalPersonnel>;
   private panelDocumentations: Map<number, PanelDocumentation>;
   private claims: Map<number, Claim>;
+  private ageBandedRates: Map<number, AgeBandedRate>;
+  private familyRates: Map<number, FamilyRate>;
   
   private companyId: number;
   private memberId: number;
@@ -144,6 +160,8 @@ export class MemStorage implements IStorage {
   private medicalPersonnelId: number;
   private panelDocumentationId: number;
   private claimId: number;
+  private ageBandedRateId: number;
+  private familyRateId: number;
   
   constructor() {
     this.companies = new Map();
@@ -159,6 +177,8 @@ export class MemStorage implements IStorage {
     this.medicalPersonnel = new Map();
     this.panelDocumentations = new Map();
     this.claims = new Map();
+    this.ageBandedRates = new Map();
+    this.familyRates = new Map();
     
     this.companyId = 1;
     this.memberId = 1;
@@ -173,6 +193,8 @@ export class MemStorage implements IStorage {
     this.medicalPersonnelId = 1;
     this.panelDocumentationId = 1;
     this.claimId = 1;
+    this.ageBandedRateId = 1;
+    this.familyRateId = 1;
     
     // Initialize with a default active period, rates, and benefits
     this.initializeDefaultData();
@@ -425,6 +447,58 @@ export class MemStorage implements IStorage {
     return newPremiumRate;
   }
   
+  // Age Banded Rate methods
+  async getAgeBandedRates(): Promise<AgeBandedRate[]> {
+    return Array.from(this.ageBandedRates.values());
+  }
+  
+  async getAgeBandedRatesByPremiumRate(premiumRateId: number): Promise<AgeBandedRate[]> {
+    return Array.from(this.ageBandedRates.values()).filter(
+      rate => rate.premiumRateId === premiumRateId
+    );
+  }
+  
+  async getAgeBandedRate(id: number): Promise<AgeBandedRate | undefined> {
+    return this.ageBandedRates.get(id);
+  }
+  
+  async createAgeBandedRate(ageBandedRate: InsertAgeBandedRate): Promise<AgeBandedRate> {
+    const id = this.ageBandedRateId++;
+    const newAgeBandedRate: AgeBandedRate = {
+      ...ageBandedRate,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.ageBandedRates.set(id, newAgeBandedRate);
+    return newAgeBandedRate;
+  }
+  
+  // Family Rate methods
+  async getFamilyRates(): Promise<FamilyRate[]> {
+    return Array.from(this.familyRates.values());
+  }
+  
+  async getFamilyRatesByPremiumRate(premiumRateId: number): Promise<FamilyRate[]> {
+    return Array.from(this.familyRates.values()).filter(
+      rate => rate.premiumRateId === premiumRateId
+    );
+  }
+  
+  async getFamilyRate(id: number): Promise<FamilyRate | undefined> {
+    return this.familyRates.get(id);
+  }
+  
+  async createFamilyRate(familyRate: InsertFamilyRate): Promise<FamilyRate> {
+    const id = this.familyRateId++;
+    const newFamilyRate: FamilyRate = {
+      ...familyRate,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.familyRates.set(id, newFamilyRate);
+    return newFamilyRate;
+  }
+  
   // Premium methods
   async getPremiums(): Promise<Premium[]> {
     return Array.from(this.premiums.values());
@@ -636,7 +710,7 @@ export class MemStorage implements IStorage {
     return Array.from(this.medicalPersonnel.values());
   }
   
-  async getMedicalPersonnel(id: number): Promise<MedicalPersonnel | undefined> {
+  async getMedicalPersonnelById(id: number): Promise<MedicalPersonnel | undefined> {
     return this.medicalPersonnel.get(id);
   }
   
