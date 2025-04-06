@@ -302,164 +302,114 @@ export default function MemberDashboard() {
 
       {/* Tabs for Benefits and Claims */}
       <Card>
-        <CardHeader className="pb-0">
-          <Tabs defaultValue="benefits" value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue="benefits" value={activeTab} onValueChange={setActiveTab}>
+          <CardHeader className="pb-0">
             <TabsList>
               <TabsTrigger value="benefits">Benefits & Balance</TabsTrigger>
               <TabsTrigger value="claims">Claims History</TabsTrigger>
               <TabsTrigger value="rejected">Rejected Claims</TabsTrigger>
             </TabsList>
-          </Tabs>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {/* Benefits Tab */}
-          <TabsContent value="benefits" className="mt-0">
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Available Benefits & Usage</h3>
-              
-              {benefitsWithUsage.length === 0 ? (
-                <div className="p-4 text-center border rounded-md bg-muted/50">
-                  <p>No benefits are currently assigned to this member.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {benefitsWithUsage.map(benefit => (
-                    <Card key={benefit.benefitId} className="overflow-hidden">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <CardTitle className="text-lg">{benefit.name}</CardTitle>
-                            <Badge className="mt-1 bg-blue-600">{formatCategory(benefit.category)}</Badge>
+          </CardHeader>
+          
+          <CardContent className="pt-6">
+            <TabsContent value="benefits" className="mt-0">
+              <div className="space-y-6">
+                <h3 className="text-lg font-semibold">Available Benefits & Usage</h3>
+                
+                {benefitsWithUsage.length === 0 ? (
+                  <div className="p-4 text-center border rounded-md bg-muted/50">
+                    <p>No benefits are currently assigned to this member.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    {benefitsWithUsage.map(benefit => (
+                      <Card key={benefit.benefitId} className="overflow-hidden">
+                        <CardHeader className="pb-2">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <CardTitle className="text-lg">{benefit.name}</CardTitle>
+                              <Badge className="mt-1 bg-blue-600">{formatCategory(benefit.category)}</Badge>
+                            </div>
+                            {benefit.additionalCoverage && (
+                              <Badge className="bg-green-600">Additional Coverage</Badge>
+                            )}
                           </div>
-                          {benefit.additionalCoverage && (
-                            <Badge className="bg-green-600">Additional Coverage</Badge>
-                          )}
-                        </div>
-                        <CardDescription className="mt-2">{benefit.description}</CardDescription>
-                      </CardHeader>
-                      
-                      <CardContent>
-                        <div className="mb-4">
-                          <div className="flex justify-between mb-1">
-                            <span className="text-sm font-medium">
-                              Used: {formatCurrency(benefit.usedAmount)}
-                              {benefit.hasLimit && ` of ${formatCurrency(benefit.limitAmount)}`}
-                            </span>
-                            {benefit.hasLimit && (
+                          <CardDescription className="mt-2">{benefit.description}</CardDescription>
+                        </CardHeader>
+                        
+                        <CardContent>
+                          <div className="mb-4">
+                            <div className="flex justify-between mb-1">
                               <span className="text-sm font-medium">
-                                {benefit.usagePercentage.toFixed(0)}% Used
+                                Used: {formatCurrency(benefit.usedAmount)}
+                                {benefit.hasLimit && ` of ${formatCurrency(benefit.limitAmount)}`}
                               </span>
+                              {benefit.hasLimit && (
+                                <span className="text-sm font-medium">
+                                  {benefit.usagePercentage.toFixed(0)}% Used
+                                </span>
+                              )}
+                            </div>
+                            
+                            {benefit.hasLimit ? (
+                              <>
+                                <Progress value={benefit.usagePercentage} className="h-2" />
+                                <div className="flex justify-between mt-1">
+                                  <span className="text-xs text-gray-600">
+                                    Remaining: {formatCurrency(benefit.remainingAmount)}
+                                  </span>
+                                  <span className="text-xs text-gray-600">
+                                    {benefit.claims.length} Approved Claims
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <div className="mt-1 text-sm">
+                                <span className="text-gray-600">No limit set for this benefit</span>
+                                <div className="text-xs mt-1">
+                                  {benefit.claims.length} Approved Claims
+                                </div>
+                              </div>
                             )}
                           </div>
                           
-                          {benefit.hasLimit ? (
-                            <>
-                              <Progress value={benefit.usagePercentage} className="h-2" />
-                              <div className="flex justify-between mt-1">
-                                <span className="text-xs text-gray-600">
-                                  Remaining: {formatCurrency(benefit.remainingAmount)}
-                                </span>
-                                <span className="text-xs text-gray-600">
-                                  {benefit.claims.length} Approved Claims
-                                </span>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="mt-1 text-sm">
-                              <span className="text-gray-600">No limit set for this benefit</span>
-                              <div className="text-xs mt-1">
-                                {benefit.claims.length} Approved Claims
-                              </div>
+                          {/* Show rejected claims count if any */}
+                          {benefit.rejectedClaims.length > 0 && (
+                            <div className="text-sm mt-2 p-2 bg-red-50 border border-red-100 rounded">
+                              <span className="text-red-700 font-medium">
+                                {benefit.rejectedClaims.length} rejected {benefit.rejectedClaims.length === 1 ? 'claim' : 'claims'}
+                              </span>
                             </div>
                           )}
-                        </div>
-                        
-                        {/* Show rejected claims count if any */}
-                        {benefit.rejectedClaims.length > 0 && (
-                          <div className="text-sm mt-2 p-2 bg-red-50 border border-red-100 rounded">
-                            <span className="text-red-700 font-medium">
-                              {benefit.rejectedClaims.length} rejected {benefit.rejectedClaims.length === 1 ? 'claim' : 'claims'}
-                            </span>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          </TabsContent>
-          
-          {/* Claims History Tab */}
-          <TabsContent value="claims" className="mt-0">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Claims History</h3>
-              
-              {(!memberClaims || memberClaims.length === 0) ? (
-                <div className="p-4 text-center border rounded-md bg-muted/50">
-                  <p>No claims have been submitted for this member.</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Benefit</TableHead>
-                      <TableHead>Service Date</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Description</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {memberClaims.map((claim: Claim) => {
-                      const benefit = allBenefits?.find((b: Benefit) => b.id === claim.benefitId);
-                      return (
-                        <TableRow key={claim.id}>
-                          <TableCell className="font-medium">{benefit?.name || 'Unknown'}</TableCell>
-                          <TableCell>{format(new Date(claim.serviceDate), "MMM d, yyyy")}</TableCell>
-                          <TableCell>{formatCurrency(claim.amount)}</TableCell>
-                          <TableCell>
-                            <Badge className={getStatusBadgeColor(claim.status)}>
-                              {claim.status.replace(/_/g, ' ').toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate">
-                            {claim.description}
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </TabsContent>
-          
-          {/* Rejected Claims Tab */}
-          <TabsContent value="rejected" className="mt-0">
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Rejected Claims</h3>
-              
-              {
-                (!memberClaims || memberClaims.filter((claim: Claim) => claim.status === 'rejected').length === 0) ? (
-                <div className="p-4 text-center border rounded-md bg-muted/50">
-                  <p>No rejected claims for this member.</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Benefit</TableHead>
-                      <TableHead>Service Date</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Review Date</TableHead>
-                      <TableHead>Reviewer Notes</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {memberClaims
-                      .filter((claim: Claim) => claim.status === 'rejected')
-                      .map((claim: Claim) => {
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="claims" className="mt-0">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Claims History</h3>
+                
+                {(!memberClaims || memberClaims.length === 0) ? (
+                  <div className="p-4 text-center border rounded-md bg-muted/50">
+                    <p>No claims have been submitted for this member.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Benefit</TableHead>
+                        <TableHead>Service Date</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Description</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {memberClaims.map((claim: Claim) => {
                         const benefit = allBenefits?.find((b: Benefit) => b.id === claim.benefitId);
                         return (
                           <TableRow key={claim.id}>
@@ -467,20 +417,68 @@ export default function MemberDashboard() {
                             <TableCell>{format(new Date(claim.serviceDate), "MMM d, yyyy")}</TableCell>
                             <TableCell>{formatCurrency(claim.amount)}</TableCell>
                             <TableCell>
-                              {claim.reviewDate ? format(new Date(claim.reviewDate), "MMM d, yyyy") : 'N/A'}
+                              <Badge className={getStatusBadgeColor(claim.status)}>
+                                {claim.status.replace(/_/g, ' ').toUpperCase()}
+                              </Badge>
                             </TableCell>
-                            <TableCell className="max-w-xs">
-                              {claim.reviewerNotes || 'No notes provided'}
+                            <TableCell className="max-w-xs truncate">
+                              {claim.description}
                             </TableCell>
                           </TableRow>
                         );
                       })}
-                  </TableBody>
-                </Table>
-              )}
-            </div>
-          </TabsContent>
-        </CardContent>
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="rejected" className="mt-0">
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Rejected Claims</h3>
+                
+                {
+                  (!memberClaims || memberClaims.filter((claim: Claim) => claim.status === 'rejected').length === 0) ? (
+                  <div className="p-4 text-center border rounded-md bg-muted/50">
+                    <p>No rejected claims for this member.</p>
+                  </div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Benefit</TableHead>
+                        <TableHead>Service Date</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Review Date</TableHead>
+                        <TableHead>Reviewer Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {memberClaims
+                        .filter((claim: Claim) => claim.status === 'rejected')
+                        .map((claim: Claim) => {
+                          const benefit = allBenefits?.find((b: Benefit) => b.id === claim.benefitId);
+                          return (
+                            <TableRow key={claim.id}>
+                              <TableCell className="font-medium">{benefit?.name || 'Unknown'}</TableCell>
+                              <TableCell>{format(new Date(claim.serviceDate), "MMM d, yyyy")}</TableCell>
+                              <TableCell>{formatCurrency(claim.amount)}</TableCell>
+                              <TableCell>
+                                {claim.reviewDate ? format(new Date(claim.reviewDate), "MMM d, yyyy") : 'N/A'}
+                              </TableCell>
+                              <TableCell className="max-w-xs">
+                                {claim.reviewerNotes || 'No notes provided'}
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                    </TableBody>
+                  </Table>
+                )}
+              </div>
+            </TabsContent>
+          </CardContent>
+        </Tabs>
       </Card>
     </div>
   );
