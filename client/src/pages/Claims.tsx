@@ -137,10 +137,120 @@ export default function Claims() {
   });
 
   // Form handlers
+  const [claimError, setClaimError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Function to check member benefits eligibility
+  const checkMemberEligibility = async (memberId: number, benefitId: number): Promise<boolean> => {
+    try {
+      // This is a simplified check - in a real implementation we would call an API endpoint
+      // that checks eligibility against the current period and premium
+      const { data: member } = await queryClient.fetchQuery({
+        queryKey: [`/api/members/${memberId}`],
+        queryFn: (): Promise<Member> => 
+          fetch(`/api/members/${memberId}`).then(res => {
+            if (!res.ok) throw new Error('Member not found');
+            return res.json();
+          })
+      });
+      
+      // Find active premium for the member's company
+      const { data: activePeriod } = await queryClient.fetchQuery({
+        queryKey: ['/api/periods/active'],
+        queryFn: () => 
+          fetch('/api/periods/active').then(res => {
+            if (!res.ok) throw new Error('No active period found');
+            return res.json();
+          })
+      });
+      
+      // Get company premiums
+      const { data: premiums } = await queryClient.fetchQuery({
+        queryKey: [`/api/premiums?companyId=${member.companyId}`],
+        queryFn: (): Promise<Premium[]> => 
+          fetch(`/api/premiums?companyId=${member.companyId}`).then(res => {
+            if (!res.ok) throw new Error('No premiums found for company');
+            return res.json();
+          })
+      });
+      
+      // Find active premium
+      const activePremium = premiums.find(p => p.periodId === activePeriod.id);
+      if (!activePremium) {
+        setClaimError("Member's company does not have an active premium for the current period");
+        return false;
+      }
+      
+      // Get company benefits
+      const { data: companyBenefits } = await queryClient.fetchQuery({
+        queryKey: [`/api/company-benefits?premiumId=${activePremium.id}`],
+        queryFn: () => 
+          fetch(`/api/company-benefits?premiumId=${activePremium.id}`).then(res => {
+            if (!res.ok) throw new Error('No benefits found for this premium');
+            return res.json();
+          })
+      });
+      
+      // Check if benefit is included in company package
+      const hasBenefit = companyBenefits.some((cb: any) => cb.benefitId === benefitId);
+      
+      if (!hasBenefit) {
+        setClaimError("The selected benefit is not included in the member's insurance package");
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error checking eligibility:", error);
+      setClaimError(error instanceof Error ? error.message : "Failed to verify member eligibility");
+      return false;
+    }
+  };
+  
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setClaimError(null);
+    setIsSubmitting(true);
     
     try {
+      // Pre-validate to ensure the medical personnel belongs to the institution
+      if (claimForm.personnelId && claimForm.institutionId) {
+        const matchingPersonnel = personnel?.find(p => 
+          p.id === claimForm.personnelId && p.institutionId === claimForm.institutionId
+        );
+        
+        if (!matchingPersonnel) {
+          setClaimError("Selected medical personnel does not belong to the selected institution");
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
+      // Validate that the institution is approved
+      const institution = institutions?.find(i => i.id === claimForm.institutionId);
+      if (institution && institution.approvalStatus !== 'approved') {
+        setClaimError(`This medical institution is not approved to submit claims (Status: ${institution.approvalStatus})`);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Validate that the personnel is approved
+      const person = personnel?.find(p => p.id === claimForm.personnelId);
+      if (person && person.approvalStatus !== 'approved') {
+        setClaimError(`This medical personnel is not approved to submit claims (Status: ${person.approvalStatus})`);
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Check member benefit eligibility
+      if (claimForm.memberId && claimForm.benefitId) {
+        const isEligible = await checkMemberEligibility(claimForm.memberId, claimForm.benefitId);
+        if (!isEligible) {
+          setIsSubmitting(false);
+          return;
+        }
+      }
+      
       const formData = {
         ...claimForm,
         amount: parseFloat(claimForm.amount)
@@ -154,9 +264,10 @@ export default function Claims() {
         body: JSON.stringify(formData),
       });
       
+      const responseData = await response.json();
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create claim');
+        throw new Error(responseData.error || 'Failed to create claim');
       }
       
       // Clear form and close dialog
@@ -184,6 +295,8 @@ export default function Claims() {
         description: error instanceof Error ? error.message : "Failed to create claim",
         variant: "destructive",
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -394,6 +507,20 @@ export default function Claims() {
             </DialogHeader>
             
             <form onSubmit={handleSubmit} className="space-y-4">
+              {claimError && (
+                <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4 mb-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <i className="material-icons text-red-500">error</i>
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">Claim Validation Error</h3>
+                      <p className="text-sm mt-1">{claimError}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="memberId">Member</Label>
@@ -522,7 +649,16 @@ export default function Claims() {
               </div>
               
               <div className="flex justify-end">
-                <Button type="submit">Submit Claim</Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? (
+                    <>
+                      <span className="mr-2 animate-spin">⟳</span>
+                      Validating...
+                    </>
+                  ) : (
+                    'Submit Claim'
+                  )}
+                </Button>
               </div>
             </form>
           </DialogContent>

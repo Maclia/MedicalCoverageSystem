@@ -800,6 +800,82 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/claims", validateRequest(insertClaimSchema), async (req, res) => {
     try {
+      const { memberId, institutionId, personnelId, benefitId } = req.body;
+      
+      // 1. Verify member exists
+      const member = await storage.getMember(memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      
+      // 2. Verify medical institution exists and is approved
+      const institution = await storage.getMedicalInstitution(institutionId);
+      if (!institution) {
+        return res.status(404).json({ error: "Medical institution not found" });
+      }
+      
+      if (institution.approvalStatus !== 'approved') {
+        return res.status(403).json({ 
+          error: "Medical institution is not approved to submit claims",
+          status: institution.approvalStatus
+        });
+      }
+      
+      // 3. Verify medical personnel exists, belongs to this institution, and is approved
+      const personnel = await storage.getMedicalPersonnel(personnelId);
+      if (!personnel) {
+        return res.status(404).json({ error: "Medical personnel not found" });
+      }
+      
+      if (personnel.institutionId !== institutionId) {
+        return res.status(403).json({ 
+          error: "Medical personnel does not belong to the specified institution" 
+        });
+      }
+      
+      if (personnel.approvalStatus !== 'approved') {
+        return res.status(403).json({ 
+          error: "Medical personnel is not approved to submit claims",
+          status: personnel.approvalStatus
+        });
+      }
+      
+      // 4. Verify the benefit exists
+      const benefit = await storage.getBenefit(benefitId);
+      if (!benefit) {
+        return res.status(404).json({ error: "Benefit not found" });
+      }
+      
+      // 5. Verify the member is eligible for this benefit
+      // Get active period
+      const activePeriod = await storage.getActivePeriod();
+      if (!activePeriod) {
+        return res.status(404).json({ error: "No active period found" });
+      }
+      
+      // Find the company's premium for the active period
+      const premiums = await storage.getPremiumsByCompany(member.companyId);
+      const activePremium = premiums.find(p => p.periodId === activePeriod.id);
+      
+      if (!activePremium) {
+        return res.status(403).json({ 
+          error: "Member's company does not have an active premium for the current period" 
+        });
+      }
+      
+      // Get company benefits for this premium
+      const companyBenefits = await storage.getCompanyBenefitsByPremium(activePremium.id);
+      
+      // Check if the specified benefit is included in the company's package
+      const hasBenefit = companyBenefits.some(cb => cb.benefitId === benefitId);
+      
+      if (!hasBenefit) {
+        return res.status(403).json({ 
+          error: "The requested benefit is not included in the member's insurance package" 
+        });
+      }
+      
+      // If all validation passes, create the claim
       const claim = await storage.createClaim(req.body);
       res.status(201).json(claim);
     } catch (error) {
