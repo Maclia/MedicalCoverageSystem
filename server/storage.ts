@@ -433,6 +433,7 @@ export class MemStorage implements IStorage {
   }
   
   async createPremium(premium: InsertPremium): Promise<Premium> {
+    console.log("Creating premium with data:", premium);
     const id = this.premiumId++;
     const newPremium: Premium = {
       ...premium,
@@ -440,6 +441,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date().toISOString()
     };
     this.premiums.set(id, newPremium);
+    console.log("Premium created successfully:", newPremium);
     return newPremium;
   }
 

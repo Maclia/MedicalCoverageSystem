@@ -76,6 +76,10 @@ export const premiums = pgTable("premiums", {
   subtotal: real("subtotal").notNull(),
   tax: real("tax").notNull(),
   total: real("total").notNull(),
+  status: text("status").default('active').notNull(),
+  issuedDate: timestamp("issued_date").notNull(),
+  paidDate: timestamp("paid_date"),
+  notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

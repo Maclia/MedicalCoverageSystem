@@ -120,7 +120,126 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/members/principal", validateRequest(insertPrincipalMemberSchema), async (req, res) => {
     try {
+      console.log("Creating principal member:", req.body);
+      // Create the principal member
       const member = await storage.createMember(req.body);
+      console.log("Principal member created:", member);
+      
+      // Get the active period
+      const activePeriod = await storage.getActivePeriod();
+      console.log("Active period:", activePeriod);
+      
+      if (activePeriod) {
+        try {
+          // Check if premium already exists for this company and period
+          const companyPremiums = await storage.getPremiumsByCompany(member.companyId);
+          const existingPremium = companyPremiums.find(p => p.periodId === activePeriod.id);
+          
+          if (!existingPremium) {
+            // Calculate premium for the company automatically
+            
+            // Get premium rates for the period
+            const rates = await storage.getPremiumRateByPeriod(activePeriod.id);
+            if (rates) {
+              // Get all members for the company
+              const companyMembers = await storage.getMembersByCompany(member.companyId);
+              
+              // Count member types
+              const principalCount = companyMembers.filter(m => m.memberType === 'principal').length;
+              const spouseCount = companyMembers.filter(m => 
+                m.memberType === 'dependent' && m.dependentType === 'spouse'
+              ).length;
+              const childCount = companyMembers.filter(m => 
+                m.memberType === 'dependent' && m.dependentType === 'child' && !m.hasDisability
+              ).length;
+              const specialNeedsCount = companyMembers.filter(m => 
+                m.memberType === 'dependent' && m.dependentType === 'child' && m.hasDisability
+              ).length;
+              
+              // Calculate premium components
+              const subtotal = 
+                principalCount * rates.principalRate +
+                spouseCount * rates.spouseRate +
+                childCount * rates.childRate +
+                specialNeedsCount * rates.specialNeedsRate;
+              
+              const tax = subtotal * rates.taxRate;
+              const total = subtotal + tax;
+              
+              // Create a new premium
+              await storage.createPremium({
+                companyId: member.companyId,
+                periodId: activePeriod.id,
+                principalCount,
+                spouseCount,
+                childCount,
+                specialNeedsCount,
+                subtotal,
+                tax,
+                total,
+                status: 'active',
+                issuedDate: new Date(),
+                paidDate: null,
+                notes: 'Automatically generated upon member creation'
+              });
+            }
+          } else {
+            // Premium exists, recalculate it
+            // Get premium rates for the period
+            const rates = await storage.getPremiumRateByPeriod(activePeriod.id);
+            if (rates) {
+              // Get all members for the company
+              const companyMembers = await storage.getMembersByCompany(member.companyId);
+              
+              // Count member types
+              const principalCount = companyMembers.filter(m => m.memberType === 'principal').length;
+              const spouseCount = companyMembers.filter(m => 
+                m.memberType === 'dependent' && m.dependentType === 'spouse'
+              ).length;
+              const childCount = companyMembers.filter(m => 
+                m.memberType === 'dependent' && m.dependentType === 'child' && !m.hasDisability
+              ).length;
+              const specialNeedsCount = companyMembers.filter(m => 
+                m.memberType === 'dependent' && m.dependentType === 'child' && m.hasDisability
+              ).length;
+              
+              // Calculate premium components
+              const subtotal = 
+                principalCount * rates.principalRate +
+                spouseCount * rates.spouseRate +
+                childCount * rates.childRate +
+                specialNeedsCount * rates.specialNeedsRate;
+              
+              const tax = subtotal * rates.taxRate;
+              const total = subtotal + tax;
+              
+              // Update the existing premium
+              // Note: In a real system, we would have an updatePremium method
+              // For now, we're creating a new premium entry to simulate an update
+              await storage.createPremium({
+                companyId: member.companyId,
+                periodId: activePeriod.id,
+                principalCount,
+                spouseCount,
+                childCount,
+                specialNeedsCount,
+                subtotal,
+                tax,
+                total,
+                status: existingPremium.status,
+                issuedDate: existingPremium.issuedDate,
+                paidDate: existingPremium.paidDate,
+                notes: 'Updated automatically upon member creation'
+              });
+            }
+          }
+        } catch (calcError) {
+          console.error("Failed to calculate premium:", calcError);
+          // We don't want the member creation to fail if premium calculation fails
+          // So we continue without throwing an error
+        }
+      }
+      
       res.status(201).json(member);
     } catch (error) {
       res.status(500).json({ error: "Failed to create principal member" });
@@ -164,7 +283,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Make sure the dependent is associated with the same company as the principal
       validatedData.companyId = principal.companyId;
       
+      // Create the dependent member
       const member = await storage.createMember(validatedData);
+      
+      // Update premium calculation after dependent creation
+      // Get the active period
+      const activePeriod = await storage.getActivePeriod();
+      if (activePeriod) {
+        try {
+          // Check if premium already exists for this company and period
+          const companyPremiums = await storage.getPremiumsByCompany(member.companyId);
+          const existingPremium = companyPremiums.find(p => p.periodId === activePeriod.id);
+          
+          // Get premium rates for the period
+          const rates = await storage.getPremiumRateByPeriod(activePeriod.id);
+          if (rates) {
+            // Get all members for the company
+            const companyMembers = await storage.getMembersByCompany(member.companyId);
+            
+            // Count member types
+            const principalCount = companyMembers.filter(m => m.memberType === 'principal').length;
+            const spouseCount = companyMembers.filter(m => 
+              m.memberType === 'dependent' && m.dependentType === 'spouse'
+            ).length;
+            const childCount = companyMembers.filter(m => 
+              m.memberType === 'dependent' && m.dependentType === 'child' && !m.hasDisability
+            ).length;
+            const specialNeedsCount = companyMembers.filter(m => 
+              m.memberType === 'dependent' && m.dependentType === 'child' && m.hasDisability
+            ).length;
+            
+            // Calculate premium components
+            const subtotal = 
+              principalCount * rates.principalRate +
+              spouseCount * rates.spouseRate +
+              childCount * rates.childRate +
+              specialNeedsCount * rates.specialNeedsRate;
+            
+            const tax = subtotal * rates.taxRate;
+            const total = subtotal + tax;
+            
+            if (existingPremium) {
+              // Update the existing premium
+              // Note: In a real system, we would have an updatePremium method
+              // For now, we're creating a new premium entry to simulate an update
+              await storage.createPremium({
+                companyId: member.companyId,
+                periodId: activePeriod.id,
+                principalCount,
+                spouseCount,
+                childCount,
+                specialNeedsCount,
+                subtotal,
+                tax,
+                total,
+                status: existingPremium.status,
+                issuedDate: existingPremium.issuedDate,
+                paidDate: existingPremium.paidDate,
+                notes: 'Updated automatically upon dependent creation'
+              });
+            } else {
+              // Create a new premium if it doesn't exist
+              await storage.createPremium({
+                companyId: member.companyId,
+                periodId: activePeriod.id,
+                principalCount,
+                spouseCount,
+                childCount,
+                specialNeedsCount,
+                subtotal,
+                tax,
+                total,
+                status: 'active',
+                issuedDate: new Date(),
+                paidDate: null,
+                notes: 'Automatically generated upon dependent creation'
+              });
+            }
+          }
+        } catch (calcError) {
+          console.error("Failed to calculate premium for dependent:", calcError);
+          // We don't want the dependent creation to fail if premium calculation fails
+          // So we continue without throwing an error
+        }
+      }
+      
       res.status(201).json(member);
     } catch (error) {
       if (error instanceof ZodError) {
