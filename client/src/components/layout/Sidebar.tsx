@@ -47,16 +47,13 @@ export default function Sidebar() {
           <Link 
             key={link.path} 
             href={link.path}
+            className={cn(
+              "flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50",
+              location === link.path && "bg-primary-50 border-l-4 border-primary"
+            )}
           >
-            <a 
-              className={cn(
-                "flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50",
-                location === link.path && "bg-primary-50 border-l-4 border-primary"
-              )}
-            >
-              <i className="material-icons text-lg mr-3 text-neutral-500">{link.icon}</i>
-              {link.label}
-            </a>
+            <i className="material-icons text-lg mr-3 text-neutral-500">{link.icon}</i>
+            {link.label}
           </Link>
         ))}
         
@@ -67,16 +64,13 @@ export default function Sidebar() {
           <Link 
             key={link.path} 
             href={link.path}
+            className={cn(
+              "flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50",
+              location === link.path && "bg-primary-50 border-l-4 border-primary"
+            )}
           >
-            <a 
-              className={cn(
-                "flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50",
-                location === link.path && "bg-primary-50 border-l-4 border-primary"
-              )}
-            >
-              <i className="material-icons text-lg mr-3 text-neutral-500">{link.icon}</i>
-              {link.label}
-            </a>
+            <i className="material-icons text-lg mr-3 text-neutral-500">{link.icon}</i>
+            {link.label}
           </Link>
         ))}
         
@@ -87,16 +81,13 @@ export default function Sidebar() {
           <Link 
             key={link.path} 
             href={link.path}
+            className={cn(
+              "flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50",
+              location === link.path && "bg-primary-50 border-l-4 border-primary"
+            )}
           >
-            <a 
-              className={cn(
-                "flex items-center px-4 py-3 text-sm font-medium text-neutral-700 hover:bg-neutral-50",
-                location === link.path && "bg-primary-50 border-l-4 border-primary"
-              )}
-            >
-              <i className="material-icons text-lg mr-3 text-neutral-500">{link.icon}</i>
-              {link.label}
-            </a>
+            <i className="material-icons text-lg mr-3 text-neutral-500">{link.icon}</i>
+            {link.label}
           </Link>
         ))}
       </nav>

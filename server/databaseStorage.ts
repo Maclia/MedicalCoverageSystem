@@ -1000,6 +1000,22 @@ export class DatabaseStorage implements IStorage {
     const [newProcedure] = await db.insert(schema.medicalProcedures).values(procedure).returning();
     return newProcedure;
   }
+  
+  async getActiveMedicalProcedures(): Promise<schema.MedicalProcedure[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.medicalProcedures)
+      .where(eq(schema.medicalProcedures.active, true))
+      .orderBy(asc(schema.medicalProcedures.category), asc(schema.medicalProcedures.name));
+  }
+  
+  async updateMedicalProcedureStatus(id: number, active: boolean): Promise<schema.MedicalProcedure> {
+    if (!db) throw new Error('Database not connected');
+    const [updatedProcedure] = await db.update(schema.medicalProcedures)
+      .set({ active, updatedAt: new Date() })
+      .where(eq(schema.medicalProcedures.id, id))
+      .returning();
+    return updatedProcedure;
+  }
 
   // Provider Procedure Rates
   async getProviderProcedureRates(): Promise<schema.ProviderProcedureRate[]> {
@@ -1016,8 +1032,31 @@ export class DatabaseStorage implements IStorage {
   async getProviderProcedureRatesByInstitution(institutionId: number): Promise<schema.ProviderProcedureRate[]> {
     if (!db) throw new Error('Database not connected');
     return db.select().from(schema.providerProcedureRates)
-      .where(eq(schema.providerProcedureRates.medicalInstitutionId, institutionId))
+      .where(eq(schema.providerProcedureRates.institutionId, institutionId))
       .orderBy(asc(schema.providerProcedureRates.procedureId));
+  }
+
+  async getProviderProcedureRatesByProcedure(procedureId: number): Promise<schema.ProviderProcedureRate[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.providerProcedureRates)
+      .where(eq(schema.providerProcedureRates.procedureId, procedureId))
+      .orderBy(asc(schema.providerProcedureRates.institutionId));
+  }
+
+  async getActiveProviderProcedureRates(): Promise<schema.ProviderProcedureRate[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.providerProcedureRates)
+      .where(eq(schema.providerProcedureRates.active, true))
+      .orderBy(asc(schema.providerProcedureRates.procedureId));
+  }
+
+  async updateProviderProcedureRateStatus(id: number, active: boolean): Promise<schema.ProviderProcedureRate> {
+    if (!db) throw new Error('Database not connected');
+    const [updatedRate] = await db.update(schema.providerProcedureRates)
+      .set({ active, updatedAt: new Date() })
+      .where(eq(schema.providerProcedureRates.id, id))
+      .returning();
+    return updatedRate;
   }
 
   async createProviderProcedureRate(rate: schema.InsertProviderProcedureRate): Promise<schema.ProviderProcedureRate> {
@@ -1041,6 +1080,11 @@ export class DatabaseStorage implements IStorage {
   async getClaimProcedureItemsByClaim(claimId: number): Promise<schema.ClaimProcedureItem[]> {
     if (!db) throw new Error('Database not connected');
     return db.select().from(schema.claimProcedureItems).where(eq(schema.claimProcedureItems.claimId, claimId));
+  }
+  
+  async getClaimProcedureItemsByProcedure(procedureId: number): Promise<schema.ClaimProcedureItem[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.claimProcedureItems).where(eq(schema.claimProcedureItems.procedureId, procedureId));
   }
 
   async createClaimProcedureItem(item: schema.InsertClaimProcedureItem): Promise<schema.ClaimProcedureItem> {
