@@ -208,7 +208,7 @@ export default function ProviderClaimSubmission() {
         return;
       }
       
-      // Prepare claim data
+      // Prepare claim data with enhanced transaction support
       const claimData = {
         claim: {
           institutionId,
@@ -221,17 +221,25 @@ export default function ProviderClaimSubmission() {
           diagnosisCodeType,
           description,
           treatmentDetails,
-          amount: totalClaimAmount, // This will be recalculated on the server
-          status: 'submitted'
+          amount: totalClaimAmount, // The server will recalculate this using current rates
+          status: 'submitted',
+          // Adding timestamp for tracking
+          createdAt: new Date().toISOString(),
         },
         procedureItems: selectedProcedures.map(item => ({
           procedureId: item.procedureId,
           quantity: item.quantity,
-          notes: item.notes
+          notes: item.notes || ''
         }))
       };
       
-      // Submit the claim
+      // Show processing indicator
+      toast({
+        title: "Processing Claim",
+        description: "Your claim is being processed...",
+      });
+      
+      // Submit the claim using the transaction-based endpoint
       const response = await fetch('/api/claims-with-procedures', {
         method: 'POST',
         headers: {
