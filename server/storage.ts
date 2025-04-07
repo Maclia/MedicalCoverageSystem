@@ -21,7 +21,8 @@ import {
   InsuranceBalance, InsertInsuranceBalance,
   MedicalProcedure, InsertMedicalProcedure,
   ProviderProcedureRate, InsertProviderProcedureRate,
-  ClaimProcedureItem, InsertClaimProcedureItem
+  ClaimProcedureItem, InsertClaimProcedureItem,
+  DiagnosisCode, InsertDiagnosisCode
 } from "@shared/schema";
 
 // Storage interface
@@ -212,6 +213,15 @@ export interface IStorage {
   getClaimProcedureItemsByProcedure(procedureId: number): Promise<ClaimProcedureItem[]>;
   createClaimProcedureItem(item: InsertClaimProcedureItem): Promise<ClaimProcedureItem>;
   createClaimWithProcedureItems(claim: InsertClaim, procedureItems: Omit<InsertClaimProcedureItem, 'claimId'>[]): Promise<{ claim: Claim, procedureItems: ClaimProcedureItem[] }>;
+  
+  // Diagnosis Code methods
+  getDiagnosisCodes(): Promise<DiagnosisCode[]>;
+  getDiagnosisCode(id: number): Promise<DiagnosisCode | undefined>;
+  getDiagnosisCodeByCode(code: string): Promise<DiagnosisCode | undefined>;
+  getDiagnosisCodesByType(codeType: string): Promise<DiagnosisCode[]>;
+  getDiagnosisCodesBySearch(searchTerm: string): Promise<DiagnosisCode[]>;
+  createDiagnosisCode(diagnosisCode: InsertDiagnosisCode): Promise<DiagnosisCode>;
+  updateDiagnosisCodeStatus(id: number, isActive: boolean): Promise<DiagnosisCode>;
 }
 
 // In-memory storage implementation
@@ -239,6 +249,7 @@ export class MemStorage implements IStorage {
   private medicalProcedures: Map<number, MedicalProcedure>;
   private providerProcedureRates: Map<number, ProviderProcedureRate>;
   private claimProcedureItems: Map<number, ClaimProcedureItem>;
+  private diagnosisCodes: Map<number, DiagnosisCode>;
   
   private companyId: number;
   private memberId: number;
@@ -263,6 +274,7 @@ export class MemStorage implements IStorage {
   private medicalProcedureId: number;
   private providerProcedureRateId: number;
   private claimProcedureItemId: number;
+  private diagnosisCodeId: number;
   
   constructor() {
     this.companies = new Map();
@@ -288,6 +300,7 @@ export class MemStorage implements IStorage {
     this.medicalProcedures = new Map();
     this.providerProcedureRates = new Map();
     this.claimProcedureItems = new Map();
+    this.diagnosisCodes = new Map();
     
     this.companyId = 1;
     this.memberId = 1;
@@ -312,6 +325,7 @@ export class MemStorage implements IStorage {
     this.medicalProcedureId = 1;
     this.providerProcedureRateId = 1;
     this.claimProcedureItemId = 1;
+    this.diagnosisCodeId = 1;
     
     // Initialize with a default active period, rates, and benefits
     this.initializeDefaultData();
@@ -1575,6 +1589,61 @@ export class MemStorage implements IStorage {
     );
     
     return { claim: newClaim, procedureItems: items };
+  }
+
+  // Diagnosis Code methods
+  async getDiagnosisCodes(): Promise<DiagnosisCode[]> {
+    return Array.from(this.diagnosisCodes.values());
+  }
+
+  async getDiagnosisCode(id: number): Promise<DiagnosisCode | undefined> {
+    return this.diagnosisCodes.get(id);
+  }
+
+  async getDiagnosisCodeByCode(code: string): Promise<DiagnosisCode | undefined> {
+    return Array.from(this.diagnosisCodes.values()).find(
+      diagnosisCode => diagnosisCode.code === code
+    );
+  }
+
+  async getDiagnosisCodesByType(codeType: string): Promise<DiagnosisCode[]> {
+    return Array.from(this.diagnosisCodes.values()).filter(
+      diagnosisCode => diagnosisCode.codeType === codeType
+    );
+  }
+
+  async getDiagnosisCodesBySearch(searchTerm: string): Promise<DiagnosisCode[]> {
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    return Array.from(this.diagnosisCodes.values()).filter(
+      diagnosisCode => 
+        diagnosisCode.code.toLowerCase().includes(lowerSearchTerm) ||
+        diagnosisCode.description.toLowerCase().includes(lowerSearchTerm)
+    );
+  }
+
+  async createDiagnosisCode(diagnosisCode: InsertDiagnosisCode): Promise<DiagnosisCode> {
+    const id = this.diagnosisCodeId++;
+    const newDiagnosisCode: DiagnosisCode = {
+      ...diagnosisCode,
+      id,
+      createdAt: new Date().toISOString()
+    };
+    this.diagnosisCodes.set(id, newDiagnosisCode);
+    return newDiagnosisCode;
+  }
+
+  async updateDiagnosisCodeStatus(id: number, isActive: boolean): Promise<DiagnosisCode> {
+    const diagnosisCode = this.diagnosisCodes.get(id);
+    if (!diagnosisCode) {
+      throw new Error(`Diagnosis code with ID ${id} not found`);
+    }
+    
+    const updatedDiagnosisCode: DiagnosisCode = {
+      ...diagnosisCode,
+      isActive
+    };
+    this.diagnosisCodes.set(id, updatedDiagnosisCode);
+    return updatedDiagnosisCode;
   }
 }
 

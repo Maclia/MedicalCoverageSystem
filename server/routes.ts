@@ -23,7 +23,8 @@ import {
   insertInsuranceBalanceSchema,
   insertMedicalProcedureSchema,
   insertProviderProcedureRateSchema,
-  insertClaimProcedureItemSchema
+  insertClaimProcedureItemSchema,
+  insertDiagnosisCodeSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -2465,6 +2466,132 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         res.status(500).json({ error: "Failed to create claim with procedures" });
       }
+    }
+  });
+
+  // Diagnosis Code Routes
+  // GET all diagnosis codes
+  app.get('/api/diagnosis-codes', async (req, res) => {
+    try {
+      const diagnosisCodes = await storage.getDiagnosisCodes();
+      res.json(diagnosisCodes);
+    } catch (error) {
+      console.error('Error fetching diagnosis codes:', error);
+      res.status(500).json({ error: 'Failed to fetch diagnosis codes' });
+    }
+  });
+
+  // GET diagnosis codes by search
+  app.get('/api/diagnosis-codes/search', async (req, res) => {
+    try {
+      const searchTerm = req.query.term as string;
+      
+      if (!searchTerm) {
+        return res.status(400).json({ error: 'Search term is required' });
+      }
+      
+      const diagnosisCodes = await storage.getDiagnosisCodesBySearch(searchTerm);
+      res.json(diagnosisCodes);
+    } catch (error) {
+      console.error('Error searching diagnosis codes:', error);
+      res.status(500).json({ error: 'Failed to search diagnosis codes' });
+    }
+  });
+
+  // GET diagnosis code by code
+  app.get('/api/diagnosis-codes/code/:code', async (req, res) => {
+    try {
+      const code = req.params.code;
+      
+      const diagnosisCode = await storage.getDiagnosisCodeByCode(code);
+      if (!diagnosisCode) {
+        return res.status(404).json({ error: 'Diagnosis code not found' });
+      }
+      
+      res.json(diagnosisCode);
+    } catch (error) {
+      console.error('Error fetching diagnosis code by code:', error);
+      res.status(500).json({ error: 'Failed to fetch diagnosis code' });
+    }
+  });
+
+  // GET diagnosis codes by type
+  app.get('/api/diagnosis-codes/type/:type', async (req, res) => {
+    try {
+      const codeType = req.params.type;
+      
+      const diagnosisCodes = await storage.getDiagnosisCodesByType(codeType);
+      res.json(diagnosisCodes);
+    } catch (error) {
+      console.error('Error fetching diagnosis codes by type:', error);
+      res.status(500).json({ error: 'Failed to fetch diagnosis codes' });
+    }
+  });
+
+  // GET diagnosis code by ID - must be last since it uses a path parameter
+  app.get('/api/diagnosis-codes/:id', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid ID format' });
+      }
+      
+      const diagnosisCode = await storage.getDiagnosisCode(id);
+      if (!diagnosisCode) {
+        return res.status(404).json({ error: 'Diagnosis code not found' });
+      }
+      
+      res.json(diagnosisCode);
+    } catch (error) {
+      console.error('Error fetching diagnosis code:', error);
+      res.status(500).json({ error: 'Failed to fetch diagnosis code' });
+    }
+  });
+
+  // POST create new diagnosis code
+  app.post('/api/diagnosis-codes', async (req, res) => {
+    try {
+      // Validate the request body
+      const validatedData = insertDiagnosisCodeSchema.parse(req.body);
+      
+      // Create the diagnosis code
+      const diagnosisCode = await storage.createDiagnosisCode(validatedData);
+      res.status(201).json(diagnosisCode);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else {
+        console.error('Error creating diagnosis code:', error);
+        res.status(500).json({ error: 'Failed to create diagnosis code' });
+      }
+    }
+  });
+
+  // PATCH update diagnosis code status
+  app.patch('/api/diagnosis-codes/:id/status', async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: 'Invalid ID format' });
+      }
+      
+      // Validate request body
+      if (typeof req.body.isActive !== 'boolean') {
+        return res.status(400).json({ error: 'isActive must be a boolean value' });
+      }
+      
+      // Update the diagnosis code status
+      const diagnosisCode = await storage.updateDiagnosisCodeStatus(id, req.body.isActive);
+      res.json(diagnosisCode);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          return res.status(404).json({ error: error.message });
+        }
+      }
+      console.error('Error updating diagnosis code status:', error);
+      res.status(500).json({ error: 'Failed to update diagnosis code status' });
     }
   });
 

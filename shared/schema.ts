@@ -325,6 +325,19 @@ export const diagnosisCodeTypeEnum = pgEnum('diagnosis_code_type', ['ICD-10', 'I
 // Enum for fraud risk indicators
 export const fraudRiskLevelEnum = pgEnum('fraud_risk_level', ['none', 'low', 'medium', 'high', 'confirmed']);
 
+// Diagnosis Codes Table
+export const diagnosisCodes = pgTable("diagnosis_codes", {
+  id: serial("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  description: text("description").notNull(),
+  codeType: diagnosisCodeTypeEnum("code_type").notNull(), // ICD-10 or ICD-11
+  category: text("category").notNull(), // Disease category
+  subcategory: text("subcategory"), // Optional subcategory
+  searchTerms: text("search_terms"), // Additional search terms to help find codes
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 export const claims = pgTable("claims", {
   id: serial("id").primaryKey(),
   institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
@@ -359,6 +372,11 @@ export const claims = pgTable("claims", {
 });
 
 // Insert schemas for new entities
+export const insertDiagnosisCodeSchema = createInsertSchema(diagnosisCodes).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertRegionSchema = createInsertSchema(regions).omit({
   id: true,
   createdAt: true,
@@ -432,6 +450,9 @@ export type InsertAgeBandedRate = z.infer<typeof insertAgeBandedRateSchema>;
 
 export type FamilyRate = typeof familyRates.$inferSelect;
 export type InsertFamilyRate = z.infer<typeof insertFamilyRateSchema>;
+
+export type DiagnosisCode = typeof diagnosisCodes.$inferSelect;
+export type InsertDiagnosisCode = z.infer<typeof insertDiagnosisCodeSchema>;
 
 // Payment types enum
 export const paymentTypeEnum = pgEnum('payment_type', ['premium', 'claim', 'disbursement']);

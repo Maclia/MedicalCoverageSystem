@@ -1,5 +1,5 @@
 import { db } from './db';
-import { eq, and, asc, desc, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, asc, desc, isNull, isNotNull, or, sql } from 'drizzle-orm';
 import type { IStorage } from './storage';
 import * as schema from '@shared/schema';
 import { memberHasClaims } from './utils/dbOperations';
@@ -1116,5 +1116,81 @@ export class DatabaseStorage implements IStorage {
       
       return { claim: newClaim, procedureItems: items };
     });
+  }
+
+  // Diagnosis Code methods
+  async getDiagnosisCodes(): Promise<schema.DiagnosisCode[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select().from(schema.diagnosisCodes);
+  }
+
+  async getDiagnosisCode(id: number): Promise<schema.DiagnosisCode | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [diagnosisCode] = await db
+      .select()
+      .from(schema.diagnosisCodes)
+      .where(eq(schema.diagnosisCodes.id, id));
+    return diagnosisCode;
+  }
+
+  async getDiagnosisCodeByCode(code: string): Promise<schema.DiagnosisCode | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [diagnosisCode] = await db
+      .select()
+      .from(schema.diagnosisCodes)
+      .where(eq(schema.diagnosisCodes.code, code));
+    return diagnosisCode;
+  }
+
+  async getDiagnosisCodesByType(codeType: string): Promise<schema.DiagnosisCode[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db
+      .select()
+      .from(schema.diagnosisCodes)
+      .where(eq(schema.diagnosisCodes.codeType, codeType));
+  }
+
+  async getDiagnosisCodesBySearch(searchTerm: string): Promise<schema.DiagnosisCode[]> {
+    if (!db) throw new Error('Database not connected');
+    
+    // Create a SQL query to search for terms in both code and description fields
+    // Using SQL ILIKE for case-insensitive search with pattern matching
+    const searchPattern = `%${searchTerm}%`;
+    
+    // Use the direct SQL approach instead of the query builder
+    return await db
+      .select()
+      .from(schema.diagnosisCodes)
+      .where(
+        or(
+          sql`${schema.diagnosisCodes.code} ILIKE ${searchPattern}`,
+          sql`${schema.diagnosisCodes.description} ILIKE ${searchPattern}`,
+          sql`COALESCE(${schema.diagnosisCodes.searchTerms}, '') ILIKE ${searchPattern}`
+        )
+      );
+  }
+
+  async createDiagnosisCode(diagnosisCode: schema.InsertDiagnosisCode): Promise<schema.DiagnosisCode> {
+    if (!db) throw new Error('Database not connected');
+    const [newDiagnosisCode] = await db
+      .insert(schema.diagnosisCodes)
+      .values(diagnosisCode)
+      .returning();
+    return newDiagnosisCode;
+  }
+
+  async updateDiagnosisCodeStatus(id: number, isActive: boolean): Promise<schema.DiagnosisCode> {
+    if (!db) throw new Error('Database not connected');
+    const [updatedDiagnosisCode] = await db
+      .update(schema.diagnosisCodes)
+      .set({ isActive })
+      .where(eq(schema.diagnosisCodes.id, id))
+      .returning();
+    
+    if (!updatedDiagnosisCode) {
+      throw new Error(`Diagnosis code with ID ${id} not found`);
+    }
+    
+    return updatedDiagnosisCode;
   }
 }
