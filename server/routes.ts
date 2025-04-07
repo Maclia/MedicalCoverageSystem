@@ -20,7 +20,10 @@ import {
   insertClaimPaymentSchema,
   insertProviderDisbursementSchema,
   insertDisbursementItemSchema,
-  insertInsuranceBalanceSchema
+  insertInsuranceBalanceSchema,
+  insertMedicalProcedureSchema,
+  insertProviderProcedureRateSchema,
+  insertClaimProcedureItemSchema
 } from "@shared/schema";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
@@ -1328,6 +1331,124 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   });
+  
+  // New routes for provider verification and fraud detection
+  
+  // Get claims by provider verification status
+  app.get("/api/claims/verification/:status", async (req, res) => {
+    try {
+      const { status } = req.params;
+      const isVerified = status === 'verified';
+      
+      const claims = await storage.getClaimsByProviderVerification(isVerified);
+      res.json(claims);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to fetch claims by verification status" });
+      }
+    }
+  });
+  
+  // Get claims requiring higher approval
+  app.get("/api/claims/approval/higher", async (req, res) => {
+    try {
+      const claims = await storage.getClaimsRequiringHigherApproval();
+      res.json(claims);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to fetch claims requiring higher approval" });
+      }
+    }
+  });
+  
+  // Get claims by fraud risk level
+  app.get("/api/claims/fraud/:level", async (req, res) => {
+    try {
+      const { level } = req.params;
+      const claims = await storage.getClaimsByFraudRiskLevel(level);
+      res.json(claims);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to fetch claims by fraud risk level" });
+      }
+    }
+  });
+  
+  // Admin approval for claim
+  app.patch("/api/claims/:id/admin-approve", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { adminNotes } = req.body;
+      
+      if (!id || !adminNotes) {
+        return res.status(400).json({ error: "ID and admin notes are required" });
+      }
+      
+      const claim = await storage.adminApproveClaim(Number(id), adminNotes);
+      res.json(claim);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to admin approve claim" });
+      }
+    }
+  });
+  
+  // Reject claim
+  app.patch("/api/claims/:id/reject", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      
+      if (!id || !reason) {
+        return res.status(400).json({ error: "ID and rejection reason are required" });
+      }
+      
+      const claim = await storage.rejectClaim(Number(id), reason);
+      res.json(claim);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to reject claim" });
+      }
+    }
+  });
+  
+  // Mark claim as fraudulent
+  app.patch("/api/claims/:id/mark-fraudulent", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { riskLevel, riskFactors, reviewerId } = req.body;
+      
+      if (!id || !riskLevel || !riskFactors || !reviewerId) {
+        return res.status(400).json({ 
+          error: "ID, risk level, risk factors, and reviewer ID are required" 
+        });
+      }
+      
+      const claim = await storage.markClaimAsFraudulent(
+        Number(id), 
+        riskLevel, 
+        riskFactors, 
+        Number(reviewerId)
+      );
+      res.json(claim);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to mark claim as fraudulent" });
+      }
+    }
+  });
 
   // Premium Payments
   app.get("/api/premium-payments", async (req, res) => {
@@ -1967,6 +2088,383 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(companyPeriod);
     } catch (error) {
       res.status(500).json({ error: "Failed to create company period" });
+    }
+  });
+
+  // Medical Procedures routes
+  app.get("/api/medical-procedures", async (req, res) => {
+    try {
+      let procedures;
+      if (req.query.category) {
+        procedures = await storage.getMedicalProceduresByCategory(req.query.category as string);
+      } else if (req.query.active === 'true') {
+        procedures = await storage.getActiveMedicalProcedures();
+      } else {
+        procedures = await storage.getMedicalProcedures();
+      }
+      res.json(procedures);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch medical procedures" });
+    }
+  });
+
+  app.get("/api/medical-procedures/:id", async (req, res) => {
+    try {
+      const procedure = await storage.getMedicalProcedure(Number(req.params.id));
+      if (!procedure) {
+        return res.status(404).json({ error: "Medical procedure not found" });
+      }
+      res.json(procedure);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch medical procedure" });
+    }
+  });
+
+  app.post("/api/medical-procedures", validateRequest(insertMedicalProcedureSchema), async (req, res) => {
+    try {
+      const procedure = await storage.createMedicalProcedure(req.body);
+      res.status(201).json(procedure);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create medical procedure" });
+    }
+  });
+
+  app.patch("/api/medical-procedures/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { active } = req.body;
+      
+      if (!id || active === undefined) {
+        return res.status(400).json({ error: "ID and active status are required" });
+      }
+      
+      const procedure = await storage.updateMedicalProcedureStatus(Number(id), active);
+      res.json(procedure);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to update medical procedure status" });
+      }
+    }
+  });
+
+  // Provider Procedure Rates routes
+  app.get("/api/provider-procedure-rates", async (req, res) => {
+    try {
+      let rates;
+      if (req.query.institutionId) {
+        rates = await storage.getProviderProcedureRatesByInstitution(Number(req.query.institutionId));
+      } else if (req.query.procedureId) {
+        rates = await storage.getProviderProcedureRatesByProcedure(Number(req.query.procedureId));
+      } else if (req.query.active === 'true') {
+        rates = await storage.getActiveProviderProcedureRates();
+      } else {
+        rates = await storage.getProviderProcedureRates();
+      }
+      
+      // Enhance rates with institution and procedure details
+      const enhancedRates = await Promise.all(
+        rates.map(async (rate) => {
+          const institution = await storage.getMedicalInstitution(rate.institutionId);
+          const procedure = await storage.getMedicalProcedure(rate.procedureId);
+          
+          return {
+            ...rate,
+            institutionName: institution ? institution.name : 'Unknown',
+            procedureName: procedure ? procedure.name : 'Unknown',
+            procedureCode: procedure ? procedure.code : 'Unknown',
+            standardRate: procedure ? procedure.standardRate : 0,
+            rateVariance: procedure ? ((rate.agreedRate - procedure.standardRate) / procedure.standardRate * 100).toFixed(2) + '%' : '0%'
+          };
+        })
+      );
+      
+      res.json(enhancedRates);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch provider procedure rates" });
+    }
+  });
+
+  app.get("/api/provider-procedure-rates/:id", async (req, res) => {
+    try {
+      const rate = await storage.getProviderProcedureRate(Number(req.params.id));
+      if (!rate) {
+        return res.status(404).json({ error: "Provider procedure rate not found" });
+      }
+      
+      // Get related data
+      const institution = await storage.getMedicalInstitution(rate.institutionId);
+      const procedure = await storage.getMedicalProcedure(rate.procedureId);
+      
+      const enhancedRate = {
+        ...rate,
+        institutionDetails: institution,
+        procedureDetails: procedure,
+        rateVariance: procedure 
+          ? ((rate.agreedRate - procedure.standardRate) / procedure.standardRate * 100).toFixed(2) + '%' 
+          : '0%'
+      };
+      
+      res.json(enhancedRate);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch provider procedure rate" });
+    }
+  });
+
+  app.post("/api/provider-procedure-rates", validateRequest(insertProviderProcedureRateSchema), async (req, res) => {
+    try {
+      // Verify institution exists
+      const institution = await storage.getMedicalInstitution(req.body.institutionId);
+      if (!institution) {
+        return res.status(404).json({ error: "Medical institution not found" });
+      }
+      
+      // Verify procedure exists
+      const procedure = await storage.getMedicalProcedure(req.body.procedureId);
+      if (!procedure) {
+        return res.status(404).json({ error: "Medical procedure not found" });
+      }
+      
+      const rate = await storage.createProviderProcedureRate(req.body);
+      res.status(201).json(rate);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create provider procedure rate" });
+    }
+  });
+
+  app.patch("/api/provider-procedure-rates/:id/status", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { active } = req.body;
+      
+      if (!id || active === undefined) {
+        return res.status(400).json({ error: "ID and active status are required" });
+      }
+      
+      const rate = await storage.updateProviderProcedureRateStatus(Number(id), active);
+      res.json(rate);
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to update provider procedure rate status" });
+      }
+    }
+  });
+
+  // Claim Procedure Items routes
+  app.get("/api/claim-procedure-items", async (req, res) => {
+    try {
+      let items;
+      if (req.query.claimId) {
+        items = await storage.getClaimProcedureItemsByClaim(Number(req.query.claimId));
+      } else if (req.query.procedureId) {
+        items = await storage.getClaimProcedureItemsByProcedure(Number(req.query.procedureId));
+      } else {
+        items = await storage.getClaimProcedureItems();
+      }
+      
+      // Enhance items with procedure details
+      const enhancedItems = await Promise.all(
+        items.map(async (item) => {
+          const procedure = await storage.getMedicalProcedure(item.procedureId);
+          const claim = await storage.getClaim(item.claimId);
+          
+          return {
+            ...item,
+            procedureName: procedure ? procedure.name : 'Unknown',
+            procedureCode: procedure ? procedure.code : 'Unknown',
+            procedureCategory: procedure ? procedure.category : 'Unknown',
+            claimStatus: claim ? claim.status : 'Unknown'
+          };
+        })
+      );
+      
+      res.json(enhancedItems);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch claim procedure items" });
+    }
+  });
+
+  app.get("/api/claim-procedure-items/:id", async (req, res) => {
+    try {
+      const item = await storage.getClaimProcedureItem(Number(req.params.id));
+      if (!item) {
+        return res.status(404).json({ error: "Claim procedure item not found" });
+      }
+      
+      // Get related data
+      const procedure = await storage.getMedicalProcedure(item.procedureId);
+      const claim = await storage.getClaim(item.claimId);
+      
+      const enhancedItem = {
+        ...item,
+        procedureDetails: procedure,
+        claimDetails: claim
+      };
+      
+      res.json(enhancedItem);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch claim procedure item" });
+    }
+  });
+
+  // Enhanced claim submission endpoint to include procedure items
+  app.post("/api/claims-with-procedures", async (req, res) => {
+    try {
+      const { claim, procedureItems } = req.body;
+      
+      // Validate claim data
+      insertClaimSchema.parse(claim);
+      
+      // Validate each procedure item
+      if (!procedureItems || !Array.isArray(procedureItems) || procedureItems.length === 0) {
+        return res.status(400).json({ error: "At least one procedure item is required" });
+      }
+      
+      const { memberId, institutionId, personnelId, benefitId } = claim;
+      
+      // 1. Verify member exists
+      const member = await storage.getMember(memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+      
+      // 2. Verify medical institution exists and is approved
+      const institution = await storage.getMedicalInstitution(institutionId);
+      if (!institution) {
+        return res.status(404).json({ error: "Medical institution not found" });
+      }
+      
+      if (institution.approvalStatus !== 'approved') {
+        return res.status(403).json({ 
+          error: "Medical institution is not approved to submit claims",
+          status: institution.approvalStatus
+        });
+      }
+      
+      // 3. Verify medical personnel exists and is approved
+      const personnel = await storage.getMedicalPersonnelById(personnelId);
+      if (!personnel) {
+        return res.status(404).json({ error: "Medical personnel not found" });
+      }
+      
+      if (personnel.institutionId !== institutionId) {
+        return res.status(403).json({ 
+          error: "Medical personnel does not belong to the specified institution" 
+        });
+      }
+      
+      if (personnel.approvalStatus !== 'approved') {
+        return res.status(403).json({ 
+          error: "Medical personnel is not approved to submit claims",
+          status: personnel.approvalStatus
+        });
+      }
+      
+      // 4. Verify the benefit exists
+      const benefit = await storage.getBenefit(benefitId);
+      if (!benefit) {
+        return res.status(404).json({ error: "Benefit not found" });
+      }
+      
+      // 5. Verify the member is eligible for this benefit
+      // Get active period
+      const activePeriod = await storage.getActivePeriod();
+      if (!activePeriod) {
+        return res.status(404).json({ error: "No active period found" });
+      }
+      
+      // Find the company's premium for the active period
+      const premiums = await storage.getPremiumsByCompany(member.companyId);
+      const activePremium = premiums.find(p => p.periodId === activePeriod.id);
+      
+      if (!activePremium) {
+        return res.status(403).json({ 
+          error: "Member's company does not have an active premium for the current period" 
+        });
+      }
+      
+      // Get company benefits for this premium
+      const companyBenefits = await storage.getCompanyBenefitsByPremium(activePremium.id);
+      
+      // Check if the specified benefit is included in the company's package
+      const hasBenefit = companyBenefits.some(cb => cb.benefitId === benefitId);
+      
+      if (!hasBenefit) {
+        return res.status(403).json({ 
+          error: "The requested benefit is not included in the member's insurance package" 
+        });
+      }
+      
+      // 6. Verify each procedure and get the institution-specific rates
+      let totalAmount = 0;
+      const validatedProcedureItems = [];
+      
+      for (const item of procedureItems) {
+        // Validate the procedure item structure
+        if (!item.procedureId || !item.quantity) {
+          return res.status(400).json({ 
+            error: "Each procedure item must include procedureId and quantity" 
+          });
+        }
+        
+        // Verify procedure exists
+        const procedure = await storage.getMedicalProcedure(item.procedureId);
+        if (!procedure) {
+          return res.status(404).json({ 
+            error: `Medical procedure with ID ${item.procedureId} not found` 
+          });
+        }
+        
+        // Get provider-specific rate if available
+        const rates = await storage.getProviderProcedureRatesByInstitution(institutionId);
+        const providerRate = rates.find(r => 
+          r.procedureId === item.procedureId && 
+          r.active && 
+          (!r.expiryDate || new Date(r.expiryDate) > new Date())
+        );
+        
+        // Use provider-specific rate if available, otherwise use standard rate
+        const unitRate = providerRate ? providerRate.agreedRate : procedure.standardRate;
+        const itemTotal = unitRate * item.quantity;
+        
+        totalAmount += itemTotal;
+        
+        validatedProcedureItems.push({
+          procedureId: item.procedureId,
+          quantity: item.quantity,
+          unitRate,
+          totalAmount: itemTotal,
+          notes: item.notes || ''
+        });
+      }
+      
+      // 7. Update the claim with calculated amount
+      claim.amount = totalAmount;
+      
+      // 8. Check if the provider is verified
+      claim.providerVerified = institution.approvalStatus === 'approved' && 
+                              personnel.approvalStatus === 'approved';
+      
+      // 9. If provider is not verified, set flag for higher approval
+      claim.requiresHigherApproval = !claim.providerVerified;
+      
+      // 10. Use the transaction method to create claim and procedure items together
+      const result = await storage.createClaimWithProcedureItems(claim, validatedProcedureItems);
+      
+      // Return the created claim with procedure items
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof ZodError) {
+        const validationError = fromZodError(error);
+        res.status(400).json({ error: validationError.message });
+      } else if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create claim with procedures" });
+      }
     }
   });
 

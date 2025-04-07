@@ -11,7 +11,7 @@ export const benefitCategoryEnum = pgEnum('benefit_category', ['medical', 'denta
 export const institutionTypeEnum = pgEnum('institution_type', ['hospital', 'clinic', 'laboratory', 'imaging', 'pharmacy', 'specialist', 'general']);
 export const personnelTypeEnum = pgEnum('personnel_type', ['doctor', 'nurse', 'specialist', 'technician', 'pharmacist', 'therapist', 'other']);
 export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected', 'suspended']);
-export const claimStatusEnum = pgEnum('claim_status', ['submitted', 'under_review', 'approved', 'rejected', 'paid']);
+export const claimStatusEnum = pgEnum('claim_status', ['submitted', 'under_review', 'approved', 'rejected', 'paid', 'fraud_review', 'fraud_confirmed']);
 export const premiumRateTypeEnum = pgEnum('premium_rate_type', ['standard', 'age_banded', 'family_size']);
 
 // Companies table
@@ -320,6 +320,11 @@ export const panelDocumentation = pgTable("panel_documentation", {
 });
 
 // Claims submitted by medical panels
+export const diagnosisCodeTypeEnum = pgEnum('diagnosis_code_type', ['ICD-10', 'ICD-11']);
+
+// Enum for fraud risk indicators
+export const fraudRiskLevelEnum = pgEnum('fraud_risk_level', ['none', 'low', 'medium', 'high', 'confirmed']);
+
 export const claims = pgTable("claims", {
   id: serial("id").primaryKey(),
   institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
@@ -331,12 +336,25 @@ export const claims = pgTable("claims", {
   amount: real("amount").notNull(),
   description: text("description").notNull(),
   diagnosis: text("diagnosis").notNull(),
+  diagnosisCode: text("diagnosis_code").notNull(), // ICD-10 or ICD-11 code
+  diagnosisCodeType: diagnosisCodeTypeEnum("diagnosis_code_type").notNull(), // Type of diagnosis code
   treatmentDetails: text("treatment_details"),
   status: claimStatusEnum("status").default("submitted").notNull(),
   reviewDate: timestamp("review_date"),
   reviewerNotes: text("reviewer_notes"),
   paymentDate: timestamp("payment_date"),
   paymentReference: text("payment_reference"),
+  // Provider verification fields
+  providerVerified: boolean("provider_verified").default(false),
+  requiresHigherApproval: boolean("requires_higher_approval").default(false),
+  approvedByAdmin: boolean("approved_by_admin").default(false),
+  adminApprovalDate: timestamp("admin_approval_date"),
+  adminReviewNotes: text("admin_review_notes"),
+  // Fraud detection fields
+  fraudRiskLevel: fraudRiskLevelEnum("fraud_risk_level").default("none"),
+  fraudRiskFactors: text("fraud_risk_factors"),
+  fraudReviewDate: timestamp("fraud_review_date"),
+  fraudReviewerId: integer("fraud_reviewer_id"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -369,6 +387,23 @@ export const insertClaimSchema = createInsertSchema(claims).omit({
   reviewDate: true,
   paymentDate: true,
   createdAt: true,
+  // Admin approval fields
+  adminApprovalDate: true,
+  fraudReviewDate: true,
+}).extend({
+  diagnosisCode: z.string().min(3, "Diagnosis code must be at least 3 characters").max(50, "Diagnosis code is too long"),
+  diagnosisCodeType: z.enum(["ICD-10", "ICD-11"], {
+    required_error: "Diagnosis code type is required (ICD-10 or ICD-11)",
+    invalid_type_error: "Diagnosis code type must be either ICD-10 or ICD-11",
+  }),
+  // Provider verification and fraud risk are set by the system, not provided by user
+  providerVerified: z.boolean().optional().default(false),
+  requiresHigherApproval: z.boolean().optional().default(false),
+  approvedByAdmin: z.boolean().optional().default(false),
+  adminReviewNotes: z.string().optional(),
+  fraudRiskLevel: z.enum(["none", "low", "medium", "high", "confirmed"]).optional().default("none"),
+  fraudRiskFactors: z.string().optional(),
+  fraudReviewerId: z.number().optional(),
 });
 
 export type CompanyBenefit = typeof companyBenefits.$inferSelect;
@@ -402,6 +437,7 @@ export type InsertFamilyRate = z.infer<typeof insertFamilyRateSchema>;
 export const paymentTypeEnum = pgEnum('payment_type', ['premium', 'claim', 'disbursement']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'completed', 'failed', 'cancelled']);
 export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
+export const procedureCategoryEnum = pgEnum('procedure_category', ['consultation', 'surgery', 'diagnostic', 'laboratory', 'imaging', 'dental', 'vision', 'medication', 'therapy', 'emergency', 'maternity', 'preventative', 'other']);
 
 // Premium Payments table
 export const premiumPayments = pgTable("premium_payments", {
@@ -522,3 +558,70 @@ export type InsertDisbursementItem = z.infer<typeof insertDisbursementItemSchema
 
 export type InsuranceBalance = typeof insuranceBalances.$inferSelect;
 export type InsertInsuranceBalance = z.infer<typeof insertInsuranceBalanceSchema>;
+
+// Medical Procedures/Items tables for claim processing
+export const medicalProcedures = pgTable("medical_procedures", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: text("code").notNull().unique(),
+  category: procedureCategoryEnum("category").notNull(),
+  description: text("description"),
+  standardRate: real("standard_rate").notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider-specific procedure rates
+export const providerProcedureRates = pgTable("provider_procedure_rates", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  procedureId: integer("procedure_id").references(() => medicalProcedures.id).notNull(),
+  agreedRate: real("agreed_rate").notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  active: boolean("active").default(true).notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Claim procedure items
+export const claimProcedureItems = pgTable("claim_procedure_items", {
+  id: serial("id").primaryKey(),
+  claimId: integer("claim_id").references(() => claims.id).notNull(),
+  procedureId: integer("procedure_id").references(() => medicalProcedures.id).notNull(),
+  quantity: integer("quantity").default(1).notNull(),
+  unitRate: real("unit_rate").notNull(),
+  totalAmount: real("total_amount").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for medical procedures tables
+export const insertMedicalProcedureSchema = createInsertSchema(medicalProcedures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderProcedureRateSchema = createInsertSchema(providerProcedureRates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClaimProcedureItemSchema = createInsertSchema(claimProcedureItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for medical procedures entities
+export type MedicalProcedure = typeof medicalProcedures.$inferSelect;
+export type InsertMedicalProcedure = z.infer<typeof insertMedicalProcedureSchema>;
+
+export type ProviderProcedureRate = typeof providerProcedureRates.$inferSelect;
+export type InsertProviderProcedureRate = z.infer<typeof insertProviderProcedureRateSchema>;
+
+export type ClaimProcedureItem = typeof claimProcedureItems.$inferSelect;
+export type InsertClaimProcedureItem = z.infer<typeof insertClaimProcedureItemSchema>;

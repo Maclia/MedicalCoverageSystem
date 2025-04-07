@@ -608,6 +608,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.claims.status, status as any));
   }
   
+  async getClaimsByProviderVerification(verified: boolean): Promise<schema.Claim[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.claims)
+      .where(eq(schema.claims.providerVerified, verified));
+  }
+  
+  async getClaimsByFraudRiskLevel(riskLevel: string): Promise<schema.Claim[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.claims)
+      .where(eq(schema.claims.fraudRiskLevel, riskLevel as any));
+  }
+  
+  async getClaimsRequiringHigherApproval(): Promise<schema.Claim[]> {
+    if (!db) throw new Error('Database not connected');
+    return await db.select()
+      .from(schema.claims)
+      .where(and(
+        eq(schema.claims.requiresHigherApproval, true),
+        eq(schema.claims.approvedByAdmin, false)
+      ));
+  }
+  
   async createClaim(claim: schema.InsertClaim): Promise<schema.Claim> {
     if (!db) throw new Error('Database not connected');
     const [newClaim] = await db.insert(schema.claims)
@@ -627,6 +651,55 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.claims.id, id))
       .returning();
     return updatedClaim;
+  }
+  
+  async adminApproveClaim(id: number, adminNotes: string): Promise<schema.Claim> {
+    if (!db) throw new Error('Database not connected');
+    const [updatedClaim] = await db.update(schema.claims)
+      .set({
+        approvedByAdmin: true,
+        adminApprovalDate: new Date(),
+        adminReviewNotes: adminNotes,
+        status: 'approved',
+        reviewDate: new Date()
+      })
+      .where(eq(schema.claims.id, id))
+      .returning();
+    return updatedClaim;
+  }
+  
+  async rejectClaim(id: number, reason: string): Promise<schema.Claim> {
+    if (!db) throw new Error('Database not connected');
+    const [rejectedClaim] = await db.update(schema.claims)
+      .set({
+        status: 'rejected',
+        reviewDate: new Date(),
+        reviewerNotes: reason
+      })
+      .where(eq(schema.claims.id, id))
+      .returning();
+    return rejectedClaim;
+  }
+  
+  async markClaimAsFraudulent(
+    id: number, 
+    riskLevel: string, 
+    riskFactors: string, 
+    reviewerId: number
+  ): Promise<schema.Claim> {
+    if (!db) throw new Error('Database not connected');
+    const [fraudClaim] = await db.update(schema.claims)
+      .set({
+        fraudRiskLevel: riskLevel as any,
+        fraudRiskFactors: riskFactors,
+        fraudReviewDate: new Date(),
+        fraudReviewerId: reviewerId,
+        status: riskLevel === 'confirmed' ? 'fraud_confirmed' : 'fraud_review',
+        reviewDate: new Date()
+      })
+      .where(eq(schema.claims.id, id))
+      .returning();
+    return fraudClaim;
   }
   
   async processClaimPayment(id: number, paymentReference: string): Promise<schema.Claim> {
@@ -900,5 +973,104 @@ export class DatabaseStorage implements IStorage {
       .where(eq(schema.insuranceBalances.id, id))
       .returning();
     return updatedBalance;
+  }
+
+  // Medical Procedures
+  async getMedicalProcedures(): Promise<schema.MedicalProcedure[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.medicalProcedures).where(eq(schema.medicalProcedures.active, true)).orderBy(asc(schema.medicalProcedures.category), asc(schema.medicalProcedures.name));
+  }
+
+  async getMedicalProcedure(id: number): Promise<schema.MedicalProcedure | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [procedure] = await db.select().from(schema.medicalProcedures).where(eq(schema.medicalProcedures.id, id));
+    return procedure;
+  }
+
+  async getMedicalProceduresByCategory(category: string): Promise<schema.MedicalProcedure[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.medicalProcedures).where(and(
+      eq(schema.medicalProcedures.category, category),
+      eq(schema.medicalProcedures.active, true)
+    )).orderBy(asc(schema.medicalProcedures.name));
+  }
+
+  async createMedicalProcedure(procedure: schema.InsertMedicalProcedure): Promise<schema.MedicalProcedure> {
+    if (!db) throw new Error('Database not connected');
+    const [newProcedure] = await db.insert(schema.medicalProcedures).values(procedure).returning();
+    return newProcedure;
+  }
+
+  // Provider Procedure Rates
+  async getProviderProcedureRates(): Promise<schema.ProviderProcedureRate[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.providerProcedureRates);
+  }
+
+  async getProviderProcedureRate(id: number): Promise<schema.ProviderProcedureRate | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [rate] = await db.select().from(schema.providerProcedureRates).where(eq(schema.providerProcedureRates.id, id));
+    return rate;
+  }
+
+  async getProviderProcedureRatesByInstitution(institutionId: number): Promise<schema.ProviderProcedureRate[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.providerProcedureRates)
+      .where(eq(schema.providerProcedureRates.medicalInstitutionId, institutionId))
+      .orderBy(asc(schema.providerProcedureRates.procedureId));
+  }
+
+  async createProviderProcedureRate(rate: schema.InsertProviderProcedureRate): Promise<schema.ProviderProcedureRate> {
+    if (!db) throw new Error('Database not connected');
+    const [newRate] = await db.insert(schema.providerProcedureRates).values(rate).returning();
+    return newRate;
+  }
+
+  // Claim Procedure Items
+  async getClaimProcedureItems(): Promise<schema.ClaimProcedureItem[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.claimProcedureItems);
+  }
+
+  async getClaimProcedureItem(id: number): Promise<schema.ClaimProcedureItem | undefined> {
+    if (!db) throw new Error('Database not connected');
+    const [item] = await db.select().from(schema.claimProcedureItems).where(eq(schema.claimProcedureItems.id, id));
+    return item;
+  }
+
+  async getClaimProcedureItemsByClaim(claimId: number): Promise<schema.ClaimProcedureItem[]> {
+    if (!db) throw new Error('Database not connected');
+    return db.select().from(schema.claimProcedureItems).where(eq(schema.claimProcedureItems.claimId, claimId));
+  }
+
+  async createClaimProcedureItem(item: schema.InsertClaimProcedureItem): Promise<schema.ClaimProcedureItem> {
+    if (!db) throw new Error('Database not connected');
+    const [newItem] = await db.insert(schema.claimProcedureItems).values(item).returning();
+    return newItem;
+  }
+
+  async createClaimWithProcedureItems(
+    claim: schema.InsertClaim, 
+    procedureItems: Omit<schema.InsertClaimProcedureItem, 'claimId'>[]
+  ): Promise<{ claim: schema.Claim, procedureItems: schema.ClaimProcedureItem[] }> {
+    if (!db) throw new Error('Database not connected');
+    
+    // Start a transaction
+    return db.transaction(async (tx) => {
+      // Create the claim
+      const [newClaim] = await tx.insert(schema.claims).values(claim).returning();
+      
+      // Create all procedure items with the new claim ID
+      const items = await Promise.all(
+        procedureItems.map(async (item) => {
+          const [newItem] = await tx.insert(schema.claimProcedureItems)
+            .values({ ...item, claimId: newClaim.id })
+            .returning();
+          return newItem;
+        })
+      );
+      
+      return { claim: newClaim, procedureItems: items };
+    });
   }
 }

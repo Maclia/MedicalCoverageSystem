@@ -22,6 +22,7 @@ const medicalPanelLinks: SidebarLink[] = [
   { path: "/medical-personnel", label: "Personnel", icon: "person" },
   { path: "/panel-documentation", label: "Documentation", icon: "folder" },
   { path: "/claims", label: "Claims", icon: "receipt_long" },
+  { path: "/provider-claim-submission", label: "Submit Claim", icon: "add_circle" },
 ];
 
 const managementLinks: SidebarLink[] = [

@@ -18,7 +18,10 @@ import {
   ClaimPayment, InsertClaimPayment,
   ProviderDisbursement, InsertProviderDisbursement,
   DisbursementItem, InsertDisbursementItem,
-  InsuranceBalance, InsertInsuranceBalance
+  InsuranceBalance, InsertInsuranceBalance,
+  MedicalProcedure, InsertMedicalProcedure,
+  ProviderProcedureRate, InsertProviderProcedureRate,
+  ClaimProcedureItem, InsertClaimProcedureItem
 } from "@shared/schema";
 
 // Storage interface
@@ -129,8 +132,18 @@ export interface IStorage {
   getClaimsByPersonnel(personnelId: number): Promise<Claim[]>;
   getClaimsByMember(memberId: number): Promise<Claim[]>;
   getClaimsByStatus(status: string): Promise<Claim[]>;
+  // New methods for provider verification and fraud detection
+  getClaimsByProviderVerification(verified: boolean): Promise<Claim[]>;
+  getClaimsByFraudRiskLevel(riskLevel: string): Promise<Claim[]>;
+  getClaimsRequiringHigherApproval(): Promise<Claim[]>;
+  
   createClaim(claim: InsertClaim): Promise<Claim>;
   updateClaimStatus(id: number, status: string, reviewerNotes?: string): Promise<Claim>;
+  
+  // Admin approval and fraud detection methods
+  adminApproveClaim(id: number, adminNotes: string): Promise<Claim>;
+  rejectClaim(id: number, reason: string): Promise<Claim>;
+  markClaimAsFraudulent(id: number, riskLevel: string, riskFactors: string, reviewerId: number): Promise<Claim>;
   processClaimPayment(id: number, paymentReference: string): Promise<Claim>;
   
   // Premium Payment methods
@@ -174,6 +187,31 @@ export interface IStorage {
   getInsuranceBalanceByPeriod(periodId: number): Promise<InsuranceBalance | undefined>;
   createInsuranceBalance(balance: InsertInsuranceBalance): Promise<InsuranceBalance>;
   updateInsuranceBalance(id: number, totalPremiums: number, totalClaims: number, pendingClaims: number, activeBalance: number): Promise<InsuranceBalance>;
+  
+  // Medical Procedure methods
+  getMedicalProcedures(): Promise<MedicalProcedure[]>;
+  getMedicalProcedure(id: number): Promise<MedicalProcedure | undefined>;
+  getMedicalProceduresByCategory(category: string): Promise<MedicalProcedure[]>;
+  getActiveMedicalProcedures(): Promise<MedicalProcedure[]>;
+  createMedicalProcedure(procedure: InsertMedicalProcedure): Promise<MedicalProcedure>;
+  updateMedicalProcedureStatus(id: number, active: boolean): Promise<MedicalProcedure>;
+  
+  // Provider Procedure Rate methods
+  getProviderProcedureRates(): Promise<ProviderProcedureRate[]>;
+  getProviderProcedureRate(id: number): Promise<ProviderProcedureRate | undefined>;
+  getProviderProcedureRatesByInstitution(institutionId: number): Promise<ProviderProcedureRate[]>;
+  getProviderProcedureRatesByProcedure(procedureId: number): Promise<ProviderProcedureRate[]>;
+  getActiveProviderProcedureRates(): Promise<ProviderProcedureRate[]>;
+  createProviderProcedureRate(rate: InsertProviderProcedureRate): Promise<ProviderProcedureRate>;
+  updateProviderProcedureRateStatus(id: number, active: boolean): Promise<ProviderProcedureRate>;
+  
+  // Claim Procedure Item methods
+  getClaimProcedureItems(): Promise<ClaimProcedureItem[]>;
+  getClaimProcedureItem(id: number): Promise<ClaimProcedureItem | undefined>;
+  getClaimProcedureItemsByClaim(claimId: number): Promise<ClaimProcedureItem[]>;
+  getClaimProcedureItemsByProcedure(procedureId: number): Promise<ClaimProcedureItem[]>;
+  createClaimProcedureItem(item: InsertClaimProcedureItem): Promise<ClaimProcedureItem>;
+  createClaimWithProcedureItems(claim: InsertClaim, procedureItems: Omit<InsertClaimProcedureItem, 'claimId'>[]): Promise<{ claim: Claim, procedureItems: ClaimProcedureItem[] }>;
 }
 
 // In-memory storage implementation
@@ -198,6 +236,9 @@ export class MemStorage implements IStorage {
   private providerDisbursements: Map<number, ProviderDisbursement>;
   private disbursementItems: Map<number, DisbursementItem>;
   private insuranceBalances: Map<number, InsuranceBalance>;
+  private medicalProcedures: Map<number, MedicalProcedure>;
+  private providerProcedureRates: Map<number, ProviderProcedureRate>;
+  private claimProcedureItems: Map<number, ClaimProcedureItem>;
   
   private companyId: number;
   private memberId: number;
@@ -219,6 +260,9 @@ export class MemStorage implements IStorage {
   private providerDisbursementId: number;
   private disbursementItemId: number;
   private insuranceBalanceId: number;
+  private medicalProcedureId: number;
+  private providerProcedureRateId: number;
+  private claimProcedureItemId: number;
   
   constructor() {
     this.companies = new Map();
@@ -241,6 +285,9 @@ export class MemStorage implements IStorage {
     this.providerDisbursements = new Map();
     this.disbursementItems = new Map();
     this.insuranceBalances = new Map();
+    this.medicalProcedures = new Map();
+    this.providerProcedureRates = new Map();
+    this.claimProcedureItems = new Map();
     
     this.companyId = 1;
     this.memberId = 1;
@@ -262,6 +309,9 @@ export class MemStorage implements IStorage {
     this.providerDisbursementId = 1;
     this.disbursementItemId = 1;
     this.insuranceBalanceId = 1;
+    this.medicalProcedureId = 1;
+    this.providerProcedureRateId = 1;
+    this.claimProcedureItemId = 1;
     
     // Initialize with a default active period, rates, and benefits
     this.initializeDefaultData();
@@ -919,15 +969,68 @@ export class MemStorage implements IStorage {
     );
   }
   
+  async getClaimsByProviderVerification(verified: boolean): Promise<Claim[]> {
+    return Array.from(this.claims.values()).filter(
+      claim => claim.providerVerified === verified
+    );
+  }
+  
+  async getClaimsByFraudRiskLevel(riskLevel: string): Promise<Claim[]> {
+    return Array.from(this.claims.values()).filter(
+      claim => claim.fraudRiskLevel === riskLevel
+    );
+  }
+  
+  async getClaimsRequiringHigherApproval(): Promise<Claim[]> {
+    return Array.from(this.claims.values()).filter(
+      claim => claim.requiresHigherApproval === true && !claim.approvedByAdmin
+    );
+  }
+  
   async createClaim(claim: InsertClaim): Promise<Claim> {
     const id = this.claimId++;
+    
+    // Validate diagnosis code is provided
+    if (!claim.diagnosisCode || !claim.diagnosisCodeType) {
+      throw new Error('ICD-10 or ICD-11 diagnosis code and code type are required');
+    }
+    
+    // Validate diagnosis code type is valid
+    if (claim.diagnosisCodeType !== 'ICD-10' && claim.diagnosisCodeType !== 'ICD-11') {
+      throw new Error('Diagnosis code type must be either ICD-10 or ICD-11');
+    }
+    
+    // Check provider verification status
+    const institution = await this.getMedicalInstitution(claim.institutionId);
+    const personnel = claim.personnelId ? await this.getMedicalPersonnel(claim.personnelId) : null;
+    
+    // Determine provider verification status
+    const isInstitutionVerified = institution && institution.approvalStatus === 'approved';
+    const isPersonnelVerified = !claim.personnelId || 
+      (personnel && personnel.approvalStatus === 'approved');
+
+    // Set provider verified status 
+    const providerVerified = isInstitutionVerified && isPersonnelVerified;
+    
+    // Set higher approval requirement
+    const requiresHigherApproval = !providerVerified;
+
     const newClaim: Claim = {
       ...claim,
       id,
       claimDate: new Date().toISOString(),
-      status: 'submitted',
+      status: requiresHigherApproval ? 'under_review' : 'submitted',
       reviewDate: null,
       paymentDate: null,
+      providerVerified,
+      requiresHigherApproval,
+      approvedByAdmin: false,
+      adminApprovalDate: null,
+      adminReviewNotes: null,
+      fraudRiskLevel: 'none',
+      fraudRiskFactors: null,
+      fraudReviewDate: null,
+      fraudReviewerId: null,
       createdAt: new Date().toISOString()
     };
     this.claims.set(id, newClaim);
@@ -951,6 +1054,77 @@ export class MemStorage implements IStorage {
     return updatedClaim;
   }
   
+  async adminApproveClaim(id: number, adminNotes: string): Promise<Claim> {
+    const claim = this.claims.get(id);
+    if (!claim) {
+      throw new Error(`Claim with ID ${id} not found`);
+    }
+    
+    if (!claim.requiresHigherApproval) {
+      throw new Error(`Claim with ID ${id} does not require admin approval`);
+    }
+    
+    const updatedClaim: Claim = {
+      ...claim,
+      approvedByAdmin: true,
+      adminApprovalDate: new Date().toISOString(),
+      adminReviewNotes: adminNotes,
+      status: 'approved',
+      reviewDate: new Date().toISOString()
+    };
+    
+    this.claims.set(id, updatedClaim);
+    return updatedClaim;
+  }
+  
+  async rejectClaim(id: number, reason: string): Promise<Claim> {
+    const claim = this.claims.get(id);
+    if (!claim) {
+      throw new Error(`Claim with ID ${id} not found`);
+    }
+    
+    const updatedClaim: Claim = {
+      ...claim,
+      status: 'rejected',
+      reviewDate: new Date().toISOString(),
+      reviewerNotes: reason
+    };
+    
+    this.claims.set(id, updatedClaim);
+    return updatedClaim;
+  }
+  
+  async markClaimAsFraudulent(
+    id: number, 
+    riskLevel: string, 
+    riskFactors: string, 
+    reviewerId: number
+  ): Promise<Claim> {
+    const claim = this.claims.get(id);
+    if (!claim) {
+      throw new Error(`Claim with ID ${id} not found`);
+    }
+    
+    // Valid risk levels
+    const validRiskLevels = ['low', 'medium', 'high', 'confirmed'];
+    if (!validRiskLevels.includes(riskLevel)) {
+      throw new Error(`Invalid risk level: ${riskLevel}. Must be one of: ${validRiskLevels.join(', ')}`);
+    }
+    
+    const updatedClaim: Claim = {
+      ...claim,
+      fraudRiskLevel: riskLevel as any,
+      fraudRiskFactors: riskFactors,
+      fraudReviewDate: new Date().toISOString(),
+      fraudReviewerId: reviewerId,
+      status: riskLevel === 'confirmed' ? 'fraud_confirmed' : 'fraud_review',
+      reviewDate: new Date().toISOString()
+    };
+    
+    this.claims.set(id, updatedClaim);
+    return updatedClaim;
+  }
+  
   async processClaimPayment(id: number, paymentReference: string): Promise<Claim> {
     const claim = this.claims.get(id);
     if (!claim) {
@@ -959,6 +1133,14 @@ export class MemStorage implements IStorage {
     
     if (claim.status !== 'approved') {
       throw new Error(`Claim with ID ${id} must be approved before payment can be processed`);
+    }
+    
+    if (claim.requiresHigherApproval && !claim.approvedByAdmin) {
+      throw new Error(`Claim with ID ${id} requires admin approval before payment can be processed`);
+    }
+    
+    if (claim.fraudRiskLevel === 'high' || claim.fraudRiskLevel === 'confirmed') {
+      throw new Error(`Claim with ID ${id} has been flagged for fraud and cannot be processed for payment`);
     }
     
     const updatedClaim: Claim = {
@@ -1231,6 +1413,168 @@ export class MemStorage implements IStorage {
     
     this.insuranceBalances.set(id, updatedBalance);
     return updatedBalance;
+  }
+
+  // Medical Procedure methods
+  async getMedicalProcedures(): Promise<MedicalProcedure[]> {
+    return Array.from(this.medicalProcedures.values()).filter(
+      procedure => procedure.active
+    ).sort((a, b) => {
+      if (a.category !== b.category) {
+        return a.category.localeCompare(b.category);
+      }
+      return a.name.localeCompare(b.name);
+    });
+  }
+
+  async getMedicalProcedure(id: number): Promise<MedicalProcedure | undefined> {
+    return this.medicalProcedures.get(id);
+  }
+
+  async getMedicalProceduresByCategory(category: string): Promise<MedicalProcedure[]> {
+    return Array.from(this.medicalProcedures.values()).filter(
+      procedure => procedure.category === category && procedure.active
+    ).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getActiveMedicalProcedures(): Promise<MedicalProcedure[]> {
+    return Array.from(this.medicalProcedures.values()).filter(
+      procedure => procedure.active
+    );
+  }
+
+  async createMedicalProcedure(procedure: InsertMedicalProcedure): Promise<MedicalProcedure> {
+    const id = this.medicalProcedureId++;
+    const newProcedure: MedicalProcedure = {
+      ...procedure,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.medicalProcedures.set(id, newProcedure);
+    return newProcedure;
+  }
+
+  async updateMedicalProcedureStatus(id: number, active: boolean): Promise<MedicalProcedure> {
+    const procedure = this.medicalProcedures.get(id);
+    if (!procedure) {
+      throw new Error(`Medical Procedure with ID ${id} not found`);
+    }
+    
+    const updatedProcedure: MedicalProcedure = {
+      ...procedure,
+      active,
+      updatedAt: new Date()
+    };
+    
+    this.medicalProcedures.set(id, updatedProcedure);
+    return updatedProcedure;
+  }
+
+  // Provider Procedure Rate methods
+  async getProviderProcedureRates(): Promise<ProviderProcedureRate[]> {
+    return Array.from(this.providerProcedureRates.values());
+  }
+
+  async getProviderProcedureRate(id: number): Promise<ProviderProcedureRate | undefined> {
+    return this.providerProcedureRates.get(id);
+  }
+
+  async getProviderProcedureRatesByInstitution(institutionId: number): Promise<ProviderProcedureRate[]> {
+    return Array.from(this.providerProcedureRates.values()).filter(
+      rate => rate.medicalInstitutionId === institutionId
+    );
+  }
+
+  async getProviderProcedureRatesByProcedure(procedureId: number): Promise<ProviderProcedureRate[]> {
+    return Array.from(this.providerProcedureRates.values()).filter(
+      rate => rate.procedureId === procedureId
+    );
+  }
+
+  async getActiveProviderProcedureRates(): Promise<ProviderProcedureRate[]> {
+    return Array.from(this.providerProcedureRates.values()).filter(
+      rate => rate.active
+    );
+  }
+
+  async createProviderProcedureRate(rate: InsertProviderProcedureRate): Promise<ProviderProcedureRate> {
+    const id = this.providerProcedureRateId++;
+    const newRate: ProviderProcedureRate = {
+      ...rate,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.providerProcedureRates.set(id, newRate);
+    return newRate;
+  }
+
+  async updateProviderProcedureRateStatus(id: number, active: boolean): Promise<ProviderProcedureRate> {
+    const rate = this.providerProcedureRates.get(id);
+    if (!rate) {
+      throw new Error(`Provider Procedure Rate with ID ${id} not found`);
+    }
+    
+    const updatedRate: ProviderProcedureRate = {
+      ...rate,
+      active,
+      updatedAt: new Date()
+    };
+    
+    this.providerProcedureRates.set(id, updatedRate);
+    return updatedRate;
+  }
+
+  // Claim Procedure Item methods
+  async getClaimProcedureItems(): Promise<ClaimProcedureItem[]> {
+    return Array.from(this.claimProcedureItems.values());
+  }
+
+  async getClaimProcedureItem(id: number): Promise<ClaimProcedureItem | undefined> {
+    return this.claimProcedureItems.get(id);
+  }
+
+  async getClaimProcedureItemsByClaim(claimId: number): Promise<ClaimProcedureItem[]> {
+    return Array.from(this.claimProcedureItems.values()).filter(
+      item => item.claimId === claimId
+    );
+  }
+
+  async getClaimProcedureItemsByProcedure(procedureId: number): Promise<ClaimProcedureItem[]> {
+    return Array.from(this.claimProcedureItems.values()).filter(
+      item => item.procedureId === procedureId
+    );
+  }
+
+  async createClaimProcedureItem(item: InsertClaimProcedureItem): Promise<ClaimProcedureItem> {
+    const id = this.claimProcedureItemId++;
+    const newItem: ClaimProcedureItem = {
+      ...item,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.claimProcedureItems.set(id, newItem);
+    return newItem;
+  }
+
+  async createClaimWithProcedureItems(
+    claim: InsertClaim, 
+    procedureItems: Omit<InsertClaimProcedureItem, 'claimId'>[]
+  ): Promise<{ claim: Claim, procedureItems: ClaimProcedureItem[] }> {
+    // Create the claim first
+    const newClaim = await this.createClaim(claim);
+    
+    // Then create all procedure items with the new claim ID
+    const items = await Promise.all(
+      procedureItems.map(item => this.createClaimProcedureItem({
+        ...item,
+        claimId: newClaim.id
+      }))
+    );
+    
+    return { claim: newClaim, procedureItems: items };
   }
 }
 

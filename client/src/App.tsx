@@ -17,6 +17,7 @@ import MedicalPersonnel from "@/pages/MedicalPersonnel";
 import PanelDocumentation from "@/pages/PanelDocumentation";
 import Claims from "@/pages/Claims";
 import MemberDashboard from "@/pages/MemberDashboard";
+import ProviderClaimSubmission from "@/pages/ProviderClaimSubmission";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -37,6 +38,7 @@ function Router() {
         <Route path="/panel-documentation" component={PanelDocumentation} />
         <Route path="/claims" component={Claims} />
         <Route path="/member-dashboard/:id" component={MemberDashboard} />
+        <Route path="/provider-claim-submission" component={ProviderClaimSubmission} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

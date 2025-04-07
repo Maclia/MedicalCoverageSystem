@@ -80,6 +80,9 @@ interface Claim {
   serviceDate: string;
   amount: number;
   description: string;
+  diagnosis: string;
+  diagnosisCode: string;
+  diagnosisCodeType: 'ICD-10' | 'ICD-11';
   status: string;
   reviewDate: string | null;
   reviewerNotes: string | null;
@@ -103,7 +106,10 @@ export default function Claims() {
     benefitId: 0,
     serviceDate: new Date().toISOString().split('T')[0],
     amount: "",
-    description: ""
+    description: "",
+    diagnosis: "",
+    diagnosisCode: "",
+    diagnosisCodeType: "ICD-10" as "ICD-10" | "ICD-11"
   });
   
   const [reviewForm, setReviewForm] = useState({
@@ -251,6 +257,27 @@ export default function Claims() {
         }
       }
       
+      // Validate diagnosis code format
+      if (!claimForm.diagnosisCode) {
+        setClaimError("Diagnosis code is required");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Validate ICD-10 code format (if ICD-10 is selected)
+      if (claimForm.diagnosisCodeType === "ICD-10" && !/^[A-Z][0-9]{2}(\.[0-9]{1,2})?$/.test(claimForm.diagnosisCode)) {
+        setClaimError("Invalid ICD-10 format. Expected format: A00-Z99 with optional decimal (e.g., A09.0)");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Validate ICD-11 code format (if ICD-11 is selected)
+      if (claimForm.diagnosisCodeType === "ICD-11" && !/^[A-Z][A-Z0-9]{1}[0-9]{2}(\.[0-9]{1,3})?$/.test(claimForm.diagnosisCode)) {
+        setClaimError("Invalid ICD-11 format. Expected format: 1A00-ZZ99 with optional decimal (e.g., BA00.0)");
+        setIsSubmitting(false);
+        return;
+      }
+      
       const formData = {
         ...claimForm,
         amount: parseFloat(claimForm.amount)
@@ -278,7 +305,10 @@ export default function Claims() {
         benefitId: 0,
         serviceDate: new Date().toISOString().split('T')[0],
         amount: "",
-        description: ""
+        description: "",
+        diagnosis: "",
+        diagnosisCode: "",
+        diagnosisCodeType: "ICD-10" as "ICD-10" | "ICD-11"
       });
       setOpen(false);
       
@@ -646,6 +676,49 @@ export default function Claims() {
                     required
                   />
                 </div>
+
+                <div className="space-y-2 md:col-span-2">
+                  <Label htmlFor="diagnosis">Diagnosis</Label>
+                  <Textarea 
+                    id="diagnosis"
+                    name="diagnosis"
+                    value={claimForm.diagnosis}
+                    onChange={handleChange}
+                    placeholder="Enter the medical diagnosis"
+                    rows={2}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="diagnosisCodeType">Diagnosis Code Type</Label>
+                  <Select 
+                    name="diagnosisCodeType" 
+                    value={claimForm.diagnosisCodeType}
+                    onValueChange={(value) => handleSelectChange("diagnosisCodeType", value)}
+                    required
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select diagnosis code type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ICD-10">ICD-10</SelectItem>
+                      <SelectItem value="ICD-11">ICD-11</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="diagnosisCode">Diagnosis Code</Label>
+                  <Input 
+                    id="diagnosisCode"
+                    name="diagnosisCode"
+                    value={claimForm.diagnosisCode}
+                    onChange={handleChange}
+                    placeholder={`Enter ${claimForm.diagnosisCodeType} code`}
+                    required
+                  />
+                </div>
               </div>
               
               <div className="flex justify-end">
@@ -686,6 +759,7 @@ export default function Claims() {
                     <TableHead>Member</TableHead>
                     <TableHead>Provider</TableHead>
                     <TableHead>Benefit</TableHead>
+                    <TableHead>Diagnosis</TableHead>
                     <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Actions</TableHead>
@@ -711,6 +785,12 @@ export default function Claims() {
                         <div>{getBenefitName(claim.benefitId)}</div>
                         <div className="text-sm text-muted-foreground">
                           {new Date(claim.serviceDate).toLocaleDateString()}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="font-medium">{claim.diagnosis}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {claim.diagnosisCodeType}: {claim.diagnosisCode}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -784,6 +864,12 @@ export default function Claims() {
                   <div className="mt-1">
                     <span className="font-medium">Description:</span> {selectedClaim.description}
                   </div>
+                  <div className="mt-1">
+                    <span className="font-medium">Diagnosis:</span> {selectedClaim.diagnosis}
+                  </div>
+                  <div className="mt-1">
+                    <span className="font-medium">Diagnosis Code:</span> {selectedClaim.diagnosisCodeType} - {selectedClaim.diagnosisCode}
+                  </div>
                 </>
               )}
             </DialogDescription>
@@ -841,6 +927,12 @@ export default function Claims() {
                   </div>
                   <div className="mt-1">
                     <span className="font-medium">Amount:</span> {formatCurrency(selectedClaim.amount)}
+                  </div>
+                  <div className="mt-1">
+                    <span className="font-medium">Diagnosis:</span> {selectedClaim.diagnosis}
+                  </div>
+                  <div className="mt-1">
+                    <span className="font-medium">Diagnosis Code:</span> {selectedClaim.diagnosisCodeType} - {selectedClaim.diagnosisCode}
                   </div>
                 </>
               )}
