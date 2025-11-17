@@ -280,7 +280,9 @@ export class MemStorage implements IStorage {
   private providerProcedureRateId: number;
   private claimProcedureItemId: number;
   private diagnosisCodeId: number;
-  
+  private users: Map<number, User>;
+  private userId: number;
+
   constructor() {
     this.companies = new Map();
     this.members = new Map();
@@ -306,6 +308,7 @@ export class MemStorage implements IStorage {
     this.providerProcedureRates = new Map();
     this.claimProcedureItems = new Map();
     this.diagnosisCodes = new Map();
+    this.users = new Map();
     
     this.companyId = 1;
     this.memberId = 1;
