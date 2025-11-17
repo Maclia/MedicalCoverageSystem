@@ -308,20 +308,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   );
 
-  // Members
-  app.get("/api/members", async (req, res) => {
-    try {
-      let members;
-      if (req.query.companyId) {
-        members = await storage.getMembersByCompany(Number(req.query.companyId));
-      } else {
-        members = await storage.getMembers();
+  // Members - Protected routes
+  app.get("/api/members",
+    authenticate,
+    requireRole(['insurance']),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        let members;
+        if (req.query.companyId) {
+          // Only allow access to own company members
+          if (Number(req.query.companyId) !== req.user!.entityId) {
+            return res.status(403).json({ error: "Access denied - can only view your own company's members" });
+          }
+          members = await storage.getMembersByCompany(Number(req.query.companyId));
+        } else {
+          members = await storage.getMembers();
+        }
+        res.json(members);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to fetch members" });
       }
-      res.json(members);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch members" });
     }
-  });
+  );
   
   // Add endpoint for getting members by company ID in URL path
   app.get("/api/members/company/:companyId", async (req, res) => {
