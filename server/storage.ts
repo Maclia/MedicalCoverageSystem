@@ -31,6 +31,7 @@ export interface IStorage {
   // User authentication methods
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
 
   // Company methods
   getCompanies(): Promise<Company[]>;
