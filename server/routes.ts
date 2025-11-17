@@ -1,12 +1,12 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { 
-  insertCompanySchema, 
+import {
+  insertCompanySchema,
   insertPrincipalMemberSchema,
-  insertDependentMemberSchema, 
-  insertPeriodSchema, 
-  insertPremiumRateSchema, 
+  insertDependentMemberSchema,
+  insertPeriodSchema,
+  insertPremiumRateSchema,
   insertPremiumSchema,
   insertBenefitSchema,
   insertCompanyBenefitSchema,
@@ -24,8 +24,16 @@ import {
   insertMedicalProcedureSchema,
   insertProviderProcedureRateSchema,
   insertClaimProcedureItemSchema,
-  insertDiagnosisCodeSchema
+  insertDiagnosisCodeSchema,
+  insertUserSchema
 } from "@shared/schema";
+import { authenticateUser, logoutUser, refreshUserToken } from "./auth";
+import { authenticate, requireRole, requireOwnership, AuthenticatedRequest } from "./middleware/auth";
+import { ZodError } from "zod";
+import { fromZodError } from "zod-validation-error";
+import * as premiumCalculator from "./utils/premiumCalculator";
+import { addDays, differenceInYears, parseISO } from "date-fns";
+import { z } from "zod";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import * as premiumCalculator from "./utils/premiumCalculator";
