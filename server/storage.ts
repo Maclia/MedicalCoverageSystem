@@ -334,6 +334,7 @@ export class MemStorage implements IStorage {
     this.providerProcedureRateId = 1;
     this.claimProcedureItemId = 1;
     this.diagnosisCodeId = 1;
+    this.userId = 1;
     
     // Initialize with a default active period, rates, and benefits
     this.initializeDefaultData();
