@@ -460,6 +460,9 @@ export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processin
 export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
 export const procedureCategoryEnum = pgEnum('procedure_category', ['consultation', 'surgery', 'diagnostic', 'laboratory', 'imaging', 'dental', 'vision', 'medication', 'therapy', 'emergency', 'maternity', 'preventative', 'other']);
 
+// User type enum for authentication
+export const userTypeEnum = pgEnum('user_type', ['insurance', 'institution', 'provider']);
+
 // Premium Payments table
 export const premiumPayments = pgTable("premium_payments", {
   id: serial("id").primaryKey(),
