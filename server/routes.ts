@@ -267,8 +267,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // API Routes
-  // Companies
-  app.get("/api/companies", async (req, res) => {
+  // Companies - Protected routes
+  app.get("/api/companies", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
     try {
       const companies = await storage.getCompanies();
       res.json(companies);
@@ -277,26 +277,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/companies/:id", async (req, res) => {
-    try {
-      const company = await storage.getCompany(Number(req.params.id));
-      if (!company) {
-        return res.status(404).json({ error: "Company not found" });
+  app.get("/api/companies/:id",
+    authenticate,
+    requireRole(['insurance']),
+    requireOwnership((user, resourceId) => user.entityId === parseInt(resourceId)),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const company = await storage.getCompany(Number(req.params.id));
+        if (!company) {
+          return res.status(404).json({ error: "Company not found" });
+        }
+        res.json(company);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to fetch company" });
       }
-      res.json(company);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch company" });
     }
-  });
+  );
 
-  app.post("/api/companies", validateRequest(insertCompanySchema), async (req, res) => {
-    try {
-      const company = await storage.createCompany(req.body);
-      res.status(201).json(company);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to create company" });
+  app.post("/api/companies",
+    authenticate,
+    requireRole(['insurance']),
+    validateRequest(insertCompanySchema),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const company = await storage.createCompany(req.body);
+        res.status(201).json(company);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to create company" });
+      }
     }
-  });
+  );
 
   // Members
   app.get("/api/members", async (req, res) => {
