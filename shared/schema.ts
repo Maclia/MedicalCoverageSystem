@@ -685,3 +685,30 @@ export type InsertProviderProcedureRate = z.infer<typeof insertProviderProcedure
 
 export type ClaimProcedureItem = typeof claimProcedureItems.$inferSelect;
 export type InsertClaimProcedureItem = z.infer<typeof insertClaimProcedureItemSchema>;
+
+// Insert schemas for authentication tables
+export const insertUserSchema = createInsertSchema(users).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+
+// Types for authentication entities
+export type User = typeof users.$inferSelect;
+export type InsertUser = z.infer<typeof insertUserSchema>;
+
+export type UserSession = typeof userSessions.$inferSelect;
+export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
+
+export type AuditLog = typeof auditLogs.$inferSelect;
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
