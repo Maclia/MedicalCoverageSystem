@@ -232,6 +232,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  }
+
   // Helper function to get permissions based on user role
   function getPermissionsForRole(userType: string) {
     switch (userType) {
@@ -265,6 +267,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return [];
     }
   }
+
+  // Import analytics engine
+  const { AnalyticsEngine } = require('./routes/analytics');
+  const analyticsEngine = new AnalyticsEngine();
 
   // API Routes
   // Companies - Protected routes
