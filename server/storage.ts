@@ -1,7 +1,7 @@
-import { 
-  Company, InsertCompany, 
-  Member, InsertMember, 
-  Period, InsertPeriod, 
+import {
+  Company, InsertCompany,
+  Member, InsertMember,
+  Period, InsertPeriod,
   PremiumRate, InsertPremiumRate,
   Premium, InsertPremium,
   Benefit, InsertBenefit,
@@ -22,11 +22,17 @@ import {
   MedicalProcedure, InsertMedicalProcedure,
   ProviderProcedureRate, InsertProviderProcedureRate,
   ClaimProcedureItem, InsertClaimProcedureItem,
-  DiagnosisCode, InsertDiagnosisCode
+  DiagnosisCode, InsertDiagnosisCode,
+  User
 } from "@shared/schema";
 
 // Storage interface
 export interface IStorage {
+  // User authentication methods
+  getUser(id: number): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+
   // Company methods
   getCompanies(): Promise<Company[]>;
   getCompany(id: number): Promise<Company | undefined>;
@@ -275,7 +281,9 @@ export class MemStorage implements IStorage {
   private providerProcedureRateId: number;
   private claimProcedureItemId: number;
   private diagnosisCodeId: number;
-  
+  private users: Map<number, User>;
+  private userId: number;
+
   constructor() {
     this.companies = new Map();
     this.members = new Map();
@@ -301,6 +309,7 @@ export class MemStorage implements IStorage {
     this.providerProcedureRates = new Map();
     this.claimProcedureItems = new Map();
     this.diagnosisCodes = new Map();
+    this.users = new Map();
     
     this.companyId = 1;
     this.memberId = 1;
@@ -326,6 +335,7 @@ export class MemStorage implements IStorage {
     this.providerProcedureRateId = 1;
     this.claimProcedureItemId = 1;
     this.diagnosisCodeId = 1;
+    this.userId = 1;
     
     // Initialize with a default active period, rates, and benefits
     this.initializeDefaultData();
@@ -465,7 +475,18 @@ export class MemStorage implements IStorage {
       this.benefits.set(id, newBenefit);
     });
   }
-  
+
+  // User authentication methods
+  async getUser(id: number): Promise<User | undefined> {
+    return this.users.get(id);
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      user => user.email.toLowerCase() === email.toLowerCase()
+    );
+  }
+
   // Company methods
   async getCompanies(): Promise<Company[]> {
     return Array.from(this.companies.values());

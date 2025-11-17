@@ -1,12 +1,12 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { 
-  insertCompanySchema, 
+import {
+  insertCompanySchema,
   insertPrincipalMemberSchema,
-  insertDependentMemberSchema, 
-  insertPeriodSchema, 
-  insertPremiumRateSchema, 
+  insertDependentMemberSchema,
+  insertPeriodSchema,
+  insertPremiumRateSchema,
   insertPremiumSchema,
   insertBenefitSchema,
   insertCompanyBenefitSchema,
@@ -24,12 +24,16 @@ import {
   insertMedicalProcedureSchema,
   insertProviderProcedureRateSchema,
   insertClaimProcedureItemSchema,
-  insertDiagnosisCodeSchema
+  insertDiagnosisCodeSchema,
+  insertUserSchema
 } from "@shared/schema";
+import { authenticateUser, logoutUser, refreshUserToken } from "./auth";
+import { authenticate, requireRole, requireOwnership, AuthenticatedRequest } from "./middleware/auth";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import * as premiumCalculator from "./utils/premiumCalculator";
 import { addDays, differenceInYears, parseISO } from "date-fns";
+import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to handle zod validation errors
@@ -47,9 +51,224 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
+  // Authentication validation schemas
+  const loginSchema = z.object({
+    email: z.string().email("Invalid email format"),
+    password: z.string().min(6, "Password must be at least 6 characters"),
+    userType: z.enum(["insurance", "institution", "provider"], {
+      required_error: "User type is required",
+      invalid_type_error: "User type must be insurance, institution, or provider"
+    })
+  });
+
+  const refreshSchema = z.object({
+    refreshToken: z.string().min(1, "Refresh token is required")
+  });
+
+  const forgotPasswordSchema = z.object({
+    email: z.string().email("Invalid email format"),
+    userType: z.enum(["insurance", "institution", "provider"], {
+      required_error: "User type is required",
+      invalid_type_error: "User type must be insurance, institution, or provider"
+    })
+  });
+
+  const resetPasswordSchema = z.object({
+    token: z.string().min(1, "Reset token is required"),
+    newPassword: z.string().min(8, "Password must be at least 8 characters")
+  });
+
+  // Authentication Routes
+  app.post("/api/auth/login", validateRequest(loginSchema), async (req, res) => {
+    try {
+      const { email, password, userType } = req.body;
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const userAgent = req.get('User-Agent');
+
+      const tokens = await authenticateUser(email, password, userType);
+
+      // Store IP and user agent for security
+      if (tokens.user) {
+        console.log(`User logged in: ${email} (${userType}) from ${ipAddress}`);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          ...tokens,
+          ipAddress,
+          userAgent
+        }
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+      res.status(401).json({ error: errorMessage });
+    }
+  });
+
+  app.post("/api/auth/refresh", validateRequest(refreshSchema), async (req, res) => {
+    try {
+      const { refreshToken } = req.body;
+      const ipAddress = req.ip || req.connection.remoteAddress;
+      const userAgent = req.get('User-Agent');
+
+      const tokens = await refreshUserToken(refreshToken);
+
+      res.json({
+        success: true,
+        data: {
+          ...tokens,
+          ipAddress,
+          userAgent
+        }
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Token refresh failed';
+      res.status(401).json({ error: errorMessage });
+    }
+  });
+
+  app.post("/api/auth/logout", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(400).json({ error: 'Refresh token required for logout' });
+      }
+
+      const refreshToken = authHeader.substring(7);
+      await logoutUser(refreshToken);
+
+      res.json({
+        success: true,
+        message: 'Logged out successfully'
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Logout failed';
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.get("/api/auth/profile", authenticate, async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ error: 'User not authenticated' });
+      }
+
+      // Get full user profile with entity data
+      const userRecord = await storage.getUser(req.user.userId);
+      if (!userRecord) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      let entityData = null;
+      switch (req.user.userType) {
+        case 'insurance':
+          const companiesData = await storage.getCompany(req.user.entityId);
+          entityData = companiesData || null;
+          break;
+        case 'institution':
+          const institutionsData = await storage.getMedicalInstitution(req.user.entityId);
+          entityData = institutionsData || null;
+          break;
+        case 'provider':
+          const personnelData = await storage.getMedicalPersonnel(req.user.entityId);
+          entityData = personnelData || null;
+          break;
+      }
+
+      const profile = {
+        ...userRecord,
+        entityData,
+        permissions: getPermissionsForRole(req.user.userType)
+      };
+
+      res.json({
+        success: true,
+        data: profile
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Profile fetch failed';
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.post("/api/auth/forgot-password", validateRequest(forgotPasswordSchema), async (req, res) => {
+    try {
+      const { email, userType } = req.body;
+
+      // In a real implementation, you would:
+      // 1. Generate a reset token
+      // 2. Store it in the database with expiry
+      // 3. Send an email with reset link
+      // For now, we'll just return a success message
+      res.json({
+        success: true,
+        message: 'Password reset link sent to your email address'
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  app.post("/api/auth/reset-password", validateRequest(resetPasswordSchema), async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      // In a real implementation, you would:
+      // 1. Validate the reset token
+      // 2. Check if it's expired
+      // 3. Update the user's password
+      // 4. Invalidate the reset token
+      // For now, we'll just return a success message
+      res.json({
+        success: true,
+        message: 'Password reset successfully'
+      });
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
+      res.status(500).json({ error: errorMessage });
+    }
+  });
+
+  // Helper function to get permissions based on user role
+  function getPermissionsForRole(userType: string) {
+    switch (userType) {
+      case 'insurance':
+        return [
+          'view_company',
+          'edit_company',
+          'view_members',
+          'manage_members',
+          'view_premiums',
+          'view_benefits',
+          'view_claims'
+        ];
+      case 'institution':
+        return [
+          'view_institution',
+          'edit_institution',
+          'view_personnel',
+          'manage_personnel',
+          'view_institution_claims'
+        ];
+      case 'provider':
+        return [
+          'view_profile',
+          'edit_profile',
+          'submit_claims',
+          'view_own_claims',
+          'view_institution_info'
+        ];
+      default:
+        return [];
+    }
+  }
+
   // API Routes
-  // Companies
-  app.get("/api/companies", async (req, res) => {
+  // Companies - Protected routes
+  app.get("/api/companies", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
     try {
       const companies = await storage.getCompanies();
       res.json(companies);
@@ -58,41 +277,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/companies/:id", async (req, res) => {
-    try {
-      const company = await storage.getCompany(Number(req.params.id));
-      if (!company) {
-        return res.status(404).json({ error: "Company not found" });
+  app.get("/api/companies/:id",
+    authenticate,
+    requireRole(['insurance']),
+    requireOwnership((user, resourceId) => user.entityId === parseInt(resourceId)),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const company = await storage.getCompany(Number(req.params.id));
+        if (!company) {
+          return res.status(404).json({ error: "Company not found" });
+        }
+        res.json(company);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to fetch company" });
       }
-      res.json(company);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch company" });
     }
-  });
+  );
 
-  app.post("/api/companies", validateRequest(insertCompanySchema), async (req, res) => {
-    try {
-      const company = await storage.createCompany(req.body);
-      res.status(201).json(company);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to create company" });
-    }
-  });
-
-  // Members
-  app.get("/api/members", async (req, res) => {
-    try {
-      let members;
-      if (req.query.companyId) {
-        members = await storage.getMembersByCompany(Number(req.query.companyId));
-      } else {
-        members = await storage.getMembers();
+  app.post("/api/companies",
+    authenticate,
+    requireRole(['insurance']),
+    validateRequest(insertCompanySchema),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const company = await storage.createCompany(req.body);
+        res.status(201).json(company);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to create company" });
       }
-      res.json(members);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to fetch members" });
     }
-  });
+  );
+
+  // Members - Protected routes
+  app.get("/api/members",
+    authenticate,
+    requireRole(['insurance']),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        let members;
+        if (req.query.companyId) {
+          // Only allow access to own company members
+          if (Number(req.query.companyId) !== req.user!.entityId) {
+            return res.status(403).json({ error: "Access denied - can only view your own company's members" });
+          }
+          members = await storage.getMembersByCompany(Number(req.query.companyId));
+        } else {
+          members = await storage.getMembers();
+        }
+        res.json(members);
+      } catch (error) {
+        res.status(500).json({ error: "Failed to fetch members" });
+      }
+    }
+  );
   
   // Add endpoint for getting members by company ID in URL path
   app.get("/api/members/company/:companyId", async (req, res) => {
