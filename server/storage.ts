@@ -1,7 +1,7 @@
-import { 
-  Company, InsertCompany, 
-  Member, InsertMember, 
-  Period, InsertPeriod, 
+import {
+  Company, InsertCompany,
+  Member, InsertMember,
+  Period, InsertPeriod,
   PremiumRate, InsertPremiumRate,
   Premium, InsertPremium,
   Benefit, InsertBenefit,
@@ -22,7 +22,8 @@ import {
   MedicalProcedure, InsertMedicalProcedure,
   ProviderProcedureRate, InsertProviderProcedureRate,
   ClaimProcedureItem, InsertClaimProcedureItem,
-  DiagnosisCode, InsertDiagnosisCode
+  DiagnosisCode, InsertDiagnosisCode,
+  User
 } from "@shared/schema";
 
 // Storage interface
