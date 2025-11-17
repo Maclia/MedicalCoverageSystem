@@ -1,0 +1,90 @@
+version: '3.8'
+
+services:
+  # Main Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - HOSTNAME=0.0.0.0
+      - JWT_SECRET=${JWT_SECRET:-your-super-secret-jwt-key-change-in-production}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - medical-coverage-network
+
+  # Development environment with hot reload (optional)
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5000:5000"
+      - "5173:5173"  # Vite dev server
+    environment:
+      - NODE_ENV=development
+      - PORT=5000
+      - HOSTNAME=0.0.0.0
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-key}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-dev-refresh-secret-key}
+      - DATABASE_URL=${DATABASE_URL}
+    env_file:
+      - .env
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - medical-coverage-network
+    profiles:
+      - dev
+
+  # Database backup service (optional)
+  db-backup:
+    image: postgres:15-alpine
+    environment:
+      - PGPASSWORD=${DB_BACKUP_PASSWORD}
+    volumes:
+      - ./backups:/backups
+      - ./scripts:/scripts
+    command: >
+      sh -c "
+        echo 'Database backup service initialized' &&
+        tail -f /dev/null
+      "
+    restart: unless-stopped
+    networks:
+      - medical-coverage-network
+    profiles:
+      - backup
+
+networks:
+  medical-coverage-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+volumes:
+  logs:
+    driver: local
+  backups:
+    driver: local
