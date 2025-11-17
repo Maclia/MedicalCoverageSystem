@@ -28,6 +28,10 @@ import {
 
 // Storage interface
 export interface IStorage {
+  // User authentication methods
+  getUser(id: number): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+
   // Company methods
   getCompanies(): Promise<Company[]>;
   getCompany(id: number): Promise<Company | undefined>;
