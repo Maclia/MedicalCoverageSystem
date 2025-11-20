@@ -25,7 +25,17 @@ import {
   insertProviderProcedureRateSchema,
   insertClaimProcedureItemSchema,
   insertDiagnosisCodeSchema,
-  insertUserSchema
+  insertUserSchema,
+  insertOnboardingSessionSchema,
+  insertOnboardingTaskSchema,
+  insertMemberDocumentSchema,
+  insertOnboardingPreferenceSchema,
+  insertActivationTokenSchema,
+  insertMemberPreferenceSchema,
+  insertBehaviorAnalyticSchema,
+  insertPersonalizationScoreSchema,
+  insertJourneyStageSchema,
+  insertRecommendationHistorySchema
 } from "@shared/schema";
 import { authenticateUser, logoutUser, refreshUserToken } from "./auth";
 import { authenticate, requireRole, requireOwnership, AuthenticatedRequest } from "./middleware/auth";
