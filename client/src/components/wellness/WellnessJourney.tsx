@@ -33,7 +33,8 @@ import {
   Trophy,
   Mountain,
   Flag,
-  Map
+  Map,
+  Shield
 } from 'lucide-react';
 
 interface WellnessGoal {
