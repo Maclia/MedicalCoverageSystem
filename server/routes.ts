@@ -2987,6 +2987,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Member activated successfully",
         onboardingSession
       });
+
+      // Send welcome email after token activation
+      try {
+        await emailService.sendTemplatedEmail('welcome_email', activationToken.memberId);
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+      }
     } catch (error) {
       console.error('Token activation error:', error);
       res.status(500).json({ error: "Failed to activate member" });
