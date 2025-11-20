@@ -3717,6 +3717,288 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Document Review Queue Statistics
+  app.get("/api/admin/documents/stats", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const allDocuments = await storage.getAllMemberDocuments();
+
+      const pending = allDocuments.filter(d => d.verificationStatus === 'pending').length;
+      const approved = allDocuments.filter(d => d.verificationStatus === 'approved').length;
+      const rejected = allDocuments.filter(d => d.verificationStatus === 'rejected').length;
+      const needsMoreInfo = allDocuments.filter(d => d.verificationStatus === 'needs_info').length;
+
+      // Calculate average review time (in hours)
+      const reviewedDocs = allDocuments.filter(d => d.verificationDate);
+      const avgReviewTime = reviewedDocs.length > 0
+        ? reviewedDocs.reduce((acc, doc) => {
+            if (doc.verificationDate && doc.uploadDate) {
+              const reviewTime = (doc.verificationDate.getTime() - doc.uploadDate.getTime()) / (1000 * 60 * 60);
+              return acc + reviewTime;
+            }
+            return acc;
+          }, 0) / reviewedDocs.length
+        : 0;
+
+      // Documents processed today
+      const todayProcessed = allDocuments.filter(d =>
+        d.verificationDate &&
+        d.verificationDate.toDateString() === new Date().toDateString()
+      ).length;
+
+      // Documents by type
+      const documentsByType = allDocuments.reduce((acc, doc) => {
+        acc[doc.documentType] = (acc[doc.documentType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Priority breakdown
+      const urgentDocuments = allDocuments.filter(d =>
+        d.verificationStatus === 'pending' &&
+        d.isRequired === true
+      ).length;
+
+      const stats = {
+        pending,
+        approved,
+        rejected,
+        needsMoreInfo,
+        avgReviewTime: Math.round(avgReviewTime * 10) / 10,
+        todayProcessed,
+        total: allDocuments.length,
+        documentsByType,
+        urgentDocuments
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching document stats:', error);
+      res.status(500).json({ error: "Failed to fetch document statistics" });
+    }
+  });
+
+  // Enhanced Document Review Queue with filtering
+  app.get("/api/admin/documents/review-queue-enhanced", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const {
+        status = 'pending',
+        documentType,
+        priority,
+        search,
+        page = 1,
+        limit = 50
+      } = req.query;
+
+      let documents;
+      if (status === 'all') {
+        documents = await storage.getAllMemberDocuments();
+      } else if (status === 'pending') {
+        documents = await storage.getPendingDocuments();
+      } else {
+        documents = await storage.getMemberDocumentsByStatus(null, status as string);
+      }
+
+      // Enhance with member data
+      const enhancedDocuments = await Promise.all(
+        documents.map(async (document) => {
+          const member = await storage.getMember(document.memberId);
+          const company = member ? await storage.getCompany(member.companyId) : null;
+          const session = member ? await storage.getOnboardingSessionByMember(member.id) : null;
+
+          // Determine priority based on requirements and urgency
+          let priorityLevel = 'medium';
+          if (document.isRequired && document.verificationStatus === 'pending') {
+            priorityLevel = 'high';
+            if (session && session.currentDay <= 3) {
+              priorityLevel = 'urgent';
+            }
+          }
+
+          // Simulate OCR confidence score and extracted text for demo
+          const hasTextContent = document.fileName.toLowerCase().includes('.pdf') ||
+                                document.fileName.toLowerCase().includes('.jpg') ||
+                                document.fileName.toLowerCase().includes('.png');
+
+          return {
+            id: document.id.toString(),
+            memberId: document.memberId.toString(),
+            memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+            documentType: document.documentType,
+            fileName: document.fileName,
+            fileSize: document.fileSize || Math.floor(Math.random() * 5000000) + 100000,
+            mimeType: document.mimeType || 'application/octet-stream',
+            uploadDate: document.uploadDate || new Date(),
+            reviewStatus: document.verificationStatus === 'approved' ? 'approved' :
+                         document.verificationStatus === 'rejected' ? 'rejected' :
+                         document.verificationStatus === 'needs_info' ? 'needs_more_info' : 'pending',
+            reviewedBy: document.verifiedBy,
+            reviewedDate: document.verificationDate,
+            reviewNotes: document.rejectionReason,
+            priority: priorityLevel,
+            tags: [document.documentType.toLowerCase().replace(' ', '_'),
+                   document.isRequired ? 'required' : 'optional'],
+            extractedText: hasTextContent ? `Sample extracted content for ${document.documentType}...` : undefined,
+            confidenceScore: hasTextContent ? 0.85 + Math.random() * 0.14 : undefined,
+            isRequired: document.isRequired || false
+          };
+        })
+      );
+
+      // Apply filters
+      let filteredDocuments = enhancedDocuments;
+
+      if (documentType && documentType !== 'all') {
+        filteredDocuments = filteredDocuments.filter(doc => doc.documentType === documentType);
+      }
+
+      if (priority && priority !== 'all') {
+        filteredDocuments = filteredDocuments.filter(doc => doc.priority === priority);
+      }
+
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        filteredDocuments = filteredDocuments.filter(doc =>
+          doc.memberName.toLowerCase().includes(searchLower) ||
+          doc.documentType.toLowerCase().includes(searchLower) ||
+          doc.fileName.toLowerCase().includes(searchLower) ||
+          doc.tags.some(tag => tag.toLowerCase().includes(searchLower))
+        );
+      }
+
+      // Sort by priority and upload date
+      filteredDocuments.sort((a, b) => {
+        const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+        const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 2;
+        const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 2;
+
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+
+        return b.uploadDate.getTime() - a.uploadDate.getTime();
+      });
+
+      // Pagination
+      const total = filteredDocuments.length;
+      const offset = (Number(page) - 1) * Number(limit);
+      const paginatedDocuments = filteredDocuments.slice(offset, offset + Number(limit));
+
+      // Get unique document types for filters
+      const documentTypes = [...new Set(enhancedDocuments.map(doc => doc.documentType))];
+
+      res.json({
+        documents: paginatedDocuments,
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / Number(limit)),
+        documentTypes
+      });
+    } catch (error) {
+      console.error('Error fetching enhanced document review queue:', error);
+      res.status(500).json({ error: "Failed to fetch document review queue" });
+    }
+  });
+
+  // Bulk Document Actions
+  app.post("/api/admin/documents/bulk-action", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { documentIds, action, notes } = req.body;
+
+      if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
+        return res.status(400).json({ error: "Document IDs array is required" });
+      }
+
+      if (!['approve', 'reject', 'request_info'].includes(action)) {
+        return res.status(400).json({ error: "Invalid action" });
+      }
+
+      const results = [];
+      for (const documentId of documentIds) {
+        try {
+          const verificationStatus = action === 'approve' ? 'approved' :
+                                    action === 'reject' ? 'rejected' : 'needs_info';
+
+          const document = await storage.updateMemberDocument(Number(documentId), {
+            verificationStatus,
+            verificationDate: new Date(),
+            verifiedBy: req.user?.userId,
+            rejectionReason: notes || (action === 'approve' ? 'Bulk approved' :
+                                     action === 'reject' ? 'Bulk rejected' : 'Bulk info requested')
+          });
+
+          results.push({
+            documentId,
+            success: true,
+            document
+          });
+        } catch (error) {
+          results.push({
+            documentId,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.length - successCount;
+
+      res.json({
+        message: `Processed ${results.length} documents: ${successCount} successful, ${failureCount} failed`,
+        results,
+        summary: {
+          total: results.length,
+          successful: successCount,
+          failed: failureCount
+        }
+      });
+    } catch (error) {
+      console.error('Error performing bulk document action:', error);
+      res.status(500).json({ error: "Failed to perform bulk document action" });
+    }
+  });
+
+  // Get Document Details for Review
+  app.get("/api/admin/documents/:documentId/details", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const documentId = Number(req.params.id);
+      const document = await storage.getMemberDocument(documentId);
+
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      const member = await storage.getMember(document.memberId);
+      const company = member ? await storage.getCompany(member.companyId) : null;
+      const session = member ? await storage.getOnboardingSessionByMember(member.id) : null;
+
+      // Get related documents for this member
+      const memberDocuments = await storage.getMemberDocuments(document.memberId);
+
+      const enhancedDocument = {
+        ...document,
+        memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+        memberEmail: member ? member.email : 'Unknown',
+        memberPhone: member ? member.phone : 'Unknown',
+        companyName: company ? company.name : 'Unknown',
+        sessionInfo: session ? {
+          sessionId: session.id,
+          currentDay: session.currentDay,
+          activationDate: session.activationDate,
+          status: session.status
+        } : null,
+        relatedDocuments: memberDocuments.filter(doc => doc.id !== documentId),
+        totalMemberDocuments: memberDocuments.length,
+        reviewedDocumentCount: memberDocuments.filter(doc => doc.verificationStatus).length
+      };
+
+      res.json(enhancedDocument);
+    } catch (error) {
+      console.error('Error fetching document details:', error);
+      res.status(500).json({ error: "Failed to fetch document details" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
