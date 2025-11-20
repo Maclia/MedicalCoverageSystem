@@ -21,7 +21,8 @@ import {
   Activity,
   BookOpen,
   Lightbulb,
-  CheckCircle
+  CheckCircle,
+  Brain
 } from 'lucide-react';
 
 interface PersonalizedWelcomeProps {
