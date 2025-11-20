@@ -2842,6 +2842,704 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Member Engagement Hub - Onboarding System
+
+  // Member Activation Endpoints
+  app.post("/api/members/:id/activate", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { password, securityQuestions, communicationPreferences } = req.body;
+
+      if (!memberId || !password) {
+        return res.status(400).json({ error: "Member ID and password are required" });
+      }
+
+      // Verify member exists
+      const member = await storage.getMember(memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      // Check if member is already activated
+      const existingSession = await storage.getOnboardingSessionByMember(memberId);
+      if (existingSession && existingSession.activationCompleted) {
+        return res.status(400).json({ error: "Member is already activated" });
+      }
+
+      // Create activation token (in a real system, this would be sent via email)
+      const activationToken = await storage.createActivationToken({
+        memberId,
+        tokenHash: Buffer.from(Math.random().toString(36)).toString('base64'), // Simple token generation
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        status: 'pending',
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      // Create or update onboarding session
+      let onboardingSession;
+      if (existingSession) {
+        onboardingSession = await storage.updateOnboardingSession(existingSession.id, {
+          activationCompleted: true,
+          status: 'active'
+        });
+      } else {
+        onboardingSession = await storage.createOnboardingSession({
+          memberId,
+          status: 'active',
+          activationCompleted: true,
+          currentDay: 1
+        });
+      }
+
+      // Create onboarding preferences
+      await storage.createOnboardingPreference({
+        memberId,
+        emailFrequency: communicationPreferences?.emailFrequency || 'daily',
+        smsEnabled: communicationPreferences?.smsEnabled || true,
+        timezone: communicationPreferences?.timezone || 'UTC',
+        preferredTime: communicationPreferences?.preferredTime || '09:00',
+        language: communicationPreferences?.language || 'en',
+        communicationChannel: communicationPreferences?.communicationChannel || 'email'
+      });
+
+      // Create Day 1 tasks
+      await storage.createOnboardingTasksForDay(memberId, 1);
+
+      res.status(201).json({
+        success: true,
+        message: "Member activated successfully",
+        activationToken: activationToken.tokenHash,
+        onboardingSession
+      });
+    } catch (error) {
+      console.error('Activation error:', error);
+      res.status(500).json({ error: "Failed to activate member" });
+    }
+  });
+
+  app.post("/api/members/activate-with-token", async (req, res) => {
+    try {
+      const { token, password, communicationPreferences } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ error: "Activation token and password are required" });
+      }
+
+      // Find activation token
+      const activationToken = await storage.getActivationToken(token);
+      if (!activationToken) {
+        return res.status(404).json({ error: "Invalid activation token" });
+      }
+
+      if (activationToken.status !== 'pending') {
+        return res.status(400).json({ error: "Activation token has already been used" });
+      }
+
+      if (new Date(activationToken.expiresAt) < new Date()) {
+        return res.status(400).json({ error: "Activation token has expired" });
+      }
+
+      // Get member
+      const member = await storage.getMember(activationToken.memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      // Update token status
+      await storage.updateActivationToken(activationToken.id, {
+        status: 'used',
+        usedAt: new Date()
+      });
+
+      // Create onboarding session
+      const onboardingSession = await storage.createOnboardingSession({
+        memberId: activationToken.memberId,
+        status: 'active',
+        activationCompleted: true,
+        currentDay: 1
+      });
+
+      // Create onboarding preferences
+      await storage.createOnboardingPreference({
+        memberId: activationToken.memberId,
+        emailFrequency: communicationPreferences?.emailFrequency || 'daily',
+        smsEnabled: communicationPreferences?.smsEnabled || true,
+        timezone: communicationPreferences?.timezone || 'UTC',
+        preferredTime: communicationPreferences?.preferredTime || '09:00',
+        language: communicationPreferences?.language || 'en',
+        communicationChannel: communicationPreferences?.communicationChannel || 'email'
+      });
+
+      // Create Day 1 tasks
+      await storage.createOnboardingTasksForDay(activationToken.memberId, 1);
+
+      res.status(201).json({
+        success: true,
+        message: "Member activated successfully",
+        onboardingSession
+      });
+    } catch (error) {
+      console.error('Token activation error:', error);
+      res.status(500).json({ error: "Failed to activate member" });
+    }
+  });
+
+  // Onboarding Progress Endpoints
+  app.get("/api/onboarding/:memberId/status", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+
+      const session = await storage.getOnboardingSessionByMember(memberId);
+      if (!session) {
+        return res.status(404).json({ error: "Onboarding session not found" });
+      }
+
+      const tasks = await storage.getOnboardingTasksBySession(session.id);
+      const documents = await storage.getMemberDocuments(memberId);
+
+      // Calculate progress
+      const completedTasks = tasks.filter(task => task.completionStatus);
+      const progressPercentage = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
+
+      res.json({
+        session,
+        tasks,
+        documents,
+        progressPercentage,
+        completedTasks: completedTasks.length,
+        totalTasks: tasks.length,
+        currentDay: session.currentDay,
+        status: session.status
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch onboarding status" });
+    }
+  });
+
+  app.get("/api/onboarding/:memberId/next-day", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+
+      const session = await storage.getOnboardingSessionByMember(memberId);
+      if (!session) {
+        return res.status(404).json({ error: "Onboarding session not found" });
+      }
+
+      if (session.status === 'completed') {
+        return res.status(400).json({ error: "Onboarding already completed" });
+      }
+
+      // Check if current day tasks are completed
+      const currentTasks = await storage.getOnboardingTasksBySessionAndDay(session.id, session.currentDay);
+      const incompleteTasks = currentTasks.filter(task => !task.completionStatus);
+
+      if (incompleteTasks.length > 0 && session.currentDay > 1) {
+        return res.status(400).json({
+          error: "Complete current day tasks before advancing",
+          incompleteTasks: incompleteTasks.map(task => ({ id: task.id, title: task.title }))
+        });
+      }
+
+      const nextDay = session.currentDay + 1;
+
+      if (nextDay > 7) {
+        // Complete onboarding
+        await storage.updateOnboardingSession(session.id, {
+          status: 'completed',
+          completionDate: new Date(),
+          currentDay: 7
+        });
+
+        return res.json({
+          message: "Onboarding completed!",
+          status: 'completed',
+          nextDay: null
+        });
+      }
+
+      // Create tasks for next day
+      await storage.createOnboardingTasksForDay(memberId, nextDay);
+      await storage.updateOnboardingSession(session.id, { currentDay: nextDay });
+
+      const nextTasks = await storage.getOnboardingTasksBySessionAndDay(session.id, nextDay);
+
+      res.json({
+        nextDay,
+        tasks: nextTasks,
+        status: 'active'
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get next day content" });
+    }
+  });
+
+  app.post("/api/onboarding/:memberId/skip-day", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { reason } = req.body;
+
+      const session = await storage.getOnboardingSessionByMember(memberId);
+      if (!session) {
+        return res.status(404).json({ error: "Onboarding session not found" });
+      }
+
+      const nextDay = Math.min(session.currentDay + 1, 7);
+
+      await storage.updateOnboardingSession(session.id, { currentDay: nextDay });
+      await storage.createOnboardingTasksForDay(memberId, nextDay);
+
+      const nextTasks = await storage.getOnboardingTasksBySessionAndDay(session.id, nextDay);
+
+      res.json({
+        nextDay,
+        tasks: nextTasks,
+        skippedDay: session.currentDay,
+        reason
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to skip day" });
+    }
+  });
+
+  // Task Management Endpoints
+  app.put("/api/onboarding/tasks/:taskId", async (req, res) => {
+    try {
+      const taskId = Number(req.params.id);
+      const { completionStatus, taskData } = req.body;
+
+      const task = await storage.getOnboardingTask(taskId);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      const updateData: any = { completionStatus };
+      if (completionStatus && !task.completedAt) {
+        updateData.completedAt = new Date();
+        updateData.pointsEarned = 10; // Base points for task completion
+      } else if (!completionStatus) {
+        updateData.completedAt = null;
+        updateData.pointsEarned = 0;
+      }
+
+      if (taskData) {
+        updateData.taskData = JSON.stringify(taskData);
+      }
+
+      const updatedTask = await storage.updateOnboardingTask(taskId, updateData);
+
+      // Update session points if task was completed
+      if (completionStatus && !task.completionStatus) {
+        const session = await storage.getOnboardingSession(updatedTask.sessionId);
+        if (session) {
+          await storage.updateOnboardingSession(session.id, {
+            totalPointsEarned: session.totalPointsEarned + updateData.pointsEarned
+          });
+        }
+      }
+
+      res.json(updatedTask);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update task" });
+    }
+  });
+
+  // Document Upload Endpoints
+  app.post("/api/onboarding/:memberId/documents", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { documentType, fileName, fileData, mimeType } = req.body;
+
+      if (!documentType || !fileName || !fileData || !mimeType) {
+        return res.status(400).json({
+          error: "Document type, filename, file data, and MIME type are required"
+        });
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      if (!allowedTypes.includes(mimeType)) {
+        return res.status(400).json({
+          error: "Only JPG, PNG, and PDF files are allowed"
+        });
+      }
+
+      // Validate file size (10MB max)
+      const fileSize = Buffer.byteLength(fileData, 'base64');
+      if (fileSize > 10 * 1024 * 1024) {
+        return res.status(400).json({
+          error: "File size must be less than 10MB"
+        });
+      }
+
+      // Generate file hash
+      const crypto = require('crypto');
+      const fileHash = crypto.createHash('sha256').update(fileData).digest('hex');
+
+      // Store file (in a real system, this would be cloud storage)
+      const storedFilePath = `documents/${memberId}/${Date.now()}-${fileName}`;
+
+      const document = await storage.createMemberDocument({
+        memberId,
+        documentType,
+        originalFileName: fileName,
+        storedFilePath,
+        fileHash,
+        fileSize,
+        mimeType,
+        verificationStatus: 'pending'
+      });
+
+      // Start document validation process (in background)
+      // This would typically be handled by a background job
+
+      res.status(201).json({
+        success: true,
+        document: {
+          id: document.id,
+          documentType,
+          originalFileName: fileName,
+          uploadDate: document.uploadDate,
+          verificationStatus: document.verificationStatus
+        }
+      });
+    } catch (error) {
+      console.error('Document upload error:', error);
+      res.status(500).json({ error: "Failed to upload document" });
+    }
+  });
+
+  app.get("/api/onboarding/:memberId/documents", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { status } = req.query;
+
+      let documents;
+      if (status) {
+        documents = await storage.getMemberDocumentsByStatus(memberId, status as string);
+      } else {
+        documents = await storage.getMemberDocuments(memberId);
+      }
+
+      res.json(documents);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch documents" });
+    }
+  });
+
+  // Personalization Engine Endpoints
+  app.get("/api/members/:id/personalized-dashboard", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+
+      // Get member preferences
+      const preferences = await storage.getMemberPreferences(memberId);
+
+      // Get behavior analytics for recommendations
+      const recentBehavior = await storage.getRecentBehaviorAnalytics(memberId, 10);
+
+      // Get personalization scores
+      const personalizationScores = await storage.getPersonalizationScores(memberId);
+
+      // Get recommendations
+      const recommendations = await storage.getActiveRecommendations(memberId);
+
+      // Get journey stage
+      const journeyStage = await storage.getJourneyStage(memberId);
+
+      // Get current onboarding status
+      const onboardingSession = await storage.getOnboardingSessionByMember(memberId);
+
+      res.json({
+        preferences,
+        recentBehavior,
+        personalizationScores,
+        recommendations,
+        journeyStage,
+        onboardingStatus: onboardingSession,
+        personalizationLevel: preferences?.personalizationLevel || 'moderate'
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch personalized dashboard data" });
+    }
+  });
+
+  app.post("/api/members/:id/preferences", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const preferenceData = req.body;
+
+      // Validate member exists
+      const member = await storage.getMember(memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      let preferences;
+      const existingPreferences = await storage.getMemberPreferences(memberId);
+
+      if (existingPreferences) {
+        preferences = await storage.updateMemberPreferences(memberId, preferenceData);
+      } else {
+        preferences = await storage.createMemberPreference({
+          memberId,
+          ...preferenceData
+        });
+      }
+
+      res.json(preferences);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update preferences" });
+    }
+  });
+
+  app.get("/api/members/:id/recommendations", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { type, limit = 10 } = req.query;
+
+      let recommendations;
+      if (type) {
+        recommendations = await storage.getRecommendationsByType(memberId, type as string, Number(limit));
+      } else {
+        recommendations = await storage.getActiveRecommendations(memberId, Number(limit));
+      }
+
+      res.json(recommendations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch recommendations" });
+    }
+  });
+
+  app.post("/api/members/:id/recommendations/:recommendationId/feedback", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const recommendationId = Number(req.params.recommendationId);
+      const { response, feedbackRating, feedbackText } = req.body;
+
+      const recommendation = await storage.getRecommendationHistory(recommendationId);
+      if (!recommendation || recommendation.memberId !== memberId) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      const updatedRecommendation = await storage.updateRecommendationFeedback(recommendationId, {
+        memberResponse: response,
+        responseDate: new Date(),
+        feedbackRating,
+        feedbackText
+      });
+
+      res.json(updatedRecommendation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to record feedback" });
+    }
+  });
+
+  // Behavior Analytics Endpoints
+  app.post("/api/members/:id/analytics", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { eventType, resourceName, resourceData, sessionId, timeOnPage, scrollDepth } = req.body;
+
+      if (!eventType || !resourceName || !sessionId) {
+        return res.status(400).json({
+          error: "Event type, resource name, and session ID are required"
+        });
+      }
+
+      const analytic = await storage.createBehaviorAnalytic({
+        memberId,
+        eventType,
+        resourceName,
+        resourceData: resourceData ? JSON.stringify(resourceData) : null,
+        sessionId,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        referrer: req.get('Referer'),
+        timeOnPage: timeOnPage || null,
+        scrollDepth: scrollDepth || null
+      });
+
+      res.status(201).json(analytic);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to record analytics" });
+    }
+  });
+
+  app.get("/api/members/:id/analytics", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { eventType, limit = 50, sessionId } = req.query;
+
+      let analytics;
+      if (sessionId) {
+        analytics = await storage.getBehaviorAnalyticsBySession(memberId, sessionId as string, Number(limit));
+      } else if (eventType) {
+        analytics = await storage.getBehaviorAnalyticsByType(memberId, eventType as string, Number(limit));
+      } else {
+        analytics = await storage.getRecentBehaviorAnalytics(memberId, Number(limit));
+      }
+
+      res.json(analytics);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  // Admin Onboarding Management Endpoints
+  app.get("/api/admin/onboarding/overview", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { companyId, day, status } = req.query;
+
+      // Get all onboarding sessions with filters
+      let sessions;
+      if (companyId) {
+        sessions = await storage.getOnboardingSessionsByCompany(Number(companyId));
+      } else {
+        sessions = await storage.getAllOnboardingSessions();
+      }
+
+      // Apply additional filters
+      if (day) {
+        sessions = sessions.filter(session => session.currentDay === Number(day));
+      }
+
+      if (status) {
+        sessions = sessions.filter(session => session.status === status);
+      }
+
+      // Enhance with member data
+      const enhancedSessions = await Promise.all(
+        sessions.map(async (session) => {
+          const member = await storage.getMember(session.memberId);
+          const company = member ? await storage.getCompany(member.companyId) : null;
+          const tasks = await storage.getOnboardingTasksBySession(session.id);
+          const completedTasks = tasks.filter(task => task.completionStatus);
+
+          return {
+            ...session,
+            memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+            memberEmail: member ? member.email : 'Unknown',
+            companyName: company ? company.name : 'Unknown',
+            progressPercentage: tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0,
+            completedTasks: completedTasks.length,
+            totalTasks: tasks.length
+          };
+        })
+      );
+
+      // Calculate summary statistics
+      const stats = {
+        totalSessions: enhancedSessions.length,
+        activeSessions: enhancedSessions.filter(s => s.status === 'active').length,
+        completedSessions: enhancedSessions.filter(s => s.status === 'completed').length,
+        averageProgress: enhancedSessions.reduce((sum, s) => sum + s.progressPercentage, 0) / enhancedSessions.length || 0,
+        currentDayDistribution: {
+          1: enhancedSessions.filter(s => s.currentDay === 1).length,
+          2: enhancedSessions.filter(s => s.currentDay === 2).length,
+          3: enhancedSessions.filter(s => s.currentDay === 3).length,
+          4: enhancedSessions.filter(s => s.currentDay === 4).length,
+          5: enhancedSessions.filter(s => s.currentDay === 5).length,
+          6: enhancedSessions.filter(s => s.currentDay === 6).length,
+          7: enhancedSessions.filter(s => s.currentDay === 7).length
+        }
+      };
+
+      res.json({
+        sessions: enhancedSessions,
+        stats
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch onboarding overview" });
+    }
+  });
+
+  app.get("/api/admin/documents/review-queue", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status = 'pending' } = req.query;
+
+      let documents;
+      if (status === 'pending') {
+        documents = await storage.getPendingDocuments();
+      } else {
+        documents = await storage.getMemberDocumentsByStatus(null, status as string);
+      }
+
+      // Enhance with member data
+      const enhancedDocuments = await Promise.all(
+        documents.map(async (document) => {
+          const member = await storage.getMember(document.memberId);
+          const company = member ? await storage.getCompany(member.companyId) : null;
+
+          return {
+            ...document,
+            memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+            memberEmail: member ? member.email : 'Unknown',
+            companyName: company ? company.name : 'Unknown'
+          };
+        })
+      );
+
+      res.json(enhancedDocuments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch document review queue" });
+    }
+  });
+
+  app.patch("/api/admin/documents/:documentId/verify", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const documentId = Number(req.params.id);
+      const { verificationStatus, rejectionReason, verifiedBy } = req.body;
+
+      if (!['approved', 'rejected'].includes(verificationStatus)) {
+        return res.status(400).json({ error: "Verification status must be 'approved' or 'rejected'" });
+      }
+
+      if (verificationStatus === 'rejected' && !rejectionReason) {
+        return res.status(400).json({ error: "Rejection reason is required when rejecting documents" });
+      }
+
+      const document = await storage.updateMemberDocument(documentId, {
+        verificationStatus,
+        verificationDate: new Date(),
+        verifiedBy: verifiedBy || req.user?.userId,
+        rejectionReason: rejectionReason || null
+      });
+
+      res.json(document);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to verify document" });
+    }
+  });
+
+  app.post("/api/admin/onboarding/:sessionId/advance-day", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const sessionId = Number(req.params.id);
+      const { reason } = req.body;
+
+      const session = await storage.getOnboardingSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Onboarding session not found" });
+      }
+
+      const nextDay = Math.min(session.currentDay + 1, 7);
+
+      await storage.updateOnboardingSession(sessionId, { currentDay: nextDay });
+      await storage.createOnboardingTasksForDay(session.memberId, nextDay);
+
+      const nextTasks = await storage.getOnboardingTasksBySessionAndDay(sessionId, nextDay);
+
+      res.json({
+        nextDay,
+        tasks: nextTasks,
+        advancedBy: req.user?.userId,
+        reason
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to advance onboarding day" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
