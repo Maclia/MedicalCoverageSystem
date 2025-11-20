@@ -239,6 +239,9 @@ export interface IStorage {
   createDiagnosisCode(diagnosisCode: InsertDiagnosisCode): Promise<DiagnosisCode>;
   updateDiagnosisCodeStatus(id: number, isActive: boolean): Promise<DiagnosisCode>;
 
+  // User method
+  createUser(user: InsertUser): Promise<User>;
+
   // Member Engagement Hub - Onboarding System
   getOnboardingSession(id: number): Promise<OnboardingSession | undefined>;
   getOnboardingSessionByMember(memberId: number): Promise<OnboardingSession | undefined>;
