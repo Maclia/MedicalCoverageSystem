@@ -405,7 +405,31 @@ export class MemStorage implements IStorage {
     this.claimProcedureItems = new Map();
     this.diagnosisCodes = new Map();
     this.users = new Map();
-    
+
+    // Initialize Member Engagement Hub storage
+    this.onboardingSessions = new Map();
+    this.onboardingTasks = new Map();
+    this.memberDocuments = new Map();
+    this.onboardingPreferences = new Map();
+    this.activationTokens = new Map();
+    this.memberPreferences = new Map();
+    this.behaviorAnalytics = new Map();
+    this.personalizationScores = new Map();
+    this.journeyStages = new Map();
+    this.recommendationHistory = new Map();
+
+    // Initialize Member Engagement Hub IDs
+    this.onboardingSessionId = 1;
+    this.onboardingTaskId = 1;
+    this.memberDocumentId = 1;
+    this.onboardingPreferenceId = 1;
+    this.activationTokenId = 1;
+    this.memberPreferenceId = 1;
+    this.behaviorAnalyticId = 1;
+    this.personalizationScoreId = 1;
+    this.journeyStageId = 1;
+    this.recommendationHistoryId = 1;
+
     this.companyId = 1;
     this.memberId = 1;
     this.periodId = 1;
