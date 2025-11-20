@@ -23,7 +23,8 @@ import {
   Calendar,
   Star,
   Award,
-  TrendingDown
+  TrendingDown,
+  RefreshCw
 } from 'lucide-react';
 
 interface BenefitInsight {
