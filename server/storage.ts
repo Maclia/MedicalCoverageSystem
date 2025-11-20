@@ -290,7 +290,7 @@ export interface IStorage {
   updatePersonalizationScore(id: number, updates: Partial<PersonalizationScore>): Promise<PersonalizationScore>;
 
   getJourneyStage(id: number): Promise<JourneyStage | undefined>;
-  getJourneyStage(memberId: number): Promise<JourneyStage | undefined>;
+  getJourneyStageByMember(memberId: number): Promise<JourneyStage | undefined>;
   createJourneyStage(stage: InsertJourneyStage): Promise<JourneyStage>;
   updateJourneyStage(id: number, updates: Partial<JourneyStage>): Promise<JourneyStage>;
 
