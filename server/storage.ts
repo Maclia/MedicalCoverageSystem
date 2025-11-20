@@ -238,6 +238,67 @@ export interface IStorage {
   getDiagnosisCodesBySearch(searchTerm: string): Promise<DiagnosisCode[]>;
   createDiagnosisCode(diagnosisCode: InsertDiagnosisCode): Promise<DiagnosisCode>;
   updateDiagnosisCodeStatus(id: number, isActive: boolean): Promise<DiagnosisCode>;
+
+  // Member Engagement Hub - Onboarding System
+  getOnboardingSession(id: number): Promise<OnboardingSession | undefined>;
+  getOnboardingSessionByMember(memberId: number): Promise<OnboardingSession | undefined>;
+  getAllOnboardingSessions(): Promise<OnboardingSession[]>;
+  getOnboardingSessionsByCompany(companyId: number): Promise<OnboardingSession[]>;
+  createOnboardingSession(session: InsertOnboardingSession): Promise<OnboardingSession>;
+  updateOnboardingSession(id: number, updates: Partial<OnboardingSession>): Promise<OnboardingSession>;
+
+  getOnboardingTask(id: number): Promise<OnboardingTask | undefined>;
+  getOnboardingTasksBySession(sessionId: number): Promise<OnboardingTask[]>;
+  getOnboardingTasksBySessionAndDay(sessionId: number, dayNumber: number): Promise<OnboardingTask[]>;
+  createOnboardingTask(task: InsertOnboardingTask): Promise<OnboardingTask>;
+  updateOnboardingTask(id: number, updates: Partial<OnboardingTask>): Promise<OnboardingTask>;
+  createOnboardingTasksForDay(memberId: number, dayNumber: number): Promise<OnboardingTask[]>;
+
+  getMemberDocument(id: number): Promise<MemberDocument | undefined>;
+  getMemberDocuments(memberId: number): Promise<MemberDocument[]>;
+  getMemberDocumentsByStatus(memberId: number, status: string): Promise<MemberDocument[]>;
+  getPendingDocuments(): Promise<MemberDocument[]>;
+  createMemberDocument(document: InsertMemberDocument): Promise<MemberDocument>;
+  updateMemberDocument(id: number, updates: Partial<MemberDocument>): Promise<MemberDocument>;
+
+  getOnboardingPreference(id: number): Promise<OnboardingPreference | undefined>;
+  getOnboardingPreferencesByMember(memberId: number): Promise<OnboardingPreference | undefined>;
+  createOnboardingPreference(preference: InsertOnboardingPreference): Promise<OnboardingPreference>;
+  updateOnboardingPreference(id: number, updates: Partial<OnboardingPreference>): Promise<OnboardingPreference>;
+
+  getActivationToken(id: number): Promise<ActivationToken | undefined>;
+  getActivationToken(tokenHash: string): Promise<ActivationToken | undefined>;
+  createActivationToken(token: InsertActivationToken): Promise<ActivationToken>;
+  updateActivationToken(id: number, updates: Partial<ActivationToken>): Promise<ActivationToken>;
+
+  // Personalization System
+  getMemberPreference(id: number): Promise<MemberPreference | undefined>;
+  getMemberPreferences(memberId: number): Promise<MemberPreference | undefined>;
+  createMemberPreference(preference: InsertMemberPreference): Promise<MemberPreference>;
+  updateMemberPreferences(memberId: number, updates: Partial<MemberPreference>): Promise<MemberPreference>;
+
+  getBehaviorAnalytic(id: number): Promise<BehaviorAnalytic | undefined>;
+  getBehaviorAnalyticsByMember(memberId: number): Promise<BehaviorAnalytic[]>;
+  getBehaviorAnalyticsBySession(memberId: number, sessionId: string, limit?: number): Promise<BehaviorAnalytic[]>;
+  getBehaviorAnalyticsByType(memberId: number, eventType: string, limit?: number): Promise<BehaviorAnalytic[]>;
+  getRecentBehaviorAnalytics(memberId: number, limit?: number): Promise<BehaviorAnalytic[]>;
+  createBehaviorAnalytic(analytic: InsertBehaviorAnalytic): Promise<BehaviorAnalytic>;
+
+  getPersonalizationScore(id: number): Promise<PersonalizationScore | undefined>;
+  getPersonalizationScores(memberId: number): Promise<PersonalizationScore[]>;
+  createPersonalizationScore(score: InsertPersonalizationScore): Promise<PersonalizationScore>;
+  updatePersonalizationScore(id: number, updates: Partial<PersonalizationScore>): Promise<PersonalizationScore>;
+
+  getJourneyStage(id: number): Promise<JourneyStage | undefined>;
+  getJourneyStage(memberId: number): Promise<JourneyStage | undefined>;
+  createJourneyStage(stage: InsertJourneyStage): Promise<JourneyStage>;
+  updateJourneyStage(id: number, updates: Partial<JourneyStage>): Promise<JourneyStage>;
+
+  getRecommendationHistory(id: number): Promise<RecommendationHistory | undefined>;
+  getActiveRecommendations(memberId: number, limit?: number): Promise<RecommendationHistory[]>;
+  getRecommendationsByType(memberId: number, type: string, limit?: number): Promise<RecommendationHistory[]>;
+  createRecommendationHistory(recommendation: InsertRecommendationHistory): Promise<RecommendationHistory>;
+  updateRecommendationFeedback(id: number, updates: Partial<RecommendationHistory>): Promise<RecommendationHistory>;
 }
 
 // In-memory storage implementation
