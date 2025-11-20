@@ -327,7 +327,31 @@ export class MemStorage implements IStorage {
   private providerProcedureRates: Map<number, ProviderProcedureRate>;
   private claimProcedureItems: Map<number, ClaimProcedureItem>;
   private diagnosisCodes: Map<number, DiagnosisCode>;
-  
+
+  // Member Engagement Hub storage
+  private onboardingSessions: Map<number, OnboardingSession>;
+  private onboardingTasks: Map<number, OnboardingTask>;
+  private memberDocuments: Map<number, MemberDocument>;
+  private onboardingPreferences: Map<number, OnboardingPreference>;
+  private activationTokens: Map<number, ActivationToken>;
+  private memberPreferences: Map<number, MemberPreference>;
+  private behaviorAnalytics: Map<number, BehaviorAnalytic>;
+  private personalizationScores: Map<number, PersonalizationScore>;
+  private journeyStages: Map<number, JourneyStage>;
+  private recommendationHistory: Map<number, RecommendationHistory>;
+
+  // Member Engagement Hub IDs
+  private onboardingSessionId: number;
+  private onboardingTaskId: number;
+  private memberDocumentId: number;
+  private onboardingPreferenceId: number;
+  private activationTokenId: number;
+  private memberPreferenceId: number;
+  private behaviorAnalyticId: number;
+  private personalizationScoreId: number;
+  private journeyStageId: number;
+  private recommendationHistoryId: number;
+
   private companyId: number;
   private memberId: number;
   private periodId: number;
