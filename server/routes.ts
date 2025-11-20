@@ -3587,6 +3587,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Email Administration Endpoints
+  app.get("/api/admin/email/templates", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { emailTemplateSystem } = await import('./emailService');
+      const templates = emailTemplateSystem.getAllTemplates();
+
+      res.json({
+        templates,
+        total: templates.length
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch email templates" });
+    }
+  });
+
+  app.post("/api/admin/email/send", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { templateId, memberId, additionalData, testEmail } = req.body;
+
+      if (!templateId) {
+        return res.status(400).json({ error: "Template ID is required" });
+      }
+
+      if (testEmail) {
+        // Send test email to admin
+        const { emailTemplateSystem } = await import('./emailService');
+        const template = emailTemplateSystem.getTemplate(templateId);
+
+        if (!template) {
+          return res.status(404).json({ error: "Template not found" });
+        }
+
+        const testData = {
+          member: {
+            firstName: 'Test',
+            lastName: 'User',
+            email: testEmail,
+            companyName: 'Test Company'
+          },
+          additionalData
+        };
+
+        const rendered = emailTemplateSystem.renderTemplate(templateId, testData);
+
+        const { emailService } = await import('./emailService');
+        const sent = await emailService.sendEmail({
+          to: testEmail,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text
+        });
+
+        res.json({
+          success: sent,
+          message: sent ? "Test email sent successfully" : "Failed to send test email"
+        });
+      } else if (memberId) {
+        // Send email to specific member
+        const { emailService } = await import('./emailService');
+        const sent = await emailService.sendTemplatedEmail(templateId, memberId, additionalData);
+
+        res.json({
+          success: sent,
+          message: sent ? "Email sent successfully" : "Failed to send email"
+        });
+      } else {
+        res.status(400).json({ error: "Either memberId or testEmail is required" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to send email" });
+    }
+  });
+
+  app.get("/api/admin/email/stats", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { emailService } = await import('./emailService');
+      const stats = emailService.getDeliveryStats();
+
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch email stats" });
+    }
+  });
+
+  app.post("/api/admin/email/trigger", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { memberId, trigger, additionalData } = req.body;
+
+      if (!memberId || !trigger) {
+        return res.status(400).json({ error: "Member ID and trigger are required" });
+      }
+
+      const { emailWorkflows } = await import('./emailService');
+      await emailWorkflows.sendTriggeredEmails(trigger, memberId, additionalData);
+
+      res.json({
+        success: true,
+        message: "Triggered emails sent successfully"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to trigger emails" });
+    }
+  });
+
+  // Manual email sending endpoint for testing
+  app.post("/api/admin/email/manual-send", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { to, subject, html, text } = req.body;
+
+      if (!to || !subject) {
+        return res.status(400).json({ error: "To address and subject are required" });
+      }
+
+      const { emailService } = await import('./emailService');
+      const sent = await emailService.sendEmail({
+        to,
+        subject,
+        html: html || '',
+        text: text || ''
+      });
+
+      res.json({
+        success: sent,
+        message: sent ? "Email sent successfully" : "Failed to send email"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to send manual email" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
