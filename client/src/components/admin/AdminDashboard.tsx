@@ -368,6 +368,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userNa
           <EmailManagement userRole={userRole} />
         </TabsContent>
 
+        <TabsContent value="documents">
+          <DocumentReviewQueue userRole={userRole} />
+        </TabsContent>
+
         <TabsContent value="system">
           <div className="space-y-6">
             {/* System Configuration */}
