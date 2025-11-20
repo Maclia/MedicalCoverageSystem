@@ -180,7 +180,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userNa
               <span>Analytics</span>
             </Button>
             <Button
-              onClick={() => navigate('/admin/documents')}
+              onClick={() => setActiveTab('documents')}
               variant="outline"
               className="h-16 flex flex-col items-center justify-center space-y-2"
             >
