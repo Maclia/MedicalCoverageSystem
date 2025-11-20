@@ -23,7 +23,17 @@ import {
   ProviderProcedureRate, InsertProviderProcedureRate,
   ClaimProcedureItem, InsertClaimProcedureItem,
   DiagnosisCode, InsertDiagnosisCode,
-  User
+  User,
+  OnboardingSession, InsertOnboardingSession,
+  OnboardingTask, InsertOnboardingTask,
+  MemberDocument, InsertMemberDocument,
+  OnboardingPreference, InsertOnboardingPreference,
+  ActivationToken, InsertActivationToken,
+  MemberPreference, InsertMemberPreference,
+  BehaviorAnalytic, InsertBehaviorAnalytic,
+  PersonalizationScore, InsertPersonalizationScore,
+  JourneyStage, InsertJourneyStage,
+  RecommendationHistory, InsertRecommendationHistory
 } from "@shared/schema";
 
 // Storage interface
