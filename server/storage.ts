@@ -260,6 +260,7 @@ export interface IStorage {
   getMemberDocument(id: number): Promise<MemberDocument | undefined>;
   getMemberDocuments(memberId: number): Promise<MemberDocument[]>;
   getMemberDocumentsByStatus(memberId: number, status: string): Promise<MemberDocument[]>;
+  getAllMemberDocuments(): Promise<MemberDocument[]>;
   getPendingDocuments(): Promise<MemberDocument[]>;
   createMemberDocument(document: InsertMemberDocument): Promise<MemberDocument>;
   updateMemberDocument(id: number, updates: Partial<MemberDocument>): Promise<MemberDocument>;
