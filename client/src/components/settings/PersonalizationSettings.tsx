@@ -42,7 +42,8 @@ import {
   Moon,
   Sun,
   Volume2,
-  VolumeX
+  VolumeX,
+  RotateCcw
 } from 'lucide-react';
 
 interface PersonalizationPreference {
