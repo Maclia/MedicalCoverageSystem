@@ -44,6 +44,7 @@ import { fromZodError } from "zod-validation-error";
 import * as premiumCalculator from "./utils/premiumCalculator";
 import { addDays, differenceInYears, parseISO } from "date-fns";
 import { z } from "zod";
+import { emailService, emailWorkflows } from "./emailService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to handle zod validation errors
