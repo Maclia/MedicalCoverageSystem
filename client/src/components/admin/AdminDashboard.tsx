@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { EmailManagement } from './EmailManagement';
 import { OnboardingManagement } from './OnboardingManagement';
+import { DocumentReviewQueue } from './DocumentReviewQueue';
 
 interface AdminDashboardProps {
   userRole: string;
