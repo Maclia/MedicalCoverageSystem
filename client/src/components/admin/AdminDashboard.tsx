@@ -178,6 +178,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ userRole, userNa
               <BarChart3 className="h-6 w-6" />
               <span>Analytics</span>
             </Button>
+            <Button
+              onClick={() => navigate('/admin/documents')}
+              variant="outline"
+              className="h-16 flex flex-col items-center justify-center space-y-2"
+            >
+              <FileText className="h-6 w-6" />
+              <span>Documents</span>
+            </Button>
           </div>
         </CardContent>
       </Card>
