@@ -1785,6 +1785,641 @@ export class MemStorage implements IStorage {
     this.diagnosisCodes.set(id, updatedDiagnosisCode);
     return updatedDiagnosisCode;
   }
+
+  // Member Engagement Hub - Onboarding System Implementation
+
+  // Onboarding Sessions
+  async getOnboardingSession(id: number): Promise<OnboardingSession | undefined> {
+    return this.onboardingSessions.get(id);
+  }
+
+  async getOnboardingSessionByMember(memberId: number): Promise<OnboardingSession | undefined> {
+    return Array.from(this.onboardingSessions.values()).find(
+      session => session.memberId === memberId
+    );
+  }
+
+  async getAllOnboardingSessions(): Promise<OnboardingSession[]> {
+    return Array.from(this.onboardingSessions.values());
+  }
+
+  async getOnboardingSessionsByCompany(companyId: number): Promise<OnboardingSession[]> {
+    const sessions = Array.from(this.onboardingSessions.values());
+    const companySessions = [];
+
+    for (const session of sessions) {
+      const member = await this.getMember(session.memberId);
+      if (member && member.companyId === companyId) {
+        companySessions.push(session);
+      }
+    }
+
+    return companySessions;
+  }
+
+  async createOnboardingSession(session: InsertOnboardingSession): Promise<OnboardingSession> {
+    const id = this.onboardingSessionId++;
+    const newSession: OnboardingSession = {
+      ...session,
+      id,
+      startDate: session.startDate || new Date(),
+      completionDate: session.completionDate || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.onboardingSessions.set(id, newSession);
+    return newSession;
+  }
+
+  async updateOnboardingSession(id: number, updates: Partial<OnboardingSession>): Promise<OnboardingSession> {
+    const session = this.onboardingSessions.get(id);
+    if (!session) {
+      throw new Error(`Onboarding session with ID ${id} not found`);
+    }
+
+    const updatedSession: OnboardingSession = {
+      ...session,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.onboardingSessions.set(id, updatedSession);
+    return updatedSession;
+  }
+
+  // Onboarding Tasks
+  async getOnboardingTask(id: number): Promise<OnboardingTask | undefined> {
+    return this.onboardingTasks.get(id);
+  }
+
+  async getOnboardingTasksBySession(sessionId: number): Promise<OnboardingTask[]> {
+    return Array.from(this.onboardingTasks.values()).filter(
+      task => task.sessionId === sessionId
+    );
+  }
+
+  async getOnboardingTasksBySessionAndDay(sessionId: number, dayNumber: number): Promise<OnboardingTask[]> {
+    return Array.from(this.onboardingTasks.values()).filter(
+      task => task.sessionId === sessionId && task.dayNumber === dayNumber
+    );
+  }
+
+  async createOnboardingTask(task: InsertOnboardingTask): Promise<OnboardingTask> {
+    const id = this.onboardingTaskId++;
+    const newTask: OnboardingTask = {
+      ...task,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.onboardingTasks.set(id, newTask);
+    return newTask;
+  }
+
+  async updateOnboardingTask(id: number, updates: Partial<OnboardingTask>): Promise<OnboardingTask> {
+    const task = this.onboardingTasks.get(id);
+    if (!task) {
+      throw new Error(`Onboarding task with ID ${id} not found`);
+    }
+
+    const updatedTask: OnboardingTask = {
+      ...task,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.onboardingTasks.set(id, updatedTask);
+    return updatedTask;
+  }
+
+  async createOnboardingTasksForDay(memberId: number, dayNumber: number): Promise<OnboardingTask[]> {
+    const session = await this.getOnboardingSessionByMember(memberId);
+    if (!session) {
+      throw new Error(`No onboarding session found for member ${memberId}`);
+    }
+
+    const dayTasks = this.getTasksForDay(dayNumber);
+    const createdTasks = [];
+
+    for (const taskData of dayTasks) {
+      const task = await this.createOnboardingTask({
+        sessionId: session.id,
+        dayNumber,
+        taskType: taskData.taskType,
+        title: taskData.title,
+        description: taskData.description,
+        completionStatus: false,
+        pointsEarned: 0,
+        taskData: JSON.stringify(taskData.taskData || {})
+      });
+      createdTasks.push(task);
+    }
+
+    return createdTasks;
+  }
+
+  private getTasksForDay(dayNumber: number) {
+    const tasksByDay = {
+      1: [
+        {
+          taskType: 'profile_completion' as const,
+          title: 'Complete Your Profile',
+          description: 'Add your personal details, contact information, and emergency contacts.',
+          taskData: { required: true, points: 20 }
+        },
+        {
+          taskType: 'document_upload' as const,
+          title: 'Upload Government ID',
+          description: 'Upload a clear photo of your government-issued identification.',
+          taskData: { required: true, points: 15 }
+        }
+      ],
+      2: [
+        {
+          taskType: 'benefits_education' as const,
+          title: 'Explore Your Benefits',
+          description: 'Learn about your health insurance coverage and benefits.',
+          taskData: { required: true, points: 10 }
+        },
+        {
+          taskType: 'document_upload' as const,
+          title: 'Upload Proof of Address',
+          description: 'Upload a recent utility bill or bank statement.',
+          taskData: { required: false, points: 10 }
+        }
+      ],
+      3: [
+        {
+          taskType: 'dependent_registration' as const,
+          title: 'Register Dependents',
+          description: 'Add your spouse and children to your insurance coverage.',
+          taskData: { required: false, points: 15 }
+        },
+        {
+          taskType: 'wellness_setup' as const,
+          title: 'Set Wellness Goals',
+          description: 'Define your health and wellness objectives for the year.',
+          taskData: { required: false, points: 10 }
+        }
+      ],
+      4: [
+        {
+          taskType: 'emergency_setup' as const,
+          title: 'Set Emergency Contacts',
+          description: 'Designate emergency contacts and medical preferences.',
+          taskData: { required: true, points: 15 }
+        },
+        {
+          taskType: 'benefits_education' as const,
+          title: 'Learn About Preventive Care',
+          description: 'Discover covered preventive services and screenings.',
+          taskData: { required: false, points: 10 }
+        }
+      ],
+      5: [
+        {
+          taskType: 'document_upload' as const,
+          title: 'Upload Insurance Card',
+          description: 'Upload your insurance card for quick access.',
+          taskData: { required: false, points: 5 }
+        },
+        {
+          taskType: 'wellness_setup' as const,
+          title: 'Complete Health Assessment',
+          description: 'Take a comprehensive health risk assessment.',
+          taskData: { required: false, points: 20 }
+        }
+      ],
+      6: [
+        {
+          taskType: 'benefits_education' as const,
+          title: 'Understand Claims Process',
+          description: 'Learn how to submit claims and track their status.',
+          taskData: { required: false, points: 10 }
+        },
+        {
+          taskType: 'wellness_setup' as const,
+          title: 'Join Wellness Program',
+          description: 'Enroll in available wellness programs and challenges.',
+          taskData: { required: false, points: 15 }
+        }
+      ],
+      7: [
+        {
+          taskType: 'completion' as const,
+          title: 'Review Coverage Summary',
+          description: 'Review your complete coverage and understand your benefits.',
+          taskData: { required: true, points: 20 }
+        },
+        {
+          taskType: 'completion' as const,
+          title: 'Complete Onboarding',
+          description: 'Finish your onboarding journey and unlock all features.',
+          taskData: { required: true, points: 25 }
+        }
+      ]
+    };
+
+    return tasksByDay[dayNumber as keyof typeof tasksByDay] || [];
+  }
+
+  // Member Documents
+  async getMemberDocument(id: number): Promise<MemberDocument | undefined> {
+    return this.memberDocuments.get(id);
+  }
+
+  async getMemberDocuments(memberId: number): Promise<MemberDocument[]> {
+    return Array.from(this.memberDocuments.values()).filter(
+      document => document.memberId === memberId
+    );
+  }
+
+  async getMemberDocumentsByStatus(memberId: number, status: string): Promise<MemberDocument[]> {
+    return Array.from(this.memberDocuments.values()).filter(
+      document => document.memberId === memberId && document.verificationStatus === status
+    );
+  }
+
+  async getPendingDocuments(): Promise<MemberDocument[]> {
+    return Array.from(this.memberDocuments.values()).filter(
+      document => document.verificationStatus === 'pending'
+    );
+  }
+
+  async createMemberDocument(document: InsertMemberDocument): Promise<MemberDocument> {
+    const id = this.memberDocumentId++;
+    const newDocument: MemberDocument = {
+      ...document,
+      id,
+      uploadDate: document.uploadDate || new Date(),
+      verificationDate: document.verificationDate || null,
+      expiresAt: document.expiresAt || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.memberDocuments.set(id, newDocument);
+    return newDocument;
+  }
+
+  async updateMemberDocument(id: number, updates: Partial<MemberDocument>): Promise<MemberDocument> {
+    const document = this.memberDocuments.get(id);
+    if (!document) {
+      throw new Error(`Member document with ID ${id} not found`);
+    }
+
+    const updatedDocument: MemberDocument = {
+      ...document,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.memberDocuments.set(id, updatedDocument);
+    return updatedDocument;
+  }
+
+  // Onboarding Preferences
+  async getOnboardingPreference(id: number): Promise<OnboardingPreference | undefined> {
+    return this.onboardingPreferences.get(id);
+  }
+
+  async getOnboardingPreferencesByMember(memberId: number): Promise<OnboardingPreference | undefined> {
+    return Array.from(this.onboardingPreferences.values()).find(
+      preference => preference.memberId === memberId
+    );
+  }
+
+  async createOnboardingPreference(preference: InsertOnboardingPreference): Promise<OnboardingPreference> {
+    const id = this.onboardingPreferenceId++;
+    const newPreference: OnboardingPreference = {
+      ...preference,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.onboardingPreferences.set(id, newPreference);
+    return newPreference;
+  }
+
+  async updateOnboardingPreference(id: number, updates: Partial<OnboardingPreference>): Promise<OnboardingPreference> {
+    const preference = this.onboardingPreferences.get(id);
+    if (!preference) {
+      throw new Error(`Onboarding preference with ID ${id} not found`);
+    }
+
+    const updatedPreference: OnboardingPreference = {
+      ...preference,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.onboardingPreferences.set(id, updatedPreference);
+    return updatedPreference;
+  }
+
+  // Activation Tokens
+  async getActivationToken(id: number): Promise<ActivationToken | undefined> {
+    return this.activationTokens.get(id);
+  }
+
+  async getActivationToken(tokenHash: string): Promise<ActivationToken | undefined> {
+    return Array.from(this.activationTokens.values()).find(
+      token => token.tokenHash === tokenHash
+    );
+  }
+
+  async createActivationToken(token: InsertActivationToken): Promise<ActivationToken> {
+    const id = this.activationTokenId++;
+    const newToken: ActivationToken = {
+      ...token,
+      id,
+      usedAt: token.usedAt || null,
+      createdAt: new Date()
+    };
+    this.activationTokens.set(id, newToken);
+    return newToken;
+  }
+
+  async updateActivationToken(id: number, updates: Partial<ActivationToken>): Promise<ActivationToken> {
+    const token = this.activationTokens.get(id);
+    if (!token) {
+      throw new Error(`Activation token with ID ${id} not found`);
+    }
+
+    const updatedToken: ActivationToken = {
+      ...token,
+      ...updates
+    };
+
+    this.activationTokens.set(id, updatedToken);
+    return updatedToken;
+  }
+
+  // Personalization System Implementation
+
+  // Member Preferences
+  async getMemberPreference(id: number): Promise<MemberPreference | undefined> {
+    return this.memberPreferences.get(id);
+  }
+
+  async getMemberPreferences(memberId: number): Promise<MemberPreference | undefined> {
+    return Array.from(this.memberPreferences.values()).find(
+      preference => preference.memberId === memberId
+    );
+  }
+
+  async createMemberPreference(preference: InsertMemberPreference): Promise<MemberPreference> {
+    const id = this.memberPreferenceId++;
+    const newPreference: MemberPreference = {
+      ...preference,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.memberPreferences.set(id, newPreference);
+    return newPreference;
+  }
+
+  async updateMemberPreferences(memberId: number, updates: Partial<MemberPreference>): Promise<MemberPreference> {
+    const preference = await this.getMemberPreferences(memberId);
+    if (!preference) {
+      throw new Error(`Member preference for member ${memberId} not found`);
+    }
+
+    const updatedPreference: MemberPreference = {
+      ...preference,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.memberPreferences.set(preference.id, updatedPreference);
+    return updatedPreference;
+  }
+
+  // Behavior Analytics
+  async getBehaviorAnalytic(id: number): Promise<BehaviorAnalytic | undefined> {
+    return this.behaviorAnalytics.get(id);
+  }
+
+  async getBehaviorAnalyticsByMember(memberId: number): Promise<BehaviorAnalytic[]> {
+    return Array.from(this.behaviorAnalytics.values())
+      .filter(analytic => analytic.memberId === memberId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+  }
+
+  async getBehaviorAnalyticsBySession(memberId: number, sessionId: string, limit?: number): Promise<BehaviorAnalytic[]> {
+    let analytics = Array.from(this.behaviorAnalytics.values()).filter(
+      analytic => analytic.memberId === memberId && analytic.sessionId === sessionId
+    );
+
+    analytics.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+    if (limit) {
+      analytics = analytics.slice(0, limit);
+    }
+
+    return analytics;
+  }
+
+  async getBehaviorAnalyticsByType(memberId: number, eventType: string, limit?: number): Promise<BehaviorAnalytic[]> {
+    let analytics = Array.from(this.behaviorAnalytics.values()).filter(
+      analytic => analytic.memberId === memberId && analytic.eventType === eventType
+    );
+
+    analytics.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    if (limit) {
+      analytics = analytics.slice(0, limit);
+    }
+
+    return analytics;
+  }
+
+  async getRecentBehaviorAnalytics(memberId: number, limit?: number): Promise<BehaviorAnalytic[]> {
+    let analytics = Array.from(this.behaviorAnalytics.values())
+      .filter(analytic => analytic.memberId === memberId)
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    if (limit) {
+      analytics = analytics.slice(0, limit);
+    }
+
+    return analytics;
+  }
+
+  async createBehaviorAnalytic(analytic: InsertBehaviorAnalytic): Promise<BehaviorAnalytic> {
+    const id = this.behaviorAnalyticId++;
+    const newAnalytic: BehaviorAnalytic = {
+      ...analytic,
+      id,
+      timestamp: analytic.timestamp || new Date(),
+      coordinates: analytic.coordinates || null,
+      createdAt: new Date()
+    };
+    this.behaviorAnalytics.set(id, newAnalytic);
+    return newAnalytic;
+  }
+
+  // Personalization Scores
+  async getPersonalizationScore(id: number): Promise<PersonalizationScore | undefined> {
+    return this.personalizationScores.get(id);
+  }
+
+  async getPersonalizationScores(memberId: number): Promise<PersonalizationScore[]> {
+    return Array.from(this.personalizationScores.values()).filter(
+      score => score.memberId === memberId
+    );
+  }
+
+  async createPersonalizationScore(score: InsertPersonalizationScore): Promise<PersonalizationScore> {
+    const id = this.personalizationScoreId++;
+    const newScore: PersonalizationScore = {
+      ...score,
+      id,
+      lastCalculated: score.lastCalculated || new Date(),
+      expiresAt: score.expiresAt || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.personalizationScores.set(id, newScore);
+    return newScore;
+  }
+
+  async updatePersonalizationScore(id: number, updates: Partial<PersonalizationScore>): Promise<PersonalizationScore> {
+    const score = this.personalizationScores.get(id);
+    if (!score) {
+      throw new Error(`Personalization score with ID ${id} not found`);
+    }
+
+    const updatedScore: PersonalizationScore = {
+      ...score,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.personalizationScores.set(id, updatedScore);
+    return updatedScore;
+  }
+
+  // Journey Stages
+  async getJourneyStage(id: number): Promise<JourneyStage | undefined> {
+    return this.journeyStages.get(id);
+  }
+
+  async getJourneyStageByMember(memberId: number): Promise<JourneyStage | undefined> {
+    return Array.from(this.journeyStages.values()).find(
+      stage => stage.memberId === memberId
+    );
+  }
+
+  async createJourneyStage(stage: InsertJourneyStage): Promise<JourneyStage> {
+    const id = this.journeyStageId++;
+    const newStage: JourneyStage = {
+      ...stage,
+      id,
+      progressPercentage: stage.progressPercentage || 0,
+      milestonesCompleted: stage.milestonesCompleted || null,
+      nextMilestone: stage.nextMilestone || null,
+      estimatedCompletion: stage.estimatedCompletion || null,
+      transitionCriteria: stage.transitionCriteria || null,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.journeyStages.set(id, newStage);
+    return newStage;
+  }
+
+  async updateJourneyStage(id: number, updates: Partial<JourneyStage>): Promise<JourneyStage> {
+    const stage = this.journeyStages.get(id);
+    if (!stage) {
+      throw new Error(`Journey stage with ID ${id} not found`);
+    }
+
+    const updatedStage: JourneyStage = {
+      ...stage,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.journeyStages.set(id, updatedStage);
+    return updatedStage;
+  }
+
+  // Recommendation History
+  async getRecommendationHistory(id: number): Promise<RecommendationHistory | undefined> {
+    return this.recommendationHistory.get(id);
+  }
+
+  async getActiveRecommendations(memberId: number, limit?: number): Promise<RecommendationHistory[]> {
+    let recommendations = Array.from(this.recommendationHistory.values())
+      .filter(rec =>
+        rec.memberId === memberId &&
+        (!rec.validUntil || new Date(rec.validUntil) > new Date())
+      )
+      .sort((a, b) => new Date(b.shownAt).getTime() - new Date(a.shownAt).getTime());
+
+    if (limit) {
+      recommendations = recommendations.slice(0, limit);
+    }
+
+    return recommendations;
+  }
+
+  async getRecommendationsByType(memberId: number, type: string, limit?: number): Promise<RecommendationHistory[]> {
+    let recommendations = Array.from(this.recommendationHistory.values())
+      .filter(rec => rec.memberId === memberId && rec.recommendationType === type)
+      .sort((a, b) => new Date(b.shownAt).getTime() - new Date(a.shownAt).getTime());
+
+    if (limit) {
+      recommendations = recommendations.slice(0, limit);
+    }
+
+    return recommendations;
+  }
+
+  async createRecommendationHistory(recommendation: InsertRecommendationHistory): Promise<RecommendationHistory> {
+    const id = this.recommendationHistoryId++;
+    const newRecommendation: RecommendationHistory = {
+      ...recommendation,
+      id,
+      priority: recommendation.priority || 0,
+      validUntil: recommendation.validUntil || null,
+      memberResponse: recommendation.memberResponse || null,
+      responseDate: recommendation.responseDate || null,
+      feedbackRating: recommendation.feedbackRating || null,
+      feedbackText: recommendation.feedbackText || null,
+      effectiveness: recommendation.effectiveness || null,
+      shownAt: recommendation.shownAt || new Date(),
+      createdAt: new Date()
+    };
+    this.recommendationHistory.set(id, newRecommendation);
+    return newRecommendation;
+  }
+
+  async updateRecommendationFeedback(id: number, updates: Partial<RecommendationHistory>): Promise<RecommendationHistory> {
+    const recommendation = this.recommendationHistory.get(id);
+    if (!recommendation) {
+      throw new Error(`Recommendation history with ID ${id} not found`);
+    }
+
+    const updatedRecommendation: RecommendationHistory = {
+      ...recommendation,
+      ...updates
+    };
+
+    this.recommendationHistory.set(id, updatedRecommendation);
+    return updatedRecommendation;
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const id = this.userId++;
+    const newUser: User = {
+      ...user,
+      id,
+      createdAt: new Date()
+    };
+    this.users.set(id, newUser);
+    return newUser;
+  }
 }
 
 import { DatabaseStorage } from './databaseStorage';
