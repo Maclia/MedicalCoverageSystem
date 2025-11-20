@@ -2913,6 +2913,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         activationToken: activationToken.tokenHash,
         onboardingSession
       });
+
+      // Send activation email
+      try {
+        await emailService.sendTemplatedEmail('member_activation', memberId);
+      } catch (emailError) {
+        console.error('Failed to send activation email:', emailError);
+      }
     } catch (error) {
       console.error('Activation error:', error);
       res.status(500).json({ error: "Failed to activate member" });
