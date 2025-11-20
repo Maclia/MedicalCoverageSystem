@@ -3066,6 +3066,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentDay: 7
         });
 
+        // Send completion milestone email
+        try {
+          await emailService.sendMilestoneEmail(memberId, 'completion');
+        } catch (emailError) {
+          console.error('Failed to send completion email:', emailError);
+        }
+
         return res.json({
           message: "Onboarding completed!",
           status: 'completed',
@@ -3076,6 +3083,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create tasks for next day
       await storage.createOnboardingTasksForDay(memberId, nextDay);
       await storage.updateOnboardingSession(session.id, { currentDay: nextDay });
+
+      // Send milestone email for halfway point (Day 4)
+      if (nextDay === 4) {
+        try {
+          await emailService.sendMilestoneEmail(memberId, 'halfway');
+        } catch (emailError) {
+          console.error('Failed to send milestone email:', emailError);
+        }
+      }
+
+      // Send wellness invitation on Day 5
+      if (nextDay === 5) {
+        try {
+          await emailService.sendWellnessInvitation(memberId);
+        } catch (emailError) {
+          console.error('Failed to send wellness invitation:', emailError);
+        }
+      }
+
+      // Send daily progress email
+      try {
+        await emailService.sendOnboardingProgressEmail(memberId, nextDay);
+      } catch (emailError) {
+        console.error('Failed to send progress email:', emailError);
+      }
 
       const nextTasks = await storage.getOnboardingTasksBySessionAndDay(session.id, nextDay);
 
