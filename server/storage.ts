@@ -2044,6 +2044,10 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getAllMemberDocuments(): Promise<MemberDocument[]> {
+    return Array.from(this.memberDocuments.values());
+  }
+
   async getPendingDocuments(): Promise<MemberDocument[]> {
     return Array.from(this.memberDocuments.values()).filter(
       document => document.verificationStatus === 'pending'
