@@ -712,3 +712,269 @@ export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+
+// Member Engagement Hub - Onboarding System
+export const onboardingStatusEnum = pgEnum('onboarding_status', ['pending', 'active', 'completed', 'paused', 'cancelled']);
+export const taskTypeEnum = pgEnum('task_type', ['profile_completion', 'document_upload', 'benefits_education', 'dependent_registration', 'wellness_setup', 'emergency_setup', 'completion']);
+export const documentTypeEnum = pgEnum('document_type', ['government_id', 'proof_of_address', 'insurance_card', 'dependent_document']);
+export const documentStatusEnum = pgEnum('document_status', ['pending', 'approved', 'rejected', 'expired']);
+export const activationStatusEnum = pgEnum('activation_status', ['pending', 'active', 'expired', 'used']);
+
+// Onboarding sessions table
+export const onboardingSessions = pgTable("onboarding_sessions", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  startDate: timestamp("start_date").defaultNow().notNull(),
+  currentDay: integer("current_day").default(1).notNull(),
+  completionDate: timestamp("completion_date"),
+  status: onboardingStatusEnum("status").default("pending").notNull(),
+  activationCompleted: boolean("activation_completed").default(false),
+  totalPointsEarned: integer("total_points_earned").default(0),
+  streakDays: integer("streak_days").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Onboarding tasks table
+export const onboardingTasks = pgTable("onboarding_tasks", {
+  id: serial("id").primaryKey(),
+  sessionId: integer("session_id").references(() => onboardingSessions.id).notNull(),
+  dayNumber: integer("day_number").notNull(),
+  taskType: taskTypeEnum("task_type").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  completionStatus: boolean("completion_status").default(false),
+  completedAt: timestamp("completed_at"),
+  pointsEarned: integer("points_earned").default(0),
+  taskData: text("task_data"), // JSON string for additional task-specific data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Member documents table
+export const memberDocuments = pgTable("member_documents", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  documentType: documentTypeEnum("document_type").notNull(),
+  originalFileName: text("original_file_name").notNull(),
+  storedFilePath: text("stored_file_path").notNull(),
+  fileHash: text("file_hash").notNull(), // SHA-256 hash for integrity
+  fileSize: integer("file_size").notNull(), // in bytes
+  mimeType: text("mime_type").notNull(),
+  uploadDate: timestamp("upload_date").defaultNow().notNull(),
+  verificationStatus: documentStatusEnum("verification_status").default("pending").notNull(),
+  verificationDate: timestamp("verification_date"),
+  verifiedBy: integer("verified_by"), // Admin user ID
+  rejectionReason: text("rejection_reason"),
+  extractedData: text("extracted_data"), // JSON string for OCR/extracted data
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Onboarding preferences table
+export const onboardingPreferences = pgTable("onboarding_preferences", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  emailFrequency: text("email_frequency").default("daily").notNull(), // daily, weekly, none
+  smsEnabled: boolean("sms_enabled").default(true).notNull(),
+  timezone: text("timezone").default("UTC").notNull(),
+  preferredTime: text("preferred_time").default("09:00").notNull(), // HH:MM format
+  language: text("language").default("en").notNull(),
+  communicationChannel: text("communication_channel").default("email").notNull(), // email, sms, both
+  autoAdvanceDays: boolean("auto_advance_days").default(false).notNull(),
+  reminderEnabled: boolean("reminder_enabled").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Activation tokens table
+export const activationTokens = pgTable("activation_tokens", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  tokenHash: text("token_hash").notNull().unique(), // SHA-256 hash of the activation token
+  status: activationStatusEnum("status").default("pending").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Personalization System
+export const personalizationLevelEnum = pgEnum('personalization_level', ['minimal', 'moderate', 'full']);
+export const recommendationTypeEnum = pgEnum('recommendation_type', ['preventive_care', 'wellness', 'cost_optimization', 'care_coordination', 'educational']);
+export const journeyStageEnum = pgEnum('journey_stage', ['new_member', 'established_member', 'long_term_member', 'new_parent', 'chronic_condition', 'high_risk', 'wellness_champion']);
+
+// Member preferences table
+export const memberPreferences = pgTable("member_preferences", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  personalizationLevel: personalizationLevelEnum("personalization_level").default("moderate").notNull(),
+  contentCategories: text("content_categories"), // JSON array of preferred content categories
+  excludedTopics: text("excluded_topics"), // JSON array of excluded topics
+  dataSharingConsent: boolean("data_sharing_consent").default(false).notNull(),
+  recommendationFeedback: boolean("recommendation_feedback").default(true).notNull(),
+  interfacePreferences: text("interface_preferences"), // JSON string for UI preferences
+  healthGoals: text("health_goals"), // JSON string for wellness goals
+  lifestyleFactors: text("lifestyle_factors"), // JSON string for lifestyle data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Behavior analytics table
+export const behaviorAnalytics = pgTable("behavior_analytics", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  eventType: text("event_type").notNull(), // page_view, click, form_submit, search, etc.
+  resourceName: text("resource_name").notNull(), // page/component name
+  resourceData: text("resource_data"), // JSON string with additional context
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+  sessionId: text("session_id").notNull(),
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  referrer: text("referrer"),
+  timeOnPage: integer("time_on_page"), // in seconds
+  scrollDepth: integer("scroll_depth"), // percentage
+  coordinates: text("coordinates"), // JSON string with click coordinates
+});
+
+// Personalization scores table
+export const personalizationScores = pgTable("personalization_scores", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  category: text("category").notNull(), // benefits, wellness, preventive, etc.
+  contentId: integer("content_id").notNull(),
+  score: real("score").notNull(), // 0.0 to 1.0 relevance score
+  confidence: real("confidence").default(0.0).notNull(), // confidence in the recommendation
+  lastCalculated: timestamp("last_calculated").defaultNow().notNull(),
+  factors: text("factors"), // JSON string explaining score factors
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Journey stages table
+export const journeyStages = pgTable("journey_stages", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  currentStage: journeyStageEnum("current_stage").notNull(),
+  previousStage: journeyStageEnum("previous_stage"),
+  stageStartDate: timestamp("stage_start_date").defaultNow().notNull(),
+  progressPercentage: real("progress_percentage").default(0).notNull(),
+  milestonesCompleted: text("milestones_completed"), // JSON array of completed milestones
+  nextMilestone: text("next_milestone"),
+  estimatedCompletion: timestamp("estimated_completion"),
+  transitionCriteria: text("transition_criteria"), // JSON string for stage transition rules
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Recommendation history table
+export const recommendationHistory = pgTable("recommendation_history", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  recommendationType: recommendationTypeEnum("recommendation_type").notNull(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  contentData: text("content_data"), // JSON string with recommendation content
+  priority: integer("priority").default(0).notNull(), // 0-10, higher is more important
+  validUntil: timestamp("valid_until"),
+  memberResponse: text("member_response"), // clicked, dismissed, completed, etc.
+  responseDate: timestamp("response_date"),
+  feedbackRating: integer("feedback_rating"), // 1-5 stars
+  feedbackText: text("feedback_text"),
+  effectiveness: real("effectiveness"), // 0.0 to 1.0, calculated later
+  shownAt: timestamp("shown_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for onboarding system
+export const insertOnboardingSessionSchema = createInsertSchema(onboardingSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMemberDocumentSchema = createInsertSchema(memberDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertOnboardingPreferenceSchema = createInsertSchema(onboardingPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertActivationTokenSchema = createInsertSchema(activationTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Insert schemas for personalization system
+export const insertMemberPreferenceSchema = createInsertSchema(memberPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBehaviorAnalyticSchema = createInsertSchema(behaviorAnalytics).omit({
+  id: true,
+});
+
+export const insertPersonalizationScoreSchema = createInsertSchema(personalizationScores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertJourneyStageSchema = createInsertSchema(journeyStages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRecommendationHistorySchema = createInsertSchema(recommendationHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for onboarding system
+export type OnboardingSession = typeof onboardingSessions.$inferSelect;
+export type InsertOnboardingSession = z.infer<typeof insertOnboardingSessionSchema>;
+
+export type OnboardingTask = typeof onboardingTasks.$inferSelect;
+export type InsertOnboardingTask = z.infer<typeof insertOnboardingTaskSchema>;
+
+export type MemberDocument = typeof memberDocuments.$inferSelect;
+export type InsertMemberDocument = z.infer<typeof insertMemberDocumentSchema>;
+
+export type OnboardingPreference = typeof onboardingPreferences.$inferSelect;
+export type InsertOnboardingPreference = z.infer<typeof insertOnboardingPreferenceSchema>;
+
+export type ActivationToken = typeof activationTokens.$inferSelect;
+export type InsertActivationToken = z.infer<typeof insertActivationTokenSchema>;
+
+// Types for personalization system
+export type MemberPreference = typeof memberPreferences.$inferSelect;
+export type InsertMemberPreference = z.infer<typeof insertMemberPreferenceSchema>;
+
+export type BehaviorAnalytic = typeof behaviorAnalytics.$inferSelect;
+export type InsertBehaviorAnalytic = z.infer<typeof insertBehaviorAnalyticSchema>;
+
+export type PersonalizationScore = typeof personalizationScores.$inferSelect;
+export type InsertPersonalizationScore = z.infer<typeof insertPersonalizationScoreSchema>;
+
+export type JourneyStage = typeof journeyStages.$inferSelect;
+export type InsertJourneyStage = z.infer<typeof insertJourneyStageSchema>;
+
+export type RecommendationHistory = typeof recommendationHistory.$inferSelect;
+export type InsertRecommendationHistory = z.infer<typeof insertRecommendationHistorySchema>;
