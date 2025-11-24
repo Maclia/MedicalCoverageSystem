@@ -33,7 +33,13 @@ import {
   BehaviorAnalytic, InsertBehaviorAnalytic,
   PersonalizationScore, InsertPersonalizationScore,
   JourneyStage, InsertJourneyStage,
-  RecommendationHistory, InsertRecommendationHistory
+  RecommendationHistory, InsertRecommendationHistory,
+  ClaimAdjudicationResult, InsertClaimAdjudicationResult,
+  MedicalNecessityValidation, InsertMedicalNecessityValidation,
+  FraudDetectionResult, InsertFraudDetectionResult,
+  ExplanationOfBenefits, InsertExplanationOfBenefits,
+  ClaimAuditTrail, InsertClaimAuditTrail,
+  BenefitUtilization, InsertBenefitUtilization
 } from "@shared/schema";
 
 // Storage interface
@@ -242,6 +248,46 @@ export interface IStorage {
   // User method
   createUser(user: InsertUser): Promise<User>;
 
+  // Enhanced Claims Processing Methods
+  // Claim Adjudication Results
+  getClaimAdjudicationResults(): Promise<ClaimAdjudicationResult[]>;
+  getClaimAdjudicationResult(id: number): Promise<ClaimAdjudicationResult | undefined>;
+  getClaimAdjudicationResultsByClaim(claimId: number): Promise<ClaimAdjudicationResult[]>;
+  createClaimAdjudicationResult(result: InsertClaimAdjudicationResult): Promise<ClaimAdjudicationResult>;
+
+  // Medical Necessity Validations
+  getMedicalNecessityValidations(): Promise<MedicalNecessityValidation[]>;
+  getMedicalNecessityValidation(id: number): Promise<MedicalNecessityValidation | undefined>;
+  getMedicalNecessityValidationsByClaim(claimId: number): Promise<MedicalNecessityValidation[]>;
+  createMedicalNecessityResult(validation: InsertMedicalNecessityValidation): Promise<MedicalNecessityValidation>;
+
+  // Fraud Detection Results
+  getFraudDetectionResults(): Promise<FraudDetectionResult[]>;
+  getFraudDetectionResult(id: number): Promise<FraudDetectionResult | undefined>;
+  getFraudDetectionResultsByClaim(claimId: number): Promise<FraudDetectionResult[]>;
+  createFraudDetectionResult(result: InsertFraudDetectionResult): Promise<FraudDetectionResult>;
+
+  // Explanation of Benefits
+  getExplanationOfBenefits(): Promise<ExplanationOfBenefits[]>;
+  getExplanationOfBenefits(id: number): Promise<ExplanationOfBenefits | undefined>;
+  getExplanationOfBenefitsByClaim(claimId: number): Promise<ExplanationOfBenefits[]>;
+  getExplanationOfBenefitsByMember(memberId: number): Promise<ExplanationOfBenefits[]>;
+  createExplanationOfBenefits(eob: InsertExplanationOfBenefits): Promise<ExplanationOfBenefits>;
+
+  // Claim Audit Trails
+  getClaimAuditTrails(): Promise<ClaimAuditTrail[]>;
+  getClaimAuditTrail(id: number): Promise<ClaimAuditTrail | undefined>;
+  getClaimAuditTrailsByClaim(claimId: number): Promise<ClaimAuditTrail[]>;
+  createClaimAuditTrail(audit: InsertClaimAuditTrail): Promise<ClaimAuditTrail>;
+
+  // Benefit Utilization
+  getBenefitUtilization(): Promise<BenefitUtilization[]>;
+  getBenefitUtilizationById(id: number): Promise<BenefitUtilization | undefined>;
+  getBenefitUtilizationByMember(memberId: number): Promise<BenefitUtilization[]>;
+  getBenefitUtilizationByMemberAndBenefit(memberId: number, benefitId: number): Promise<BenefitUtilization | undefined>;
+  createBenefitUtilization(utilization: InsertBenefitUtilization): Promise<BenefitUtilization>;
+  updateBenefitUtilization(id: number, usedAmount: number): Promise<BenefitUtilization>;
+
   // Member Engagement Hub - Onboarding System
   getOnboardingSession(id: number): Promise<OnboardingSession | undefined>;
   getOnboardingSessionByMember(memberId: number): Promise<OnboardingSession | undefined>;
@@ -344,6 +390,14 @@ export class MemStorage implements IStorage {
   private journeyStages: Map<number, JourneyStage>;
   private recommendationHistory: Map<number, RecommendationHistory>;
 
+  // Enhanced Claims Processing Storage
+  private claimAdjudicationResults: Map<number, ClaimAdjudicationResult>;
+  private medicalNecessityValidations: Map<number, MedicalNecessityValidation>;
+  private fraudDetectionResults: Map<number, FraudDetectionResult>;
+  private explanationOfBenefits: Map<number, ExplanationOfBenefits>;
+  private claimAuditTrails: Map<number, ClaimAuditTrail>;
+  private benefitUtilization: Map<number, BenefitUtilization>;
+
   // Member Engagement Hub IDs
   private onboardingSessionId: number;
   private onboardingTaskId: number;
@@ -355,6 +409,14 @@ export class MemStorage implements IStorage {
   private personalizationScoreId: number;
   private journeyStageId: number;
   private recommendationHistoryId: number;
+
+  // Enhanced Claims Processing IDs
+  private claimAdjudicationResultId: number;
+  private medicalNecessityValidationId: number;
+  private fraudDetectionResultId: number;
+  private explanationOfBenefitsId: number;
+  private claimAuditTrailId: number;
+  private benefitUtilizationId: number;
 
   private companyId: number;
   private memberId: number;
@@ -422,6 +484,14 @@ export class MemStorage implements IStorage {
     this.journeyStages = new Map();
     this.recommendationHistory = new Map();
 
+    // Initialize Enhanced Claims Processing Storage
+    this.claimAdjudicationResults = new Map();
+    this.medicalNecessityValidations = new Map();
+    this.fraudDetectionResults = new Map();
+    this.explanationOfBenefits = new Map();
+    this.claimAuditTrails = new Map();
+    this.benefitUtilization = new Map();
+
     // Initialize Member Engagement Hub IDs
     this.onboardingSessionId = 1;
     this.onboardingTaskId = 1;
@@ -433,6 +503,14 @@ export class MemStorage implements IStorage {
     this.personalizationScoreId = 1;
     this.journeyStageId = 1;
     this.recommendationHistoryId = 1;
+
+    // Initialize Enhanced Claims Processing IDs
+    this.claimAdjudicationResultId = 1;
+    this.medicalNecessityValidationId = 1;
+    this.fraudDetectionResultId = 1;
+    this.explanationOfBenefitsId = 1;
+    this.claimAuditTrailId = 1;
+    this.benefitUtilizationId = 1;
 
     this.companyId = 1;
     this.memberId = 1;
@@ -2427,6 +2505,203 @@ export class MemStorage implements IStorage {
     };
     this.users.set(id, newUser);
     return newUser;
+  }
+
+  // Enhanced Claims Processing Methods Implementation
+
+  // Claim Adjudication Results
+  async getClaimAdjudicationResults(): Promise<ClaimAdjudicationResult[]> {
+    return Array.from(this.claimAdjudicationResults.values());
+  }
+
+  async getClaimAdjudicationResult(id: number): Promise<ClaimAdjudicationResult | undefined> {
+    return this.claimAdjudicationResults.get(id);
+  }
+
+  async getClaimAdjudicationResultsByClaim(claimId: number): Promise<ClaimAdjudicationResult[]> {
+    return Array.from(this.claimAdjudicationResults.values()).filter(
+      result => result.claimId === claimId
+    );
+  }
+
+  async createClaimAdjudicationResult(result: InsertClaimAdjudicationResult): Promise<ClaimAdjudicationResult> {
+    const id = this.claimAdjudicationResultId++;
+    const newResult: ClaimAdjudicationResult = {
+      ...result,
+      id,
+      adjudicationDate: result.adjudicationDate || new Date(),
+      createdAt: new Date()
+    };
+    this.claimAdjudicationResults.set(id, newResult);
+    return newResult;
+  }
+
+  // Medical Necessity Validations
+  async getMedicalNecessityValidations(): Promise<MedicalNecessityValidation[]> {
+    return Array.from(this.medicalNecessityValidations.values());
+  }
+
+  async getMedicalNecessityValidation(id: number): Promise<MedicalNecessityValidation | undefined> {
+    return this.medicalNecessityValidations.get(id);
+  }
+
+  async getMedicalNecessityValidationsByClaim(claimId: number): Promise<MedicalNecessityValidation[]> {
+    return Array.from(this.medicalNecessityValidations.values()).filter(
+      validation => validation.claimId === claimId
+    );
+  }
+
+  async createMedicalNecessityResult(validation: InsertMedicalNecessityValidation): Promise<MedicalNecessityValidation> {
+    const id = this.medicalNecessityValidationId++;
+    const newValidation: MedicalNecessityValidation = {
+      ...validation,
+      id,
+      createdAt: new Date()
+    };
+    this.medicalNecessityValidations.set(id, newValidation);
+    return newValidation;
+  }
+
+  // Fraud Detection Results
+  async getFraudDetectionResults(): Promise<FraudDetectionResult[]> {
+    return Array.from(this.fraudDetectionResults.values());
+  }
+
+  async getFraudDetectionResult(id: number): Promise<FraudDetectionResult | undefined> {
+    return this.fraudDetectionResults.get(id);
+  }
+
+  async getFraudDetectionResultsByClaim(claimId: number): Promise<FraudDetectionResult[]> {
+    return Array.from(this.fraudDetectionResults.values()).filter(
+      result => result.claimId === claimId
+    );
+  }
+
+  async createFraudDetectionResult(result: InsertFraudDetectionResult): Promise<FraudDetectionResult> {
+    const id = this.fraudDetectionResultId++;
+    const newResult: FraudDetectionResult = {
+      ...result,
+      id,
+      detectionDate: result.detectionDate || new Date(),
+      createdAt: new Date()
+    };
+    this.fraudDetectionResults.set(id, newResult);
+    return newResult;
+  }
+
+  // Explanation of Benefits
+  async getExplanationOfBenefits(): Promise<ExplanationOfBenefits[]> {
+    return Array.from(this.explanationOfBenefits.values());
+  }
+
+  async getExplanationOfBenefits(id: number): Promise<ExplanationOfBenefits | undefined> {
+    return this.explanationOfBenefits.get(id);
+  }
+
+  async getExplanationOfBenefitsByClaim(claimId: number): Promise<ExplanationOfBenefits[]> {
+    return Array.from(this.explanationOfBenefits.values()).filter(
+      eob => eob.claimId === claimId
+    );
+  }
+
+  async getExplanationOfBenefitsByMember(memberId: number): Promise<ExplanationOfBenefits[]> {
+    return Array.from(this.explanationOfBenefits.values()).filter(
+      eob => eob.memberId === memberId
+    );
+  }
+
+  async createExplanationOfBenefits(eob: InsertExplanationOfBenefits): Promise<ExplanationOfBenefits> {
+    const id = this.explanationOfBenefitsId++;
+    const newEOB: ExplanationOfBenefits = {
+      ...eob,
+      id,
+      eobDate: eob.eobDate || new Date(),
+      createdAt: new Date()
+    };
+    this.explanationOfBenefits.set(id, newEOB);
+    return newEOB;
+  }
+
+  // Claim Audit Trails
+  async getClaimAuditTrails(): Promise<ClaimAuditTrail[]> {
+    return Array.from(this.claimAuditTrails.values());
+  }
+
+  async getClaimAuditTrail(id: number): Promise<ClaimAuditTrail | undefined> {
+    return this.claimAuditTrails.get(id);
+  }
+
+  async getClaimAuditTrailsByClaim(claimId: number): Promise<ClaimAuditTrail[]> {
+    return Array.from(this.claimAuditTrails.values())
+      .filter(trail => trail.claimId === claimId)
+      .sort((a, b) => new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
+  }
+
+  async createClaimAuditTrail(audit: InsertClaimAuditTrail): Promise<ClaimAuditTrail> {
+    const id = this.claimAuditTrailId++;
+    const newAudit: ClaimAuditTrail = {
+      ...audit,
+      id,
+      eventDate: audit.eventDate || new Date(),
+      createdAt: new Date()
+    };
+    this.claimAuditTrails.set(id, newAudit);
+    return newAudit;
+  }
+
+  // Benefit Utilization
+  async getBenefitUtilization(): Promise<BenefitUtilization[]> {
+    return Array.from(this.benefitUtilization.values());
+  }
+
+  async getBenefitUtilizationById(id: number): Promise<BenefitUtilization | undefined> {
+    return this.benefitUtilization.get(id);
+  }
+
+  async getBenefitUtilizationByMember(memberId: number): Promise<BenefitUtilization[]> {
+    return Array.from(this.benefitUtilization.values()).filter(
+      utilization => utilization.memberId === memberId
+    );
+  }
+
+  async getBenefitUtilizationByMemberAndBenefit(memberId: number, benefitId: number): Promise<BenefitUtilization | undefined> {
+    return Array.from(this.benefitUtilization.values()).find(
+      utilization => utilization.memberId === memberId && utilization.benefitId === benefitId
+    );
+  }
+
+  async createBenefitUtilization(utilization: InsertBenefitUtilization): Promise<BenefitUtilization> {
+    const id = this.benefitUtilizationId++;
+    const newUtilization: BenefitUtilization = {
+      ...utilization,
+      id,
+      lastUpdated: new Date(),
+      createdAt: new Date()
+    };
+    this.benefitUtilization.set(id, newUtilization);
+    return newUtilization;
+  }
+
+  async updateBenefitUtilization(id: number, usedAmount: number): Promise<BenefitUtilization> {
+    const utilization = this.benefitUtilization.get(id);
+    if (!utilization) {
+      throw new Error(`Benefit utilization with ID ${id} not found`);
+    }
+
+    const updatedUtilization: BenefitUtilization = {
+      ...utilization,
+      usedAmount,
+      lastUpdated: new Date()
+    };
+
+    // Recalculate remaining amount and percentage
+    if (utilization.limitAmount) {
+      updatedUtilization.remainingAmount = Math.max(0, utilization.limitAmount - usedAmount);
+      updatedUtilization.utilizationPercentage = (usedAmount / utilization.limitAmount) * 100;
+    }
+
+    this.benefitUtilization.set(id, updatedUtilization);
+    return updatedUtilization;
   }
 }
 
