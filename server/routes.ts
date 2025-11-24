@@ -25,7 +25,17 @@ import {
   insertProviderProcedureRateSchema,
   insertClaimProcedureItemSchema,
   insertDiagnosisCodeSchema,
-  insertUserSchema
+  insertUserSchema,
+  insertOnboardingSessionSchema,
+  insertOnboardingTaskSchema,
+  insertMemberDocumentSchema,
+  insertOnboardingPreferenceSchema,
+  insertActivationTokenSchema,
+  insertMemberPreferenceSchema,
+  insertBehaviorAnalyticSchema,
+  insertPersonalizationScoreSchema,
+  insertJourneyStageSchema,
+  insertRecommendationHistorySchema
 } from "@shared/schema";
 import { authenticateUser, logoutUser, refreshUserToken } from "./auth";
 import { authenticate, requireRole, requireOwnership, AuthenticatedRequest } from "./middleware/auth";
@@ -34,6 +44,7 @@ import { fromZodError } from "zod-validation-error";
 import * as premiumCalculator from "./utils/premiumCalculator";
 import { addDays, differenceInYears, parseISO } from "date-fns";
 import { z } from "zod";
+import { emailService, emailWorkflows } from "./emailService";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to handle zod validation errors
@@ -2837,6 +2848,1174 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: 'Failed to update diagnosis code status' });
     }
   });
+
+  // Member Engagement Hub - Onboarding System
+
+  // Member Activation Endpoints
+  app.post("/api/members/:id/activate", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { password, securityQuestions, communicationPreferences } = req.body;
+
+      if (!memberId || !password) {
+        return res.status(400).json({ error: "Member ID and password are required" });
+      }
+
+      // Verify member exists
+      const member = await storage.getMember(memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      // Check if member is already activated
+      const existingSession = await storage.getOnboardingSessionByMember(memberId);
+      if (existingSession && existingSession.activationCompleted) {
+        return res.status(400).json({ error: "Member is already activated" });
+      }
+
+      // Create activation token (in a real system, this would be sent via email)
+      const activationToken = await storage.createActivationToken({
+        memberId,
+        tokenHash: Buffer.from(Math.random().toString(36)).toString('base64'), // Simple token generation
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+        status: 'pending',
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent')
+      });
+
+      // Create or update onboarding session
+      let onboardingSession;
+      if (existingSession) {
+        onboardingSession = await storage.updateOnboardingSession(existingSession.id, {
+          activationCompleted: true,
+          status: 'active'
+        });
+      } else {
+        onboardingSession = await storage.createOnboardingSession({
+          memberId,
+          status: 'active',
+          activationCompleted: true,
+          currentDay: 1
+        });
+      }
+
+      // Create onboarding preferences
+      await storage.createOnboardingPreference({
+        memberId,
+        emailFrequency: communicationPreferences?.emailFrequency || 'daily',
+        smsEnabled: communicationPreferences?.smsEnabled || true,
+        timezone: communicationPreferences?.timezone || 'UTC',
+        preferredTime: communicationPreferences?.preferredTime || '09:00',
+        language: communicationPreferences?.language || 'en',
+        communicationChannel: communicationPreferences?.communicationChannel || 'email'
+      });
+
+      // Create Day 1 tasks
+      await storage.createOnboardingTasksForDay(memberId, 1);
+
+      res.status(201).json({
+        success: true,
+        message: "Member activated successfully",
+        activationToken: activationToken.tokenHash,
+        onboardingSession
+      });
+
+      // Send activation email
+      try {
+        await emailService.sendTemplatedEmail('member_activation', memberId);
+      } catch (emailError) {
+        console.error('Failed to send activation email:', emailError);
+      }
+    } catch (error) {
+      console.error('Activation error:', error);
+      res.status(500).json({ error: "Failed to activate member" });
+    }
+  });
+
+  app.post("/api/members/activate-with-token", async (req, res) => {
+    try {
+      const { token, password, communicationPreferences } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ error: "Activation token and password are required" });
+      }
+
+      // Find activation token
+      const activationToken = await storage.getActivationToken(token);
+      if (!activationToken) {
+        return res.status(404).json({ error: "Invalid activation token" });
+      }
+
+      if (activationToken.status !== 'pending') {
+        return res.status(400).json({ error: "Activation token has already been used" });
+      }
+
+      if (new Date(activationToken.expiresAt) < new Date()) {
+        return res.status(400).json({ error: "Activation token has expired" });
+      }
+
+      // Get member
+      const member = await storage.getMember(activationToken.memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      // Update token status
+      await storage.updateActivationToken(activationToken.id, {
+        status: 'used',
+        usedAt: new Date()
+      });
+
+      // Create onboarding session
+      const onboardingSession = await storage.createOnboardingSession({
+        memberId: activationToken.memberId,
+        status: 'active',
+        activationCompleted: true,
+        currentDay: 1
+      });
+
+      // Create onboarding preferences
+      await storage.createOnboardingPreference({
+        memberId: activationToken.memberId,
+        emailFrequency: communicationPreferences?.emailFrequency || 'daily',
+        smsEnabled: communicationPreferences?.smsEnabled || true,
+        timezone: communicationPreferences?.timezone || 'UTC',
+        preferredTime: communicationPreferences?.preferredTime || '09:00',
+        language: communicationPreferences?.language || 'en',
+        communicationChannel: communicationPreferences?.communicationChannel || 'email'
+      });
+
+      // Create Day 1 tasks
+      await storage.createOnboardingTasksForDay(activationToken.memberId, 1);
+
+      res.status(201).json({
+        success: true,
+        message: "Member activated successfully",
+        onboardingSession
+      });
+
+      // Send welcome email after token activation
+      try {
+        await emailService.sendTemplatedEmail('welcome_email', activationToken.memberId);
+      } catch (emailError) {
+        console.error('Failed to send welcome email:', emailError);
+      }
+    } catch (error) {
+      console.error('Token activation error:', error);
+      res.status(500).json({ error: "Failed to activate member" });
+    }
+  });
+
+  // Onboarding Progress Endpoints
+  app.get("/api/onboarding/:memberId/status", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+
+      const session = await storage.getOnboardingSessionByMember(memberId);
+      if (!session) {
+        return res.status(404).json({ error: "Onboarding session not found" });
+      }
+
+      const tasks = await storage.getOnboardingTasksBySession(session.id);
+      const documents = await storage.getMemberDocuments(memberId);
+
+      // Calculate progress
+      const completedTasks = tasks.filter(task => task.completionStatus);
+      const progressPercentage = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
+
+      res.json({
+        session,
+        tasks,
+        documents,
+        progressPercentage,
+        completedTasks: completedTasks.length,
+        totalTasks: tasks.length,
+        currentDay: session.currentDay,
+        status: session.status
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch onboarding status" });
+    }
+  });
+
+  app.get("/api/onboarding/:memberId/next-day", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+
+      const session = await storage.getOnboardingSessionByMember(memberId);
+      if (!session) {
+        return res.status(404).json({ error: "Onboarding session not found" });
+      }
+
+      if (session.status === 'completed') {
+        return res.status(400).json({ error: "Onboarding already completed" });
+      }
+
+      // Check if current day tasks are completed
+      const currentTasks = await storage.getOnboardingTasksBySessionAndDay(session.id, session.currentDay);
+      const incompleteTasks = currentTasks.filter(task => !task.completionStatus);
+
+      if (incompleteTasks.length > 0 && session.currentDay > 1) {
+        return res.status(400).json({
+          error: "Complete current day tasks before advancing",
+          incompleteTasks: incompleteTasks.map(task => ({ id: task.id, title: task.title }))
+        });
+      }
+
+      const nextDay = session.currentDay + 1;
+
+      if (nextDay > 7) {
+        // Complete onboarding
+        await storage.updateOnboardingSession(session.id, {
+          status: 'completed',
+          completionDate: new Date(),
+          currentDay: 7
+        });
+
+        // Send completion milestone email
+        try {
+          await emailService.sendMilestoneEmail(memberId, 'completion');
+        } catch (emailError) {
+          console.error('Failed to send completion email:', emailError);
+        }
+
+        return res.json({
+          message: "Onboarding completed!",
+          status: 'completed',
+          nextDay: null
+        });
+      }
+
+      // Create tasks for next day
+      await storage.createOnboardingTasksForDay(memberId, nextDay);
+      await storage.updateOnboardingSession(session.id, { currentDay: nextDay });
+
+      // Send milestone email for halfway point (Day 4)
+      if (nextDay === 4) {
+        try {
+          await emailService.sendMilestoneEmail(memberId, 'halfway');
+        } catch (emailError) {
+          console.error('Failed to send milestone email:', emailError);
+        }
+      }
+
+      // Send wellness invitation on Day 5
+      if (nextDay === 5) {
+        try {
+          await emailService.sendWellnessInvitation(memberId);
+        } catch (emailError) {
+          console.error('Failed to send wellness invitation:', emailError);
+        }
+      }
+
+      // Send daily progress email
+      try {
+        await emailService.sendOnboardingProgressEmail(memberId, nextDay);
+      } catch (emailError) {
+        console.error('Failed to send progress email:', emailError);
+      }
+
+      const nextTasks = await storage.getOnboardingTasksBySessionAndDay(session.id, nextDay);
+
+      res.json({
+        nextDay,
+        tasks: nextTasks,
+        status: 'active'
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get next day content" });
+    }
+  });
+
+  app.post("/api/onboarding/:memberId/skip-day", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { reason } = req.body;
+
+      const session = await storage.getOnboardingSessionByMember(memberId);
+      if (!session) {
+        return res.status(404).json({ error: "Onboarding session not found" });
+      }
+
+      const nextDay = Math.min(session.currentDay + 1, 7);
+
+      await storage.updateOnboardingSession(session.id, { currentDay: nextDay });
+      await storage.createOnboardingTasksForDay(memberId, nextDay);
+
+      const nextTasks = await storage.getOnboardingTasksBySessionAndDay(session.id, nextDay);
+
+      res.json({
+        nextDay,
+        tasks: nextTasks,
+        skippedDay: session.currentDay,
+        reason
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to skip day" });
+    }
+  });
+
+  // Task Management Endpoints
+  app.put("/api/onboarding/tasks/:taskId", async (req, res) => {
+    try {
+      const taskId = Number(req.params.id);
+      const { completionStatus, taskData } = req.body;
+
+      const task = await storage.getOnboardingTask(taskId);
+      if (!task) {
+        return res.status(404).json({ error: "Task not found" });
+      }
+
+      const updateData: any = { completionStatus };
+      if (completionStatus && !task.completedAt) {
+        updateData.completedAt = new Date();
+        updateData.pointsEarned = 10; // Base points for task completion
+      } else if (!completionStatus) {
+        updateData.completedAt = null;
+        updateData.pointsEarned = 0;
+      }
+
+      if (taskData) {
+        updateData.taskData = JSON.stringify(taskData);
+      }
+
+      const updatedTask = await storage.updateOnboardingTask(taskId, updateData);
+
+      // Update session points if task was completed
+      if (completionStatus && !task.completionStatus) {
+        const session = await storage.getOnboardingSession(updatedTask.sessionId);
+        if (session) {
+          await storage.updateOnboardingSession(session.id, {
+            totalPointsEarned: session.totalPointsEarned + updateData.pointsEarned
+          });
+        }
+      }
+
+      res.json(updatedTask);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update task" });
+    }
+  });
+
+  // Document Upload Endpoints
+  app.post("/api/onboarding/:memberId/documents", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { documentType, fileName, fileData, mimeType } = req.body;
+
+      if (!documentType || !fileName || !fileData || !mimeType) {
+        return res.status(400).json({
+          error: "Document type, filename, file data, and MIME type are required"
+        });
+      }
+
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      if (!allowedTypes.includes(mimeType)) {
+        return res.status(400).json({
+          error: "Only JPG, PNG, and PDF files are allowed"
+        });
+      }
+
+      // Validate file size (10MB max)
+      const fileSize = Buffer.byteLength(fileData, 'base64');
+      if (fileSize > 10 * 1024 * 1024) {
+        return res.status(400).json({
+          error: "File size must be less than 10MB"
+        });
+      }
+
+      // Generate file hash
+      const crypto = require('crypto');
+      const fileHash = crypto.createHash('sha256').update(fileData).digest('hex');
+
+      // Store file (in a real system, this would be cloud storage)
+      const storedFilePath = `documents/${memberId}/${Date.now()}-${fileName}`;
+
+      const document = await storage.createMemberDocument({
+        memberId,
+        documentType,
+        originalFileName: fileName,
+        storedFilePath,
+        fileHash,
+        fileSize,
+        mimeType,
+        verificationStatus: 'pending'
+      });
+
+      // Start document validation process (in background)
+      // This would typically be handled by a background job
+
+      res.status(201).json({
+        success: true,
+        document: {
+          id: document.id,
+          documentType,
+          originalFileName: fileName,
+          uploadDate: document.uploadDate,
+          verificationStatus: document.verificationStatus
+        }
+      });
+    } catch (error) {
+      console.error('Document upload error:', error);
+      res.status(500).json({ error: "Failed to upload document" });
+    }
+  });
+
+  app.get("/api/onboarding/:memberId/documents", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { status } = req.query;
+
+      let documents;
+      if (status) {
+        documents = await storage.getMemberDocumentsByStatus(memberId, status as string);
+      } else {
+        documents = await storage.getMemberDocuments(memberId);
+      }
+
+      res.json(documents);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch documents" });
+    }
+  });
+
+  // Personalization Engine Endpoints
+  app.get("/api/members/:id/personalized-dashboard", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+
+      // Get member preferences
+      const preferences = await storage.getMemberPreferences(memberId);
+
+      // Get behavior analytics for recommendations
+      const recentBehavior = await storage.getRecentBehaviorAnalytics(memberId, 10);
+
+      // Get personalization scores
+      const personalizationScores = await storage.getPersonalizationScores(memberId);
+
+      // Get recommendations
+      const recommendations = await storage.getActiveRecommendations(memberId);
+
+      // Get journey stage
+      const journeyStage = await storage.getJourneyStage(memberId);
+
+      // Get current onboarding status
+      const onboardingSession = await storage.getOnboardingSessionByMember(memberId);
+
+      res.json({
+        preferences,
+        recentBehavior,
+        personalizationScores,
+        recommendations,
+        journeyStage,
+        onboardingStatus: onboardingSession,
+        personalizationLevel: preferences?.personalizationLevel || 'moderate'
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch personalized dashboard data" });
+    }
+  });
+
+  app.post("/api/members/:id/preferences", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const preferenceData = req.body;
+
+      // Validate member exists
+      const member = await storage.getMember(memberId);
+      if (!member) {
+        return res.status(404).json({ error: "Member not found" });
+      }
+
+      let preferences;
+      const existingPreferences = await storage.getMemberPreferences(memberId);
+
+      if (existingPreferences) {
+        preferences = await storage.updateMemberPreferences(memberId, preferenceData);
+      } else {
+        preferences = await storage.createMemberPreference({
+          memberId,
+          ...preferenceData
+        });
+      }
+
+      res.json(preferences);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update preferences" });
+    }
+  });
+
+  app.get("/api/members/:id/recommendations", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { type, limit = 10 } = req.query;
+
+      let recommendations;
+      if (type) {
+        recommendations = await storage.getRecommendationsByType(memberId, type as string, Number(limit));
+      } else {
+        recommendations = await storage.getActiveRecommendations(memberId, Number(limit));
+      }
+
+      res.json(recommendations);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch recommendations" });
+    }
+  });
+
+  app.post("/api/members/:id/recommendations/:recommendationId/feedback", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const recommendationId = Number(req.params.recommendationId);
+      const { response, feedbackRating, feedbackText } = req.body;
+
+      const recommendation = await storage.getRecommendationHistory(recommendationId);
+      if (!recommendation || recommendation.memberId !== memberId) {
+        return res.status(404).json({ error: "Recommendation not found" });
+      }
+
+      const updatedRecommendation = await storage.updateRecommendationFeedback(recommendationId, {
+        memberResponse: response,
+        responseDate: new Date(),
+        feedbackRating,
+        feedbackText
+      });
+
+      res.json(updatedRecommendation);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to record feedback" });
+    }
+  });
+
+  // Behavior Analytics Endpoints
+  app.post("/api/members/:id/analytics", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { eventType, resourceName, resourceData, sessionId, timeOnPage, scrollDepth } = req.body;
+
+      if (!eventType || !resourceName || !sessionId) {
+        return res.status(400).json({
+          error: "Event type, resource name, and session ID are required"
+        });
+      }
+
+      const analytic = await storage.createBehaviorAnalytic({
+        memberId,
+        eventType,
+        resourceName,
+        resourceData: resourceData ? JSON.stringify(resourceData) : null,
+        sessionId,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        referrer: req.get('Referer'),
+        timeOnPage: timeOnPage || null,
+        scrollDepth: scrollDepth || null
+      });
+
+      res.status(201).json(analytic);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to record analytics" });
+    }
+  });
+
+  app.get("/api/members/:id/analytics", async (req, res) => {
+    try {
+      const memberId = Number(req.params.id);
+      const { eventType, limit = 50, sessionId } = req.query;
+
+      let analytics;
+      if (sessionId) {
+        analytics = await storage.getBehaviorAnalyticsBySession(memberId, sessionId as string, Number(limit));
+      } else if (eventType) {
+        analytics = await storage.getBehaviorAnalyticsByType(memberId, eventType as string, Number(limit));
+      } else {
+        analytics = await storage.getRecentBehaviorAnalytics(memberId, Number(limit));
+      }
+
+      res.json(analytics);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch analytics" });
+    }
+  });
+
+  // Admin Onboarding Management Endpoints
+  app.get("/api/admin/onboarding/overview", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { companyId, day, status } = req.query;
+
+      // Get all onboarding sessions with filters
+      let sessions;
+      if (companyId) {
+        sessions = await storage.getOnboardingSessionsByCompany(Number(companyId));
+      } else {
+        sessions = await storage.getAllOnboardingSessions();
+      }
+
+      // Apply additional filters
+      if (day) {
+        sessions = sessions.filter(session => session.currentDay === Number(day));
+      }
+
+      if (status) {
+        sessions = sessions.filter(session => session.status === status);
+      }
+
+      // Enhance with member data
+      const enhancedSessions = await Promise.all(
+        sessions.map(async (session) => {
+          const member = await storage.getMember(session.memberId);
+          const company = member ? await storage.getCompany(member.companyId) : null;
+          const tasks = await storage.getOnboardingTasksBySession(session.id);
+          const completedTasks = tasks.filter(task => task.completionStatus);
+
+          return {
+            ...session,
+            memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+            memberEmail: member ? member.email : 'Unknown',
+            companyName: company ? company.name : 'Unknown',
+            progressPercentage: tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0,
+            completedTasks: completedTasks.length,
+            totalTasks: tasks.length
+          };
+        })
+      );
+
+      // Calculate summary statistics
+      const stats = {
+        totalSessions: enhancedSessions.length,
+        activeSessions: enhancedSessions.filter(s => s.status === 'active').length,
+        completedSessions: enhancedSessions.filter(s => s.status === 'completed').length,
+        averageProgress: enhancedSessions.reduce((sum, s) => sum + s.progressPercentage, 0) / enhancedSessions.length || 0,
+        currentDayDistribution: {
+          1: enhancedSessions.filter(s => s.currentDay === 1).length,
+          2: enhancedSessions.filter(s => s.currentDay === 2).length,
+          3: enhancedSessions.filter(s => s.currentDay === 3).length,
+          4: enhancedSessions.filter(s => s.currentDay === 4).length,
+          5: enhancedSessions.filter(s => s.currentDay === 5).length,
+          6: enhancedSessions.filter(s => s.currentDay === 6).length,
+          7: enhancedSessions.filter(s => s.currentDay === 7).length
+        }
+      };
+
+      res.json({
+        sessions: enhancedSessions,
+        stats
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch onboarding overview" });
+    }
+  });
+
+  app.get("/api/admin/documents/review-queue", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { status = 'pending' } = req.query;
+
+      let documents;
+      if (status === 'pending') {
+        documents = await storage.getPendingDocuments();
+      } else {
+        documents = await storage.getMemberDocumentsByStatus(null, status as string);
+      }
+
+      // Enhance with member data
+      const enhancedDocuments = await Promise.all(
+        documents.map(async (document) => {
+          const member = await storage.getMember(document.memberId);
+          const company = member ? await storage.getCompany(member.companyId) : null;
+
+          return {
+            ...document,
+            memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+            memberEmail: member ? member.email : 'Unknown',
+            companyName: company ? company.name : 'Unknown'
+          };
+        })
+      );
+
+      res.json(enhancedDocuments);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch document review queue" });
+    }
+  });
+
+  app.patch("/api/admin/documents/:documentId/verify", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const documentId = Number(req.params.id);
+      const { verificationStatus, rejectionReason, verifiedBy } = req.body;
+
+      if (!['approved', 'rejected'].includes(verificationStatus)) {
+        return res.status(400).json({ error: "Verification status must be 'approved' or 'rejected'" });
+      }
+
+      if (verificationStatus === 'rejected' && !rejectionReason) {
+        return res.status(400).json({ error: "Rejection reason is required when rejecting documents" });
+      }
+
+      const document = await storage.updateMemberDocument(documentId, {
+        verificationStatus,
+        verificationDate: new Date(),
+        verifiedBy: verifiedBy || req.user?.userId,
+        rejectionReason: rejectionReason || null
+      });
+
+      res.json(document);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to verify document" });
+    }
+  });
+
+  app.post("/api/admin/onboarding/:sessionId/advance-day", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const sessionId = Number(req.params.id);
+      const { reason } = req.body;
+
+      const session = await storage.getOnboardingSession(sessionId);
+      if (!session) {
+        return res.status(404).json({ error: "Onboarding session not found" });
+      }
+
+      const nextDay = Math.min(session.currentDay + 1, 7);
+
+      await storage.updateOnboardingSession(sessionId, { currentDay: nextDay });
+      await storage.createOnboardingTasksForDay(session.memberId, nextDay);
+
+      const nextTasks = await storage.getOnboardingTasksBySessionAndDay(sessionId, nextDay);
+
+      res.json({
+        nextDay,
+        tasks: nextTasks,
+        advancedBy: req.user?.userId,
+        reason
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to advance onboarding day" });
+    }
+  });
+
+  // Email Administration Endpoints
+  app.get("/api/admin/email/templates", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { emailTemplateSystem } = await import('./emailService');
+      const templates = emailTemplateSystem.getAllTemplates();
+
+      res.json({
+        templates,
+        total: templates.length
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch email templates" });
+    }
+  });
+
+  app.post("/api/admin/email/send", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { templateId, memberId, additionalData, testEmail } = req.body;
+
+      if (!templateId) {
+        return res.status(400).json({ error: "Template ID is required" });
+      }
+
+      if (testEmail) {
+        // Send test email to admin
+        const { emailTemplateSystem } = await import('./emailService');
+        const template = emailTemplateSystem.getTemplate(templateId);
+
+        if (!template) {
+          return res.status(404).json({ error: "Template not found" });
+        }
+
+        const testData = {
+          member: {
+            firstName: 'Test',
+            lastName: 'User',
+            email: testEmail,
+            companyName: 'Test Company'
+          },
+          additionalData
+        };
+
+        const rendered = emailTemplateSystem.renderTemplate(templateId, testData);
+
+        const { emailService } = await import('./emailService');
+        const sent = await emailService.sendEmail({
+          to: testEmail,
+          subject: rendered.subject,
+          html: rendered.html,
+          text: rendered.text
+        });
+
+        res.json({
+          success: sent,
+          message: sent ? "Test email sent successfully" : "Failed to send test email"
+        });
+      } else if (memberId) {
+        // Send email to specific member
+        const { emailService } = await import('./emailService');
+        const sent = await emailService.sendTemplatedEmail(templateId, memberId, additionalData);
+
+        res.json({
+          success: sent,
+          message: sent ? "Email sent successfully" : "Failed to send email"
+        });
+      } else {
+        res.status(400).json({ error: "Either memberId or testEmail is required" });
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to send email" });
+    }
+  });
+
+  app.get("/api/admin/email/stats", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { emailService } = await import('./emailService');
+      const stats = emailService.getDeliveryStats();
+
+      res.json(stats);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch email stats" });
+    }
+  });
+
+  app.post("/api/admin/email/trigger", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { memberId, trigger, additionalData } = req.body;
+
+      if (!memberId || !trigger) {
+        return res.status(400).json({ error: "Member ID and trigger are required" });
+      }
+
+      const { emailWorkflows } = await import('./emailService');
+      await emailWorkflows.sendTriggeredEmails(trigger, memberId, additionalData);
+
+      res.json({
+        success: true,
+        message: "Triggered emails sent successfully"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to trigger emails" });
+    }
+  });
+
+  // Manual email sending endpoint for testing
+  app.post("/api/admin/email/manual-send", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { to, subject, html, text } = req.body;
+
+      if (!to || !subject) {
+        return res.status(400).json({ error: "To address and subject are required" });
+      }
+
+      const { emailService } = await import('./emailService');
+      const sent = await emailService.sendEmail({
+        to,
+        subject,
+        html: html || '',
+        text: text || ''
+      });
+
+      res.json({
+        success: sent,
+        message: sent ? "Email sent successfully" : "Failed to send email"
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to send manual email" });
+    }
+  });
+
+  // Document Review Queue Statistics
+  app.get("/api/admin/documents/stats", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const allDocuments = await storage.getAllMemberDocuments();
+
+      const pending = allDocuments.filter(d => d.verificationStatus === 'pending').length;
+      const approved = allDocuments.filter(d => d.verificationStatus === 'approved').length;
+      const rejected = allDocuments.filter(d => d.verificationStatus === 'rejected').length;
+      const needsMoreInfo = allDocuments.filter(d => d.verificationStatus === 'needs_info').length;
+
+      // Calculate average review time (in hours)
+      const reviewedDocs = allDocuments.filter(d => d.verificationDate);
+      const avgReviewTime = reviewedDocs.length > 0
+        ? reviewedDocs.reduce((acc, doc) => {
+            if (doc.verificationDate && doc.uploadDate) {
+              const reviewTime = (doc.verificationDate.getTime() - doc.uploadDate.getTime()) / (1000 * 60 * 60);
+              return acc + reviewTime;
+            }
+            return acc;
+          }, 0) / reviewedDocs.length
+        : 0;
+
+      // Documents processed today
+      const todayProcessed = allDocuments.filter(d =>
+        d.verificationDate &&
+        d.verificationDate.toDateString() === new Date().toDateString()
+      ).length;
+
+      // Documents by type
+      const documentsByType = allDocuments.reduce((acc, doc) => {
+        acc[doc.documentType] = (acc[doc.documentType] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      // Priority breakdown
+      const urgentDocuments = allDocuments.filter(d =>
+        d.verificationStatus === 'pending' &&
+        d.isRequired === true
+      ).length;
+
+      const stats = {
+        pending,
+        approved,
+        rejected,
+        needsMoreInfo,
+        avgReviewTime: Math.round(avgReviewTime * 10) / 10,
+        todayProcessed,
+        total: allDocuments.length,
+        documentsByType,
+        urgentDocuments
+      };
+
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching document stats:', error);
+      res.status(500).json({ error: "Failed to fetch document statistics" });
+    }
+  });
+
+  // Enhanced Document Review Queue with filtering
+  app.get("/api/admin/documents/review-queue-enhanced", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const {
+        status = 'pending',
+        documentType,
+        priority,
+        search,
+        page = 1,
+        limit = 50
+      } = req.query;
+
+      let documents;
+      if (status === 'all') {
+        documents = await storage.getAllMemberDocuments();
+      } else if (status === 'pending') {
+        documents = await storage.getPendingDocuments();
+      } else {
+        documents = await storage.getMemberDocumentsByStatus(null, status as string);
+      }
+
+      // Enhance with member data
+      const enhancedDocuments = await Promise.all(
+        documents.map(async (document) => {
+          const member = await storage.getMember(document.memberId);
+          const company = member ? await storage.getCompany(member.companyId) : null;
+          const session = member ? await storage.getOnboardingSessionByMember(member.id) : null;
+
+          // Determine priority based on requirements and urgency
+          let priorityLevel = 'medium';
+          if (document.isRequired && document.verificationStatus === 'pending') {
+            priorityLevel = 'high';
+            if (session && session.currentDay <= 3) {
+              priorityLevel = 'urgent';
+            }
+          }
+
+          // Simulate OCR confidence score and extracted text for demo
+          const hasTextContent = document.fileName.toLowerCase().includes('.pdf') ||
+                                document.fileName.toLowerCase().includes('.jpg') ||
+                                document.fileName.toLowerCase().includes('.png');
+
+          return {
+            id: document.id.toString(),
+            memberId: document.memberId.toString(),
+            memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+            documentType: document.documentType,
+            fileName: document.fileName,
+            fileSize: document.fileSize || Math.floor(Math.random() * 5000000) + 100000,
+            mimeType: document.mimeType || 'application/octet-stream',
+            uploadDate: document.uploadDate || new Date(),
+            reviewStatus: document.verificationStatus === 'approved' ? 'approved' :
+                         document.verificationStatus === 'rejected' ? 'rejected' :
+                         document.verificationStatus === 'needs_info' ? 'needs_more_info' : 'pending',
+            reviewedBy: document.verifiedBy,
+            reviewedDate: document.verificationDate,
+            reviewNotes: document.rejectionReason,
+            priority: priorityLevel,
+            tags: [document.documentType.toLowerCase().replace(' ', '_'),
+                   document.isRequired ? 'required' : 'optional'],
+            extractedText: hasTextContent ? `Sample extracted content for ${document.documentType}...` : undefined,
+            confidenceScore: hasTextContent ? 0.85 + Math.random() * 0.14 : undefined,
+            isRequired: document.isRequired || false
+          };
+        })
+      );
+
+      // Apply filters
+      let filteredDocuments = enhancedDocuments;
+
+      if (documentType && documentType !== 'all') {
+        filteredDocuments = filteredDocuments.filter(doc => doc.documentType === documentType);
+      }
+
+      if (priority && priority !== 'all') {
+        filteredDocuments = filteredDocuments.filter(doc => doc.priority === priority);
+      }
+
+      if (search) {
+        const searchLower = (search as string).toLowerCase();
+        filteredDocuments = filteredDocuments.filter(doc =>
+          doc.memberName.toLowerCase().includes(searchLower) ||
+          doc.documentType.toLowerCase().includes(searchLower) ||
+          doc.fileName.toLowerCase().includes(searchLower) ||
+          doc.tags.some(tag => tag.toLowerCase().includes(searchLower))
+        );
+      }
+
+      // Sort by priority and upload date
+      filteredDocuments.sort((a, b) => {
+        const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
+        const aPriority = priorityOrder[a.priority as keyof typeof priorityOrder] || 2;
+        const bPriority = priorityOrder[b.priority as keyof typeof priorityOrder] || 2;
+
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+
+        return b.uploadDate.getTime() - a.uploadDate.getTime();
+      });
+
+      // Pagination
+      const total = filteredDocuments.length;
+      const offset = (Number(page) - 1) * Number(limit);
+      const paginatedDocuments = filteredDocuments.slice(offset, offset + Number(limit));
+
+      // Get unique document types for filters
+      const documentTypes = [...new Set(enhancedDocuments.map(doc => doc.documentType))];
+
+      res.json({
+        documents: paginatedDocuments,
+        total,
+        page: Number(page),
+        limit: Number(limit),
+        totalPages: Math.ceil(total / Number(limit)),
+        documentTypes
+      });
+    } catch (error) {
+      console.error('Error fetching enhanced document review queue:', error);
+      res.status(500).json({ error: "Failed to fetch document review queue" });
+    }
+  });
+
+  // Bulk Document Actions
+  app.post("/api/admin/documents/bulk-action", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const { documentIds, action, notes } = req.body;
+
+      if (!documentIds || !Array.isArray(documentIds) || documentIds.length === 0) {
+        return res.status(400).json({ error: "Document IDs array is required" });
+      }
+
+      if (!['approve', 'reject', 'request_info'].includes(action)) {
+        return res.status(400).json({ error: "Invalid action" });
+      }
+
+      const results = [];
+      for (const documentId of documentIds) {
+        try {
+          const verificationStatus = action === 'approve' ? 'approved' :
+                                    action === 'reject' ? 'rejected' : 'needs_info';
+
+          const document = await storage.updateMemberDocument(Number(documentId), {
+            verificationStatus,
+            verificationDate: new Date(),
+            verifiedBy: req.user?.userId,
+            rejectionReason: notes || (action === 'approve' ? 'Bulk approved' :
+                                     action === 'reject' ? 'Bulk rejected' : 'Bulk info requested')
+          });
+
+          results.push({
+            documentId,
+            success: true,
+            document
+          });
+        } catch (error) {
+          results.push({
+            documentId,
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      const successCount = results.filter(r => r.success).length;
+      const failureCount = results.length - successCount;
+
+      res.json({
+        message: `Processed ${results.length} documents: ${successCount} successful, ${failureCount} failed`,
+        results,
+        summary: {
+          total: results.length,
+          successful: successCount,
+          failed: failureCount
+        }
+      });
+    } catch (error) {
+      console.error('Error performing bulk document action:', error);
+      res.status(500).json({ error: "Failed to perform bulk document action" });
+    }
+  });
+
+  // Get Document Details for Review
+  app.get("/api/admin/documents/:documentId/details", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+    try {
+      const documentId = Number(req.params.id);
+      const document = await storage.getMemberDocument(documentId);
+
+      if (!document) {
+        return res.status(404).json({ error: "Document not found" });
+      }
+
+      const member = await storage.getMember(document.memberId);
+      const company = member ? await storage.getCompany(member.companyId) : null;
+      const session = member ? await storage.getOnboardingSessionByMember(member.id) : null;
+
+      // Get related documents for this member
+      const memberDocuments = await storage.getMemberDocuments(document.memberId);
+
+      const enhancedDocument = {
+        ...document,
+        memberName: member ? `${member.firstName} ${member.lastName}` : 'Unknown',
+        memberEmail: member ? member.email : 'Unknown',
+        memberPhone: member ? member.phone : 'Unknown',
+        companyName: company ? company.name : 'Unknown',
+        sessionInfo: session ? {
+          sessionId: session.id,
+          currentDay: session.currentDay,
+          activationDate: session.activationDate,
+          status: session.status
+        } : null,
+        relatedDocuments: memberDocuments.filter(doc => doc.id !== documentId),
+        totalMemberDocuments: memberDocuments.length,
+        reviewedDocumentCount: memberDocuments.filter(doc => doc.verificationStatus).length
+      };
+
+      res.json(enhancedDocument);
+    } catch (error) {
+      console.error('Error fetching document details:', error);
+      res.status(500).json({ error: "Failed to fetch document details" });
+    }
+  });
+
+  // Import and use wellness integration routes
+  import wellnessIntegrationRoutes from "./src/routes/wellnessIntegration";
+  app.use("/api/wellness", wellnessIntegrationRoutes);
+
+  // Import and use risk assessment routes
+  import riskAssessmentRoutes from "./src/routes/riskAssessment";
+  app.use("/api/risk", riskAssessmentRoutes);
+
+  // Import and use communication routes
+  import communicationRoutes from "./src/routes/communication";
+  app.use("/api/communication", communicationRoutes);
 
   const httpServer = createServer(app);
   return httpServer;

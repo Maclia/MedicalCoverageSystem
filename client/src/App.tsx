@@ -18,6 +18,9 @@ import PanelDocumentation from "@/pages/PanelDocumentation";
 import Claims from "@/pages/Claims";
 import MemberDashboard from "@/pages/MemberDashboard";
 import ProviderClaimSubmission from "@/pages/ProviderClaimSubmission";
+import Communication from "@/pages/Communication";
+import Wellness from "@/pages/Wellness";
+import RiskAssessment from "@/pages/RiskAssessment";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -39,6 +42,9 @@ function Router() {
         <Route path="/claims" component={Claims} />
         <Route path="/member-dashboard/:id" component={MemberDashboard} />
         <Route path="/provider-claim-submission" component={ProviderClaimSubmission} />
+        <Route path="/communication/:id" component={Communication} />
+        <Route path="/wellness/:id" component={Wellness} />
+        <Route path="/risk-assessment/:id" component={RiskAssessment} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>

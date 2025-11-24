@@ -1,0 +1,45 @@
+{
+  "totalMembers": 150,
+  "activeSessions": 45,
+  "completionRate": 85.5,
+  "averageCompletionTime": 6.2,
+  "todayStarted": 8,
+  "todayCompleted": 12,
+  "dayBreakdown": [
+    {
+      "day": 1,
+      "count": 12,
+      "completionRate": 95.5
+    },
+    {
+      "day": 2,
+      "count": 10,
+      "completionRate": 89.2
+    },
+    {
+      "day": 3,
+      "count": 8,
+      "completionRate": 82.1
+    },
+    {
+      "day": 4,
+      "count": 7,
+      "completionRate": 76.4
+    },
+    {
+      "day": 5,
+      "count": 5,
+      "completionRate": 70.8
+    },
+    {
+      "day": 6,
+      "count": 3,
+      "completionRate": 65.2
+    },
+    {
+      "day": 7,
+      "count": 0,
+      "completionRate": 0
+    }
+  ]
+}

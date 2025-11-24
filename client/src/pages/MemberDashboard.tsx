@@ -28,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
+import { Heart, Activity, AlertTriangle } from "lucide-react";
 
 // Define interfaces for type safety
 interface Member {
@@ -290,11 +291,35 @@ export default function MemberDashboard() {
               </div>
             </div>
             
-            <div className="bg-muted/50 p-3 rounded-md text-sm">
-              <div><strong>Company:</strong> {member.company?.name}</div>
-              <div><strong>Email:</strong> {member.email}</div>
-              <div><strong>Phone:</strong> {member.phone}</div>
-              <div><strong>Date of Birth:</strong> {format(new Date(member.dateOfBirth), "MMM d, yyyy")}</div>
+            <div className="space-y-3">
+              <div className="bg-muted/50 p-3 rounded-md text-sm">
+                <div><strong>Company:</strong> {member.company?.name}</div>
+                <div><strong>Email:</strong> {member.email}</div>
+                <div><strong>Phone:</strong> {member.phone}</div>
+                <div><strong>Date of Birth:</strong> {format(new Date(member.dateOfBirth), "MMM d, yyyy")}</div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="flex flex-col space-y-2">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/wellness/${memberId}`}>
+                    <Heart className="h-4 w-4 mr-2" />
+                    Wellness Integration
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/risk-assessment/${memberId}`}>
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Risk Assessment
+                  </Link>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/communication/${memberId}`}>
+                    <Activity className="h-4 w-4 mr-2" />
+                    Communication
+                  </Link>
+                </Button>
+              </div>
             </div>
           </div>
         </CardHeader>
