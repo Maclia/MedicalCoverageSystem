@@ -14,6 +14,11 @@ export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approve
 export const claimStatusEnum = pgEnum('claim_status', ['submitted', 'under_review', 'approved', 'rejected', 'paid', 'fraud_review', 'fraud_confirmed']);
 export const premiumRateTypeEnum = pgEnum('premium_rate_type', ['standard', 'age_banded', 'family_size']);
 
+// Enhanced Premium Calculation Enums
+export const pricingMethodologyEnum = pgEnum('pricing_methodology', ['community_rated', 'experience_rated', 'adjusted_community_rated', 'benefit_rated']);
+export const riskAdjustmentTierEnum = pgEnum('risk_adjustment_tier', ['low_risk', 'average_risk', 'moderate_risk', 'high_risk', 'very_high_risk']);
+export const inflationCategoryEnum = pgEnum('inflation_category', ['medical_trend', 'utilization_trend', 'cost_shifting', 'technology_advancement', 'regulatory_impact']);
+
 // Companies table
 export const companies = pgTable("companies", {
   id: serial("id").primaryKey(),
@@ -574,6 +579,86 @@ export const insuranceBalances = pgTable("insurance_balances", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Enhanced Premium Calculation Tables
+export const enhancedPremiumCalculations = pgTable("enhanced_premium_calculations", {
+  id: serial("id").primaryKey(),
+  premiumId: integer("premium_id").references(() => premiums.id).notNull(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  basePremium: real("base_premium").notNull(),
+  riskAdjustmentFactor: real("risk_adjustment_factor").notNull(),
+  demographicAdjustment: real("demographic_adjustment").notNull(),
+  healthcareInflationFactor: real("healthcare_inflation_factor").notNull(),
+  regionalCostAdjustment: real("regional_cost_adjustment").notNull(),
+  finalAdjustedPremium: real("final_adjusted_premium").notNull(),
+  riskScore: real("risk_score").notNull(),
+  pricingMethodology: pricingMethodologyEnum("pricing_methodology").notNull(),
+  riskAdjustmentTier: riskAdjustmentTierEnum("risk_adjustment_tier").notNull(),
+  calculationDate: timestamp("calculation_date").defaultNow().notNull(),
+  validUntil: timestamp("valid_until"),
+  calculationMetadata: text("calculation_metadata"), // JSON string with detailed breakdown
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const riskAdjustmentFactors = pgTable("risk_adjustment_factors", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  healthConditionRisk: real("health_condition_risk").notNull(),
+  lifestyleRisk: real("lifestyle_risk").notNull(),
+  demographicRisk: real("demographic_risk").notNull(),
+  geographicRisk: real("geographic_risk").notNull(),
+  occupationalRisk: real("occupational_risk").notNull(),
+  familyHistoryRisk: real("family_history_risk").notNull(),
+  overallRiskScore: real("overall_risk_score").notNull(),
+  riskAdjustmentTier: riskAdjustmentTierEnum("risk_adjustment_tier").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  nextReviewDate: timestamp("next_review_date").notNull(),
+  calculationMetadata: text("calculation_metadata"), // JSON string with risk factors breakdown
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const healthcareInflationRates = pgTable("healthcare_inflation_rates", {
+  id: serial("id").primaryKey(),
+  category: inflationCategoryEnum("category").notNull(),
+  regionId: integer("region_id").references(() => regions.id),
+  baseYear: integer("base_year").notNull(),
+  targetYear: integer("target_year").notNull(),
+  inflationRate: real("inflation_rate").notNull(),
+  projectedMedicalTrend: real("projected_medical_trend").notNull(),
+  utilizationTrend: real("utilization_trend").notNull(),
+  costShiftingFactor: real("cost_shifting_factor").notNull(),
+  technologyImpact: real("technology_impact").notNull(),
+  regulatoryImpact: real("regulatory_impact").notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiresAt: timestamp("expires_at"),
+  dataSource: text("data_source").notNull(),
+  confidenceLevel: real("confidence_level").notNull(), // 0.0 to 1.0
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const actuarialRateTables = pgTable("actuarial_rate_tables", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  pricingMethodology: pricingMethodologyEnum("pricing_methodology").notNull(),
+  regionId: integer("region_id").references(() => regions.id),
+  minAge: integer("min_age").notNull(),
+  maxAge: integer("max_age").notNull(),
+  gender: text("gender"), // 'male', 'female', 'all', null for unisex
+  smokerStatus: text("smoker_status"), // 'smoker', 'non_smoker', 'all', null for no distinction
+  baseRate: real("base_rate").notNull(),
+  lossRatioTarget: real("loss_ratio_target").notNull(),
+  expenseLoading: real("expense_loading").notNull(),
+  profitMargin: real("profit_margin").notNull(),
+  regulatoryComplianceFactors: text("regulatory_compliance_factors"), // JSON string with compliance details
+  marketAdjustmentFactor: real("market_adjustment_factor").notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiresAt: timestamp("expires_at"),
+  approvedBy: text("approved_by").notNull(),
+  version: text("version").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas for payment tables
 export const insertPremiumPaymentSchema = createInsertSchema(premiumPayments).omit({
   id: true,
@@ -603,6 +688,27 @@ export const insertInsuranceBalanceSchema = createInsertSchema(insuranceBalances
   createdAt: true,
 });
 
+// Insert schemas for enhanced premium calculation tables
+export const insertEnhancedPremiumCalculationSchema = createInsertSchema(enhancedPremiumCalculations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRiskAdjustmentFactorSchema = createInsertSchema(riskAdjustmentFactors).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertHealthcareInflationRateSchema = createInsertSchema(healthcareInflationRates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertActuarialRateTableSchema = createInsertSchema(actuarialRateTables).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types for payment entities
 export type PremiumPayment = typeof premiumPayments.$inferSelect;
 export type InsertPremiumPayment = z.infer<typeof insertPremiumPaymentSchema>;
@@ -618,6 +724,19 @@ export type InsertDisbursementItem = z.infer<typeof insertDisbursementItemSchema
 
 export type InsuranceBalance = typeof insuranceBalances.$inferSelect;
 export type InsertInsuranceBalance = z.infer<typeof insertInsuranceBalanceSchema>;
+
+// Types for enhanced premium calculation entities
+export type EnhancedPremiumCalculation = typeof enhancedPremiumCalculations.$inferSelect;
+export type InsertEnhancedPremiumCalculation = z.infer<typeof insertEnhancedPremiumCalculationSchema>;
+
+export type RiskAdjustmentFactor = typeof riskAdjustmentFactors.$inferSelect;
+export type InsertRiskAdjustmentFactor = z.infer<typeof insertRiskAdjustmentFactorSchema>;
+
+export type HealthcareInflationRate = typeof healthcareInflationRates.$inferSelect;
+export type InsertHealthcareInflationRate = z.infer<typeof insertHealthcareInflationRateSchema>;
+
+export type ActuarialRateTable = typeof actuarialRateTables.$inferSelect;
+export type InsertActuarialRateTable = z.infer<typeof insertActuarialRateTableSchema>;
 
 // Medical Procedures/Items tables for claim processing
 export const medicalProcedures = pgTable("medical_procedures", {

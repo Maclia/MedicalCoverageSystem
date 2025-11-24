@@ -1,4 +1,4 @@
-interface EmailTemplate {
+export interface EmailTemplate {
   id: string;
   name: string;
   type: 'activation' | 'onboarding_reminder' | 'milestone' | 'achievement' | 'engagement';
@@ -11,7 +11,7 @@ interface EmailTemplate {
   priority: 'high' | 'medium' | 'low';
 }
 
-interface MemberData {
+export interface MemberData {
   firstName: string;
   lastName: string;
   email: string;
@@ -22,7 +22,7 @@ interface MemberData {
   activationLink?: string;
 }
 
-interface TemplateData {
+export interface TemplateData {
   member: MemberData;
   additionalData?: Record<string, any>;
 }
