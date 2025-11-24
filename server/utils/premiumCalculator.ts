@@ -1,17 +1,41 @@
 /**
  * Premium calculator utility functions
+ * Enhanced with risk-adjusted pricing and actuarial models while maintaining backward compatibility
  */
 import { IStorage } from '../storage';
 import * as schema from '@shared/schema';
 import { getActivePeriod, countMembersByType, getLatestPremium } from './dbOperations';
+import {
+  calculateRiskAdjustedPremium,
+  PremiumCalculationInput,
+  PremiumResult,
+  DemographicData,
+  FamilyComposition,
+  HistoricalClaimsData
+} from './enhancedPremiumCalculator';
+
+// Premium calculation options interface
+export interface PremiumCalculationOptions {
+  methodology?: 'standard' | 'risk-adjusted' | 'hybrid';
+  includeRiskAdjustment?: boolean;
+  demographicData?: DemographicData;
+  familyComposition?: FamilyComposition;
+  historicalClaims?: HistoricalClaimsData;
+  geographicRegion?: string;
+  projectionYear?: number;
+  dataQuality?: number;
+  fallbackToStandard?: boolean; // Default: true for backward compatibility
+}
 
 /**
  * Calculate premium for a company based on members and premium rates
+ * Enhanced with optional risk-adjusted pricing
  */
 export async function calculatePremium(
   storage: IStorage,
   companyId: number,
-  periodId?: number
+  periodId?: number,
+  options?: PremiumCalculationOptions
 ): Promise<schema.InsertPremium> {
   // Get active period if periodId not provided
   let activePeriod;
@@ -36,17 +60,80 @@ export async function calculatePremium(
   
   // Count members by type for the company
   const counts = await countMembersByType(companyId);
-  
-  // Calculate premium
-  const subtotal = (
-    (counts.principal * rates.principalRate) +
-    (counts.spouse * rates.spouseRate) +
-    (counts.child * rates.childRate) +
-    (counts.specialNeeds * rates.specialNeedsRate)
-  );
-  
+
+  let subtotal: number;
+  let total: number;
+  let enhancedCalculation: PremiumResult | null = null;
+
+  // Determine calculation methodology
+  const methodology = options?.methodology || 'standard';
+  const includeRiskAdjustment = options?.includeRiskAdjustment || false;
+
+  try {
+    // Use enhanced calculation if requested and data is available
+    if ((methodology === 'risk-adjusted' || methodology === 'hybrid') && includeRiskAdjustment) {
+      // Get member IDs for risk assessment
+      const companyMembers = await storage.getMembersByCompany(companyId);
+      const memberIds = companyMembers.map(member => member.id);
+
+      // Prepare enhanced calculation input
+      const enhancedInput: PremiumCalculationInput = {
+        companyId,
+        periodId,
+        memberIds,
+        includeRiskAdjustment: true,
+        geographicRegion: options?.geographicRegion,
+        projectionYear: options?.projectionYear,
+        familyComposition: options?.familyComposition || {
+          familySize: counts.principal + counts.spouse + counts.child + counts.specialNeeds,
+          hasSpouse: counts.spouse > 0,
+          childCount: counts.child,
+          specialNeedsCount: counts.specialNeeds,
+          singleParent: counts.spouse === 0 && counts.child > 0
+        },
+        demographics: options?.demographicData,
+        historicalClaims: options?.historicalClaims,
+        dataQuality: options?.dataQuality || 85
+      };
+
+      // Calculate enhanced premium
+      enhancedCalculation = await calculateRiskAdjustedPremium(storage, enhancedInput);
+
+      if (methodology === 'risk-adjusted') {
+        // Use fully adjusted premium
+        subtotal = enhancedCalculation.adjustedPremium;
+      } else {
+        // Hybrid approach: blend standard and risk-adjusted
+        const standardTotal = (
+          (counts.principal * rates.principalRate) +
+          (counts.spouse * rates.spouseRate) +
+          (counts.child * rates.childRate) +
+          (counts.specialNeeds * rates.specialNeedsRate)
+        );
+        subtotal = (standardTotal * 0.7) + (enhancedCalculation.adjustedPremium * 0.3);
+      }
+    } else {
+      // Use standard calculation
+      subtotal = (
+        (counts.principal * rates.principalRate) +
+        (counts.spouse * rates.spouseRate) +
+        (counts.child * rates.childRate) +
+        (counts.specialNeeds * rates.specialNeedsRate)
+      );
+    }
+  } catch (error) {
+    // Fallback to standard calculation if enhanced calculation fails
+    console.warn('Enhanced premium calculation failed, falling back to standard:', error);
+    subtotal = (
+      (counts.principal * rates.principalRate) +
+      (counts.spouse * rates.spouseRate) +
+      (counts.child * rates.childRate) +
+      (counts.specialNeeds * rates.specialNeedsRate)
+    );
+  }
+
   const tax = subtotal * rates.taxRate;
-  const total = subtotal + tax;
+  total = subtotal + tax;
   
   // Create premium data
   const premium: schema.InsertPremium = {
@@ -61,12 +148,130 @@ export async function calculatePremium(
     total,
     issuedDate: new Date(),
     status: 'active',
-    adjustmentFactor: 1.0,
+    adjustmentFactor: enhancedCalculation ? (enhancedCalculation.adjustedPremium / enhancedCalculation.basePremium) : 1.0,
     effectiveStartDate: new Date(activePeriod.startDate),
-    effectiveEndDate: new Date(activePeriod.endDate)
+    effectiveEndDate: new Date(activePeriod.endDate),
+    notes: enhancedCalculation ?
+      `Calculated using ${methodology} methodology. Confidence: ${enhancedCalculation.confidence}%.` :
+      'Calculated using standard methodology.'
   };
   
   return premium;
+}
+
+/**
+ * Calculate enhanced premium with risk adjustment (wrapper function)
+ */
+export async function calculateEnhancedPremium(
+  storage: IStorage,
+  companyId: number,
+  input: PremiumCalculationInput
+): Promise<PremiumResult> {
+  return await calculateRiskAdjustedPremium(storage, input);
+}
+
+/**
+ * Get pricing methodology used for a premium calculation
+ */
+export function getPricingMethodology(options?: PremiumCalculationOptions): {
+  methodology: 'standard' | 'risk-adjusted' | 'hybrid';
+  description: string;
+  confidence: number;
+} {
+  const methodology = options?.methodology || 'standard';
+  const includeRiskAdjustment = options?.includeRiskAdjustment || false;
+
+  if (methodology === 'risk-adjusted' && includeRiskAdjustment) {
+    return {
+      methodology: 'risk-adjusted',
+      description: 'Full risk-adjusted pricing using individual risk scores and demographic factors',
+      confidence: options?.dataQuality || 85
+    };
+  } else if (methodology === 'hybrid' && includeRiskAdjustment) {
+    return {
+      methodology: 'hybrid',
+      description: 'Blended approach combining standard and risk-adjusted pricing (70/30 split)',
+      confidence: (options?.dataQuality || 85) * 0.8
+    };
+  } else {
+    return {
+      methodology: 'standard',
+      description: 'Traditional premium calculation based on member types and fixed rates',
+      confidence: 95
+    };
+  }
+}
+
+/**
+ * Calculate premium for individual member with enhanced features
+ */
+export async function calculateIndividualPremium(
+  storage: IStorage,
+  memberId: number,
+  options?: PremiumCalculationOptions
+): Promise<PremiumResult> {
+  // Get member information
+  const member = await storage.getMember(memberId);
+  if (!member) {
+    throw new Error(`Member with ID ${memberId} not found`);
+  }
+
+  // Prepare individual calculation input
+  const input: PremiumCalculationInput = {
+    companyId: member.companyId,
+    memberId,
+    includeRiskAdjustment: options?.includeRiskAdjustment || true,
+    geographicRegion: options?.geographicRegion,
+    projectionYear: options?.projectionYear,
+    dataQuality: options?.dataQuality || 85
+  };
+
+  return await calculateRiskAdjustedPremium(storage, input);
+}
+
+/**
+ * Support mixed pricing models during transition period
+ */
+export async function calculateMixedModelPremium(
+  storage: IStorage,
+  companyId: number,
+  periodId?: number,
+  riskAdjustmentWeight: number = 0.5 // Default 50/50 split
+): Promise<schema.InsertPremium> {
+  // Calculate standard premium
+  const standardPremium = await calculatePremium(storage, companyId, periodId, { methodology: 'standard' });
+
+  // Calculate risk-adjusted premium
+  const companyMembers = await storage.getMembersByCompany(companyId);
+  const memberIds = companyMembers.map(member => member.id);
+
+  const enhancedInput: PremiumCalculationInput = {
+    companyId,
+    periodId,
+    memberIds,
+    includeRiskAdjustment: true,
+    dataQuality: 80
+  };
+
+  const enhancedResult = await calculateRiskAdjustedPremium(storage, enhancedInput);
+
+  // Blend the results
+  const blendedSubtotal = (standardPremium.subtotal * (1 - riskAdjustmentWeight)) +
+                         (enhancedResult.basePremium * riskAdjustmentWeight);
+  const blendedTax = blendedSubtotal * (standardPremium.tax / standardPremium.subtotal);
+  const blendedTotal = blendedSubtotal + blendedTax;
+
+  // Create blended premium record
+  const blendedPremium: schema.InsertPremium = {
+    ...standardPremium,
+    subtotal: blendedSubtotal,
+    tax: blendedTax,
+    total: blendedTotal,
+    adjustmentFactor: enhancedResult.adjustedPremium / enhancedResult.basePremium,
+    notes: `Mixed model calculation with ${Math.round(riskAdjustmentWeight * 100)}% risk adjustment weighting.`
+  };
+
+  return blendedPremium;
 }
 
 /**
