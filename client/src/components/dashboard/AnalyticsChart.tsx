@@ -117,7 +117,7 @@ export default function AnalyticsChart({
             points={data.map((point, i) => {
               const x = (i / (data.length - 1)) * 380 + 10;
               const y = 180 - ((point.value - Math.min(...data.map(d => d.value))) /
-                           (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))) * 160;
+                           (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160;
               return `${x},${y}`;
             }).join(' ')}
             fill="none"
@@ -130,7 +130,7 @@ export default function AnalyticsChart({
         {data.map((point, i) => {
           const x = (i / (data.length - 1)) * 380 + 10;
           const y = 180 - ((point.value - Math.min(...data.map(d => d.value))) /
-                       (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))) * 160;
+                       (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160;
           return (
             <circle
               key={i}
@@ -149,10 +149,10 @@ export default function AnalyticsChart({
             <line
               x1={(data.length - 1) / (data.length - 1) * 380 + 10}
               y1={180 - ((data[data.length - 1].value - Math.min(...data.map(d => d.value))) /
-                          (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))) * 160}
+                          (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160}
               x2="390"
               y2={180 - ((data[data.length - 1].projected! - Math.min(...data.map(d => d.value))) /
-                           (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))) * 160}
+                           (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160}
               stroke={color}
               strokeWidth="2"
               strokeDasharray="5,5"
@@ -160,7 +160,7 @@ export default function AnalyticsChart({
             />
             <circle
               cx="390"
-              cy={180 - ((data[data.length - 1].projected! - Math.min(...data.map(d => d.value))) * 160}
+              cy={180 - ((data[data.length - 1].projected! - Math.min(...data.map(d => d.value)))) / (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value)))) * 160}
               r="4"
               fill="none"
               stroke={color}
@@ -180,7 +180,7 @@ export default function AnalyticsChart({
           const barWidth = 300 / data.length - 10;
           const x = (i / data.length) * 380 + 20;
           const height = ((point.value - Math.min(...data.map(d => d.value))) /
-                       (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))) * 160;
+                       (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160;
           const y = 180 - height;
 
           return (

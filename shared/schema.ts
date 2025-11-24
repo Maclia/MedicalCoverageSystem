@@ -1097,3 +1097,163 @@ export type InsertJourneyStage = z.infer<typeof insertJourneyStageSchema>;
 
 export type RecommendationHistory = typeof recommendationHistory.$inferSelect;
 export type InsertRecommendationHistory = z.infer<typeof insertRecommendationHistorySchema>;
+
+// Claims processing enums
+export const adjudicationResultEnum = pgEnum('adjudication_result', ['APPROVED', 'PARTIALLY_APPROVED', 'DENIED', 'PENDING_REVIEW']);
+export const medicalNecessityResultEnum = pgEnum('medical_necessity_result', ['PASS', 'FAIL', 'REVIEW_REQUIRED']);
+export const eobStatusEnum = pgEnum('eob_status', ['GENERATED', 'SENT', 'ACKNOWLEDGED', 'DISPUTED']);
+export const claimEventTypeEnum = pgEnum('claim_event_type', ['SUBMITTED', 'ELIGIBILITY_CHECKED', 'VALIDATED', 'ADJUDICATED', 'MEDICAL_REVIEW', 'FRAUD_DETECTED', 'APPROVED', 'DENIED', 'PAID']);
+
+// Enhanced claims processing tables
+
+// Claim adjudication results
+export const claimAdjudicationResults = pgTable("claim_adjudication_results", {
+  id: serial("id").primaryKey(),
+  claimId: integer("claim_id").references(() => claims.id).notNull(),
+  adjudicationDate: timestamp("adjudication_date").defaultNow().notNull(),
+  originalAmount: real("original_amount").notNull(),
+  approvedAmount: real("approved_amount").default(0).notNull(),
+  memberResponsibility: real("member_responsibility").default(0).notNull(),
+  insurerResponsibility: real("insurer_responsibility").default(0).notNull(),
+  denialReasons: text("denial_reasons"), // JSON array of denial reasons
+  appliedRules: text("applied_rules"), // JSON array of applied business rules
+  waitingPeriodApplied: boolean("waiting_period_applied").default(false),
+  deductibleApplied: real("deductible_applied").default(0),
+  copayApplied: real("copay_applied").default(0),
+  coinsuranceApplied: real("coinsurance_applied").default(0),
+  providerDiscountApplied: real("provider_discount_applied").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Medical necessity validations
+export const medicalNecessityValidations = pgTable("medical_necessity_validations", {
+  id: serial("id").primaryKey(),
+  claimId: integer("claim_id").references(() => claims.id).notNull(),
+  diagnosisCode: text("diagnosis_code").notNull(),
+  procedureCodes: text("procedure_codes").notNull(), // JSON array
+  validationResult: text("validation_result").notNull(), // PASS, FAIL, REVIEW
+  clinicalGuidelineReference: text("clinical_guideline_reference"),
+  necessityScore: real("necessity_score"), // 0-100 confidence score
+  reviewerNotes: text("reviewer_notes"),
+  requiresClinicalReview: boolean("requires_clinical_review").default(false),
+  clinicalReviewDate: timestamp("clinical_review_date"),
+  clinicalReviewerId: integer("clinical_reviewer_id"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Fraud detection results
+export const fraudDetectionResults = pgTable("fraud_detection_results", {
+  id: serial("id").primaryKey(),
+  claimId: integer("claim_id").references(() => claims.id).notNull(),
+  detectionDate: timestamp("detection_date").defaultNow().notNull(),
+  riskScore: real("risk_score").notNull(), // 0-100
+  riskLevel: text("risk_level").notNull(), // LOW, MEDIUM, HIGH, CRITICAL
+  detectedIndicators: text("detected_indicators").notNull(), // JSON array
+  mlModelConfidence: real("ml_model_confidence"),
+  ruleBasedViolations: text("rule_based_violations"), // JSON array
+  investigationRequired: boolean("investigation_required").default(false),
+  investigationStatus: text("investigation_status"), // PENDING, IN_PROGRESS, RESOLVED
+  fraudType: text("fraud_type"), // BILLING_FRAUD, UPSELLING, DUPLICATE, etc.
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Explanation of Benefits
+export const explanationOfBenefits = pgTable("explanation_of_benefits", {
+  id: serial("id").primaryKey(),
+  claimId: integer("claim_id").references(() => claims.id).notNull(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  eobDate: timestamp("eob_date").defaultNow().notNull(),
+  eobNumber: text("eob_number").notNull().unique(),
+  totalBilledAmount: real("total_billed_amount").notNull(),
+  totalAllowedAmount: real("total_allowed_amount").notNull(),
+  totalPaidAmount: real("total_paid_amount").notNull(),
+  memberResponsibility: real("member_responsibility").notNull(),
+  planResponsibility: real("plan_responsibility").notNull(),
+  serviceDetails: text("service_details").notNull(), // JSON with line item details
+  denialReasons: text("denial_reasons"), // JSON array
+  appealInformation: text("appeal_information"),
+  status: text("status").notNull(), // GENERATED, SENT, ACKNOWLEDGED
+  sentDate: timestamp("sent_date"),
+  acknowledgmentDate: timestamp("acknowledgment_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Enhanced claim audit trails
+export const claimAuditTrails = pgTable("claim_audit_trails", {
+  id: serial("id").primaryKey(),
+  claimId: integer("claim_id").references(() => claims.id).notNull(),
+  eventType: text("event_type").notNull(), // SUBMITTED, VALIDATED, ADJUDICATED, etc.
+  eventDate: timestamp("event_date").defaultNow().notNull(),
+  previousStatus: text("previous_status"),
+  newStatus: text("new_status"),
+  userId: integer("user_id"), // System user or reviewer
+  automatedDecision: boolean("automated_decision").default(false),
+  decisionFactors: text("decision_factors"), // JSON explaining decision
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Benefit utilization tracking
+export const benefitUtilization = pgTable("benefit_utilization", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  benefitId: integer("benefit_id").references(() => benefits.id).notNull(),
+  periodId: integer("period_id").references(() => periods.id).notNull(),
+  usedAmount: real("used_amount").notNull(),
+  limitAmount: real("limit_amount"),
+  remainingAmount: real("remaining_amount"),
+  utilizationPercentage: real("utilization_percentage"),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert schemas for enhanced claims processing tables
+export const insertClaimAdjudicationResultSchema = createInsertSchema(claimAdjudicationResults).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMedicalNecessityValidationSchema = createInsertSchema(medicalNecessityValidations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFraudDetectionResultSchema = createInsertSchema(fraudDetectionResults).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertExplanationOfBenefitsSchema = createInsertSchema(explanationOfBenefits).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertClaimAuditTrailSchema = createInsertSchema(claimAuditTrails).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertBenefitUtilizationSchema = createInsertSchema(benefitUtilization).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types for enhanced claims processing entities
+export type ClaimAdjudicationResult = typeof claimAdjudicationResults.$inferSelect;
+export type InsertClaimAdjudicationResult = z.infer<typeof insertClaimAdjudicationResultSchema>;
+
+export type MedicalNecessityValidation = typeof medicalNecessityValidations.$inferSelect;
+export type InsertMedicalNecessityValidation = z.infer<typeof insertMedicalNecessityValidationSchema>;
+
+export type FraudDetectionResult = typeof fraudDetectionResults.$inferSelect;
+export type InsertFraudDetectionResult = z.infer<typeof insertFraudDetectionResultSchema>;
+
+export type ExplanationOfBenefits = typeof explanationOfBenefits.$inferSelect;
+export type InsertExplanationOfBenefits = z.infer<typeof insertExplanationOfBenefitsSchema>;
+
+export type ClaimAuditTrail = typeof claimAuditTrails.$inferSelect;
+export type InsertClaimAuditTrail = z.infer<typeof insertClaimAuditTrailSchema>;
+
+export type BenefitUtilization = typeof benefitUtilization.$inferSelect;
+export type InsertBenefitUtilization = z.infer<typeof insertBenefitUtilizationSchema>;

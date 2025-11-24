@@ -104,7 +104,7 @@ export class AnalyticsEngine {
         previous: monthlyCosts.length > 1 ? monthlyCosts[monthlyCosts.length - 2].average : 0,
         changePercent: monthlyCosts.length > 1
           ? ((monthlyCosts[monthlyCosts.length - 1].average - monthlyCosts[monthlyCosts.length - 2].average) / monthlyCosts[monthlyCosts.length - 2].average * 100
-          : 0,
+          : 0),
         trend: monthlyCosts.length > 1
           ? monthlyCosts[monthlyCosts.length - 1].average > monthlyCosts[monthlyCosts.length - 2].average ? 'up' : 'down'
           : 'stable'
@@ -266,7 +266,7 @@ export class AnalyticsEngine {
     // Calculate ROI metrics
     const totalPremiums = premiumsData.reduce((sum, p) => sum + p.total, 0);
     const totalClaims = claimsData.reduce((sum, c) => sum + c.amount, 0);
-    const averageROI = totalPremiums > 0 ? ((totalPremiums - totalClaims) / totalPremiums) * 100) : 0;
+    const averageROI = totalPremiums > 0 ? ((totalPremiums - totalClaims) / totalPremiums) * 100 : 0;
 
     // Industry benchmarking (simulated data)
     const industryAverageROI = 78;
@@ -407,7 +407,7 @@ export class AnalyticsEngine {
         previous: monthlyData.length > 1 ? monthlyData[monthlyData.length - 2].count : 0,
         changePercent: monthlyData.length > 1
           ? ((monthlyData[monthlyData.length - 1].count - monthlyData[monthlyData.length - 2].count) / monthlyData[monthlyData.length - 2].count * 100
-          : 0,
+          : 0),
         trend: monthlyData.length > 1
           ? monthlyData[monthlyData.length - 1].count > monthlyData[monthlyData.length - 2].count ? 'up' : 'down'
           : 'stable'
@@ -459,7 +459,7 @@ export class AnalyticsEngine {
         previous: monthlyCosts.length > 1 ? monthlyCosts[monthlyCosts.length - 2].average : 0,
         changePercent: monthlyCosts.length > 1
           ? ((monthlyCosts[monthlyCosts.length - 1].average - monthlyCosts[monthlyCosts.length - 2].average) / monthlyCosts[monthlyCosts.length - 2].average * 100
-          : 0,
+          : 0),
         trend: monthlyCosts.length > 1
           ? monthlyCosts[monthlyCosts.length - 1].average > monthlyCosts[monthlyCosts.length - 2].average ? 'up' : 'down'
           : 'stable'

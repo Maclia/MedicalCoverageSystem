@@ -21,6 +21,7 @@ import ProviderClaimSubmission from "@/pages/ProviderClaimSubmission";
 import Communication from "@/pages/Communication";
 import Wellness from "@/pages/Wellness";
 import RiskAssessment from "@/pages/RiskAssessment";
+import { ClaimsManagement } from "@/pages/ClaimsManagement";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -45,6 +46,7 @@ function Router() {
         <Route path="/communication/:id" component={Communication} />
         <Route path="/wellness/:id" component={Wellness} />
         <Route path="/risk-assessment/:id" component={RiskAssessment} />
+        <Route path="/claims-management" component={ClaimsManagement} />
         <Route component={NotFound} />
       </Switch>
     </AppLayout>
