@@ -4017,6 +4017,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   import communicationRoutes from "./src/routes/communication";
   app.use("/api/communication", communicationRoutes);
 
+  // Import and use card management routes
+  import cardManagementRoutes from "./routes/cardManagement";
+  app.use("/api/cards", cardManagementRoutes);
+
   const httpServer = createServer(app);
   return httpServer;
 }
