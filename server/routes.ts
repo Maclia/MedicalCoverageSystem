@@ -3999,6 +3999,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Import and use wellness integration routes
+  import wellnessIntegrationRoutes from "./src/routes/wellnessIntegration";
+  app.use("/api/wellness", wellnessIntegrationRoutes);
+
+  // Import and use risk assessment routes
+  import riskAssessmentRoutes from "./src/routes/riskAssessment";
+  app.use("/api/risk", riskAssessmentRoutes);
+
+  // Import and use communication routes
+  import communicationRoutes from "./src/routes/communication";
+  app.use("/api/communication", communicationRoutes);
+
   const httpServer = createServer(app);
   return httpServer;
 }
