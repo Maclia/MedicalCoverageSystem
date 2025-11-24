@@ -1257,3 +1257,143 @@ export type InsertClaimAuditTrail = z.infer<typeof insertClaimAuditTrailSchema>;
 
 export type BenefitUtilization = typeof benefitUtilization.$inferSelect;
 export type InsertBenefitUtilization = z.infer<typeof insertBenefitUtilizationSchema>;
+
+// Card Management System
+
+// Card management enums
+export const cardTypeEnum = pgEnum('card_type', ['physical', 'digital', 'both']);
+export const cardStatusEnum = pgEnum('card_status', ['pending', 'active', 'inactive', 'expired', 'lost', 'stolen', 'damaged', 'replaced']);
+export const cardTemplateEnum = pgEnum('card_template', ['standard', 'premium', 'corporate', 'family', 'individual']);
+
+// Member Cards table
+export const memberCards = pgTable("member_cards", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  cardNumber: text("card_number").notNull().unique(),
+  cardType: cardTypeEnum("card_type").notNull(),
+  status: cardStatusEnum("status").default("pending").notNull(),
+  templateType: cardTemplateEnum("template_type").default("standard").notNull(),
+  issueDate: timestamp("issue_date"),
+  expiryDate: timestamp("expiry_date").notNull(),
+  activationDate: timestamp("activation_date"),
+  deactivationDate: timestamp("deactivation_date"),
+  physicalCardPrinted: boolean("physical_card_printed").default(false),
+  physicalCardShipped: boolean("physical_card_shipped").default(false),
+  physicalCardTracking: text("physical_card_tracking"),
+  digitalCardUrl: text("digital_card_url"), // Secure URL for digital card access
+  qrCodeData: text("qr_code_data"), // Encrypted QR code content
+  magneticStripeData: text("magnetic_stripe_data"), // Encrypted stripe data
+  chipEnabled: boolean("chip_enabled").default(false),
+  nfcEnabled: boolean("nfc_enabled").default(false),
+  personalizationData: text("personalization_data"), // JSON with member-specific card design
+  securityPin: text("security_pin"), // Encrypted PIN for virtual card access
+  replacementReason: text("replacement_reason"),
+  previousCardId: integer("previous_card_id").references(() => memberCards.id),
+  deliveryMethod: text("delivery_method"), // 'standard_mail', 'express', 'pickup', 'digital_only'
+  deliveryAddress: text("delivery_address"),
+  batchId: text("batch_id"), // For batch processing
+  auditLog: text("audit_log"), // JSON array of card lifecycle events
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Card Templates table
+export const cardTemplates = pgTable("card_templates", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id),
+  templateName: text("template_name").notNull(),
+  templateType: cardTemplateEnum("template_type").notNull(),
+  templateDescription: text("template_description"),
+  backgroundColor: text("background_color").default("#ffffff"),
+  foregroundColor: text("foreground_color").default("#000000"),
+  accentColor: text("accent_color").default("#1976d2"),
+  fontFamily: text("font_family").default("Arial"),
+  logoUrl: text("logo_url"), // Company logo URL
+  backgroundPattern: text("background_pattern"),
+  cardWidth: real("card_width").default(85.6), // Standard credit card width in mm
+  cardHeight: real("card_height").default(53.98), // Standard credit card height in mm
+  templateHtml: text("template_html"), // HTML template for card rendering
+  templateCss: text("template_css"), // CSS styles for card
+  isActive: boolean("is_active").default(true),
+  isDefault: boolean("is_default").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Card Verification Events table
+export const cardVerificationEvents = pgTable("card_verification_events", {
+  id: serial("id").primaryKey(),
+  cardId: integer("card_id").references(() => memberCards.id).notNull(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  verifierId: integer("verifier_id"), // Provider or institution ID
+  verificationMethod: text("verification_method").notNull(), // 'qr_scan', 'card_number', 'api_call', 'nfc'
+  verificationResult: text("verification_result").notNull(), // 'success', 'failed', 'expired', 'inactive'
+  verificationData: text("verification_data"), // JSON with verification details
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  geolocation: text("geolocation"), // JSON with lat/lng
+  verificationTimestamp: timestamp("verification_timestamp").defaultNow().notNull(),
+  providerResponseTime: real("provider_response_time"), // Time in milliseconds
+  fraudRiskScore: real("fraud_risk_score").default(0),
+  fraudIndicators: text("fraud_indicators"), // JSON array of fraud indicators
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Card Production Batches table
+export const cardProductionBatches = pgTable("card_production_batches", {
+  id: serial("id").primaryKey(),
+  batchId: text("batch_id").notNull().unique(),
+  batchName: text("batch_name").notNull(),
+  batchType: text("batch_type").notNull(), // 'initial_issue', 'renewal', 'replacement', 'bulk'
+  totalCards: integer("total_cards").notNull(),
+  processedCards: integer("processed_cards").default(0),
+  productionStatus: text("production_status").default("pending").notNull(), // 'pending', 'processing', 'printed', 'shipped', 'completed'
+  printVendor: text("print_vendor"),
+  productionStartDate: timestamp("production_start_date"),
+  completionDate: timestamp("completion_date"),
+  shippingDate: timestamp("shipping_date"),
+  trackingNumbers: text("tracking_numbers"), // JSON array of tracking numbers
+  costPerCard: real("cost_per_card"),
+  totalCost: real("total_cost"),
+  productionNotes: text("production_notes"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Insert schemas for card management
+export const insertMemberCardSchema = createInsertSchema(memberCards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCardTemplateSchema = createInsertSchema(cardTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCardVerificationEventSchema = createInsertSchema(cardVerificationEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCardProductionBatchSchema = createInsertSchema(cardProductionBatches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for card management entities
+export type MemberCard = typeof memberCards.$inferSelect;
+export type InsertMemberCard = z.infer<typeof insertMemberCardSchema>;
+
+export type CardTemplate = typeof cardTemplates.$inferSelect;
+export type InsertCardTemplate = z.infer<typeof insertCardTemplateSchema>;
+
+export type CardVerificationEvent = typeof cardVerificationEvents.$inferSelect;
+export type InsertCardVerificationEvent = z.infer<typeof insertCardVerificationEventSchema>;
+
+export type CardProductionBatch = typeof cardProductionBatches.$inferSelect;
+export type InsertCardProductionBatch = z.infer<typeof insertCardProductionBatchSchema>;

@@ -39,7 +39,11 @@ import {
   FraudDetectionResult, InsertFraudDetectionResult,
   ExplanationOfBenefits, InsertExplanationOfBenefits,
   ClaimAuditTrail, InsertClaimAuditTrail,
-  BenefitUtilization, InsertBenefitUtilization
+  BenefitUtilization, InsertBenefitUtilization,
+  MemberCard, InsertMemberCard,
+  CardTemplate, InsertCardTemplate,
+  CardVerificationEvent, InsertCardVerificationEvent,
+  CardProductionBatch, InsertCardProductionBatch
 } from "@shared/schema";
 
 // Storage interface
@@ -349,6 +353,44 @@ export interface IStorage {
   getRecommendationsByType(memberId: number, type: string, limit?: number): Promise<RecommendationHistory[]>;
   createRecommendationHistory(recommendation: InsertRecommendationHistory): Promise<RecommendationHistory>;
   updateRecommendationFeedback(id: number, updates: Partial<RecommendationHistory>): Promise<RecommendationHistory>;
+
+  // Card Management System
+  // Member Cards
+  getMemberCards(): Promise<MemberCard[]>;
+  getMemberCard(id: number): Promise<MemberCard | undefined>;
+  getMemberCardsByMember(memberId: number): Promise<MemberCard[]>;
+  getMemberCardsByStatus(status: string): Promise<MemberCard[]>;
+  getActiveMemberCards(memberId: number): Promise<MemberCard[]>;
+  createMemberCard(card: InsertMemberCard): Promise<MemberCard>;
+  updateMemberCard(id: number, updates: Partial<MemberCard>): Promise<MemberCard>;
+  deactivateMemberCard(id: number, reason: string): Promise<MemberCard>;
+  replaceMemberCard(id: number, newCardData: InsertMemberCard): Promise<{ oldCard: MemberCard, newCard: MemberCard }>;
+
+  // Card Templates
+  getCardTemplates(): Promise<CardTemplate[]>;
+  getCardTemplate(id: number): Promise<CardTemplate | undefined>;
+  getCardTemplatesByCompany(companyId: number): Promise<CardTemplate[]>;
+  getCardTemplatesByType(templateType: string): Promise<CardTemplate[]>;
+  getActiveCardTemplates(): Promise<CardTemplate[]>;
+  createCardTemplate(template: InsertCardTemplate): Promise<CardTemplate>;
+  updateCardTemplate(id: number, updates: Partial<CardTemplate>): Promise<CardTemplate>;
+  deactivateCardTemplate(id: number): Promise<CardTemplate>;
+
+  // Card Verification Events
+  getCardVerificationEvents(): Promise<CardVerificationEvent[]>;
+  getCardVerificationEvent(id: number): Promise<CardVerificationEvent | undefined>;
+  getCardVerificationEventsByCard(cardId: number): Promise<CardVerificationEvent[]>;
+  getCardVerificationEventsByMember(memberId: number): Promise<CardVerificationEvent[]>;
+  getCardVerificationEventsByDateRange(startDate: Date, endDate: Date): Promise<CardVerificationEvent[]>;
+  createCardVerificationEvent(event: InsertCardVerificationEvent): Promise<CardVerificationEvent>;
+
+  // Card Production Batches
+  getCardProductionBatches(): Promise<CardProductionBatch[]>;
+  getCardProductionBatch(id: number): Promise<CardProductionBatch | undefined>;
+  getCardProductionBatchesByStatus(status: string): Promise<CardProductionBatch[]>;
+  getCardProductionBatchesByDateRange(startDate: Date, endDate: Date): Promise<CardProductionBatch[]>;
+  createCardProductionBatch(batch: InsertCardProductionBatch): Promise<CardProductionBatch>;
+  updateCardProductionBatch(id: number, updates: Partial<CardProductionBatch>): Promise<CardProductionBatch>;
 }
 
 // In-memory storage implementation
@@ -398,6 +440,12 @@ export class MemStorage implements IStorage {
   private claimAuditTrails: Map<number, ClaimAuditTrail>;
   private benefitUtilization: Map<number, BenefitUtilization>;
 
+  // Card Management Storage
+  private memberCards: Map<number, MemberCard>;
+  private cardTemplates: Map<number, CardTemplate>;
+  private cardVerificationEvents: Map<number, CardVerificationEvent>;
+  private cardProductionBatches: Map<number, CardProductionBatch>;
+
   // Member Engagement Hub IDs
   private onboardingSessionId: number;
   private onboardingTaskId: number;
@@ -444,6 +492,12 @@ export class MemStorage implements IStorage {
   private diagnosisCodeId: number;
   private users: Map<number, User>;
   private userId: number;
+
+  // Card Management IDs
+  private memberCardId: number;
+  private cardTemplateId: number;
+  private cardVerificationEventId: number;
+  private cardProductionBatchId: number;
 
   constructor() {
     this.companies = new Map();
@@ -537,9 +591,18 @@ export class MemStorage implements IStorage {
     this.claimProcedureItemId = 1;
     this.diagnosisCodeId = 1;
     this.userId = 1;
-    
+
+    // Card Management IDs
+    this.memberCardId = 1;
+    this.cardTemplateId = 1;
+    this.cardVerificationEventId = 1;
+    this.cardProductionBatchId = 1;
+
     // Initialize with a default active period, rates, and benefits
     this.initializeDefaultData();
+
+    // Initialize card management storage
+    this.initializeCardManagement();
   }
   
   private initializeDefaultData() {
@@ -2702,6 +2765,349 @@ export class MemStorage implements IStorage {
 
     this.benefitUtilization.set(id, updatedUtilization);
     return updatedUtilization;
+  }
+
+  // Card Management System Implementation
+
+  // Initialize Card Management Storage
+  private initializeCardManagement() {
+    // Initialize card management storage if not already done
+    if (!this.memberCards) {
+      this.memberCards = new Map();
+      this.cardTemplates = new Map();
+      this.cardVerificationEvents = new Map();
+      this.cardProductionBatches = new Map();
+    }
+  }
+
+  // Member Cards
+  async getMemberCards(): Promise<MemberCard[]> {
+    return Array.from(this.memberCards.values());
+  }
+
+  async getMemberCard(id: number): Promise<MemberCard | undefined> {
+    return this.memberCards.get(id);
+  }
+
+  async getMemberCardsByMember(memberId: number): Promise<MemberCard[]> {
+    return Array.from(this.memberCards.values()).filter(
+      card => card.memberId === memberId
+    );
+  }
+
+  async getMemberCardsByStatus(status: string): Promise<MemberCard[]> {
+    return Array.from(this.memberCards.values()).filter(
+      card => card.cardStatus === status
+    );
+  }
+
+  async getActiveMemberCards(memberId: number): Promise<MemberCard[]> {
+    return Array.from(this.memberCards.values()).filter(
+      card => card.memberId === memberId && card.cardStatus === 'active'
+    );
+  }
+
+  async createMemberCard(card: InsertMemberCard): Promise<MemberCard> {
+    const id = this.memberCardId++;
+    const newCard: MemberCard = {
+      ...card,
+      id,
+      issuedAt: new Date(),
+      expiresAt: card.expiresAt || new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000), // 3 years default
+      lastUsedAt: null,
+      deactivatedAt: null,
+      deactivationReason: null,
+      replacedByCardId: null,
+      qrCodeData: card.qrCodeData || this.generateQRCodeData(id),
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.memberCards.set(id, newCard);
+    return newCard;
+  }
+
+  async updateMemberCard(id: number, updates: Partial<MemberCard>): Promise<MemberCard> {
+    const card = this.memberCards.get(id);
+    if (!card) {
+      throw new Error(`Member card with ID ${id} not found`);
+    }
+
+    const updatedCard: MemberCard = {
+      ...card,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.memberCards.set(id, updatedCard);
+    return updatedCard;
+  }
+
+  async deactivateMemberCard(id: number, reason: string): Promise<MemberCard> {
+    const card = this.memberCards.get(id);
+    if (!card) {
+      throw new Error(`Member card with ID ${id} not found`);
+    }
+
+    const updatedCard: MemberCard = {
+      ...card,
+      cardStatus: 'inactive',
+      deactivatedAt: new Date(),
+      deactivationReason: reason,
+      updatedAt: new Date()
+    };
+
+    this.memberCards.set(id, updatedCard);
+    return updatedCard;
+  }
+
+  async replaceMemberCard(id: number, newCardData: InsertMemberCard): Promise<{ oldCard: MemberCard, newCard: MemberCard }> {
+    const oldCard = this.memberCards.get(id);
+    if (!oldCard) {
+      throw new Error(`Member card with ID ${id} not found`);
+    }
+
+    // Deactivate the old card
+    const deactivatedOldCard = await this.deactivateMemberCard(id, 'card_replacement');
+
+    // Create the new card
+    const newCard = await this.createMemberCard({
+      ...newCardData,
+      memberId: oldCard.memberId,
+      cardType: oldCard.cardType
+    });
+
+    // Update old card to reference the replacement
+    await this.updateMemberCard(id, { replacedByCardId: newCard.id });
+
+    return {
+      oldCard: deactivatedOldCard,
+      newCard
+    };
+  }
+
+  // Card Templates
+  async getCardTemplates(): Promise<CardTemplate[]> {
+    return Array.from(this.cardTemplates.values());
+  }
+
+  async getCardTemplate(id: number): Promise<CardTemplate | undefined> {
+    return this.cardTemplates.get(id);
+  }
+
+  async getCardTemplatesByCompany(companyId: number): Promise<CardTemplate[]> {
+    return Array.from(this.cardTemplates.values()).filter(
+      template => template.companyId === companyId
+    );
+  }
+
+  async getCardTemplatesByType(templateType: string): Promise<CardTemplate[]> {
+    return Array.from(this.cardTemplates.values()).filter(
+      template => template.templateType === templateType
+    );
+  }
+
+  async getActiveCardTemplates(): Promise<CardTemplate[]> {
+    return Array.from(this.cardTemplates.values()).filter(
+      template => template.isActive
+    );
+  }
+
+  async createCardTemplate(template: InsertCardTemplate): Promise<CardTemplate> {
+    const id = this.cardTemplateId++;
+    const newTemplate: CardTemplate = {
+      ...template,
+      id,
+      isActive: template.isActive ?? true,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.cardTemplates.set(id, newTemplate);
+    return newTemplate;
+  }
+
+  async updateCardTemplate(id: number, updates: Partial<CardTemplate>): Promise<CardTemplate> {
+    const template = this.cardTemplates.get(id);
+    if (!template) {
+      throw new Error(`Card template with ID ${id} not found`);
+    }
+
+    const updatedTemplate: CardTemplate = {
+      ...template,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.cardTemplates.set(id, updatedTemplate);
+    return updatedTemplate;
+  }
+
+  async deactivateCardTemplate(id: number): Promise<CardTemplate> {
+    const template = this.cardTemplates.get(id);
+    if (!template) {
+      throw new Error(`Card template with ID ${id} not found`);
+    }
+
+    const updatedTemplate: CardTemplate = {
+      ...template,
+      isActive: false,
+      updatedAt: new Date()
+    };
+
+    this.cardTemplates.set(id, updatedTemplate);
+    return updatedTemplate;
+  }
+
+  // Card Verification Events
+  async getCardVerificationEvents(): Promise<CardVerificationEvent[]> {
+    return Array.from(this.cardVerificationEvents.values());
+  }
+
+  async getCardVerificationEvent(id: number): Promise<CardVerificationEvent | undefined> {
+    return this.cardVerificationEvents.get(id);
+  }
+
+  async getCardVerificationEventsByCard(cardId: number): Promise<CardVerificationEvent[]> {
+    return Array.from(this.cardVerificationEvents.values()).filter(
+      event => event.cardId === cardId
+    ).sort((a, b) => new Date(b.verifiedAt).getTime() - new Date(a.verifiedAt).getTime());
+  }
+
+  async getCardVerificationEventsByMember(memberId: number): Promise<CardVerificationEvent[]> {
+    return Array.from(this.cardVerificationEvents.values()).filter(
+      event => event.memberId === memberId
+    ).sort((a, b) => new Date(b.verifiedAt).getTime() - new Date(a.verifiedAt).getTime());
+  }
+
+  async getCardVerificationEventsByDateRange(startDate: Date, endDate: Date): Promise<CardVerificationEvent[]> {
+    return Array.from(this.cardVerificationEvents.values()).filter(
+      event => {
+        const eventDate = new Date(event.verifiedAt);
+        return eventDate >= startDate && eventDate <= endDate;
+      }
+    ).sort((a, b) => new Date(b.verifiedAt).getTime() - new Date(a.verifiedAt).getTime());
+  }
+
+  async createCardVerificationEvent(event: InsertCardVerificationEvent): Promise<CardVerificationEvent> {
+    const id = this.cardVerificationEventId++;
+    const newEvent: CardVerificationEvent = {
+      ...event,
+      id,
+      verifiedAt: event.verifiedAt || new Date(),
+      createdAt: new Date()
+    };
+    this.cardVerificationEvents.set(id, newEvent);
+    return newEvent;
+  }
+
+  // Card Production Batches
+  async getCardProductionBatches(): Promise<CardProductionBatch[]> {
+    return Array.from(this.cardProductionBatches.values());
+  }
+
+  async getCardProductionBatch(id: number): Promise<CardProductionBatch | undefined> {
+    return this.cardProductionBatches.get(id);
+  }
+
+  async getCardProductionBatchesByStatus(status: string): Promise<CardProductionBatch[]> {
+    return Array.from(this.cardProductionBatches.values()).filter(
+      batch => batch.batchStatus === status
+    );
+  }
+
+  async getCardProductionBatchesByDateRange(startDate: Date, endDate: Date): Promise<CardProductionBatch[]> {
+    return Array.from(this.cardProductionBatches.values()).filter(
+      batch => {
+        const batchDate = new Date(batch.createdAt);
+        return batchDate >= startDate && batchDate <= endDate;
+      }
+    ).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  async createCardProductionBatch(batch: InsertCardProductionBatch): Promise<CardProductionBatch> {
+    const id = this.cardProductionBatchId++;
+    const newBatch: CardProductionBatch = {
+      ...batch,
+      id,
+      batchStatus: batch.batchStatus || 'pending',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.cardProductionBatches.set(id, newBatch);
+    return newBatch;
+  }
+
+  async updateCardProductionBatch(id: number, updates: Partial<CardProductionBatch>): Promise<CardProductionBatch> {
+    const batch = this.cardProductionBatches.get(id);
+    if (!batch) {
+      throw new Error(`Card production batch with ID ${id} not found`);
+    }
+
+    const updatedBatch: CardProductionBatch = {
+      ...batch,
+      ...updates,
+      updatedAt: new Date()
+    };
+
+    this.cardProductionBatches.set(id, updatedBatch);
+    return updatedBatch;
+  }
+
+  // Helper Methods for Card Management
+  private generateQRCodeData(cardId: number): string {
+    // Generate a unique QR code data for the card
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 15);
+    return `MC-${cardId}-${timestamp}-${random}`;
+  }
+
+  // Method to validate card eligibility and status
+  async validateCardForTransaction(cardId: number): Promise<{ valid: boolean; reason?: string }> {
+    const card = await this.getMemberCard(cardId);
+    if (!card) {
+      return { valid: false, reason: 'Card not found' };
+    }
+
+    if (card.cardStatus !== 'active') {
+      return { valid: false, reason: `Card is ${card.cardStatus}` };
+    }
+
+    if (card.expiresAt && new Date(card.expiresAt) < new Date()) {
+      return { valid: false, reason: 'Card has expired' };
+    }
+
+    // Validate member eligibility
+    const member = await this.getMember(card.memberId);
+    if (!member) {
+      return { valid: false, reason: 'Member not found' };
+    }
+
+    // Check if member is active and in good standing
+    // This would integrate with the eligibility engine
+    return { valid: true };
+  }
+
+  // Method to record card verification for provider use
+  async recordCardVerification(
+    cardId: number,
+    memberId: number,
+    providerId: string,
+    verificationType: string,
+    location?: string,
+    deviceInfo?: string
+  ): Promise<CardVerificationEvent> {
+    return await this.createCardVerificationEvent({
+      cardId,
+      memberId,
+      verifiedBy: providerId,
+      verificationType,
+      verificationResult: 'success',
+      location,
+      deviceInfo,
+      additionalData: JSON.stringify({
+        timestamp: new Date().toISOString(),
+        verificationSource: 'provider_portal'
+      })
+    });
   }
 }
 
