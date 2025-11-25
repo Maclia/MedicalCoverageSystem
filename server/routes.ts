@@ -57,6 +57,19 @@ import providerNetworkRoutes from "./api/provider-networks";
 import providerContractRoutes from "./api/provider-contracts";
 import providerOnboardingRoutes from "./api/provider-onboarding";
 import providerPerformanceRoutes from "./api/provider-performance";
+// Import CRM routes
+import crmLeadsRoutes from "./api/crm/leads";
+import crmOpportunitiesRoutes from "./api/crm/opportunities";
+import crmActivitiesRoutes from "./api/crm/activities";
+import crmTeamsRoutes from "./api/crm/teams";
+import crmAnalyticsRoutes from "./api/crm/analytics";
+import crmAgentsRoutes from "./api/crm/agents";
+import crmCommissionTiersRoutes from "./api/crm/commission-tiers";
+import crmPerformanceAnalyticsRoutes from "./api/crm/performance-analytics";
+import crmWorkflowAutomationRoutes from "./api/crm/workflow-automation";
+import crmTaskAutomationRoutes from "./api/crm/task-automation";
+import crmLeadScoringRoutes from "./api/crm/lead-scoring";
+import crmLeadNurturingRoutes from "./api/crm/lead-nurturing";
 // Import enhanced Members & Clients module routes
 import { setupMemberRoutes } from "./routes/members";
 import { setupCorporateMemberRoutes } from "./routes/corporate-members";
@@ -4042,6 +4055,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Use provider performance routes
   app.use("/api/provider-performance", providerPerformanceRoutes);
+
+  // Use CRM routes
+  app.use("/api/crm/leads", crmLeadsRoutes);
+  app.use("/api/crm/opportunities", crmOpportunitiesRoutes);
+  app.use("/api/crm/activities", crmActivitiesRoutes);
+  app.use("/api/crm/teams", crmTeamsRoutes);
+  app.use("/api/crm/analytics", crmAnalyticsRoutes);
+  app.use("/api/crm/agents", crmAgentsRoutes);
+  app.use("/api/crm/commission-tiers", crmCommissionTiersRoutes);
+  app.use("/api/crm/performance-analytics", crmPerformanceAnalyticsRoutes);
+  app.use("/api/crm/workflow-automation", crmWorkflowAutomationRoutes);
+  app.use("/api/crm/task-automation", crmTaskAutomationRoutes);
+  app.use("/api/crm/lead-scoring", crmLeadScoringRoutes);
+  app.use("/api/crm/lead-nurturing", crmLeadNurturingRoutes);
 
   // Use schemes & benefits management routes
   registerSchemesRoutes(app);
