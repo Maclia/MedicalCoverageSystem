@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -270,6 +270,267 @@ export const companyBenefits = pgTable("company_benefits", {
 //   id: true,
 //   createdAt: true,
 // });
+
+// ===================
+// CRM MODULE TABLES
+// ===================
+
+// Lead Management Tables
+export const leads = pgTable('leads', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // Basic Information
+  firstName: varchar('first_name', { length: 100 }).notNull(),
+  lastName: varchar('last_name', { length: 100 }).notNull(),
+  email: varchar('email', { length: 255 }).notNull().unique(),
+  phone: varchar('phone', { length: 20 }),
+  companyName: varchar('company_name', { length: 255 }),
+  // Lead Details
+  leadSource: leadSourceEnum('lead_source').notNull().default('website'),
+  leadStatus: leadStatusEnum('lead_status').notNull().default('new'),
+  priority: leadPriorityEnum('priority').notNull().default('medium'),
+  leadScore: integer('lead_score').default(0),
+  // Classification
+  memberType: memberTypeEnum('member_type'), // Use existing enum
+  schemeInterest: text('scheme_interest'), // Reference to existing scheme types
+  estimatedCoverage: integer('estimated_coverage'), // in currency units
+  estimatedPremium: integer('estimated_premium'), // in currency units
+  // Assignment and Tracking
+  assignedAgentId: integer('assigned_agent_id').references(() => users.id),
+  assignedTeamId: integer('assigned_team_id'),
+  territoryId: integer('territory_id'),
+  // Dates
+  firstContactDate: timestamp('first_contact_date'),
+  lastContactDate: timestamp('last_contact_date'),
+  nextFollowUpDate: timestamp('next_follow_up_date'),
+  conversionDate: timestamp('conversion_date'),
+  // Lead scoring fields
+  score: integer('score'), // Current lead score (0-100)
+  scoreTier: varchar('score_tier', { length: 10 }), // hot, warm, cool, cold
+  lastScored: timestamp('last_scored'), // When score was last calculated
+  scoringModelId: varchar('scoring_model_id', { length: 100 }), // Which model was used
+  // Additional lead qualification fields
+  jobTitle: varchar('job_title', { length: 100 }),
+  companyId: integer('company_id').references(() => companies.id),
+  company: varchar('company', { length: 255 }), // For backwards compatibility
+  budgetRange: varchar('budget_range', { length: 100 }),
+  timeline: varchar('timeline', { length: 100 }),
+  immediateNeed: boolean('immediate_need').default(false),
+  notes: text('notes'),
+  status: varchar('status', { length: 20 }).default('active'), // For compatibility with lead scoring service
+  // System fields
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  createdBy: integer('created_by').references(() => users.id),
+});
+
+export const salesOpportunities = pgTable('sales_opportunities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  leadId: uuid('lead_id').references(() => leads.id).notNull(),
+  opportunityName: varchar('opportunity_name', { length: 255 }).notNull(),
+  stage: opportunityStageEnum('stage').notNull().default('lead'),
+  // Financial details
+  estimatedValue: integer('estimated_value'), // Annual premium estimate
+  actualValue: integer('actual_value'), // Final premium when issued
+  probability: integer('probability').default(0), // 0-100 percentage
+  // Timeline
+  expectedCloseDate: timestamp('expected_close_date'),
+  actualCloseDate: timestamp('actual_close_date'),
+  // Assignment
+  ownerId: integer('owner_id').references(() => users.id).notNull(),
+  // System
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const salesActivities = pgTable('sales_activities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // Relations
+  leadId: uuid('lead_id').references(() => leads.id),
+  opportunityId: uuid('opportunity_id').references(() => salesOpportunities.id),
+  memberId: integer('member_id').references(() => members.id), // Link to existing members
+  agentId: integer('agent_id').references(() => users.id).notNull(),
+  // Activity details
+  activityType: activityTypeEnum('activity_type').notNull(),
+  subject: varchar('subject', { length: 255 }).notNull(),
+  description: text('description'),
+  // Outcomes
+  outcome: varchar('outcome', { length: 100 }),
+  nextStep: text('next_step'),
+  nextFollowUpDate: timestamp('next_follow_up_date'),
+  // System
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const salesTeams = pgTable('sales_teams', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  teamName: varchar('team_name', { length: 100 }).notNull(),
+  teamLeadId: integer('team_lead_id').references(() => users.id),
+  managerId: integer('manager_id').references(() => users.id),
+  department: varchar('department', { length: 100 }),
+  territoryId: integer('territory_id'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const territories = pgTable('territories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  territoryName: varchar('territory_name', { length: 100 }).notNull(),
+  territoryType: territoryTypeEnum('territory_type').notNull(),
+  // Geographic definitions
+  regions: text('regions').array(), // Array of regions/states
+  cities: text('cities').array(), // Array of cities
+  postalCodes: text('postal_codes').array(), // Array of postal codes
+  // Assignment
+  primaryOwnerId: integer('primary_owner_id').references(() => users.id),
+  description: text('description'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// Agent Management Tables
+export const agents = pgTable('agents', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: integer('user_id').references(() => users.id).notNull().unique(),
+  agentCode: varchar('agent_code', { length: 20 }).notNull().unique(),
+  agentType: agentTypeEnum('agent_type').notNull(),
+  // Licensing
+  licenseNumber: varchar('license_number', { length: 50 }),
+  licenseExpiryDate: timestamp('license_expiry_date'),
+  licenseStatus: licenseStatusEnum('license_status').default('active'),
+  // Commission Structure
+  commissionTierId: uuid('commission_tier_id'),
+  baseCommissionRate: decimal('base_commission_rate', { precision: 5, scale: 2 }),
+  overrideRate: decimal('override_rate', { precision: 5, scale: 2 }),
+  // Hierarchy
+  supervisorId: uuid('supervisor_id').references(() => agents.id),
+  teamId: uuid('team_id').references(() => salesTeams.id),
+  // Performance
+  targetAnnualPremium: integer('target_annual_premium'),
+  ytdPremium: integer('ytd_premium').default(0),
+  ytdCommission: integer('ytd_commission').default(0),
+  // Status
+  isActive: boolean('is_active').default(true),
+  joinDate: timestamp('join_date').defaultNow(),
+  terminationDate: timestamp('termination_date'),
+  // System
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const commissionTiers = pgTable('commission_tiers', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  tierName: varchar('tier_name', { length: 100 }).notNull(),
+  description: text('description'),
+  // Rate Structure
+  baseRate: decimal('base_rate', { precision: 5, scale: 2 }).notNull(),
+  bonusThreshold: integer('bonus_threshold'), // Premium threshold for bonus
+  bonusRate: decimal('bonus_rate', { precision: 5, scale: 2 }),
+  // Product-specific rates
+  individualRate: decimal('individual_rate', { precision: 5, scale: 2 }),
+  corporateRate: decimal('corporate_rate', { precision: 5, scale: 2 }),
+  familyRate: decimal('family_rate', { precision: 5, scale: 2 }),
+  // Validity
+  effectiveDate: timestamp('effective_date').defaultNow(),
+  expiryDate: timestamp('expiry_date'),
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const commissionTransactions = pgTable('commission_transactions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  agentId: uuid('agent_id').references(() => agents.id).notNull(),
+  policyId: integer('policy_id'), // Will reference policies table when implemented
+  memberId: integer('member_id').references(() => members.id),
+  // Transaction Details
+  transactionType: commissionTransactionTypeEnum('transaction_type').notNull(),
+  amount: integer('amount').notNull(),
+  rate: decimal('rate', { precision: 5, scale: 2 }).notNull(),
+  premiumAmount: integer('premium_amount').notNull(),
+  // Calculation Details
+  baseCommission: integer('base_commission').notNull(),
+  bonusCommission: integer('bonus_commission').default(0),
+  overrideCommission: integer('override_commission').default(0),
+  totalCommission: integer('total_commission').notNull(),
+  // Payment Details
+  paymentDate: timestamp('payment_date'),
+  paymentStatus: paymentStatusEnum('payment_status').default('pending'),
+  paymentReference: varchar('payment_reference', { length: 100 }),
+  // Period
+  commissionPeriod: varchar('commission_period', { length: 20 }), // YYYY-MM format
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+export const agentPerformance = pgTable('agent_performance', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  agentId: uuid('agent_id').references(() => agents.id).notNull(),
+  period: varchar('period', { length: 20 }).notNull(), // YYYY-MM
+  // Metrics
+  leadsAssigned: integer('leads_assigned').default(0),
+  leadsContacted: integer('leads_contacted').default(0),
+  appointmentsSet: integer('appointments_set').default(0),
+  quotesIssued: integer('quotes_issued').default(0),
+  policiesSold: integer('policies_sold').default(0),
+  totalPremium: integer('total_premium').default(0),
+  totalCommission: integer('total_commission').default(0),
+  conversionRate: decimal('conversion_rate', { precision: 5, scale: 2 }).default(0),
+  averageDealSize: integer('average_deal_size').default(0),
+  // Rankings
+  teamRank: integer('team_rank'),
+  companyRank: integer('company_rank'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Workflow Automation Tables
+export const workflowDefinitions = pgTable('workflow_definitions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workflowName: varchar('workflow_name', { length: 100 }).notNull(),
+  description: text('description'),
+  triggerType: triggerTypeEnum('trigger_type').notNull(),
+  triggerConditions: text('trigger_conditions'), // JSON for complex conditions
+  // Workflow definition
+  steps: text('steps').notNull(), // JSON array of workflow steps
+  isActive: boolean('is_active').default(true),
+  priority: integer('priority').default(5), // 1-10 priority
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const workflowExecutions = pgTable('workflow_executions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  workflowId: uuid('workflow_id').references(() => workflowDefinitions.id).notNull(),
+  triggeredBy: integer('triggered_by').references(() => users.id),
+  entityId: varchar('entity_id', { length: 100 }), // Lead ID, Opportunity ID, etc.
+  entityType: varchar('entity_type', { length: 50 }),
+  // Execution details
+  status: workflowExecutionStatusEnum('status').default('running'),
+  currentStep: integer('current_step').default(0),
+  startedAt: timestamp('started_at').defaultNow(),
+  completedAt: timestamp('completed_at'),
+  errorDetails: text('error_details'),
+  executionData: text('execution_data'), // JSON runtime data
+});
+
+export const emailCampaigns = pgTable('email_campaigns', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  campaignName: varchar('campaign_name', { length: 100 }).notNull(),
+  subjectTemplate: varchar('subject_template', { length: 255 }),
+  bodyTemplate: text('body_template'),
+  targetSegment: text('target_segment'), // JSON lead criteria for targeting
+  schedule: text('schedule'), // JSON scheduling info
+  status: campaignStatusEnum('status').default('draft'),
+  // Metrics
+  sentCount: integer('sent_count').default(0),
+  deliveredCount: integer('delivered_count').default(0),
+  openedCount: integer('opened_count').default(0),
+  clickedCount: integer('clicked_count').default(0),
+  unsubscribedCount: integer('unsubscribed_count').default(0),
+  // System
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
 
 // Basic Insert Schemas for Core Tables - must be declared before usage
 export const insertMemberSchema = createInsertSchema(members);
@@ -654,8 +915,26 @@ export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processin
 export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
 export const procedureCategoryEnum = pgEnum('procedure_category', ['consultation', 'surgery', 'diagnostic', 'laboratory', 'imaging', 'dental', 'vision', 'medication', 'therapy', 'emergency', 'maternity', 'preventative', 'other']);
 
+// CRM Lead Management Enums
+export const leadSourceEnum = pgEnum('lead_source', ['website', 'referral', 'campaign', 'cold_call', 'partner', 'event', 'social_media', 'email_marketing', 'third_party', 'manual']);
+export const leadStatusEnum = pgEnum('lead_status', ['new', 'contacted', 'qualified', 'nurturing', 'converted', 'lost', 'duplicate']);
+export const leadPriorityEnum = pgEnum('priority', ['low', 'medium', 'high', 'urgent']);
+export const opportunityStageEnum = pgEnum('opportunity_stage', ['lead', 'qualified', 'quotation', 'underwriting', 'issuance', 'closed_won', 'closed_lost']);
+export const activityTypeEnum = pgEnum('activity_type', ['call', 'email', 'meeting', 'sms', 'whatsapp', 'note', 'task', 'demo', 'proposal']);
+export const territoryTypeEnum = pgEnum('territory_type', ['geographic', 'industry', 'company_size', 'product_line', 'mixed']);
+
+// Agent Management Enums
+export const agentTypeEnum = pgEnum('agent_type', ['internal_agent', 'external_broker', 'independent_agent', 'captive_agent', 'agency']);
+export const licenseStatusEnum = pgEnum('license_status', ['active', 'expired', 'suspended', 'pending', 'revoked']);
+export const commissionTransactionTypeEnum = pgEnum('commission_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
+
+// Workflow Automation Enums
+export const triggerTypeEnum = pgEnum('trigger_type', ['lead_created', 'lead_status_changed', 'opportunity_stage_changed', 'date_based', 'manual', 'webhook', 'email_opened', 'link_clicked']);
+export const workflowExecutionStatusEnum = pgEnum('workflow_execution_status', ['running', 'completed', 'failed', 'cancelled', 'paused']);
+export const campaignStatusEnum = pgEnum('campaign_status', ['draft', 'scheduled', 'running', 'completed', 'paused', 'cancelled']);
+
 // User type enum for authentication
-export const userTypeEnum = pgEnum('user_type', ['insurance', 'institution', 'provider']);
+export const userTypeEnum = pgEnum('user_type', ['insurance', 'institution', 'provider', 'sales_admin', 'sales_manager', 'team_lead', 'sales_agent', 'broker', 'underwriter']);
 
 // Users table for authentication
 export const users = pgTable("users", {
@@ -2774,3 +3053,144 @@ export const insertBenefitRiderSchema = createInsertSchema(benefitRiders);
 export const insertMemberRiderSelectionSchema = createInsertSchema(memberRiderSelections);
 export const insertBenefitRuleSchema = createInsertSchema(benefitRules);
 export const insertRuleExecutionLogSchema = createInsertSchema(ruleExecutionLogs);
+
+// Task Management Tables
+export const taskStatusEnum = pgEnum('task_status', ['pending', 'in_progress', 'completed', 'cancelled', 'on_hold', 'escalated']);
+export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high', 'urgent']);
+export const taskCategoryEnum = pgEnum('task_category', ['follow_up', 'documentation', 'meeting', 'call', 'email', 'review', 'custom']);
+
+export const tasks = pgTable('tasks', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  // Entity relationships
+  leadId: uuid('lead_id').references(() => leads.id),
+  opportunityId: uuid('opportunity_id').references(() => salesOpportunities.id),
+  memberId: integer('member_id').references(() => members.id),
+  // Assignment
+  assignedTo: integer('assigned_to').references(() => users.id),
+  assignedToType: varchar('assigned_to_type', { length: 10 }).default('user'), // 'user' or 'agent'
+  // Task details
+  category: taskCategoryEnum('category').notNull(),
+  priority: taskPriorityEnum('priority').notNull().default('medium'),
+  status: taskStatusEnum('status').notNull().default('pending'),
+  dueDate: timestamp('due_date'),
+  completedAt: timestamp('completed_at'),
+  completedBy: integer('completed_by').references(() => users.id),
+  // Time tracking
+  estimatedHours: decimal('estimated_hours', { precision: 5, scale: 2 }),
+  actualHours: decimal('actual_hours', { precision: 5, scale: 2 }),
+  // Task content
+  checklist: text('checklist'), // JSON array
+  tags: text('tags'), // JSON array
+  notes: text('notes'),
+  // Escalation
+  escalatedAt: timestamp('escalated_at'),
+  escalatedTo: integer('escalated_to').references(() => users.id),
+  escalationReason: text('escalation_reason'),
+  // Automation
+  templateId: varchar('template_id', { length: 100 }),
+  autoGenerated: boolean('auto_generated').default(false),
+  // System
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  createdBy: integer('created_by').references(() => users.id),
+});
+
+// Task Templates for automation
+export const taskTemplates = pgTable('task_templates', {
+  id: varchar('id', { length: 100 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  category: taskCategoryEnum('category').notNull(),
+  priority: taskPriorityEnum('priority').notNull(),
+  estimatedDuration: integer('estimated_duration').notNull(), // in minutes
+  checklist: text('checklist').notNull(), // JSON array
+  autoAssignTo: varchar('auto_assign_to', { length: 20 }).notNull(), // 'lead_owner', 'opportunity_owner', 'team_lead', 'specific_role'
+  dueDateOffset: text('due_date_offset').notNull(), // JSON with value, unit, from
+  dependencies: text('dependencies'), // JSON array of template IDs
+  recurringPattern: text('recurring_pattern'), // JSON with frequency, interval, endDate
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  createdBy: integer('created_by').references(() => users.id),
+});
+
+// Notification System Tables
+export const notificationTypeEnum = pgEnum('notification_type', ['email', 'sms', 'in_app', 'push', 'webhook']);
+export const notificationChannelEnum = pgEnum('notification_channel', ['email', 'sms', 'mobile_app', 'web', 'api']);
+export const notificationPriorityEnum = pgEnum('notification_priority', ['low', 'medium', 'high', 'urgent']);
+export const notificationStatusEnum = pgEnum('notification_status', ['pending', 'sent', 'failed', 'scheduled', 'cancelled']);
+
+export const notifications = pgTable('notifications', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  // Recipient
+  recipientId: integer('recipient_id').notNull(),
+  recipientType: varchar('recipient_type', { length: 10 }).notNull(), // 'user', 'agent', 'lead', 'member'
+  // Content
+  type: notificationTypeEnum('type').notNull(),
+  channel: notificationChannelEnum('channel').notNull(),
+  subject: varchar('subject', { length: 255 }),
+  message: text('message').notNull(),
+  data: text('data'), // JSON with additional data
+  // Delivery
+  priority: notificationPriorityEnum('priority').notNull().default('medium'),
+  status: notificationStatusEnum('status').notNull().default('pending'),
+  sentAt: timestamp('sent_at'),
+  scheduledAt: timestamp('scheduled_at'),
+  // Tracking
+  isRead: boolean('is_read').default(false),
+  readAt: timestamp('read_at'),
+  // Metadata
+  metadata: text('metadata'), // JSON with metadata
+  triggerEvent: varchar('trigger_event', { length: 100 }),
+  templateId: varchar('template_id', { length: 100 }),
+  // System
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+export const notificationTemplates = pgTable('notification_templates', {
+  id: varchar('id', { length: 100 }).primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  type: notificationTypeEnum('type').notNull(),
+  category: varchar('category', { length: 100 }).notNull(),
+  subject: varchar('subject', { length: 255 }).notNull(),
+  message: text('message').notNull(),
+  variables: text('variables'), // JSON array of variables used in template
+  isActive: boolean('is_active').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+  createdBy: integer('created_by').references(() => users.id),
+});
+
+export const notificationPreferences = pgTable('notification_preferences', {
+  id: serial('id').primaryKey(),
+  userId: integer('user_id').references(() => users.id),
+  agentId: uuid('agent_id').references(() => agents.id),
+  channels: text('channels').notNull(), // JSON with channel preferences
+  categories: text('categories').notNull(), // JSON with category preferences
+  quietHours: text('quiet_hours').notNull(), // JSON with quiet hours settings
+  frequency: text('frequency').notNull(), // JSON with frequency preferences
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// CRM Module Insert Schemas
+export const insertLeadSchema = createInsertSchema(leads);
+export const insertSalesOpportunitySchema = createInsertSchema(salesOpportunities);
+export const insertSalesActivitySchema = createInsertSchema(salesActivities);
+export const insertSalesTeamSchema = createInsertSchema(salesTeams);
+export const insertTerritorySchema = createInsertSchema(territories);
+export const insertAgentSchema = createInsertSchema(agents);
+export const insertCommissionTierSchema = createInsertSchema(commissionTiers);
+export const insertCommissionTransactionSchema = createInsertSchema(commissionTransactions);
+export const insertAgentPerformanceSchema = createInsertSchema(agentPerformance);
+export const insertWorkflowDefinitionSchema = createInsertSchema(workflowDefinitions);
+export const insertWorkflowExecutionSchema = createInsertSchema(workflowExecutions);
+export const insertEmailCampaignSchema = createInsertSchema(emailCampaigns);
+export const insertTaskSchema = createInsertSchema(tasks);
+export const insertTaskTemplateSchema = createInsertSchema(taskTemplates);
+export const insertNotificationSchema = createInsertSchema(notifications);
+export const insertNotificationTemplateSchema = createInsertSchema(notificationTemplates);
+export const insertNotificationPreferenceSchema = createInsertSchema(notificationPreferences);
