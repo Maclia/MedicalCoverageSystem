@@ -1721,6 +1721,29 @@ export type InsertPharmacyPriceList = z.infer<typeof insertPharmacyPriceListSche
 export type ConsumablesPriceList = typeof consumablesPriceLists.$inferSelect;
 export type InsertConsumablesPriceList = z.infer<typeof insertConsumablesPriceListSchema>;
 
+// Schemes & Benefits Module Enums
+
+// Scheme definition enums
+export const schemeTypeEnum = pgEnum('scheme_type', ['individual_medical', 'corporate_medical', 'nhif_top_up', 'student_cover', 'international_health', 'micro_insurance']);
+export const pricingModelEnum = pgEnum('pricing_model', ['age_rated', 'community_rated', 'group_rate', 'experience_rated']);
+export const targetMarketEnum = pgEnum('target_market', ['individuals', 'small_groups', 'large_corporates', 'students', 'seniors', 'expatriates']);
+export const planTierEnum = pgEnum('plan_tier', ['bronze', 'silver', 'gold', 'platinum', 'vip']);
+
+// Cost sharing rules enums
+export const costSharingTypeEnum = pgEnum('cost_sharing_type', ['copay_fixed', 'copay_percentage', 'coinsurance', 'deductible', 'annual_deductible']);
+export const limitTypeEnum = pgEnum('limit_type', ['overall_annual', 'benefit_annual', 'sub_limit', 'frequency', 'age_based']);
+export const limitCategoryEnum = pgEnum('limit_category', ['icu', 'room_type', 'procedure_type', 'professional_fee', 'medication', 'therapy']);
+export const frequencyLimitEnum = pgEnum('frequency_limit', ['per_visit', 'per_day', 'per_admission', 'annual', 'lifetime']);
+
+// Corporate customization enums
+export const employeeGradeEnum = pgEnum('employee_grade', ['executive', 'senior_management', 'middle_management', 'junior_staff', 'intern']);
+export const dependentTypeEnum = pgEnum('dependent_type', ['spouse', 'child', 'parent']);
+
+// Rules engine enums
+export const ruleCategoryEnum = pgEnum('rule_category', ['eligibility', 'benefit_application', 'limit_check', 'cost_sharing', 'exclusion']);
+export const ruleTypeEnum = pgEnum('rule_type', ['condition', 'calculation', 'validation', 'workflow']);
+export const ruleResultEnum = pgEnum('rule_result', ['PASS', 'FAIL', 'SKIP']);
+
 // Enhanced Provider Management System
 
 // Provider Management Enums
@@ -2036,6 +2059,89 @@ export const insertProviderClinicalExpertiseSchema = createInsertSchema(provider
   updatedAt: true,
 });
 
+// Insert schemas for Schemes & Benefits module
+export const insertSchemeSchema = createInsertSchema(schemes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSchemeVersionSchema = createInsertSchema(schemeVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPlanTierSchema = createInsertSchema(planTiers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEnhancedBenefitSchema = createInsertSchema(enhancedBenefits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSchemeBenefitMappingSchema = createInsertSchema(schemeBenefitMappings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCostSharingRuleSchema = createInsertSchema(costSharingRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBenefitLimitSchema = createInsertSchema(benefitLimits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCorporateSchemeConfigSchema = createInsertSchema(corporateSchemeConfigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertEmployeeGradeBenefitSchema = createInsertSchema(employeeGradeBenefits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertDependentCoverageRuleSchema = createInsertSchema(dependentCoverageRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBenefitRiderSchema = createInsertSchema(benefitRiders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMemberRiderSelectionSchema = createInsertSchema(memberRiderSelections).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBenefitRuleSchema = createInsertSchema(benefitRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertRuleExecutionLogSchema = createInsertSchema(ruleExecutionLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Types for enhanced provider management entities
 export type ProviderOnboardingApplication = typeof providerOnboardingApplications.$inferSelect;
 export type InsertProviderOnboardingApplication = z.infer<typeof insertProviderOnboardingApplicationSchema>;
@@ -2066,3 +2172,316 @@ export type InsertProviderEducationTraining = z.infer<typeof insertProviderEduca
 
 export type ProviderClinicalExpertise = typeof providerClinicalExpertise.$inferSelect;
 export type InsertProviderClinicalExpertise = z.infer<typeof insertProviderClinicalExpertiseSchema>;
+
+// Types for Schemes & Benefits module
+export type Scheme = typeof schemes.$inferSelect;
+export type InsertScheme = z.infer<typeof insertSchemeSchema>;
+
+export type SchemeVersion = typeof schemeVersions.$inferSelect;
+export type InsertSchemeVersion = z.infer<typeof insertSchemeVersionSchema>;
+
+export type PlanTier = typeof planTiers.$inferSelect;
+export type InsertPlanTier = z.infer<typeof insertPlanTierSchema>;
+
+export type EnhancedBenefit = typeof enhancedBenefits.$inferSelect;
+export type InsertEnhancedBenefit = z.infer<typeof insertEnhancedBenefitSchema>;
+
+export type SchemeBenefitMapping = typeof schemeBenefitMappings.$inferSelect;
+export type InsertSchemeBenefitMapping = z.infer<typeof insertSchemeBenefitMappingSchema>;
+
+export type CostSharingRule = typeof costSharingRules.$inferSelect;
+export type InsertCostSharingRule = z.infer<typeof insertCostSharingRuleSchema>;
+
+export type BenefitLimit = typeof benefitLimits.$inferSelect;
+export type InsertBenefitLimit = z.infer<typeof insertBenefitLimitSchema>;
+
+export type CorporateSchemeConfig = typeof corporateSchemeConfigs.$inferSelect;
+export type InsertCorporateSchemeConfig = z.infer<typeof insertCorporateSchemeConfigSchema>;
+
+export type EmployeeGradeBenefit = typeof employeeGradeBenefits.$inferSelect;
+export type InsertEmployeeGradeBenefit = z.infer<typeof insertEmployeeGradeBenefitSchema>;
+
+export type DependentCoverageRule = typeof dependentCoverageRules.$inferSelect;
+export type InsertDependentCoverageRule = z.infer<typeof insertDependentCoverageRuleSchema>;
+
+export type BenefitRider = typeof benefitRiders.$inferSelect;
+export type InsertBenefitRider = z.infer<typeof insertBenefitRiderSchema>;
+
+export type MemberRiderSelection = typeof memberRiderSelections.$inferSelect;
+export type InsertMemberRiderSelection = z.infer<typeof insertMemberRiderSelectionSchema>;
+
+export type BenefitRule = typeof benefitRules.$inferSelect;
+export type InsertBenefitRule = z.infer<typeof insertBenefitRuleSchema>;
+
+export type RuleExecutionLog = typeof ruleExecutionLogs.$inferSelect;
+export type InsertRuleExecutionLog = z.infer<typeof insertRuleExecutionLogSchema>;
+
+// Schemes & Benefits Module Tables
+
+// Scheme definitions layer
+export const schemes = pgTable("schemes", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  schemeCode: text("scheme_code").notNull().unique(),
+  schemeType: schemeTypeEnum("scheme_type").notNull(),
+  description: text("description").notNull(),
+  targetMarket: targetMarketEnum("target_market").notNull(),
+  pricingModel: pricingModelEnum("pricing_model").notNull(),
+  isActive: boolean("is_active").default(true),
+  launchDate: timestamp("launch_date"),
+  sunsetDate: timestamp("sunset_date"),
+  minAge: integer("min_age").default(0),
+  maxAge: integer("max_age"),
+  geographicCoverage: text("geographic_coverage"), // JSON array of regions
+  currency: text("currency").default("USD"),
+  taxTreatment: text("tax_treatment"), // 'tax_free', 'taxable', 'partially_taxable'
+  underwritingGuidelines: text("underwriting_guidelines"), // JSON with underwriting rules
+  waitingPeriodRules: text("waiting_period_rules"), // JSON with waiting period configurations
+  renewalTerms: text("renewal_terms"), // JSON with renewal conditions
+  cancellationTerms: text("cancellation_terms"), // JSON with cancellation rules
+  gracePeriodDays: integer("grace_period_days").default(30),
+  createdById: integer("created_by_id").references(() => users.id),
+  approvedById: integer("approved_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Scheme versions for version control
+export const schemeVersions = pgTable("scheme_versions", {
+  id: serial("id").primaryKey(),
+  schemeId: integer("scheme_id").references(() => schemes.id).notNull(),
+  versionNumber: text("version_number").notNull(),
+  versionDescription: text("version_description"),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  isActive: boolean("is_active").default(false),
+  isDraft: boolean("is_draft").default(true),
+  changeSummary: text("change_summary"), // Summary of changes from previous version
+  migrationRules: text("migration_rules"), // JSON for member migration
+  createdById: integer("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Plan tiers for Bronze/Silver/Gold/Platinum structure
+export const planTiers = pgTable("plan_tiers", {
+  id: serial("id").primaryKey(),
+  schemeId: integer("scheme_id").references(() => schemes.id).notNull(),
+  tierLevel: planTierEnum("tier_level").notNull(),
+  tierName: text("tier_name").notNull(),
+  tierDescription: text("tier_description").notNull(),
+  overallAnnualLimit: real("overall_annual_limit").notNull(),
+  networkAccessLevel: text("network_access_level").notNull(), // 'tier_1_only', 'full_network', 'premium_network'
+  roomTypeCoverage: text("room_type_coverage").notNull(), // 'general_ward', 'semi_private', 'private', 'deluxe'
+  dentalCoverage: boolean("dental_coverage").default(false),
+  opticalCoverage: boolean("optical_coverage").default(false),
+  maternityCoverage: boolean("maternity_coverage").default(false),
+  chronicCoverage: boolean("chronic_coverage").default(false),
+  evacuationCoverage: boolean("evacuation_coverage").default(false),
+  internationalCoverage: boolean("international_coverage").default(false),
+  wellnessBenefits: boolean("wellness_benefits").default(false),
+  premiumMultiplier: real("premium_multiplier").default(1.0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Enhanced benefits structure (extends current benefits)
+export const enhancedBenefits = pgTable("enhanced_benefits", {
+  id: serial("id").primaryKey(),
+  parentId: integer("parent_id").references(() => enhancedBenefits.id), // For hierarchical benefits
+  benefitCode: text("benefit_code").notNull().unique(),
+  benefitName: text("benefit_name").notNull(),
+  benefitCategory: text("benefit_category").notNull(), // 'inpatient', 'outpatient', 'dental', 'optical', 'maternity', 'chronic', 'wellness', 'evacuation'
+  benefitSubcategory: text("benefit_subcategory"), // 'consultation', 'procedure', 'medication', 'diagnostic'
+  description: text("description").notNull(),
+  clinicalDefinitions: text("clinical_definitions"), // JSON with clinical criteria
+  icd10CoverageCodes: text("icd10_coverage_codes"), // JSON array of covered ICD-10 codes
+  cptProcedureCodes: text("cpt_procedure_codes"), // JSON array of covered CPT codes
+  isOptional: boolean("is_optional").default(false),
+  isRider: boolean("is_rider").default(false),
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Scheme benefit mappings
+export const schemeBenefitMappings = pgTable("scheme_benefit_mappings", {
+  id: serial("id").primaryKey(),
+  schemeId: integer("scheme_id").references(() => schemes.id).notNull(),
+  planTierId: integer("plan_tier_id").references(() => planTiers.id).notNull(),
+  benefitId: integer("benefit_id").references(() => enhancedBenefits.id).notNull(),
+  isCovered: boolean("is_covered").default(true),
+  coveragePercentage: real("coverage_percentage").default(100.0),
+  annualLimit: real("annual_limit"),
+  perVisitLimit: real("per_visit_limit"),
+  waitingPeriodDays: integer("waiting_period_days").default(0),
+  preAuthRequired: boolean("pre_auth_required").default(false),
+  networkRestriction: text("network_restriction"), // 'any_provider', 'network_only', 'tier_1_only'
+  referralRequired: boolean("referral_required").default(false),
+  isActive: boolean("is_active").default(true),
+  customTerms: text("custom_terms"), // JSON with custom coverage terms
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Comprehensive cost-sharing rules
+export const costSharingRules = pgTable("cost_sharing_rules", {
+  id: serial("id").primaryKey(),
+  schemeBenefitMappingId: integer("scheme_benefit_mapping_id").references(() => schemeBenefitMappings.id).notNull(),
+  costSharingType: costSharingTypeEnum("cost_sharing_type").notNull(),
+  costSharingValue: real("cost_sharing_value").notNull(),
+  costSharingUnit: text("cost_sharing_unit").notNull(), // 'currency', 'percentage', 'visits'
+  minimumAmount: real("minimum_amount"),
+  maximumAmount: real("maximum_amount"),
+  appliesTo: text("applies_to").notNull(), // 'all_claims', 'hospitalization_only', 'outpatient_only', 'specific_procedures'
+  frequencyLimit: text("frequency_limit"),
+  exemptionConditions: text("exemption_conditions"), // JSON with conditions where cost-sharing doesn't apply
+  networkProviderDiscount: real("network_provider_discount").default(0.0),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Comprehensive limits hierarchy
+export const benefitLimits = pgTable("benefit_limits", {
+  id: serial("id").primaryKey(),
+  schemeBenefitMappingId: integer("scheme_benefit_mapping_id").references(() => schemeBenefitMappings.id).notNull(),
+  limitType: limitTypeEnum("limit_type").notNull(),
+  limitCategory: limitCategoryEnum("limit_category"),
+  limitAmount: real("limit_amount").notNull(),
+  limitUnit: text("limit_unit").notNull(), // 'currency', 'days', 'visits', 'procedures'
+  limitPeriod: text("limit_period"), // 'annual', 'lifetime', 'per_admission', 'per_condition'
+  ageMin: integer("age_min"),
+  ageMax: integer("age_max"),
+  gender: text("gender"), // 'male', 'female', 'all'
+  conditionCriteria: text("condition_criteria"), // JSON with medical condition criteria
+  resetConditions: text("reset_conditions"), // JSON with limit reset conditions
+  carryOverAllowed: boolean("carry_over_allowed").default(false),
+  carryOverPercentage: real("carry_over_percentage").default(0.0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Corporate customization system
+export const corporateSchemeConfigs = pgTable("corporate_scheme_configs", {
+  id: serial("id").primaryKey(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  schemeId: integer("scheme_id").references(() => schemes.id).notNull(),
+  configName: text("config_name").notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  customTerms: text("custom_terms"), // JSON with company-specific modifications
+  waiverConditions: text("waiver_conditions"), // JSON with waiting period waivers
+  enhancedLimits: text("enhanced_limits"), // JSON with enhanced benefit limits
+  customCostSharing: text("custom_cost_sharing"), // JSON with company-specific cost-sharing
+  customNetworkAccess: text("custom_network_access"), // JSON with network modifications
+  wellnessIntegration: text("wellness_integration"), // JSON with wellness program details
+  isActive: boolean("is_active").default(true),
+  approvedById: integer("approved_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Employee grade benefits
+export const employeeGradeBenefits = pgTable("employee_grade_benefits", {
+  id: serial("id").primaryKey(),
+  corporateConfigId: integer("corporate_config_id").references(() => corporateSchemeConfigs.id).notNull(),
+  employeeGrade: employeeGradeEnum("employee_grade").notNull(),
+  planTierId: integer("plan_tier_id").references(() => planTiers.id).notNull(),
+  customLimits: text("custom_limits"), // JSON with grade-specific limits
+  customCostSharing: text("custom_cost_sharing"), // JSON with grade-specific cost-sharing
+  additionalBenefits: text("additional_benefits"), // JSON array of additional benefits for this grade
+  enhancedCoverage: text("enhanced_coverage"), // JSON with enhanced coverage details
+  premiumContribution: real("premium_contribution"), // Company contribution percentage
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Dependent coverage rules
+export const dependentCoverageRules = pgTable("dependent_coverage_rules", {
+  id: serial("id").primaryKey(),
+  corporateConfigId: integer("corporate_config_id").references(() => corporateSchemeConfigs.id).notNull(),
+  dependentType: dependentTypeEnum("dependent_type").notNull(),
+  maxAge: integer("max_age").notNull(),
+  coveragePercentage: real("coverage_percentage").default(100.0),
+  customLimits: text("custom_limits"), // JSON with dependent-specific limits
+  additionalPremium: real("additional_premium"),
+  coverageConditions: text("coverage_conditions"), // JSON with eligibility conditions
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Riders & add-ons system
+export const benefitRiders = pgTable("benefit_riders", {
+  id: serial("id").primaryKey(),
+  riderCode: text("rider_code").notNull().unique(),
+  riderName: text("rider_name").notNull(),
+  riderType: text("rider_type").notNull(), // 'benefit_enhancement', 'additional_coverage', 'premium_protection'
+  description: text("description").notNull(),
+  baseSchemeId: integer("base_scheme_id").references(() => schemes.id).notNull(),
+  applicableTiers: text("applicable_tiers"), // JSON array of plan tiers where rider can be added
+  premiumMultiplier: real("premium_multiplier").notNull(),
+  additionalBenefits: text("additional_benefits"), // JSON array of additional benefits provided
+  enhancedLimits: text("enhanced_limits"), // JSON with limit enhancements
+  eligibilityCriteria: text("eligibility_criteria"), // JSON with rider eligibility conditions
+  waitingPeriodDays: integer("waiting_period_days").default(0),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Member rider selections
+export const memberRiderSelections = pgTable("member_rider_selections", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  riderId: integer("rider_id").references(() => benefitRiders.id).notNull(),
+  selectionDate: timestamp("selection_date").defaultNow().notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  premiumImpact: real("premium_impact").notNull(),
+  waiverReason: text("waiver_reason"), // If premium is waived
+  approvedById: integer("approved_by_id").references(() => users.id),
+  isActive: boolean("is_active").default(true),
+  expiryDate: timestamp("expiry_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Enterprise-grade rules engine
+export const benefitRules = pgTable("benefit_rules", {
+  id: serial("id").primaryKey(),
+  ruleName: text("rule_name").notNull(),
+  ruleCategory: ruleCategoryEnum("rule_category").notNull(),
+  ruleType: ruleTypeEnum("rule_type").notNull(),
+  rulePriority: integer("rule_priority").default(0), // Higher numbers execute first
+  conditionExpression: text("condition_expression").notNull(), // JSON-based rule condition
+  actionExpression: text("action_expression").notNull(), // JSON-based rule action
+  errorMessage: text("error_message"), // Error message if rule fails
+  isMandatory: boolean("is_mandatory").default(false),
+  isActive: boolean("is_active").default(true),
+  version: text("version").notNull(),
+  createdById: integer("created_by_id").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Rule execution logs
+export const ruleExecutionLogs = pgTable("rule_execution_logs", {
+  id: serial("id").primaryKey(),
+  claimId: integer("claim_id").references(() => claims.id),
+  memberId: integer("member_id").references(() => members.id),
+  ruleId: integer("rule_id").references(() => benefitRules.id).notNull(),
+  executionDate: timestamp("execution_date").defaultNow().notNull(),
+  executionContext: text("execution_context").notNull(), // JSON with data context during execution
+  result: ruleResultEnum("result").notNull(),
+  executionTime: integer("execution_time"), // Execution time in milliseconds
+  modifiedFields: text("modified_fields"), // JSON with fields modified by rule
+  errorMessage: text("error_message"),
+  executedBy: text("executed_by").notNull(), // 'system', 'user_id'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});

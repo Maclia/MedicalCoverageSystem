@@ -46,6 +46,17 @@ import { addDays, differenceInYears, parseISO } from "date-fns";
 import { z } from "zod";
 import { emailService, emailWorkflows } from "./emailService";
 
+// Import and use schemes & benefits management routes
+import { registerSchemesRoutes } from "./routes/schemes";
+import wellnessIntegrationRoutes from "./src/routes/wellnessIntegration";
+import riskAssessmentRoutes from "./src/routes/riskAssessment";
+import communicationRoutes from "./src/routes/communication";
+import cardManagementRoutes from "./routes/cardManagement";
+import providerNetworkRoutes from "./api/provider-networks";
+import providerContractRoutes from "./api/provider-contracts";
+import providerOnboardingRoutes from "./api/provider-onboarding";
+import providerPerformanceRoutes from "./api/provider-performance";
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to handle zod validation errors
   const validateRequest = (schema: any) => (req: Request, res: Response, next: Function) => {
@@ -4005,37 +4016,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Import and use wellness integration routes
-  import wellnessIntegrationRoutes from "./src/routes/wellnessIntegration";
+  // Use wellness integration routes
   app.use("/api/wellness", wellnessIntegrationRoutes);
 
-  // Import and use risk assessment routes
-  import riskAssessmentRoutes from "./src/routes/riskAssessment";
+  // Use risk assessment routes
   app.use("/api/risk", riskAssessmentRoutes);
 
-  // Import and use communication routes
-  import communicationRoutes from "./src/routes/communication";
+  // Use communication routes
   app.use("/api/communication", communicationRoutes);
 
-  // Import and use card management routes
-  import cardManagementRoutes from "./routes/cardManagement";
+  // Use card management routes
   app.use("/api/cards", cardManagementRoutes);
 
-  // Import and use provider network management routes
-  import providerNetworkRoutes from "./api/provider-networks";
+  // Use provider network management routes
   app.use("/api/provider-networks", providerNetworkRoutes);
 
-  // Import and use provider contract management routes
-  import providerContractRoutes from "./api/provider-contracts";
+  // Use provider contract management routes
   app.use("/api/provider-contracts", providerContractRoutes);
 
-  // Import and use provider onboarding routes
-  import providerOnboardingRoutes from "./api/provider-onboarding";
+  // Use provider onboarding routes
   app.use("/api/provider-onboarding", providerOnboardingRoutes);
 
-  // Import and use provider performance routes
-  import providerPerformanceRoutes from "./api/provider-performance";
+  // Use provider performance routes
   app.use("/api/provider-performance", providerPerformanceRoutes);
+
+  // Use schemes & benefits management routes
+  registerSchemesRoutes(app);
+
+  // Health check endpoint for Docker and monitoring
+  app.get("/api/health", (req: Request, res: Response) => {
+    const timestamp = new Date().toISOString();
+    const uptime = process.uptime();
+
+    res.status(200).json({
+      status: "healthy",
+      timestamp,
+      uptime: Math.floor(uptime),
+      version: "2.0.0",
+      environment: process.env.NODE_ENV || "development",
+      services: {
+        database: "connected", // This would be enhanced with actual DB connection check
+        server: "running",
+        memory: {
+          used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024) + "MB",
+          total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024) + "MB"
+        }
+      }
+    });
+  });
 
   const httpServer = createServer(app);
   return httpServer;
