@@ -16,7 +16,7 @@ import type {
   ClaimAdjudicationResult,
   MedicalNecessityValidation,
   BenefitUtilization
-} from "@shared/schema";
+} from "../../shared/schema.js";
 
 export interface AdjudicationContext {
   claim: Claim;

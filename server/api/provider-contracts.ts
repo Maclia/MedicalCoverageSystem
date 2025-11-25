@@ -10,7 +10,7 @@ import {
   insertProviderContractSchema,
   insertContractDocumentSchema,
   insertContractSignatureSchema
-} from '../shared/schema';
+} from '../../shared/schema.js';
 import { contractService } from '../services/contractService';
 
 const router = Router();

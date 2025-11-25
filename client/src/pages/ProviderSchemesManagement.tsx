@@ -420,7 +420,7 @@ export default function ProviderSchemesManagement() {
                     <SelectItem value="clinic">Clinic</SelectItem>
                     <SelectItem value="dental_clinic">Dental Clinic</SelectItem>
                     <SelectItem value="pharmacy">Pharmacy</SelectItem>
-                    <SelectItem="laboratory">Laboratory</SelectItem>
+                    <SelectItem value="laboratory">Laboratory</SelectItem>
                   </SelectContent>
                 </Select>
                 <Select value={filterNetwork} onValueChange={setFilterNetwork}>

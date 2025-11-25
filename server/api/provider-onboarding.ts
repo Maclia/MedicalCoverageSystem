@@ -10,7 +10,7 @@ import {
   insertProviderVerificationChecklistSchema,
   providerOnboardingStatusEnum,
   providerVerificationStatusEnum
-} from '../shared/schema';
+} from '../../shared/schema.js';
 import { providerOnboardingService } from '../services/providerOnboardingService';
 
 const router = Router();

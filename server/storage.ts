@@ -44,7 +44,7 @@ import {
   CardTemplate, InsertCardTemplate,
   CardVerificationEvent, InsertCardVerificationEvent,
   CardProductionBatch, InsertCardProductionBatch
-} from "@shared/schema";
+} from "../shared/schema.js";
 
 // Storage interface
 export interface IStorage {

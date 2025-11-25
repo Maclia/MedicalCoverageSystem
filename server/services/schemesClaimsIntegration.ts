@@ -5,7 +5,7 @@
 
 import { IStorage } from '../storage';
 import { EnhancedClaimsAdjudicationService } from './enhancedClaimsAdjudication';
-import * as schema from '@shared/schema';
+import * as schema from '../../shared/schema.js';
 
 export interface ClaimProcessingRequest {
   claimId: number;

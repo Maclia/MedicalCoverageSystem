@@ -1,5 +1,5 @@
 import { storage } from '../storage';
-import { Claim, Member, User } from '@shared/schema';
+import { Claim, Member, User } from '../../shared/schema.js';
 
 export interface Notification {
   id: string;

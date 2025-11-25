@@ -259,14 +259,24 @@ export const defaultActuarialConfig: ActuarialConfig = {
   marketAssumptions: {
     healthcareInflation: {
       2025: {
-        medical_trend: 0.058, // 5.8% CMS projection
-        utilization_trend: 0.023, // 2.3% utilization increase
-        cost_shifting: 0.015, // 1.5% cost shifting from Medicare/Medicaid
-        technology_advancement: 0.018, // 1.8% new technology impact
-        regulatory_impact: 0.008, // 0.8% regulatory cost impact
+        hospital: 0.058, // 5.8% CMS projection
+        physician: 0.023, // 2.3% utilization increase
+        prescription: 0.015, // 1.5% cost shifting from Medicare/Medicaid
+        mentalHealth: 0.018, // 1.8% new technology impact
+        preventive: 0.008, // 0.8% regulatory cost impact
+        medical_trend: 0.058,
+        utilization_trend: 0.023,
+        cost_shifting: 0.015,
+        technology_advancement: 0.018,
+        regulatory_impact: 0.008,
       },
       2026: {
-        medical_trend: 0.060, // 6.0% projection
+        hospital: 0.060, // 6.0% projection
+        physician: 0.025,
+        prescription: 0.016,
+        mentalHealth: 0.019,
+        preventive: 0.009,
+        medical_trend: 0.060,
         utilization_trend: 0.025,
         cost_shifting: 0.016,
         technology_advancement: 0.019,
@@ -282,6 +292,30 @@ export const defaultActuarialConfig: ActuarialConfig = {
   },
 
   pricingMethodologies: {
+    standard: {
+      description: 'Standard rating methodology with balanced risk adjustment',
+      适用条件: 'General application across all market segments',
+      baseAdjustmentFactor: 1.0,
+      riskAdjustmentWeight: 0.5,
+      trendApplication: 'pre_trend',
+      allowedMarkets: ['individual', 'small_group', 'medium_group'],
+    },
+    'risk-adjusted': {
+      description: 'Enhanced risk adjustment with individual underwriting',
+      适用条件: 'Groups requiring detailed risk assessment',
+      baseAdjustmentFactor: 0.95,
+      riskAdjustmentWeight: 0.8,
+      trendApplication: 'pre_trend',
+      allowedMarkets: ['medium_group', 'large_group'],
+    },
+    hybrid: {
+      description: 'Combines multiple rating approaches for optimal pricing',
+      适用条件: 'Complex groups requiring customized solutions',
+      baseAdjustmentFactor: 1.05,
+      riskAdjustmentWeight: 0.6,
+      trendApplication: 'blended',
+      allowedMarkets: ['large_group', 'self_funded'],
+    },
     community_rated: {
       description: 'All members pay same rate regardless of individual claims experience',
       适用条件: 'Small groups or regulated markets with community rating requirements',
@@ -600,7 +634,7 @@ export const defaultActuarialConfig: ActuarialConfig = {
           parameters: {
             medicalInflationShock: 0.10,
             utilizationShock: 0.05,
-            technologyImpact: 0.08,
+            catastrophicEvent: 0.08,
           },
         },
       ],
@@ -641,8 +675,8 @@ export class ActuarialConfigManager {
     const errors: string[] = [];
 
     // Validate ACA compliance
-    if (this.config.regulatory.acCompliance.minimumLossRatio < 0.80 ||
-        this.config.regulatory.acCompliance.minimumLossRatio > 0.90) {
+    if (this.config.regulatory.acaCompliance.minimumLossRatio < 0.80 ||
+        this.config.regulatory.acaCompliance.minimumLossRatio > 0.90) {
       errors.push('ACA minimum loss ratio must be between 80% and 90%');
     }
 

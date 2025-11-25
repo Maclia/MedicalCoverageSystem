@@ -1,5 +1,5 @@
 import { db } from '../server/db';
-import * as schema from '../shared/schema';
+import * as schema from ''../shared/schema'.js';
 import { faker } from '@faker-js/faker';
 
 async function seedMedicalProcedures() {

@@ -4,7 +4,7 @@
  */
 
 import { IStorage } from '../../../storage';
-import * as schema from '@shared/schema';
+import * as schema from '../../shared/schema.js';
 import { getActivePeriod, countMembersByType, getLatestPremium } from '../../../utils/dbOperations';
 import { getCurrentRiskAssessment } from '../../../src/services/riskAssessmentService';
 

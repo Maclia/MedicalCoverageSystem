@@ -4,7 +4,7 @@
  */
 
 import { IStorage } from '../storage';
-import * as schema from '@shared/schema';
+import * as schema from '../../shared/schema.js';
 
 // Premium optimization interfaces
 export interface PremiumOptimizationInput {
@@ -883,7 +883,7 @@ export async function optimizePremiumStructure(
     };
   } catch (error) {
     console.error('Premium optimization failed:', error);
-    throw new Error(`Premium optimization failed: ${error.message}`);
+    throw new Error(`Premium optimization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

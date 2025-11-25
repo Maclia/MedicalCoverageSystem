@@ -4,7 +4,7 @@
  */
 
 import { IStorage } from '../../../storage';
-import * as schema from '@shared/schema';
+import * as schema from '../../shared/schema.js';
 
 // Premium optimization interfaces
 export interface PremiumOptimizationInput {

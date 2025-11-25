@@ -9,7 +9,7 @@ import {
   MedicalInstitution,
   PremiumPayment,
   Claim
-} from '@shared/schema';
+} from '../../shared/schema.js';
 
 export interface EligibilityCheckRequest {
   memberId: number;

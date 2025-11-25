@@ -16,7 +16,7 @@ import {
   InsertClaimAuditTrail,
   BenefitUtilization,
   InsertBenefitUtilization
-} from '@shared/schema';
+} from '../../shared/schema.js';
 
 // Result interfaces for claims processing
 export interface AdjudicationResult {

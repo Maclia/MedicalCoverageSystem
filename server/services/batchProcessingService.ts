@@ -1,6 +1,6 @@
 import { storage } from '../storage';
 import { claimsProcessingWorkflow } from './claimsProcessingWorkflow';
-import { Claim } from '@shared/schema';
+import { Claim } from '../../shared/schema.js';
 
 export interface BatchJob {
   batchId: string;

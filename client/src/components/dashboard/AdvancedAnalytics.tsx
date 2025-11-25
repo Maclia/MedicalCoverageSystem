@@ -405,10 +405,10 @@ export default function AdvancedAnalytics() {
                           <div className="text-right">
                             <span className="text-lg font-bold">{category.rate}%</span>
                             <Badge className={
-                              category.trend === 'up' ? 'bg-green-100 text-green-800' :
-                              category.trend === 'down' ? 'bg-red-100 text-red-800' :
-                              'bg-gray-100 text-gray-800'
-                            } className="ml-2">
+                              (category.trend === 'up' ? 'bg-green-100 text-green-800' :
+                               category.trend === 'down' ? 'bg-red-100 text-red-800' :
+                               'bg-gray-100 text-gray-800') + ' ml-2'
+                            }>
                               {category.trend === 'up' ? '↑' :
                                category.trend === 'down' ? '↓' : '→'}
                             </Badge>

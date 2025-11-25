@@ -3,7 +3,7 @@
  * Enhanced with risk-adjusted pricing and actuarial models while maintaining backward compatibility
  */
 import { IStorage } from '../storage';
-import * as schema from '@shared/schema';
+import * as schema from '../../shared/schema.js';
 import { getActivePeriod, countMembersByType, getLatestPremium } from './dbOperations';
 import {
   calculateRiskAdjustedPremium,

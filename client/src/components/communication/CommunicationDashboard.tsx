@@ -10,11 +10,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
-  Message,
+  MessageSquare,
   Mail,
   Bell,
   Megaphone,
-  ChatBubble,
   Send,
   Reply,
   Search,
@@ -29,6 +28,7 @@ import {
   Download,
   Settings,
   Archive,
+  RefreshCw,
   Star,
   Calendar,
   FileText,
@@ -119,9 +119,9 @@ export const CommunicationDashboard: React.FC<CommunicationDashboardProps> = ({
       case 'email': return <Mail className="h-5 w-5" />;
       case 'sms': return <Phone className="h-5 w-5" />;
       case 'push': return <Bell className="h-5 w-5" />;
-      case 'chat': return <ChatBubble className="h-5 w-5" />;
-      case 'message': return <Message className="h-5 w-5" />;
-      default: return <Message className="h-5 w-5" />;
+      case 'chat': return <MessageSquare className="h-5 w-5" />;
+      case 'message': return <MessageSquare className="h-5 w-5" />;
+      default: return <MessageSquare className="h-5 w-5" />;
     }
   };
 
@@ -234,7 +234,7 @@ export const CommunicationDashboard: React.FC<CommunicationDashboardProps> = ({
                 <p className="text-3xl font-bold">{dashboard.summary.totalCommunications}</p>
                 <p className="text-sm text-gray-500">All time</p>
               </div>
-              <Message className="h-8 w-8 text-blue-500" />
+              <MessageSquare className="h-8 w-8 text-blue-500" />
             </div>
           </CardContent>
         </Card>
@@ -327,7 +327,7 @@ export const CommunicationDashboard: React.FC<CommunicationDashboardProps> = ({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <Message className="h-5 w-5" />
+                  <MessageSquare className="h-5 w-5" />
                   <span>Recent Communications</span>
                 </CardTitle>
                 <CardDescription>
@@ -366,7 +366,7 @@ export const CommunicationDashboard: React.FC<CommunicationDashboardProps> = ({
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
-                  <ChatBubble className="h-5 w-5" />
+                  <MessageSquare className="h-5 w-5" />
                   <span>Active Conversations</span>
                 </CardTitle>
                 <CardDescription>

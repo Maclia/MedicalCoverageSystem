@@ -1,5 +1,5 @@
-import { Router, Request, Response } from 'express';
-import { authenticateToken, requireAdmin } from '../../middleware/auth';
+import { Router, Response } from 'express';
+import { authenticate, requireRole, AuthenticatedRequest } from '../../middleware/auth';
 import {
   getWellnessIntegrations,
   connectDevice,
@@ -24,7 +24,7 @@ import {
 const router = Router();
 
 // Get all wellness integrations for the current user
-router.get('/integrations', authenticateToken, async (req: Request, res: Response) => {
+router.get('/integrations', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const integrations = await getWellnessIntegrations(userId);
@@ -36,7 +36,7 @@ router.get('/integrations', authenticateToken, async (req: Request, res: Respons
 });
 
 // Initiate device connection
-router.post('/integrations/connect', authenticateToken, async (req: Request, res: Response) => {
+router.post('/integrations/connect', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { provider, permissions, settings } = req.body;
@@ -59,7 +59,7 @@ router.post('/integrations/connect', authenticateToken, async (req: Request, res
 });
 
 // Complete device connection (OAuth callback handler)
-router.post('/integrations/callback/:provider', authenticateToken, async (req: Request, res: Response) => {
+router.post('/integrations/callback/:provider', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { provider } = req.params;
@@ -78,7 +78,7 @@ router.post('/integrations/callback/:provider', authenticateToken, async (req: R
 });
 
 // Disconnect device
-router.post('/integrations/:integrationId/disconnect', authenticateToken, async (req: Request, res: Response) => {
+router.post('/integrations/:integrationId/disconnect', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { integrationId } = req.params;
@@ -92,7 +92,7 @@ router.post('/integrations/:integrationId/disconnect', authenticateToken, async 
 });
 
 // Revoke device access
-router.post('/integrations/:integrationId/revoke', authenticateToken, async (req: Request, res: Response) => {
+router.post('/integrations/:integrationId/revoke', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { integrationId } = req.params;
@@ -106,7 +106,7 @@ router.post('/integrations/:integrationId/revoke', authenticateToken, async (req
 });
 
 // Refresh device token
-router.post('/integrations/:integrationId/refresh', authenticateToken, async (req: Request, res: Response) => {
+router.post('/integrations/:integrationId/refresh', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { integrationId } = req.params;
@@ -120,7 +120,7 @@ router.post('/integrations/:integrationId/refresh', authenticateToken, async (re
 });
 
 // Sync device data
-router.post('/integrations/:integrationId/sync', authenticateToken, async (req: Request, res: Response) => {
+router.post('/integrations/:integrationId/sync', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { integrationId } = req.params;
@@ -135,7 +135,7 @@ router.post('/integrations/:integrationId/sync', authenticateToken, async (req: 
 });
 
 // Get health data
-router.get('/health-data', authenticateToken, async (req: Request, res: Response) => {
+router.get('/health-data', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const {
@@ -164,7 +164,7 @@ router.get('/health-data', authenticateToken, async (req: Request, res: Response
 });
 
 // Get health metrics dashboard
-router.get('/health-metrics', authenticateToken, async (req: Request, res: Response) => {
+router.get('/health-metrics', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { period = '30d' } = req.query;
@@ -178,7 +178,7 @@ router.get('/health-metrics', authenticateToken, async (req: Request, res: Respo
 });
 
 // Add manual health data
-router.post('/health-data/manual', authenticateToken, async (req: Request, res: Response) => {
+router.post('/health-data/manual', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const healthData = req.body;
@@ -192,7 +192,7 @@ router.post('/health-data/manual', authenticateToken, async (req: Request, res: 
 });
 
 // Update health goals
-router.put('/health-goals', authenticateToken, async (req: Request, res: Response) => {
+router.put('/health-goals', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { goals } = req.body;
@@ -206,7 +206,7 @@ router.put('/health-goals', authenticateToken, async (req: Request, res: Respons
 });
 
 // Get wellness incentives
-router.get('/incentives', authenticateToken, async (req: Request, res: Response) => {
+router.get('/incentives', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { category, status, limit = 50 } = req.query;
@@ -225,7 +225,7 @@ router.get('/incentives', authenticateToken, async (req: Request, res: Response)
 });
 
 // Get wellness rewards
-router.get('/rewards', authenticateToken, async (req: Request, res: Response) => {
+router.get('/rewards', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { category, available, limit = 50 } = req.query;
@@ -244,7 +244,7 @@ router.get('/rewards', authenticateToken, async (req: Request, res: Response) =>
 });
 
 // Claim wellness reward
-router.post('/rewards/:rewardId/claim', authenticateToken, async (req: Request, res: Response) => {
+router.post('/rewards/:rewardId/claim', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { rewardId } = req.params;
@@ -258,7 +258,7 @@ router.post('/rewards/:rewardId/claim', authenticateToken, async (req: Request, 
 });
 
 // Get wellness coaches
-router.get('/coaches', authenticateToken, async (req: Request, res: Response) => {
+router.get('/coaches', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const {
       specialty,
@@ -286,7 +286,7 @@ router.get('/coaches', authenticateToken, async (req: Request, res: Response) =>
 });
 
 // Get available coaching slots
-router.get('/coaches/:coachId/slots', authenticateToken, async (req: Request, res: Response) => {
+router.get('/coaches/:coachId/slots', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { coachId } = req.params;
     const { dateFrom, dateTo } = req.query;
@@ -300,7 +300,7 @@ router.get('/coaches/:coachId/slots', authenticateToken, async (req: Request, re
 });
 
 // Book coaching session
-router.post('/coaching-sessions', authenticateToken, async (req: Request, res: Response) => {
+router.post('/coaching-sessions', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { coachId, slotId, type, notes } = req.body;
@@ -314,7 +314,7 @@ router.post('/coaching-sessions', authenticateToken, async (req: Request, res: R
 });
 
 // Get coaching sessions
-router.get('/coaching-sessions', authenticateToken, async (req: Request, res: Response) => {
+router.get('/coaching-sessions', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { status, limit = 20, offset = 0 } = req.query;
@@ -333,7 +333,7 @@ router.get('/coaching-sessions', authenticateToken, async (req: Request, res: Re
 });
 
 // Get wellness statistics
-router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
+router.get('/stats', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { period = '30d' } = req.query;
@@ -347,7 +347,7 @@ router.get('/stats', authenticateToken, async (req: Request, res: Response) => {
 });
 
 // Admin-only routes
-router.get('/admin/integrations/all', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/integrations/all', authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const integrations = await getWellnessIntegrations('all');
     res.json({ success: true, data: integrations });

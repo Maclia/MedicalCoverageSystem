@@ -3,7 +3,7 @@
  */
 import { db } from '../db';
 import { eq, and, desc } from 'drizzle-orm';
-import * as schema from '@shared/schema';
+import * as schema from '../../shared/schema.js';
 
 /**
  * Get the latest premium for a company and period

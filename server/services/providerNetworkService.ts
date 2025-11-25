@@ -5,7 +5,7 @@ import {
   medicalInstitutions,
   providerProcedureRates,
   medicalProcedures
-} from '../shared/schema';
+} from '../../shared/schema.js';
 
 export class ProviderNetworkService {
   // Network tier assignment and validation

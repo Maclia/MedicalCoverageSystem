@@ -6,7 +6,7 @@ import {
   MedicalInstitution,
   ExplanationOfBenefits,
   InsertExplanationOfBenefits
-} from '@shared/schema';
+} from '../../shared/schema.js';
 
 export interface EOBGenerationRequest {
   claimId: number;

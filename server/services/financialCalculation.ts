@@ -6,7 +6,7 @@ import {
   CompanyBenefit,
   MedicalProcedure,
   ProviderProcedureRate
-} from '@shared/schema';
+} from '../../shared/schema.js';
 
 export interface FinancialCalculationRequest {
   claimId: number;
