@@ -19,6 +19,12 @@ export const pricingMethodologyEnum = pgEnum('pricing_methodology', ['community_
 export const riskAdjustmentTierEnum = pgEnum('risk_adjustment_tier', ['low_risk', 'average_risk', 'moderate_risk', 'high_risk', 'very_high_risk']);
 export const inflationCategoryEnum = pgEnum('inflation_category', ['medical_trend', 'utilization_trend', 'cost_shifting', 'technology_advancement', 'regulatory_impact']);
 
+// Provider Network Management Enums
+export const networkTierEnum = pgEnum('network_tier', ['tier_1', 'tier_2', 'tier_3', 'premium', 'basic', 'standard']);
+export const contractStatusEnum = pgEnum('contract_status', ['draft', 'active', 'expired', 'terminated', 'renewal_pending']);
+export const tariffStatusEnum = pgEnum('tariff_status', ['active', 'inactive', 'pending', 'deprecated']);
+export const reimbursementModelEnum = pgEnum('reimbursement_model', ['fee_for_service', 'capitation', 'drg', 'per_diem', 'package_deal']);
+
 // Companies table
 export const companies = pgTable("companies", {
   id: serial("id").primaryKey(),
@@ -286,6 +292,120 @@ export const medicalInstitutions = pgTable("medical_institutions", {
   validUntil: timestamp("valid_until"),
   website: text("website"),
   description: text("description"),
+  // Enhanced provider network fields
+  networkAssignments: text("network_assignments"), // JSON array of network IDs
+  primaryNetworkId: integer("primary_network_id"),
+  networkTier: networkTierEnum("network_type"),
+  qualityScore: real("quality_score").default(0.0),
+  lastQualityReview: timestamp("last_quality_review"),
+  networkComplianceStatus: text("network_compliance_status").default("pending"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Provider Networks table
+export const providerNetworks = pgTable("provider_networks", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  tier: networkTierEnum("tier").notNull(),
+  description: text("description"),
+  coverageArea: text("coverage_area"), // Geographic coverage description
+  isActive: boolean("is_active").default(true).notNull(),
+  minimumProviders: integer("minimum_providers").default(1),
+  maximumProviders: integer("maximum_providers"),
+  qualityThreshold: real("quality_threshold").default(0.0), // Minimum quality score
+  costControlLevel: integer("cost_control_level").default(1), // 1-5 cost control strictness
+  specialRequirements: text("special_requirements"), // JSON with special network requirements
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Network Assignments table
+export const providerNetworkAssignments = pgTable("provider_network_assignments", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  networkId: integer("network_id").references(() => providerNetworks.id).notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  isActive: boolean("is_active").default(true).notNull(),
+  assignmentType: text("assignment_type").notNull(), // 'full', 'selective', 'emergency_only'
+  coveredSpecializations: text("covered_specializations"), // JSON array of specializations
+  networkDiscount: real("network_discount").default(0.0), // Percentage discount for network
+  specialTerms: text("special_terms"), // Special network terms
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Provider Contracts table
+export const providerContracts = pgTable("provider_contracts", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  contractNumber: text("contract_number").notNull().unique(),
+  contractName: text("contract_name").notNull(),
+  contractType: text("contract_type").notNull(), // 'service', 'facility', 'specialty', 'network'
+  status: contractStatusEnum("status").default("draft").notNull(),
+  reimbursementModel: reimbursementModelEnum("reimbursement_model").notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  autoRenewal: boolean("auto_renewal").default(false),
+  renewalTermMonths: integer("renewal_term_months").default(12),
+  terminationDays: integer("termination_days").default(90),
+  negotiatedDiscount: real("negotiated_discount").default(0.0),
+  capitationRate: real("capitation_rate"), // For capitation contracts
+  packageDealDetails: text("package_deal_details"), // JSON with package deal terms
+  preAuthorizationRequirements: text("pre_authorization_requirements"), // JSON with pre-auth rules
+  qualityMetrics: text("quality_metrics"), // JSON with quality KPI requirements
+  utilizationLimits: text("utilization_limits"), // JSON with utilization constraints
+  complianceRequirements: text("compliance_requirements"), // JSON with compliance rules
+  contractValue: real("contract_value"),
+  billingCycle: text("billing_cycle").default("monthly"), // 'weekly', 'monthly', 'quarterly'
+  paymentTerms: text("payment_terms").default("NET_30"), // Payment terms in days
+  specialTerms: text("special_terms"),
+  internalNotes: text("internal_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Contract Documents table
+export const contractDocuments = pgTable("contract_documents", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").references(() => providerContracts.id).notNull(),
+  documentType: text("document_type").notNull(), // 'master_agreement', 'schedule', 'addendum', 'appendix', 'signature'
+  documentName: text("document_name").notNull(),
+  originalFileName: text("original_file_name").notNull(),
+  storedFilePath: text("stored_file_path").notNull(),
+  fileHash: text("file_hash").notNull(), // SHA-256 hash for integrity
+  fileSize: integer("file_size").notNull(), // in bytes
+  mimeType: text("mime_type").notNull(),
+  version: integer("version").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  uploadDate: timestamp("upload_date").defaultNow().notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id),
+  expiryDate: timestamp("expiry_date"),
+  required: boolean("required").default(false),
+  documentStatus: text("document_status").default("pending"), // 'pending', 'approved', 'rejected'
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedDate: timestamp("approved_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Contract Signatures table
+export const contractSignatures = pgTable("contract_signatures", {
+  id: serial("id").primaryKey(),
+  contractId: integer("contract_id").references(() => providerContracts.id).notNull(),
+  documentId: integer("document_id").references(() => contractDocuments.id).notNull(),
+  signerType: text("signer_type").notNull(), // 'provider', 'insurer', 'witness'
+  signerName: text("signer_name").notNull(),
+  signerTitle: text("signer_title"),
+  signerEmail: text("signer_email").notNull(),
+  signatureDate: timestamp("signature_date").notNull(),
+  signatureMethod: text("signature_method").notNull(), // 'electronic', 'digital', 'wet_ink'
+  signatureData: text("signature_data"), // Base64 encoded signature or digital signature hash
+  ipAddress: text("ip_address"),
+  userAgent: text("user_agent"),
+  geolocation: text("geolocation"), // JSON with lat/lng
+  verificationStatus: text("verification_status").default("pending"), // 'pending', 'verified', 'rejected'
+  verifiedBy: integer("verified_by").references(() => users.id),
+  verifiedDate: timestamp("verified_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -747,8 +867,21 @@ export const medicalProcedures = pgTable("medical_procedures", {
   description: text("description"),
   standardRate: real("standard_rate").notNull(),
   active: boolean("active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  // Enhanced procedure fields
+  icd10Codes: text("icd10_codes"), // JSON array of related ICD-10 codes
+  cptCodes: text("cpt_codes"), // JSON array of CPT codes
+  hcpcsCodes: text("hcpcs_codes"), // JSON array of HCPCS codes
+  descriptionLong: text("description_long"), // Detailed clinical description
+  clinicalNotes: text("clinical_notes"), // Clinical guidelines and notes
+  complexityLevel: integer("complexity_level").default(1), // 1-5 complexity
+  averageDuration: integer("average_duration"), // Average procedure duration in minutes
+  requiresSpecialist: boolean("requires_specialist").default(false),
+  facilityRequirements: text("facility_requirements"), // JSON with facility requirements
+  preAuthRequired: boolean("pre_auth_required").default(false),
+  bundledProcedures: text("bundled_procedures"), // JSON array of bundled procedure IDs
+  subCategory: text("sub_category"),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // Provider-specific procedure rates
@@ -761,6 +894,111 @@ export const providerProcedureRates = pgTable("provider_procedure_rates", {
   expiryDate: timestamp("expiry_date"),
   active: boolean("active").default(true).notNull(),
   notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tariff Catalog Management tables
+
+// Tariff catalogs table
+export const tariffCatalogs = pgTable("tariff_catalogs", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  catalogType: text("catalog_type").notNull(), // 'standard', 'network', 'provider', 'regional'
+  description: text("description"),
+  version: text("version").notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  status: tariffStatusEnum("status").default("active").notNull(),
+  regionId: integer("region_id").references(() => regions.id),
+  networkId: integer("network_id").references(() => providerNetworks.id),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id),
+  currency: text("currency").default("USD").notNull(),
+  baseRateAdjustment: real("base_rate_adjustment").default(1.0),
+  inflationAdjustment: real("inflation_adjustment").default(1.0),
+  specialNotes: text("special_notes"),
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvalDate: timestamp("approval_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tariff items table
+export const tariffItems = pgTable("tariff_items", {
+  id: serial("id").primaryKey(),
+  catalogId: integer("catalog_id").references(() => tariffCatalogs.id).notNull(),
+  procedureId: integer("procedure_id").references(() => medicalProcedures.id).notNull(),
+  unitRate: real("unit_rate").notNull(),
+  negotiatedRate: real("negotiated_rate"),
+  professionalFee: real("professional_fee"),
+  facilityFee: real("facility_fee"),
+  consumablesCost: real("consumables_cost"),
+  anesthesiaFee: real("anesthesia_fee"),
+  minimumCharge: real("minimum_charge"),
+  maximumCharge: real("maximum_charge"),
+  rateBasis: text("rate_basis").notNull(), // 'percentage', 'fixed', 'rrv', 'custom'
+  rateBasisValue: real("rate_basis_value"),
+  complexityMultiplier: real("complexity_multiplier").default(1.0),
+  geographicAdjustment: real("geographic_adjustment").default(1.0),
+  timeAdjustment: real("time_adjustment").default(1.0),
+  isActive: boolean("is_active").default(true).notNull(),
+  validFrom: timestamp("valid_from").notNull(),
+  validTo: timestamp("valid_to"),
+  specialConditions: text("special_conditions"), // JSON with special pricing conditions
+  bundlingRules: text("bundling_rules"), // JSON with bundling rules
+  discountRules: text("discount_rules"), // JSON with discount rules
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Pharmacy price lists table
+export const pharmacyPriceLists = pgTable("pharmacy_price_lists", {
+  id: serial("id").primaryKey(),
+  catalogId: integer("catalog_id").references(() => tariffCatalogs.id).notNull(),
+  drugName: text("drug_name").notNull(),
+  genericName: text("generic_name"),
+  ndcCode: text("ndc_code").notNull(), // National Drug Code
+  atcCode: text("atc_code"), // Anatomical Therapeutic Chemical code
+  dosageForm: text("dosage_form"), // 'tablet', 'capsule', 'injection', etc.
+  strength: text("strength"), // e.g., '500mg', '10mg/ml'
+  packageSize: text("package_size"), // e.g., '30 tablets', '100ml'
+  unitPrice: real("unit_price").notNull(), // Price per unit
+  packagePrice: real("package_price").notNull(), // Price per package
+  genericAvailable: boolean("generic_available").default(false),
+  genericPrice: real("generic_price"),
+  therapeuticClass: text("therapeutic_class"),
+  brandPremium: real("brand_premium").default(0.0),
+  dispensingFee: real("dispensing_fee").default(0.0),
+  isActive: boolean("is_active").default(true).notNull(),
+  validFrom: timestamp("valid_from").notNull(),
+  validTo: timestamp("valid_to"),
+  specialNotes: text("special_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Consumables price lists table
+export const consumablesPriceLists = pgTable("consumables_price_lists", {
+  id: serial("id").primaryKey(),
+  catalogId: integer("catalog_id").references(() => tariffCatalogs.id).notNull(),
+  itemName: text("item_name").notNull(),
+  category: text("category").notNull(), // 'surgical', 'diagnostic', 'pharmaceutical', etc.
+  subCategory: text("sub_category"),
+  manufacturer: text("manufacturer"),
+  modelNumber: text("model_number"),
+  skuCode: text("sku_code"),
+  unitOfMeasure: text("unit_of_measure").notNull(), // 'each', 'box', 'pack', 'bottle'
+  unitPrice: real("unit_price").notNull(),
+  minimumOrderQuantity: integer("minimum_order_quantity").default(1),
+  bulkDiscountThreshold: integer("bulk_discount_threshold"),
+  bulkDiscountRate: real("bulk_discount_rate").default(0.0),
+  expiryDate: timestamp("expiry_date"),
+  storageRequirements: text("storage_requirements"), // JSON with storage conditions
+  qualityStandards: text("quality_standards"), // ISO, CE, FDA certifications
+  isActive: boolean("is_active").default(true).notNull(),
+  validFrom: timestamp("valid_from").notNull(),
+  validTo: timestamp("valid_to"),
+  specialNotes: text("special_notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -1396,4 +1634,435 @@ export type CardVerificationEvent = typeof cardVerificationEvents.$inferSelect;
 export type InsertCardVerificationEvent = z.infer<typeof insertCardVerificationEventSchema>;
 
 export type CardProductionBatch = typeof cardProductionBatches.$inferSelect;
+export type CardProductionBatch = typeof cardProductionBatches.$inferSelect;
 export type InsertCardProductionBatch = z.infer<typeof insertCardProductionBatchSchema>;
+
+// Insert schemas for provider network management tables
+export const insertProviderNetworkSchema = createInsertSchema(providerNetworks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderNetworkAssignmentSchema = createInsertSchema(providerNetworkAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Insert schemas for contract management tables
+export const insertProviderContractSchema = createInsertSchema(providerContracts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertContractDocumentSchema = createInsertSchema(contractDocuments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertContractSignatureSchema = createInsertSchema(contractSignatures).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Insert schemas for tariff catalog tables
+export const insertTariffCatalogSchema = createInsertSchema(tariffCatalogs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTariffItemSchema = createInsertSchema(tariffItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPharmacyPriceListSchema = createInsertSchema(pharmacyPriceLists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertConsumablesPriceListSchema = createInsertSchema(consumablesPriceLists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for provider network management entities
+export type ProviderNetwork = typeof providerNetworks.$inferSelect;
+export type InsertProviderNetwork = z.infer<typeof insertProviderNetworkSchema>;
+
+export type ProviderNetworkAssignment = typeof providerNetworkAssignments.$inferSelect;
+export type InsertProviderNetworkAssignment = z.infer<typeof insertProviderNetworkAssignmentSchema>;
+
+// Types for contract management entities
+export type ProviderContract = typeof providerContracts.$inferSelect;
+export type InsertProviderContract = z.infer<typeof insertProviderContractSchema>;
+
+export type ContractDocument = typeof contractDocuments.$inferSelect;
+export type InsertContractDocument = z.infer<typeof insertContractDocumentSchema>;
+
+export type ContractSignature = typeof contractSignatures.$inferSelect;
+export type InsertContractSignature = z.infer<typeof insertContractSignatureSchema>;
+
+// Types for tariff catalog entities
+export type TariffCatalog = typeof tariffCatalogs.$inferSelect;
+export type InsertTariffCatalog = z.infer<typeof insertTariffCatalogSchema>;
+
+export type TariffItem = typeof tariffItems.$inferSelect;
+export type InsertTariffItem = z.infer<typeof insertTariffItemSchema>;
+
+export type PharmacyPriceList = typeof pharmacyPriceLists.$inferSelect;
+export type InsertPharmacyPriceList = z.infer<typeof insertPharmacyPriceListSchema>;
+
+export type ConsumablesPriceList = typeof consumablesPriceLists.$inferSelect;
+export type InsertConsumablesPriceList = z.infer<typeof insertConsumablesPriceListSchema>;
+
+// Enhanced Provider Management System
+
+// Provider Management Enums
+export const providerVerificationStatusEnum = pgEnum('provider_verification_status', ['pending', 'verified', 'rejected', 'suspended', 'under_review']);
+export const providerOnboardingStatusEnum = pgEnum('provider_onboarding_status', ['registered', 'document_pending', 'verification_in_progress', 'approved', 'rejected', 'active', 'suspended']);
+export const providerPerformanceTierEnum = pgEnum('provider_performance_tier', ['excellent', 'good', 'average', 'below_average', 'poor']);
+export const accreditationStatusEnum = pgEnum('accreditation_status', ['accredited', 'provisional', 'not_accredited', 'expired']);
+export const complianceStatusEnum = pgEnum('compliance_status', ['compliant', 'minor_violations', 'major_violations', 'suspended']);
+
+// Provider Onboarding Applications table
+export const providerOnboardingApplications = pgTable("provider_onboarding_applications", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  applicationNumber: text("application_number").notNull().unique(),
+  applicationType: text("application_type").notNull(), // 'new', 'renewal', 'expansion', 'specialization_add'
+  onboardingStatus: providerOnboardingStatusEnum("onboarding_status").default("registered").notNull(),
+  submissionDate: timestamp("submission_date").defaultNow().notNull(),
+  completionDate: timestamp("completion_date"),
+  reviewDate: timestamp("review_date"),
+  reviewerId: integer("reviewer_id").references(() => users.id),
+  assignedCaseWorker: integer("assigned_case_worker").references(() => users.id),
+  priorityLevel: integer("priority_level").default(3), // 1-5, 1 being highest priority
+  estimatedCompletionDate: timestamp("estimated_completion_date"),
+  actualCompletionDate: timestamp("actual_completion_date"),
+  applicationNotes: text("application_notes"),
+  rejectionReason: text("rejection_reason"),
+  appealStatus: text("appeal_status"), // 'none', 'pending', 'approved', 'rejected'
+  appealDate: timestamp("appeal_date"),
+  appealDecision: text("appeal_decision"),
+  nextFollowUpDate: timestamp("next_follow_up_date"),
+  automatedChecksCompleted: boolean("automated_checks_completed").default(false),
+  manualVerificationRequired: boolean("manual_verification_required").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Verification Checklist table
+export const providerVerificationChecklist = pgTable("provider_verification_checklist", {
+  id: serial("id").primaryKey(),
+  applicationId: integer("application_id").references(() => providerOnboardingApplications.id).notNull(),
+  verificationCategory: text("verification_category").notNull(), // 'licensing', 'accreditation', 'compliance', 'quality', 'financial'
+  checklistItem: text("checklist_item").notNull(),
+  isRequired: boolean("is_required").default(true).notNull(),
+  isCompleted: boolean("is_completed").default(false).notNull(),
+  completionDate: timestamp("completion_date"),
+  completedBy: integer("completed_by").references(() => users.id),
+  supportingDocuments: text("supporting_documents"), // JSON array of document IDs
+  verificationNotes: text("verification_notes"),
+  automaticVerification: boolean("automatic_verification").default(false),
+  externalVerificationRequired: boolean("external_verification_required").default(false),
+  verificationMethod: text("verification_method"), // 'document', 'api_call', 'site_visit', 'third_party'
+  expiryDate: timestamp("expiry_date"),
+  reminderDate: timestamp("reminder_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Accreditation and Certification table
+export const providerAccreditations = pgTable("provider_accreditations", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  accreditationBody: text("accreditation_body").notNull(), // 'JCI', 'COHSASA', 'ISO', 'National Health Dept', etc.
+  accreditationType: text("accreditation_type").notNull(), // 'hospital', 'clinic', 'laboratory', 'radiology', 'pharmacy'
+  accreditationNumber: text("accreditation_number").notNull(),
+  accreditationStatus: accreditationStatusEnum("accreditation_status").default("not_accredited").notNull(),
+  issueDate: timestamp("issue_date"),
+  expiryDate: timestamp("expiry_date"),
+  lastAuditDate: timestamp("last_audit_date"),
+  nextAuditDate: timestamp("next_audit_date"),
+  auditScore: real("audit_score"), // 0-100 score from last audit
+  auditReportPath: text("audit_report_path"), // Path to audit report document
+  complianceStandards: text("compliance_standards"), // JSON array of standards complied with
+  nonComplianceIssues: text("non_compliance_issues"), // JSON array of identified issues
+  correctiveActions: text("corrective_actions"), // JSON array of required corrective actions
+  verificationStatus: providerVerificationStatusEnum("verification_status").default("pending").notNull(),
+  verifiedBy: integer("verified_by").references(() => users.id),
+  verificationDate: timestamp("verification_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Performance Metrics table
+export const providerPerformanceMetrics = pgTable("provider_performance_metrics", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  metricCategory: text("metric_category").notNull(), // 'quality', 'efficiency', 'patient_satisfaction', 'financial', 'compliance'
+  metricName: text("metric_name").notNull(),
+  metricValue: real("metric_value").notNull(),
+  targetValue: real("target_value"),
+  performanceThreshold: real("performance_threshold").notNull(),
+  measurementPeriod: text("measurement_period").notNull(), // 'monthly', 'quarterly', 'annually'
+  measurementDate: timestamp("measurement_date").notNull(),
+  previousValue: real("previous_value"),
+  trendDirection: text("trend_direction"), // 'improving', 'declining', 'stable'
+  performanceTier: providerPerformanceTierEnum("performance_tier").notNull(),
+  benchmarkComparison: real("benchmark_comparison"), // Comparison to industry benchmark
+  dataSource: text("data_source").notNull(), // Source of the metric data
+  collectionMethod: text("collection_method"), // How the data was collected
+  notes: text("notes"),
+  isKPI: boolean("is_kpi").default(false), // Whether this is a Key Performance Indicator
+  weight: real("weight").default(1.0), // Weight in composite calculations
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Compliance Monitoring table
+export const providerComplianceMonitoring = pgTable("provider_compliance_monitoring", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  complianceCategory: text("compliance_category").notNull(), // 'clinical', 'administrative', 'financial', 'safety', 'privacy'
+  complianceStandard: text("compliance_standard").notNull(), // 'HIPAA', 'GDPR', 'Local Health Regulations', etc.
+  complianceStatus: complianceStatusEnum("compliance_status").notNull(),
+  lastAuditDate: timestamp("last_audit_date"),
+  nextAuditDate: timestamp("next_audit_date"),
+  auditScore: real("audit_score"),
+  criticalFindings: text("critical_findings"), // JSON array of critical compliance issues
+  minorFindings: text("minor_findings"), // JSON array of minor compliance issues
+  correctiveActionPlan: text("corrective_action_plan"), // JSON object with action plan details
+  actionPlanDeadline: timestamp("action_plan_deadline"),
+  actionPlanStatus: text("action_plan_status"), // 'not_started', 'in_progress', 'completed', 'overdue'
+  monitoringFrequency: text("monitoring_frequency"), // 'continuous', 'monthly', 'quarterly', 'annually'
+  riskLevel: text("risk_level"), // 'low', 'medium', 'high', 'critical'
+  reportedTo: integer("reported_to").references(() => users.id), // Who was informed of compliance status
+  externalReporting: boolean("external_reporting").default(false), // Whether reported to external authorities
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Quality Scores table
+export const providerQualityScores = pgTable("provider_quality_scores", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  assessmentDate: timestamp("assessment_date").notNull(),
+  overallQualityScore: real("overall_quality_score").notNull(), // 0-100
+  clinicalQualityScore: real("clinical_quality_score"),
+  patientExperienceScore: real("patient_experience_score"),
+  efficiencyScore: real("efficiency_score"),
+  safetyScore: real("safety_score"),
+  accessScore: real("access_score"),
+  scoringMethodology: text("scoring_methodology").notNull(), // Description of how scores were calculated
+  assessmentPeriod: text("assessment_period").notNull(),
+  dataPoints: integer("data_points").notNull(), // Number of data points used in assessment
+  confidenceLevel: real("confidence_level"), // Statistical confidence in the scores
+  peerComparisonPercentile: real("peer_comparison_percentile"), // Percentile rank among peers
+  qualityTier: providerPerformanceTierEnum("quality_tier").notNull(),
+  improvementAreas: text("improvement_areas"), // JSON array of identified improvement areas
+  strengths: text("strengths"), // JSON array of identified strengths
+  externalValidation: boolean("external_validation").default(false), // Whether externally validated
+  validationSource: text("validation_source"),
+  assessedBy: integer("assessed_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Financial Performance table
+export const providerFinancialPerformance = pgTable("provider_financial_performance", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  reportingPeriod: text("reporting_period").notNull(), // 'Q1-2024', 'Monthly-2024-01', etc.
+  totalRevenue: real("total_revenue").notNull(),
+  insuranceRevenue: real("insurance_revenue"),
+  cashRevenue: real("cash_revenue"),
+  totalExpenses: real("total_expenses").notNull(),
+  operatingExpenses: real("operating_expenses"),
+  staffExpenses: real("staff_expenses"),
+  facilityExpenses: real("facility_expenses"),
+  profitMargin: real("profit_margin"),
+  revenueGrowth: real("revenue_growth"), // Percentage growth from previous period
+  costPerClaim: real("cost_per_claim"),
+  averageClaimValue: real("average_claim_value"),
+  denialRate: real("denial_rate"), // Percentage of claims denied
+  collectionRate: real("collection_rate"), // Percentage of billed amounts collected
+  daysInAR: real("days_in_ar"), // Days in accounts receivable
+  financialStability: text("financial_stability"), // 'excellent', 'good', 'fair', 'poor'
+  riskFactors: text("risk_factors"), // JSON array of identified financial risk factors
+  profitabilityTrend: text("profitability_trend"), // 'improving', 'declining', 'stable'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Referral Network table
+export const providerReferralNetwork = pgTable("provider_referral_network", {
+  id: serial("id").primaryKey(),
+  sourceInstitutionId: integer("source_institution_id").references(() => medicalInstitutions.id).notNull(),
+  targetInstitutionId: integer("target_institution_id").references(() => medicalInstitutions.id).notNull(),
+  referralType: text("referral_type").notNull(), // 'specialist', 'diagnostic', 'hospital', 'therapy', 'emergency'
+  referralVolume: integer("referral_volume").default(0),
+  acceptanceRate: real("acceptance_rate"), // Percentage of referrals accepted
+  averageResponseTime: real("average_response_time"), // Average response time in hours
+  qualityScore: real("quality_score"), // Quality rating of referrals
+  costEffectiveness: real("cost_effectiveness"), // Cost-effectiveness score
+  patientSatisfaction: real("patient_satisfaction"), // Patient satisfaction with referrals
+  contractTerms: text("contract_terms"), // JSON with contract terms for referrals
+  isActive: boolean("is_active").default(true).notNull(),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  lastReviewDate: timestamp("last_review_date"),
+  performanceMetrics: text("performance_metrics"), // JSON with detailed performance metrics
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Education and Training table
+export const providerEducationTraining = pgTable("provider_education_training", {
+  id: serial("id").primaryKey(),
+  personnelId: integer("personnel_id").references(() => medicalPersonnel.id).notNull(),
+  educationType: text("education_type").notNull(), // 'degree', 'certification', 'license', 'training', 'continuing_education'
+  institutionName: text("institution_name").notNull(),
+  degree: text("degree"),
+  fieldOfStudy: text("field_of_study"),
+  specialization: text("specialization"),
+  startDate: timestamp("start_date"),
+  completionDate: timestamp("completion_date"),
+  isCurrent: boolean("is_current").default(false),
+  gpaScore: real("gpa_score"),
+  honors: text("honors"),
+  licenseNumber: text("license_number"),
+  licenseIssuingAuthority: text("license_issuing_authority"),
+  licenseIssueDate: timestamp("license_issue_date"),
+  licenseExpiryDate: timestamp("license_expiry_date"),
+  licenseStatus: text("license_status").default("active"),
+  verificationStatus: providerVerificationStatusEnum("verification_status").default("pending").notNull(),
+  verificationDate: timestamp("verification_date"),
+  verifiedBy: integer("verified_by").references(() => users.id),
+  supportingDocuments: text("supporting_documents"), // JSON array of document IDs
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Provider Clinical Expertise table
+export const providerClinicalExpertise = pgTable("provider_clinical_expertise", {
+  id: serial("id").primaryKey(),
+  personnelId: integer("personnel_id").references(() => medicalPersonnel.id).notNull(),
+  clinicalArea: text("clinical_area").notNull(),
+  expertiseLevel: text("expertise_level").notNull(), // 'basic', 'intermediate', 'advanced', 'expert'
+  yearsOfExperience: integer("years_of_experience").notNull(),
+  proceduresPerformed: integer("procedures_performed").default(0),
+  successRate: real("success_rate"),
+  complicationRate: real("complication_rate"),
+  patientSatisfactionScore: real("patient_satisfaction_score"),
+  peerRecognition: text("peer_recognition"), // Awards, recognition, publications
+  researchPublications: integer("research_publications").default(0),
+  clinicalTrials: integer("clinical_trials").default(0),
+  teachingExperience: boolean("teaching_experience").default(false),
+  boardCertifications: text("board_certifications"), // JSON array of board certifications
+  specialTraining: text("special_training"), // JSON array of special training programs
+  proficiencyTests: text("proficiency_tests"), // JSON array of passed proficiency tests
+  lastAssessmentDate: timestamp("last_assessment_date"),
+  nextAssessmentDate: timestamp("next_assessment_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Insert schemas for enhanced provider management tables
+export const insertProviderOnboardingApplicationSchema = createInsertSchema(providerOnboardingApplications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderVerificationChecklistSchema = createInsertSchema(providerVerificationChecklist).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderAccreditationSchema = createInsertSchema(providerAccreditations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderPerformanceMetricSchema = createInsertSchema(providerPerformanceMetrics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderComplianceMonitoringSchema = createInsertSchema(providerComplianceMonitoring).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderQualityScoreSchema = createInsertSchema(providerQualityScores).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderFinancialPerformanceSchema = createInsertSchema(providerFinancialPerformance).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderReferralNetworkSchema = createInsertSchema(providerReferralNetwork).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderEducationTrainingSchema = createInsertSchema(providerEducationTraining).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertProviderClinicalExpertiseSchema = createInsertSchema(providerClinicalExpertise).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Types for enhanced provider management entities
+export type ProviderOnboardingApplication = typeof providerOnboardingApplications.$inferSelect;
+export type InsertProviderOnboardingApplication = z.infer<typeof insertProviderOnboardingApplicationSchema>;
+
+export type ProviderVerificationChecklist = typeof providerVerificationChecklist.$inferSelect;
+export type InsertProviderVerificationChecklist = z.infer<typeof insertProviderVerificationChecklistSchema>;
+
+export type ProviderAccreditation = typeof providerAccreditations.$inferSelect;
+export type InsertProviderAccreditation = z.infer<typeof insertProviderAccreditationSchema>;
+
+export type ProviderPerformanceMetric = typeof providerPerformanceMetrics.$inferSelect;
+export type InsertProviderPerformanceMetric = z.infer<typeof insertProviderPerformanceMetricSchema>;
+
+export type ProviderComplianceMonitoring = typeof providerComplianceMonitoring.$inferSelect;
+export type InsertProviderComplianceMonitoring = z.infer<typeof insertProviderComplianceMonitoringSchema>;
+
+export type ProviderQualityScore = typeof providerQualityScores.$inferSelect;
+export type InsertProviderQualityScore = z.infer<typeof insertProviderQualityScoreSchema>;
+
+export type ProviderFinancialPerformance = typeof providerFinancialPerformance.$inferSelect;
+export type InsertProviderFinancialPerformance = z.infer<typeof insertProviderFinancialPerformanceSchema>;
+
+export type ProviderReferralNetwork = typeof providerReferralNetwork.$inferSelect;
+export type InsertProviderReferralNetwork = z.infer<typeof insertProviderReferralNetworkSchema>;
+
+export type ProviderEducationTraining = typeof providerEducationTraining.$inferSelect;
+export type InsertProviderEducationTraining = z.infer<typeof insertProviderEducationTrainingSchema>;
+
+export type ProviderClinicalExpertise = typeof providerClinicalExpertise.$inferSelect;
+export type InsertProviderClinicalExpertise = z.infer<typeof insertProviderClinicalExpertiseSchema>;

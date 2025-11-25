@@ -4021,6 +4021,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   import cardManagementRoutes from "./routes/cardManagement";
   app.use("/api/cards", cardManagementRoutes);
 
+  // Import and use provider network management routes
+  import providerNetworkRoutes from "./api/provider-networks";
+  app.use("/api/provider-networks", providerNetworkRoutes);
+
+  // Import and use provider contract management routes
+  import providerContractRoutes from "./api/provider-contracts";
+  app.use("/api/provider-contracts", providerContractRoutes);
+
+  // Import and use provider onboarding routes
+  import providerOnboardingRoutes from "./api/provider-onboarding";
+  app.use("/api/provider-onboarding", providerOnboardingRoutes);
+
+  // Import and use provider performance routes
+  import providerPerformanceRoutes from "./api/provider-performance";
+  app.use("/api/provider-performance", providerPerformanceRoutes);
+
   const httpServer = createServer(app);
   return httpServer;
 }
