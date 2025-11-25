@@ -7,7 +7,7 @@ import {
   DiagnosisCode,
   FraudDetectionResult,
   InsertFraudDetectionResult
-} from '@shared/schema';
+} from '../../shared/schema.js';
 
 export interface FraudDetectionRequest {
   claimId: number;

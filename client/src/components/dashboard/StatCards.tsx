@@ -7,6 +7,11 @@ export default function StatCards() {
     queryKey: ['/api/dashboard/stats'],
   });
 
+  const { data: complianceData } = useQuery({
+    queryKey: ['/api/compliance/quick-stats'],
+    enabled: false // Will be enabled when backend endpoint is ready
+  });
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -27,7 +32,7 @@ export default function StatCards() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <StatCard
         title="Total Companies"
         value={data?.totalCompanies || 0}
@@ -38,8 +43,8 @@ export default function StatCards() {
         changeDirection="up"
       />
       <StatCard
-        title="Principal Members"
-        value={data?.principalMembers || 0}
+        title="Active Members"
+        value={data?.activeMembers || 0}
         icon="people"
         iconBgColor="bg-orange-100"
         iconTextColor="text-orange-600"
@@ -47,20 +52,29 @@ export default function StatCards() {
         changeDirection="up"
       />
       <StatCard
-        title="Dependents"
-        value={data?.dependents || 0}
-        icon="family_restroom"
-        iconBgColor="bg-yellow-100"
-        iconTextColor="text-yellow-600"
-        changeValue="5% from last period"
+        title="Consent Coverage"
+        value={`${data?.consentCoverage || 0}%`}
+        icon="verified_user"
+        iconBgColor="bg-green-100"
+        iconTextColor="text-green-600"
+        changeValue="3% from last period"
+        changeDirection="up"
+      />
+      <StatCard
+        title="Documents Processed"
+        value={data?.documentsProcessed || 0}
+        icon="description"
+        iconBgColor="bg-purple-100"
+        iconTextColor="text-purple-600"
+        changeValue="22% from last period"
         changeDirection="up"
       />
       <StatCard
         title="Active Premiums"
         value={formatCurrency(data?.activePremiums || 0)}
         icon="payments"
-        iconBgColor="bg-green-100"
-        iconTextColor="text-green-600"
+        iconBgColor="bg-emerald-100"
+        iconTextColor="text-emerald-600"
         changeValue="15% from last period"
         changeDirection="up"
       />

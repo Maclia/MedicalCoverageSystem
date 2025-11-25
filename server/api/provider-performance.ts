@@ -10,7 +10,7 @@ import {
   insertProviderQualityScoreSchema,
   insertProviderFinancialPerformanceSchema,
   providerPerformanceTierEnum
-} from '../shared/schema';
+} from '../../shared/schema.js';
 import { providerPerformanceService } from '../services/providerPerformanceService';
 
 const router = Router();

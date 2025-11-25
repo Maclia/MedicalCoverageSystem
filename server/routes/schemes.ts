@@ -34,7 +34,7 @@ import {
   MemberRiderSelection,
   BenefitRule,
   RuleExecutionLog
-} from "@shared/schema";
+} from "../../shared/schema.js";
 
 export function registerSchemesRoutes(app: Express): void {
   // Middleware to handle zod validation errors

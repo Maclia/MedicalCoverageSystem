@@ -4,7 +4,7 @@
  */
 
 import { IStorage } from '../storage';
-import * as schema from '@shared/schema';
+import * as schema from '../../shared/schema.js';
 
 export interface ProviderSchemeIntegration {
   schemeId: number;

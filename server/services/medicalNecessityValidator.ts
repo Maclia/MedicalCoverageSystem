@@ -6,7 +6,7 @@ import {
   MedicalProcedure,
   MedicalNecessityValidation,
   InsertMedicalNecessityValidation
-} from '@shared/schema';
+} from '../../shared/schema.js';
 
 export interface MedicalNecessityRequest {
   claimId: number;

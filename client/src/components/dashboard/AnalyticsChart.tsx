@@ -16,6 +16,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import TrendingUpIcon from "@mui/icons-material/TrendingUp";
+import TrendingDownIcon from "@mui/icons-material/TrendingDown";
+import TrendingFlatIcon from "@mui/icons-material/TrendingFlat";
+import InsightsIcon from "@mui/icons-material/Insights";
 
 interface AnalyticsChartProps {
   title: string;
@@ -116,8 +120,12 @@ export default function AnalyticsChart({
           <polyline
             points={data.map((point, i) => {
               const x = (i / (data.length - 1)) * 380 + 10;
-              const y = 180 - ((point.value - Math.min(...data.map(d => d.value))) /
-                           (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160;
+              const dataValues = data.map(d => d.value);
+              const minValue = Math.min(...dataValues);
+              const maxValue = Math.max(...dataValues);
+              const range = maxValue - minValue || 1;
+              const normalizedValue = (point.value - minValue) / range;
+              const y = 180 - (normalizedValue * 160);
               return `${x},${y}`;
             }).join(' ')}
             fill="none"
@@ -129,8 +137,12 @@ export default function AnalyticsChart({
         {/* Data points */}
         {data.map((point, i) => {
           const x = (i / (data.length - 1)) * 380 + 10;
-          const y = 180 - ((point.value - Math.min(...data.map(d => d.value))) /
-                       (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160;
+          const dataValues = data.map(d => d.value);
+          const minValue = Math.min(...dataValues);
+          const maxValue = Math.max(...dataValues);
+          const range = maxValue - minValue || 1;
+          const normalizedValue = (point.value - minValue) / range;
+          const y = 180 - (normalizedValue * 160);
           return (
             <circle
               key={i}
@@ -146,27 +158,41 @@ export default function AnalyticsChart({
         {/* Projection line */}
         {showProjections && data[data.length - 1]?.projected && (
           <>
-            <line
-              x1={(data.length - 1) / (data.length - 1) * 380 + 10}
-              y1={180 - ((data[data.length - 1].value - Math.min(...data.map(d => d.value))) /
-                          (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160}
-              x2="390"
-              y2={180 - ((data[data.length - 1].projected! - Math.min(...data.map(d => d.value))) /
-                           (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160}
-              stroke={color}
-              strokeWidth="2"
-              strokeDasharray="5,5"
-              opacity="0.7"
-            />
-            <circle
-              cx="390"
-              cy={180 - ((data[data.length - 1].projected! - Math.min(...data.map(d => d.value)))) / (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value)))) * 160}
-              r="4"
-              fill="none"
-              stroke={color}
-              strokeWidth="2"
-              strokeDasharray="5,5"
-            />
+            {(() => {
+              const dataValues = data.map(d => d.value);
+              const minValue = Math.min(...dataValues);
+              const maxValue = Math.max(...dataValues);
+              const range = maxValue - minValue || 1;
+              const lastValue = data[data.length - 1].value;
+              const projectedValue = data[data.length - 1].projected!;
+              const lastX = (data.length - 1) / (data.length - 1) * 380 + 10;
+              const lastY = 180 - (((lastValue - minValue) / range) * 160);
+              const projectedY = 180 - (((projectedValue - minValue) / range) * 160);
+
+              return (
+                <>
+                  <line
+                    x1={lastX}
+                    y1={lastY}
+                    x2="390"
+                    y2={projectedY}
+                    stroke={color}
+                    strokeWidth="2"
+                    strokeDasharray="5,5"
+                    opacity="0.7"
+                  />
+                  <circle
+                    cx="390"
+                    cy={projectedY}
+                    r="4"
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="2"
+                    strokeDasharray="5,5"
+                  />
+                </>
+              );
+            })()}
           </>
         )}
       </svg>
@@ -176,25 +202,32 @@ export default function AnalyticsChart({
   const renderBarChart = (data: DataPoint[]) => (
     <div className="relative h-64 w-full">
       <svg className="w-full h-full" viewBox="0 0 400 200" preserveAspectRatio="none">
-        {data.map((point, i) => {
-          const barWidth = 300 / data.length - 10;
-          const x = (i / data.length) * 380 + 20;
-          const height = ((point.value - Math.min(...data.map(d => d.value))) /
-                       (Math.max(...data.map(d => d.value)) - Math.min(...data.map(d => d.value))))) * 160;
-          const y = 180 - height;
+        {(() => {
+          const dataValues = data.map(d => d.value);
+          const minValue = Math.min(...dataValues);
+          const maxValue = Math.max(...dataValues);
+          const range = maxValue - minValue || 1;
 
-          return (
-            <rect
-              key={i}
-              x={x}
-              y={y}
-              width={barWidth}
-              height={height}
-              fill={color}
-              className="hover:opacity-80 cursor-pointer"
-            />
-          );
-        })}
+          return data.map((point, i) => {
+            const barWidth = 300 / data.length - 10;
+            const x = (i / data.length) * 380 + 20;
+            const normalizedValue = (point.value - minValue) / range;
+            const height = normalizedValue * 160;
+            const y = 180 - height;
+
+            return (
+              <rect
+                key={i}
+                x={x}
+                y={y}
+                width={barWidth}
+                height={height}
+                fill={color}
+                className="hover:opacity-80 cursor-pointer"
+              />
+            );
+          });
+        })()}
       </svg>
     </div>
   );
@@ -289,10 +322,9 @@ export default function AnalyticsChart({
                 trendData.trend === 'up' ? 'text-green-600' :
                 trendData.trend === 'down' ? 'text-red-600' : 'text-gray-600'
               }`}>
-                <i className="material-icons mr-1">
-                  {trendData.trend === 'up' ? 'trending_up' :
-                   trendData.trend === 'down' ? 'trending_down' : 'trending_flat'}
-                </i>
+                {trendData.trend === 'up' ? <TrendingUpIcon className="mr-1" /> :
+                 trendData.trend === 'down' ? <TrendingDownIcon className="mr-1" /> :
+                 <TrendingFlatIcon className="mr-1" />}
                 {trendData.trend === 'up' ? '+' :
                  trendData.trend === 'down' ? '-' : ''}
                 {trendData.changePercent.toFixed(1)}%
@@ -351,7 +383,7 @@ export default function AnalyticsChart({
         {showProjections && (
           <div className="mt-4 p-3 bg-purple-50 rounded">
             <div className="flex items-center text-sm text-purple-800">
-              <i className="material-icons mr-2 text-purple-600">insights</i>
+              <InsightsIcon className="mr-2 text-purple-600" />
               <div>
                 <p className="font-medium">AI-Powered Projections</p>
                 <p className="text-xs mt-1">

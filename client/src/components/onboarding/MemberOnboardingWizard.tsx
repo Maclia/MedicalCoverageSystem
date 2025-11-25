@@ -29,11 +29,22 @@ interface MemberFormData {
   phone: string;
   dateOfBirth: string;
   employeeId: string;
+  companyId: number;
+
+  // Enhanced Personal Information
+  gender?: 'male' | 'female' | 'other';
+  maritalStatus?: 'single' | 'married' | 'divorced' | 'widowed';
+  nationalId?: string;
+  passportNumber?: string;
+  address?: string;
+  city?: string;
+  postalCode?: string;
+  country: string;
 
   // Dependent Information
   memberType: 'principal' | 'dependent';
   principalId?: number;
-  dependentType?: 'spouse' | 'child';
+  dependentType?: 'spouse' | 'child' | 'parent' | 'guardian';
   hasDisability: boolean;
   disabilityDetails?: string;
 
@@ -52,10 +63,13 @@ interface MemberFormData {
   // Document Upload
   documents: File[];
 
-  // Terms and Consent
+  // Enhanced Consent Management
   acceptedTerms: boolean;
   consentToMarketing: boolean;
   dataSharingConsent: boolean;
+  consentToProviders: boolean;
+  consentToPartners: boolean;
+  consentToWellnessPrograms: boolean;
 }
 
 export default function MemberOnboardingWizard({ companyId }: { companyId?: number }) {
@@ -68,6 +82,16 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
     phone: '',
     dateOfBirth: '',
     employeeId: '',
+    companyId: companyId || 0,
+    // Enhanced fields with defaults
+    gender: undefined,
+    maritalStatus: undefined,
+    nationalId: '',
+    passportNumber: '',
+    address: '',
+    city: '',
+    postalCode: '',
+    country: 'Kenya',
     memberType: 'principal',
     hasDisability: false,
     riskFactors: [],
@@ -78,10 +102,13 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
     documents: [],
     acceptedTerms: false,
     consentToMarketing: false,
-    dataSharingConsent: false
+    dataSharingConsent: false,
+    consentToProviders: false,
+    consentToPartners: false,
+    consentToWellnessPrograms: false
   });
 
-  const onboardingSteps: OnboardingStep[] = [
+  const [onboardingSteps, setOnboardingSteps] = useState<OnboardingStep[]>([
     {
       id: 'basic-info',
       title: 'Basic Information',
@@ -138,7 +165,7 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
       completed: false,
       icon: 'fact_check'
     }
-  ];
+  ]);
 
   // Risk assessment query
   const { data: riskFactors } = useQuery({
@@ -171,33 +198,47 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
     }
   });
 
-  // Create member mutation
+  // Create member mutation using enhanced enrollment endpoint
   const createMemberMutation = useMutation({
     mutationFn: async (memberData: MemberFormData) => {
-      const response = await fetch('/api/members/onboard', {
+      // Transform the data to match the enhanced schema format
+      const transformedData = {
+        ...memberData,
+        // Map consent fields to proper consent format
+        consents: [
+          { consentType: 'data_processing', consentGiven: memberData.dataSharingConsent },
+          { consentType: 'marketing_communications', consentGiven: memberData.consentToMarketing },
+          { consentType: 'data_sharing_providers', consentGiven: memberData.consentToProviders },
+          { consentType: 'data_sharing_partners', consentGiven: memberData.consentToPartners },
+          { consentType: 'wellness_programs', consentGiven: memberData.consentToWellnessPrograms }
+        ]
+      };
+
+      const response = await fetch('/api/members/enroll', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(memberData)
+        body: JSON.stringify(transformedData)
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create member');
+        throw new Error(errorData.error || 'Failed to enroll member');
       }
 
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/members'] });
+      localStorage.removeItem('onboarding-progress'); // Clear saved progress
       toast({
         title: "Success",
-        description: "Member has been successfully onboarded.",
+        description: "Member has been successfully enrolled with enhanced information.",
       });
     },
     onError: (error) => {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to onboard member",
+        description: error instanceof Error ? error.message : "Failed to enroll member",
         variant: "destructive",
       });
     }
@@ -328,93 +369,218 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
     switch (onboardingSteps[currentStep].id) {
       case 'basic-info':
         return (
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <Label htmlFor="firstName">First Name *</Label>
-                <Input
-                  id="firstName"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
-                  placeholder="Enter first name"
-                  required
-                />
+          <div className="space-y-8">
+            {/* Personal Information Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Personal Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <Label htmlFor="firstName">First Name *</Label>
+                  <Input
+                    id="firstName"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                    placeholder="Enter first name"
+                    required
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="lastName">Last Name *</Label>
+                  <Input
+                    id="lastName"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                    placeholder="Enter last name"
+                    required
+                  />
+                </div>
               </div>
-              <div className="space-y-4">
-                <Label htmlFor="lastName">Last Name *</Label>
-                <Input
-                  id="lastName"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
-                  placeholder="Enter last name"
-                  required
-                />
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                <div className="space-y-4">
+                  <Label htmlFor="gender">Gender</Label>
+                  <Select
+                    value={formData.gender}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value as 'male' | 'female' | 'other' }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select gender" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="maritalStatus">Marital Status</Label>
+                  <Select
+                    value={formData.maritalStatus}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, maritalStatus: value as 'single' | 'married' | 'divorced' | 'widowed' }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single</SelectItem>
+                      <SelectItem value="married">Married</SelectItem>
+                      <SelectItem value="divorced">Divorced</SelectItem>
+                      <SelectItem value="widowed">Widowed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="dateOfBirth">Date of Birth *</Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
+                    max={new Date().toISOString().split('T')[0]}
+                    required
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <Label htmlFor="email">Email Address *</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                  placeholder="Enter email address"
-                  required
-                />
-              </div>
-              <div className="space-y-4">
-                <Label htmlFor="phone">Phone Number *</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={formData.phone}
-                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                  placeholder="Enter phone number"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <Label htmlFor="dateOfBirth">Date of Birth *</Label>
-                <Input
-                  id="dateOfBirth"
-                  type="date"
-                  value={formData.dateOfBirth}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))}
-                  max={new Date().toISOString().split('T')[0]}
-                  required
-                />
-              </div>
-              <div className="space-y-4">
-                <Label htmlFor="employeeId">Employee ID *</Label>
-                <Input
-                  id="employeeId"
-                  value={formData.employeeId}
-                  onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
-                  placeholder="Enter employee ID"
-                  required
-                />
+            {/* Contact Information Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <Label htmlFor="email">Email Address *</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="Enter email address"
+                    required
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="phone">Phone Number *</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="Enter phone number"
+                    required
+                  />
+                </div>
               </div>
             </div>
 
-            <div className="space-y-4">
-              <Label>Member Type</Label>
-              <Select
-                value={formData.memberType}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, memberType: value as 'principal' | 'dependent' }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="principal">Principal Member</SelectItem>
-                  <SelectItem value="dependent">Dependent</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Address Information Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Address Information</h3>
+              <div className="space-y-4">
+                <Label htmlFor="address">Physical Address</Label>
+                <Textarea
+                  id="address"
+                  value={formData.address}
+                  onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                  placeholder="Enter physical address"
+                  rows={2}
+                />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+                <div className="space-y-4">
+                  <Label htmlFor="city">City</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                    placeholder="Enter city"
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="postalCode">Postal Code</Label>
+                  <Input
+                    id="postalCode"
+                    value={formData.postalCode}
+                    onChange={(e) => setFormData(prev => ({ ...prev, postalCode: e.target.value }))}
+                    placeholder="Enter postal code"
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="country">Country</Label>
+                  <Select
+                    value={formData.country}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Kenya">Kenya</SelectItem>
+                      <SelectItem value="Uganda">Uganda</SelectItem>
+                      <SelectItem value="Tanzania">Tanzania</SelectItem>
+                      <SelectItem value="Rwanda">Rwanda</SelectItem>
+                      <SelectItem value="Burundi">Burundi</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Identification Information Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Identification Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <Label htmlFor="nationalId">National ID Number</Label>
+                  <Input
+                    id="nationalId"
+                    value={formData.nationalId}
+                    onChange={(e) => setFormData(prev => ({ ...prev, nationalId: e.target.value }))}
+                    placeholder="8-digit National ID"
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Label htmlFor="passportNumber">Passport Number (Optional)</Label>
+                  <Input
+                    id="passportNumber"
+                    value={formData.passportNumber}
+                    onChange={(e) => setFormData(prev => ({ ...prev, passportNumber: e.target.value }))}
+                    placeholder="Enter passport number"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Employment & Member Type Section */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Employment & Membership</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <Label htmlFor="employeeId">Employee ID *</Label>
+                  <Input
+                    id="employeeId"
+                    value={formData.employeeId}
+                    onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
+                    placeholder="Enter employee ID"
+                    required
+                  />
+                </div>
+                <div className="space-y-4">
+                  <Label>Member Type</Label>
+                  <Select
+                    value={formData.memberType}
+                    onValueChange={(value) => setFormData(prev => ({ ...prev, memberType: value as 'principal' | 'dependent' }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="principal">Principal Member</SelectItem>
+                      <SelectItem value="dependent">Dependent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
         );
@@ -445,7 +611,6 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
                   </SelectContent>
                 </Select>
               </div>
-            </div>
             )}
 
             <div className="space-y-4">
@@ -503,7 +668,8 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
                   ))}
                 </div>
               </div>
-            </div>
+            )}
+          </div>
         );
 
       case 'wellness-profile':
@@ -561,7 +727,8 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
                   ))}
                 </div>
               </div>
-            </div>
+            )}
+          </div>
         );
 
       case 'benefits-selection':
@@ -618,7 +785,75 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        );
+
+      case 'document-upload':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Document Upload</h3>
+              <p className="text-gray-600 mb-6">
+                Upload required documents for verification
+              </p>
             </div>
+
+            <div className="space-y-4">
+              <Label>Required Documents</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                <div className="text-4xl mb-4">📁</div>
+                <p className="text-gray-600 mb-2">Drag and drop files here or click to browse</p>
+                <Button variant="outline">Choose Files</Button>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'review-consent':
+        return (
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Review & Consent</h3>
+              <p className="text-gray-600 mb-6">
+                Review your information and provide consent
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="acceptedTerms"
+                    checked={formData.acceptedTerms}
+                    onChange={(e) => setFormData(prev => ({ ...prev, acceptedTerms: e.target.checked }))}
+                  />
+                  <Label htmlFor="acceptedTerms">I accept the terms and conditions</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="dataSharingConsent"
+                    checked={formData.dataSharingConsent}
+                    onChange={(e) => setFormData(prev => ({ ...prev, dataSharingConsent: e.target.checked }))}
+                  />
+                  <Label htmlFor="dataSharingConsent">I consent to data processing</Label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="consentToMarketing"
+                    checked={formData.consentToMarketing}
+                    onChange={(e) => setFormData(prev => ({ ...prev, consentToMarketing: e.target.checked }))}
+                  />
+                  <Label htmlFor="consentToMarketing">I consent to marketing communications</Label>
+                </div>
+              </div>
+            </div>
+          </div>
         );
 
       default:

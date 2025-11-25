@@ -1,7 +1,7 @@
 import { db } from './db';
 import { eq, and, asc, desc, isNull, isNotNull, or, sql } from 'drizzle-orm';
 import type { IStorage } from './storage';
-import * as schema from '@shared/schema';
+import * as schema from '../shared/schema.js';
 import { memberHasClaims } from './utils/dbOperations';
 
 /**

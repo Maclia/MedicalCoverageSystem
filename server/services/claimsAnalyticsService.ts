@@ -1,6 +1,6 @@
 import { storage } from '../storage';
 import { financialCalculationService } from './financialCalculationService';
-import { Claim, ClaimAdjudicationResult, Member, Company, Benefit, ClaimPayment } from '@shared/schema';
+import { Claim, ClaimAdjudicationResult, Member, Company, Benefit, ClaimPayment } from '../../shared/schema.js';
 
 export interface ClaimsAnalyticsMetrics {
   period: {

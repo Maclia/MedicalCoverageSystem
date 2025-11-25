@@ -47,7 +47,7 @@ import {
   Settings,
   Moon,
   Plus,
-  Drop
+  Droplet
 } from 'lucide-react';
 import { wellnessApi } from '@/services/wellnessApi';
 import {
@@ -338,7 +338,7 @@ export const WellnessIntegration: React.FC<WellnessIntegrationProps> = ({ member
       weight: <Target className="h-4 w-4" />,
       exercise: <Timer className="h-4 w-4" />,
       mindfulness: <Brain className="h-4 w-4" />,
-      hydration: <Drop className="h-4 w-4" />,
+      hydration: <Droplet className="h-4 w-4" />,
       stress: <AlertTriangle className="h-4 w-4" />
     };
     return icons[type as keyof typeof icons] || <Activity className="h-4 w-4" />;
@@ -809,7 +809,8 @@ export const WellnessIntegration: React.FC<WellnessIntegrationProps> = ({ member
                             </span>
                           </div>
                         </div>
-                      </CardContent>
+                      </div>
+                    </CardContent>
                   )}
                 </Card>
               );
@@ -1340,10 +1341,9 @@ export const WellnessIntegration: React.FC<WellnessIntegrationProps> = ({ member
 
               {/* Action Button */}
               <Button
-                className="w-full"
+                className={`w-full ${getProviderInfo(selectedIntegration.provider).color}`}
                 onClick={() => handleConnectIntegration(selectedIntegration.id)}
                 disabled={loading}
-                className={getProviderInfo(selectedIntegration.provider).color}
               >
                 {loading ? 'Connecting...' : `Connect ${getProviderInfo(selectedIntegration.provider).name}`}
               </Button>

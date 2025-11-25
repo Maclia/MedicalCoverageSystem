@@ -4,7 +4,7 @@
  */
 
 import { IStorage } from '../storage';
-import * as schema from '@shared/schema';
+import * as schema from '../../shared/schema.js';
 import { getActivePeriod, countMembersByType, getLatestPremium } from './dbOperations';
 import { getCurrentRiskAssessment } from '../src/services/riskAssessmentService';
 
@@ -54,6 +54,26 @@ export interface GeographicData {
   city?: string;
   zipCode?: string;
   costIndex: number; // Regional cost adjustment factor
+}
+
+// Export commonly used types for other modules
+export type PricingMethodology = 'standard' | 'risk-adjusted' | 'hybrid' | 'community_rated' | 'experience_rated' | 'adjusted_community_rated' | 'benefit_rated';
+export type RiskAdjustmentTier = 'low_risk' | 'average_risk' | 'moderate_risk' | 'high_risk' | 'very_high_risk';
+export type InflationCategory = 'hospital' | 'physician' | 'prescription' | 'mentalHealth' | 'preventive' | 'medical_trend' | 'utilization_trend' | 'cost_shifting' | 'technology_advancement' | 'regulatory_impact';
+
+export interface GeographicAdjustment {
+  regionId: string;
+  regionName: string;
+  baseCostIndex: number;
+  medicalCostIndex: number;
+  utilizationIndex: number;
+  competitiveIndex: number;
+  adjustmentFactors: {
+    providerNetworkDensity: number;
+    hospitalMarketShare: number;
+    specialistAvailability: number;
+    technologyAdoption: number;
+  };
 }
 
 export interface HistoricalClaimsData {
@@ -301,7 +321,7 @@ async function calculateBasePremium(
     const premium = await calculatePremium(storage, companyId, periodId);
     return premium.total;
   } catch (error) {
-    throw new Error(`Base premium calculation failed: ${error.message}`);
+    throw new Error(`Base premium calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

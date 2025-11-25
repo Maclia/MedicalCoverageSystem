@@ -1,5 +1,5 @@
-import { Router, Request, Response } from 'express';
-import { authenticateToken, requireRole, requireOwnership } from '../../middleware/auth';
+import { Router, Response } from 'express';
+import { authenticate, requireRole, requireOwnership, AuthenticatedRequest } from '../../middleware/auth';
 import {
   getCommunications,
   getCommunication,
@@ -69,7 +69,7 @@ import {
 const router = Router();
 
 // Communications
-router.get('/communications', authenticateToken, async (req: Request, res: Response) => {
+router.get('/communications', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const memberRole = req.user.role;
@@ -122,7 +122,7 @@ router.get('/communications', authenticateToken, async (req: Request, res: Respo
   }
 });
 
-router.get('/communications/:id', authenticateToken, async (req: Request, res: Response) => {
+router.get('/communications/:id', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const communication = await getCommunication(id);
@@ -133,7 +133,7 @@ router.get('/communications/:id', authenticateToken, async (req: Request, res: R
   }
 });
 
-router.post('/communications', authenticateToken, async (req: Request, res: Response) => {
+router.post('/communications', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const communicationData = {
@@ -149,7 +149,7 @@ router.post('/communications', authenticateToken, async (req: Request, res: Resp
   }
 });
 
-router.put('/communications/:id', authenticateToken, async (req: Request, res: Response) => {
+router.put('/communications/:id', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -161,7 +161,7 @@ router.put('/communications/:id', authenticateToken, async (req: Request, res: R
   }
 });
 
-router.delete('/communications/:id', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/communications/:id', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     await deleteCommunication(id);
@@ -172,7 +172,7 @@ router.delete('/communications/:id', authenticateToken, async (req: Request, res
   }
 });
 
-router.post('/communications/:id/send', authenticateToken, async (req: Request, res: Response) => {
+router.post('/communications/:id/send', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { scheduleAt } = req.body;
@@ -184,7 +184,7 @@ router.post('/communications/:id/send', authenticateToken, async (req: Request, 
   }
 });
 
-router.post('/communications/:id/schedule', authenticateToken, async (req: Request, res: Response) => {
+router.post('/communications/:id/schedule', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { scheduledAt } = req.body;
@@ -197,7 +197,7 @@ router.post('/communications/:id/schedule', authenticateToken, async (req: Reque
 });
 
 // Message Threads
-router.get('/threads', authenticateToken, async (req: Request, res: Response) => {
+router.get('/threads', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { memberId, status, priority, category, limit = 50, offset = 0 } = req.query;
@@ -223,7 +223,7 @@ router.get('/threads', authenticateToken, async (req: Request, res: Response) =>
   }
 });
 
-router.get('/threads/:threadId/messages', authenticateToken, async (req: Request, res: Response) => {
+router.get('/threads/:threadId/messages', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { threadId } = req.params;
     const { limit = 50, offset = 0 } = req.query;
@@ -235,7 +235,7 @@ router.get('/threads/:threadId/messages', authenticateToken, async (req: Request
   }
 });
 
-router.post('/threads', authenticateToken, async (req: Request, res: Response) => {
+router.post('/threads', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const threadData = {
@@ -251,7 +251,7 @@ router.post('/threads', authenticateToken, async (req: Request, res: Response) =
   }
 });
 
-router.post('/threads/:threadId/messages', authenticateToken, async (req: Request, res: Response) => {
+router.post('/threads/:threadId/messages', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { threadId } = req.params;
     const userId = req.user.id;
@@ -268,7 +268,7 @@ router.post('/threads/:threadId/messages', authenticateToken, async (req: Reques
   }
 });
 
-router.put('/threads/:threadId/read', authenticateToken, async (req: Request, res: Response) => {
+router.put('/threads/:threadId/read', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { threadId } = req.params;
     const { messageId, read = true } = req.body;
@@ -282,7 +282,7 @@ router.put('/threads/:threadId/read', authenticateToken, async (req: Request, re
   }
 });
 
-router.get('/unread/count', authenticateToken, async (req: Request, res: Response) => {
+router.get('/unread/count', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const { memberId } = req.query;
@@ -300,7 +300,7 @@ router.get('/unread/count', authenticateToken, async (req: Request, res: Respons
   }
 });
 
-router.post('/threads/:threadId/mark-read', authenticateToken, async (req: Request, res: Response) => {
+router.post('/threads/:threadId/mark-read', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { threadId } = req.params;
     const userId = req.user.id;
@@ -312,7 +312,7 @@ router.post('/threads/:threadId/mark-read', authenticateToken, async (req: Reque
   }
 });
 
-router.post('/threads/:threadId/mark-unread', authenticateToken, async (req: Request, res: Response) => {
+router.post('/threads/:threadId/mark-unread', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { threadId } = req.params;
     const userId = req.user.id;
@@ -324,7 +324,7 @@ router.post('/threads/:threadId/mark-unread', authenticateToken, async (req: Req
   }
 });
 
-router.post('/threads/:threadId/archive', authenticateToken, async (req: Request, res: Response) => {
+router.post('/threads/:threadId/archive', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { threadId } = req.params;
     await archiveThread(threadId);
@@ -336,7 +336,7 @@ router.post('/threads/:threadId/archive', authenticateToken, async (req: Request
 });
 
 // Notification Preferences
-router.get('/notifications/preferences/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/notifications/preferences/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const preferences = await getNotificationPreferences(memberId);
@@ -347,7 +347,7 @@ router.get('/notifications/preferences/:memberId', authenticateToken, async (req
   }
 });
 
-router.put('/notifications/preferences/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.put('/notifications/preferences/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const preferencesData = req.body;
@@ -360,7 +360,7 @@ router.put('/notifications/preferences/:memberId', authenticateToken, async (req
 });
 
 // Templates
-router.get('/templates', authenticateToken, async (req: Request, res: Response) => {
+router.get('/templates', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { category, type, language, isActive, limit = 50, offset = 0 } = req.query;
     const templates = await getTemplates({
@@ -378,7 +378,7 @@ router.get('/templates', authenticateToken, async (req: Request, res: Response) 
   }
 });
 
-router.get('/templates/:id', authenticateToken, async (req: Request, res: Response) => {
+router.get('/templates/:id', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const template = await getTemplate(id);
@@ -389,7 +389,7 @@ router.get('/templates/:id', authenticateToken, async (req: Request, res: Respon
   }
 });
 
-router.post('/templates', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/templates', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const templateData = {
@@ -405,7 +405,7 @@ router.post('/templates', authenticateToken, requireRole(['admin', 'staff']), as
   }
 });
 
-router.put('/templates/:id', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.put('/templates/:id', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -417,7 +417,7 @@ router.put('/templates/:id', authenticateToken, requireRole(['admin', 'staff']),
   }
 });
 
-router.delete('/templates/:id', authenticateToken, requireRole(['admin']), async (req: Request, res: Response) => {
+router.delete('/templates/:id', authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     await deleteTemplate(id);
@@ -428,7 +428,7 @@ router.delete('/templates/:id', authenticateToken, requireRole(['admin']), async
   }
 });
 
-router.post('/templates/:id/preview', authenticateToken, async (req: Request, res: Response) => {
+router.post('/templates/:id/preview', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { variables } = req.body;
@@ -441,7 +441,7 @@ router.post('/templates/:id/preview', authenticateToken, async (req: Request, re
 });
 
 // Campaigns
-router.get('/campaigns', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.get('/campaigns', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { status, type, limit = 50, offset = 0 } = req.query;
     const campaigns = await getCampaigns({
@@ -457,7 +457,7 @@ router.get('/campaigns', authenticateToken, requireRole(['admin', 'staff']), asy
   }
 });
 
-router.get('/campaigns/:id', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.get('/campaigns/:id', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const campaign = await getCampaign(id);
@@ -468,7 +468,7 @@ router.get('/campaigns/:id', authenticateToken, requireRole(['admin', 'staff']),
   }
 });
 
-router.post('/campaigns', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/campaigns', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const campaignData = {
@@ -484,7 +484,7 @@ router.post('/campaigns', authenticateToken, requireRole(['admin', 'staff']), as
   }
 });
 
-router.put('/campaigns/:id', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.put('/campaigns/:id', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -496,7 +496,7 @@ router.put('/campaigns/:id', authenticateToken, requireRole(['admin', 'staff']),
   }
 });
 
-router.delete('/campaigns/:id', authenticateToken, requireRole(['admin']), async (req: Request, res: Response) => {
+router.delete('/campaigns/:id', authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     await deleteCampaign(id);
@@ -507,7 +507,7 @@ router.delete('/campaigns/:id', authenticateToken, requireRole(['admin']), async
   }
 });
 
-router.post('/campaigns/:id/launch', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/campaigns/:id/launch', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const result = await launchCampaign(id);
@@ -518,7 +518,7 @@ router.post('/campaigns/:id/launch', authenticateToken, requireRole(['admin', 's
   }
 });
 
-router.post('/campaigns/:id/pause', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/campaigns/:id/pause', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const result = await pauseCampaign(id);
@@ -529,7 +529,7 @@ router.post('/campaigns/:id/pause', authenticateToken, requireRole(['admin', 'st
   }
 });
 
-router.post('/campaigns/:id/resume', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/campaigns/:id/resume', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const result = await resumeCampaign(id);
@@ -540,7 +540,7 @@ router.post('/campaigns/:id/resume', authenticateToken, requireRole(['admin', 's
   }
 });
 
-router.get('/campaigns/:id/metrics', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.get('/campaigns/:id/metrics', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const metrics = await getCampaignMetrics(id);
@@ -552,7 +552,7 @@ router.get('/campaigns/:id/metrics', authenticateToken, requireRole(['admin', 's
 });
 
 // Chat Sessions
-router.get('/chat/sessions', authenticateToken, async (req: Request, res: Response) => {
+router.get('/chat/sessions', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId, type, status, priority, department, limit = 50, offset = 0 } = req.query;
 
@@ -578,7 +578,7 @@ router.get('/chat/sessions', authenticateToken, async (req: Request, res: Respon
   }
 });
 
-router.get('/chat/sessions/:sessionId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/chat/sessions/:sessionId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
     const session = await getChatSession(sessionId);
@@ -589,7 +589,7 @@ router.get('/chat/sessions/:sessionId', authenticateToken, async (req: Request, 
   }
 });
 
-router.post('/chat/sessions', authenticateToken, async (req: Request, res: Response) => {
+router.post('/chat/sessions', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const sessionData = {
@@ -605,7 +605,7 @@ router.post('/chat/sessions', authenticateToken, async (req: Request, res: Respo
   }
 });
 
-router.post('/chat/sessions/:sessionId/messages', authenticateToken, async (req: Request, res: Response) => {
+router.post('/chat/sessions/:sessionId/messages', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
     const userId = req.user.id;
@@ -622,7 +622,7 @@ router.post('/chat/sessions/:sessionId/messages', authenticateToken, async (req:
   }
 });
 
-router.put('/chat/sessions/:sessionId', authenticateToken, async (req: Request, res: Response) => {
+router.put('/chat/sessions/:sessionId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
     const updateData = req.body;
@@ -634,7 +634,7 @@ router.put('/chat/sessions/:sessionId', authenticateToken, async (req: Request, 
   }
 });
 
-router.post('/chat/sessions/:sessionId/assign', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/chat/sessions/:sessionId/assign', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
     const { assignedTo } = req.body;
@@ -646,7 +646,7 @@ router.post('/chat/sessions/:sessionId/assign', authenticateToken, requireRole([
   }
 });
 
-router.post('/chat/sessions/:sessionId/close', authenticateToken, async (req: Request, res: Response) => {
+router.post('/chat/sessions/:sessionId/close', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
     const { resolution, satisfactionRating } = req.body;
@@ -659,7 +659,7 @@ router.post('/chat/sessions/:sessionId/close', authenticateToken, async (req: Re
 });
 
 // Announcements
-router.get('/announcements', authenticateToken, async (req: Request, res: Response) => {
+router.get('/announcements', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { type, status, visibility, limit = 50, offset = 0 } = req.query;
     const announcements = await getAnnouncements({
@@ -676,7 +676,7 @@ router.get('/announcements', authenticateToken, async (req: Request, res: Respon
   }
 });
 
-router.get('/announcements/:id', authenticateToken, async (req: Request, res: Response) => {
+router.get('/announcements/:id', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const announcement = await getAnnouncement(id);
@@ -687,7 +687,7 @@ router.get('/announcements/:id', authenticateToken, async (req: Request, res: Re
   }
 });
 
-router.post('/announcements', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/announcements', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const announcementData = {
@@ -704,7 +704,7 @@ router.post('/announcements', authenticateToken, requireRole(['admin', 'staff'])
   }
 });
 
-router.put('/announcements/:id', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.put('/announcements/:id', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -716,7 +716,7 @@ router.put('/announcements/:id', authenticateToken, requireRole(['admin', 'staff
   }
 });
 
-router.delete('/announcements/:id', authenticateToken, requireRole(['admin']), async (req: Request, res: Response) => {
+router.delete('/announcements/:id', authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     await deleteAnnouncement(id);
@@ -727,7 +727,7 @@ router.delete('/announcements/:id', authenticateToken, requireRole(['admin']), a
   }
 });
 
-router.post('/announcements/:id/publish', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/announcements/:id/publish', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const result = await publishAnnouncement(id);
@@ -739,7 +739,7 @@ router.post('/announcements/:id/publish', authenticateToken, requireRole(['admin
 });
 
 // Surveys
-router.get('/surveys', authenticateToken, async (req: Request, res: Response) => {
+router.get('/surveys', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { type, status, limit = 50, offset = 0 } = req.query;
     const surveys = await getSurveys({
@@ -755,7 +755,7 @@ router.get('/surveys', authenticateToken, async (req: Request, res: Response) =>
   }
 });
 
-router.get('/surveys/:id', authenticateToken, async (req: Request, res: Response) => {
+router.get('/surveys/:id', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const survey = await getSurvey(id);
@@ -766,7 +766,7 @@ router.get('/surveys/:id', authenticateToken, async (req: Request, res: Response
   }
 });
 
-router.post('/surveys', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/surveys', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const userId = req.user.id;
     const surveyData = {
@@ -782,7 +782,7 @@ router.post('/surveys', authenticateToken, requireRole(['admin', 'staff']), asyn
   }
 });
 
-router.put('/surveys/:id', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.put('/surveys/:id', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -794,7 +794,7 @@ router.put('/surveys/:id', authenticateToken, requireRole(['admin', 'staff']), a
   }
 });
 
-router.delete('/surveys/:id', authenticateToken, requireRole(['admin']), async (req: Request, res: Response) => {
+router.delete('/surveys/:id', authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     await deleteSurvey(id);
@@ -805,7 +805,7 @@ router.delete('/surveys/:id', authenticateToken, requireRole(['admin']), async (
   }
 });
 
-router.post('/surveys/:id/launch', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/surveys/:id/launch', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const result = await launchSurvey(id);
@@ -816,7 +816,7 @@ router.post('/surveys/:id/launch', authenticateToken, requireRole(['admin', 'sta
   }
 });
 
-router.get('/surveys/:id/responses', authenticateToken, async (req: Request, res: Response) => {
+router.get('/surveys/:id/responses', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { limit = 50, offset = 0 } = req.query;
@@ -828,7 +828,7 @@ router.get('/surveys/:id/responses', authenticateToken, async (req: Request, res
   }
 });
 
-router.post('/surveys/:id/responses', authenticateToken, async (req: Request, res: Response) => {
+router.post('/surveys/:id/responses', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const userId = req.user.id;
@@ -846,7 +846,7 @@ router.post('/surveys/:id/responses', authenticateToken, async (req: Request, re
 });
 
 // Dashboard and Analytics
-router.get('/dashboard/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/dashboard/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const userId = req.user.id;
@@ -864,7 +864,7 @@ router.get('/dashboard/:memberId', authenticateToken, async (req: Request, res: 
   }
 });
 
-router.get('/analytics', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.get('/analytics', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { type, period, memberId, limit = 100 } = req.query;
     const analytics = await getCommunicationAnalytics({
@@ -880,7 +880,7 @@ router.get('/analytics', authenticateToken, requireRole(['admin', 'staff']), asy
   }
 });
 
-router.post('/report', authenticateToken, requireRole(['admin', 'staff']), async (req: Request, res: Response) => {
+router.post('/report', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { type, filters, format = 'pdf' } = req.body;
     const report = await generateCommunicationReport(type, filters, format);
@@ -892,7 +892,7 @@ router.post('/report', authenticateToken, requireRole(['admin', 'staff']), async
 });
 
 // Delivery Receipts
-router.get('/delivery-receipts/:communicationId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/delivery-receipts/:communicationId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { communicationId } = req.params;
     const receipts = await getDeliveryReceipts(communicationId);
@@ -903,7 +903,7 @@ router.get('/delivery-receipts/:communicationId', authenticateToken, async (req:
   }
 });
 
-router.post('/delivery-receipts', authenticateToken, async (req: Request, res: Response) => {
+router.post('/delivery-receipts', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const receiptData = req.body;
     const receipt = await updateDeliveryStatus(receiptData);
@@ -915,7 +915,7 @@ router.post('/delivery-receipts', authenticateToken, async (req: Request, res: R
 });
 
 // File Attachments
-router.post('/attachments/upload', authenticateToken, async (req: Request, res: Response) => {
+router.post('/attachments/upload', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     // This would typically be handled by a file upload middleware like multer
     // For now, returning a mock response
@@ -936,7 +936,7 @@ router.post('/attachments/upload', authenticateToken, async (req: Request, res: 
   }
 });
 
-router.get('/attachments/:id/download', authenticateToken, async (req: Request, res: Response) => {
+router.get('/attachments/:id/download', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const attachment = await downloadAttachment(id);
@@ -948,7 +948,7 @@ router.get('/attachments/:id/download', authenticateToken, async (req: Request, 
 });
 
 // Settings
-router.get('/settings', authenticateToken, async (req: Request, res: Response) => {
+router.get('/settings', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const settings = await getCommunicationSettings();
     res.json({ success: true, data: settings });
@@ -958,7 +958,7 @@ router.get('/settings', authenticateToken, async (req: Request, res: Response) =
   }
 });
 
-router.put('/settings', authenticateToken, requireRole(['admin']), async (req: Request, res: Response) => {
+router.put('/settings', authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const settingsData = req.body;
     const settings = await updateCommunicationSettings(settingsData);

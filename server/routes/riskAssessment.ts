@@ -1,5 +1,5 @@
-import { Router, Request, Response } from 'express';
-import { authenticateToken, requireAdmin } from '../../middleware/auth';
+import { Router, Response } from 'express';
+import { authenticate, requireRole, AuthenticatedRequest } from '../../middleware/auth';
 import {
   getCurrentRiskAssessment,
   createRiskAssessment,
@@ -30,7 +30,7 @@ import {
 const router = Router();
 
 // Get current risk assessment for member
-router.get('/assessment/current/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/assessment/current/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const userId = req.user.id;
@@ -45,7 +45,7 @@ router.get('/assessment/current/:memberId', authenticateToken, async (req: Reque
 });
 
 // Create new risk assessment
-router.post('/assessment', authenticateToken, async (req: Request, res: Response) => {
+router.post('/assessment', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId, assessmentData } = req.body;
     const userId = req.user.id;
@@ -59,7 +59,7 @@ router.post('/assessment', authenticateToken, async (req: Request, res: Response
 });
 
 // Update risk assessment
-router.put('/assessment/:assessmentId', authenticateToken, async (req: Request, res: Response) => {
+router.put('/assessment/:assessmentId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { assessmentId } = req.params;
     const updateData = req.body;
@@ -74,7 +74,7 @@ router.put('/assessment/:assessmentId', authenticateToken, async (req: Request, 
 });
 
 // Get risk assessment history
-router.get('/assessment/history/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/assessment/history/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const { limit = 12, offset = 0 } = req.query;
@@ -92,7 +92,7 @@ router.get('/assessment/history/:memberId', authenticateToken, async (req: Reque
 });
 
 // Get risk recommendations
-router.get('/recommendations/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/recommendations/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const { category, priority, status, limit = 20 } = req.query;
@@ -111,7 +111,7 @@ router.get('/recommendations/:memberId', authenticateToken, async (req: Request,
 });
 
 // Update recommendation status
-router.put('/recommendations/:recommendationId/status', authenticateToken, async (req: Request, res: Response) => {
+router.put('/recommendations/:recommendationId/status', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { recommendationId } = req.params;
     const { status, outcome, notes } = req.body;
@@ -126,7 +126,7 @@ router.put('/recommendations/:recommendationId/status', authenticateToken, async
 });
 
 // Get risk alerts
-router.get('/alerts/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/alerts/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const { severity, read, acknowledged, limit = 50 } = req.query;
@@ -145,7 +145,7 @@ router.get('/alerts/:memberId', authenticateToken, async (req: Request, res: Res
 });
 
 // Acknowledge risk alert
-router.post('/alerts/:alertId/acknowledge', authenticateToken, async (req: Request, res: Response) => {
+router.post('/alerts/:alertId/acknowledge', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { alertId } = req.params;
     const { notes } = req.body;
@@ -160,7 +160,7 @@ router.post('/alerts/:alertId/acknowledge', authenticateToken, async (req: Reque
 });
 
 // Get risk predictions
-router.get('/predictions/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/predictions/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const { type, limit = 10 } = req.query;
@@ -177,7 +177,7 @@ router.get('/predictions/:memberId', authenticateToken, async (req: Request, res
 });
 
 // Get risk benchmarks
-router.get('/benchmarks', authenticateToken, async (req: Request, res: Response) => {
+router.get('/benchmarks', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { category, metric, population } = req.query;
 
@@ -194,7 +194,7 @@ router.get('/benchmarks', authenticateToken, async (req: Request, res: Response)
 });
 
 // Get risk action items
-router.get('/action-items/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/action-items/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const { status, priority, type, limit = 20 } = req.query;
@@ -213,7 +213,7 @@ router.get('/action-items/:memberId', authenticateToken, async (req: Request, re
 });
 
 // Update action item status
-router.put('/action-items/:actionItemId/status', authenticateToken, async (req: Request, res: Response) => {
+router.put('/action-items/:actionItemId/status', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { actionItemId } = req.params;
     const { status, outcome, notes } = req.body;
@@ -228,7 +228,7 @@ router.put('/action-items/:actionItemId/status', authenticateToken, async (req: 
 });
 
 // Get comprehensive risk dashboard
-router.get('/dashboard/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/dashboard/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const userId = req.user.id;
@@ -242,7 +242,7 @@ router.get('/dashboard/:memberId', authenticateToken, async (req: Request, res: 
 });
 
 // Generate risk assessment report
-router.get('/report/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/report/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const { format = 'pdf', period = '12m', includeHistory = true } = req.query;
@@ -260,7 +260,7 @@ router.get('/report/:memberId', authenticateToken, async (req: Request, res: Res
 });
 
 // Calculate risk scores (manual trigger)
-router.post('/calculate/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.post('/calculate/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const { categories, forceRecalculate = false } = req.body;
@@ -274,7 +274,7 @@ router.post('/calculate/:memberId', authenticateToken, async (req: Request, res:
 });
 
 // Get risk factors
-router.get('/factors/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/factors/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const { category, riskLevel, limit = 50 } = req.query;
@@ -292,7 +292,7 @@ router.get('/factors/:memberId', authenticateToken, async (req: Request, res: Re
 });
 
 // Add risk factor
-router.post('/factors', authenticateToken, async (req: Request, res: Response) => {
+router.post('/factors', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const factorData = req.body;
     const userId = req.user.id;
@@ -306,7 +306,7 @@ router.post('/factors', authenticateToken, async (req: Request, res: Response) =
 });
 
 // Update risk factor
-router.put('/factors/:factorId', authenticateToken, async (req: Request, res: Response) => {
+router.put('/factors/:factorId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { factorId } = req.params;
     const updateData = req.body;
@@ -321,7 +321,7 @@ router.put('/factors/:factorId', authenticateToken, async (req: Request, res: Re
 });
 
 // Delete risk factor
-router.delete('/factors/:factorId', authenticateToken, async (req: Request, res: Response) => {
+router.delete('/factors/:factorId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { factorId } = req.params;
     const userId = req.user.id;
@@ -335,7 +335,7 @@ router.delete('/factors/:factorId', authenticateToken, async (req: Request, res:
 });
 
 // Get intervention plans
-router.get('/interventions/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/interventions/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const { status, priority, type, limit = 20 } = req.query;
@@ -354,7 +354,7 @@ router.get('/interventions/:memberId', authenticateToken, async (req: Request, r
 });
 
 // Create intervention plan
-router.post('/interventions', authenticateToken, async (req: Request, res: Response) => {
+router.post('/interventions', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const interventionData = req.body;
     const userId = req.user.id;
@@ -368,7 +368,7 @@ router.post('/interventions', authenticateToken, async (req: Request, res: Respo
 });
 
 // Update intervention plan
-router.put('/interventions/:interventionId', authenticateToken, async (req: Request, res: Response) => {
+router.put('/interventions/:interventionId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { interventionId } = req.params;
     const updateData = req.body;
@@ -383,7 +383,7 @@ router.put('/interventions/:interventionId', authenticateToken, async (req: Requ
 });
 
 // Get risk assessment configuration
-router.get('/config/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.get('/config/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
 
@@ -396,7 +396,7 @@ router.get('/config/:memberId', authenticateToken, async (req: Request, res: Res
 });
 
 // Update risk assessment configuration
-router.put('/config/:memberId', authenticateToken, async (req: Request, res: Response) => {
+router.put('/config/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
     const configData = req.body;
@@ -411,7 +411,7 @@ router.put('/config/:memberId', authenticateToken, async (req: Request, res: Res
 });
 
 // Admin-only routes
-router.get('/admin/assessments/all', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/assessments/all', authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Admin route to get all risk assessments
     const { limit = 100, offset = 0, riskLevel } = req.query;
@@ -424,7 +424,7 @@ router.get('/admin/assessments/all', authenticateToken, requireAdmin, async (req
   }
 });
 
-router.get('/admin/benchmarks/update', authenticateToken, requireAdmin, async (req: Request, res: Response) => {
+router.get('/admin/benchmarks/update', authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Admin route to update risk benchmarks
     const benchmarks = await getRiskBenchmarks({});

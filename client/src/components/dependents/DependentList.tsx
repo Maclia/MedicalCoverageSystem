@@ -36,11 +36,13 @@ export default function DependentList() {
   const filteredDependents = dependents.filter(dependent => {
     const principal = principals?.find(p => p.id === dependent.principalId);
     const fullName = `${dependent.firstName} ${dependent.lastName}`;
-    
-    const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesSearch = fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           dependent.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           dependent.nationalId?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesPrincipal = principalFilter === "all" || dependent.principalId.toString() === principalFilter;
     const matchesType = typeFilter === "all" || dependent.dependentType === typeFilter;
-    
+
     return matchesSearch && matchesPrincipal && matchesType;
   });
 
@@ -65,10 +67,11 @@ export default function DependentList() {
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dependent</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Principal</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special Needs</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership Status</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -88,6 +91,12 @@ export default function DependentList() {
                       <Skeleton className="h-4 w-24" />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm">
+                        <Skeleton className="h-3 w-20 mb-1" />
+                        <Skeleton className="h-3 w-24" />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <Skeleton className="h-5 w-16 rounded-full" />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -97,7 +106,7 @@ export default function DependentList() {
                       <Skeleton className="h-4 w-16" />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-5 w-20 rounded-full" />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Skeleton className="h-8 w-28" />
@@ -128,7 +137,7 @@ export default function DependentList() {
                 <i className="material-icons absolute left-3 top-2.5 text-gray-400">search</i>
                 <Input
                   className="pl-10"
-                  placeholder="Search dependents..."
+                  placeholder="Search by name, email, or National ID..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -154,6 +163,8 @@ export default function DependentList() {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="spouse">Spouse</SelectItem>
                   <SelectItem value="child">Child</SelectItem>
+                  <SelectItem value="parent">Parent</SelectItem>
+                  <SelectItem value="guardian">Guardian</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -178,10 +189,11 @@ export default function DependentList() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dependent</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Principal</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contact Info</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Age</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special Needs</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -190,7 +202,7 @@ export default function DependentList() {
                     const principal = principals?.find(p => p.id === dependent.principalId);
                     const birthDate = new Date(dependent.dateOfBirth);
                     const age = differenceInYears(new Date(), birthDate);
-                    
+
                     return (
                       <tr key={dependent.id}>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -201,12 +213,21 @@ export default function DependentList() {
                                 {dependent.firstName} {dependent.lastName}
                               </div>
                               <div className="text-sm text-gray-500">{dependent.email}</div>
+                              <div className="text-xs text-gray-400">
+                                {dependent.gender && `${dependent.gender.charAt(0).toUpperCase() + dependent.gender.slice(1)} • ${dependent.nationalId ? `ID: ${dependent.nationalId}` : 'No ID'}`}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
                             {principal ? `${principal.firstName} ${principal.lastName}` : 'Unknown'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm">
+                            <div className="text-gray-900">{dependent.phone || 'No phone'}</div>
+                            <div className="text-gray-500 text-xs">{dependent.city || 'No city'}</div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -221,7 +242,7 @@ export default function DependentList() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <StatusBadge status="active" />
+                          <StatusBadge status={dependent.membershipStatus || 'pending'} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <Button variant="outline" size="sm" asChild className="mr-2">

@@ -4,7 +4,7 @@
  */
 
 import { IStorage } from '../storage';
-import * as schema from '@shared/schema';
+import * as schema from '../../shared/schema.js';
 
 // Actuarial calculation interfaces
 export interface ActuarialRateInput {
@@ -455,7 +455,7 @@ export async function calculateActuarialRates(
     };
   } catch (error) {
     console.error('Actuarial rate calculation failed:', error);
-    throw new Error(`Actuarial rate calculation failed: ${error.message}`);
+    throw new Error(`Actuarial rate calculation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

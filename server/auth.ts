@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { db } from './db';
-import { users, userSessions, companies, medicalInstitutions, medicalPersonnel } from '../shared/schema';
+import { users, userSessions, companies, medicalInstitutions, medicalPersonnel } from '../shared/schema.js';
 
 // JWT token configuration
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';

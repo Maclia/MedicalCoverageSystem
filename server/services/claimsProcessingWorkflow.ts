@@ -5,7 +5,7 @@ import { medicalNecessityValidator } from './medicalNecessityValidator';
 import { fraudDetectionEngine } from './fraudDetectionEngine';
 import { financialCalculationService } from './financialCalculationService';
 import { eobGenerationService } from './eobGenerationService';
-import { Claim, ClaimAdjudicationResult, ExplanationOfBenefits } from '@shared/schema';
+import { Claim, ClaimAdjudicationResult, ExplanationOfBenefits } from '../../shared/schema.js';
 
 export interface WorkflowStep {
   id: string;

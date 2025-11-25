@@ -13,9 +13,16 @@ type Registration = {
   memberName: string;
   memberEmail: string;
   memberType: 'principal' | 'dependent';
-  dependentType?: 'spouse' | 'child' | null;
+  dependentType?: 'spouse' | 'child' | 'parent' | 'guardian' | null;
   principalName?: string | null;
   createdAt: string;
+  // Enhanced fields from new schema
+  membershipStatus?: string;
+  nationalId?: string;
+  city?: string;
+  hasDisability?: boolean;
+  documentCount?: number;
+  consentCoverage?: number;
 };
 
 export default function RecentRegistrations() {
@@ -56,7 +63,8 @@ export default function RecentRegistrations() {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Compliance</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                 </tr>
               </thead>
@@ -77,7 +85,13 @@ export default function RecentRegistrations() {
                       <Skeleton className="h-5 w-16 rounded-full" />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-5 w-20 rounded-full" />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex gap-2">
+                        <Skeleton className="h-4 w-16" />
+                        <Skeleton className="h-4 w-12" />
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <Skeleton className="h-4 w-24" />
@@ -108,14 +122,15 @@ export default function RecentRegistrations() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Member</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Membership Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Compliance</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {recentRegistrations.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-4 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
                     No recent registrations found
                   </td>
                 </tr>
@@ -135,20 +150,35 @@ export default function RecentRegistrations() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{item.memberName}</div>
                       <div className="text-xs text-gray-500">
-                        {item.memberType === 'dependent' 
-                          ? `Dependent of ${item.principalName}` 
+                        {item.memberType === 'dependent'
+                          ? `Dependent of ${item.principalName}`
                           : item.memberEmail}
                       </div>
+                      {item.city && (
+                        <div className="text-xs text-gray-400">{item.city}</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge 
-                        status={item.memberType === 'dependent' 
-                          ? (item.dependentType || 'dependent') as any 
-                          : item.memberType} 
+                      <StatusBadge
+                        status={item.memberType === 'dependent'
+                          ? (item.dependentType || 'dependent') as any
+                          : item.memberType}
                       />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status="active" />
+                      <StatusBadge status={item.membershipStatus || 'pending'} />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Docs:</span>
+                          <span className="text-xs font-medium">{item.documentCount || 0}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Consent:</span>
+                          <span className="text-xs font-medium">{item.consentCoverage || 0}%</span>
+                        </div>
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {getTimeAgo(item.createdAt)}

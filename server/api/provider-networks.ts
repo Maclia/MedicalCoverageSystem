@@ -7,7 +7,7 @@ import {
   medicalInstitutions,
   insertProviderNetworkSchema,
   insertProviderNetworkAssignmentSchema
-} from '../shared/schema';
+} from '../../shared/schema.js';
 
 const router = Router();
 

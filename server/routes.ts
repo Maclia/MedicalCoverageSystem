@@ -1,6 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { AnalyticsEngine } from './routes/analytics.js';
 import {
   insertCompanySchema,
   insertPrincipalMemberSchema,
@@ -36,7 +37,7 @@ import {
   insertPersonalizationScoreSchema,
   insertJourneyStageSchema,
   insertRecommendationHistorySchema
-} from "@shared/schema";
+} from "../shared/schema.js";
 import { authenticateUser, logoutUser, refreshUserToken } from "./auth";
 import { authenticate, requireRole, requireOwnership, AuthenticatedRequest } from "./middleware/auth";
 import { ZodError } from "zod";
@@ -56,6 +57,11 @@ import providerNetworkRoutes from "./api/provider-networks";
 import providerContractRoutes from "./api/provider-contracts";
 import providerOnboardingRoutes from "./api/provider-onboarding";
 import providerPerformanceRoutes from "./api/provider-performance";
+// Import enhanced Members & Clients module routes
+import { setupMemberRoutes } from "./routes/members";
+import { setupCorporateMemberRoutes } from "./routes/corporate-members";
+// Import system integration routes
+import { setupSystemIntegrationRoutes } from "./routes/system-integration";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to handle zod validation errors
@@ -254,8 +260,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  }
-
   // Helper function to get permissions based on user role
   function getPermissionsForRole(userType: string) {
     switch (userType) {
@@ -291,7 +295,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   }
 
   // Import analytics engine
-  const { AnalyticsEngine } = require('./routes/analytics');
   const analyticsEngine = new AnalyticsEngine();
 
   // API Routes
@@ -4043,6 +4046,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Use schemes & benefits management routes
   registerSchemesRoutes(app);
 
+  // Setup enhanced Members & Clients module routes
+  setupMemberRoutes(app);
+  setupCorporateMemberRoutes(app);
+  // Setup system integration routes
+  setupSystemIntegrationRoutes(app);
+
   // Health check endpoint for Docker and monitoring
   app.get("/api/health", (req: Request, res: Response) => {
     const timestamp = new Date().toISOString();
@@ -4064,7 +4073,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     });
   });
-
   const httpServer = createServer(app);
   return httpServer;
 }
