@@ -3194,3 +3194,1395 @@ export const insertTaskTemplateSchema = createInsertSchema(taskTemplates);
 export const insertNotificationSchema = createInsertSchema(notifications);
 export const insertNotificationTemplateSchema = createInsertSchema(notificationTemplates);
 export const insertNotificationPreferenceSchema = createInsertSchema(notificationPreferences);
+
+// ============================================================================
+// COMPREHENSIVE FINANCE MANAGEMENT SYSTEM - MODULE 1: BILLING & INVOICING
+// ============================================================================
+
+// Finance Management Enums
+export const invoiceStatusEnum = pgEnum('invoice_status', ['draft', 'sent', 'paid', 'overdue', 'written_off', 'cancelled']);
+export const invoiceTypeEnum = pgEnum('invoice_type', ['individual', 'corporate', 'group']);
+export const lineItemTypeEnum = pgEnum('line_item_type', ['base_premium', 'dependent', 'adjustment', 'tax', 'discount']);
+export const arAccountStatusEnum = pgEnum('ar_account_status', ['active', 'suspended', 'terminated', 'collection', 'write_off']);
+export const collectionStatusEnum = pgEnum('collection_status', ['none', 'reminder', 'demand', 'agency', 'legal']);
+export const billingCommunicationTypeEnum = pgEnum('billing_communication_type', ['payment_reminder', 'overdue_notice', 'suspension_warning', 'termination_notice', 'payment_receipt', 'invoice_sent', 'collection_notice']);
+export const billingCommunicationStatusEnum = pgEnum('billing_communication_status', ['scheduled', 'sent', 'delivered', 'failed', 'bounced', 'opened', 'clicked']);
+export const billingChannelEnum = pgEnum('billing_channel', ['email', 'sms', 'postal_mail', 'phone', 'portal']);
+
+// Invoices table - Premium billing and invoicing
+export const invoices = pgTable("invoices", {
+  id: serial("id").primaryKey(),
+  invoiceNumber: text("invoice_number").notNull().unique(),
+  memberId: integer("member_id").references(() => members.id),
+  companyId: integer("company_id").references(() => companies.id),
+  invoiceType: invoiceTypeEnum("invoice_type").notNull(),
+  issueDate: date("issue_date").notNull(),
+  dueDate: date("due_date").notNull(),
+  billingPeriodStart: date("billing_period_start").notNull(),
+  billingPeriodEnd: date("billing_period_end").notNull(),
+  status: invoiceStatusEnum("status").default("draft").notNull(),
+  totalAmount: real("total_amount").notNull(),
+  subtotal: real("subtotal").notNull(),
+  taxAmount: real("tax_amount").default(0),
+  discountAmount: real("discount_amount").default(0),
+  sentAt: timestamp("sent_at"),
+  paidAt: timestamp("paid_at"),
+  overdueAt: timestamp("overdue_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Invoice line items table
+export const invoiceLineItems = pgTable("invoice_line_items", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
+  itemType: lineItemTypeEnum("item_type").notNull(),
+  description: text("description").notNull(),
+  quantity: real("quantity").notNull().default(1),
+  unitRate: real("unit_rate").notNull(),
+  amount: real("amount").notNull(),
+  prorationFactor: real("proration_factor"),
+  memberId: integer("member_id").references(() => members.id),
+  benefitId: integer("benefit_id").references(() => benefits.id),
+  metadata: text("metadata"), // JSON string for additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Invoice payments table
+export const invoicePayments = pgTable("invoice_payments", {
+  id: serial("id").primaryKey(),
+  invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
+  paymentId: integer("payment_id"),
+  amount: real("amount").notNull(),
+  allocationDate: timestamp("allocation_date").defaultNow().notNull(),
+  allocatedBy: integer("allocated_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Accounts Receivable table
+export const accountsReceivable = pgTable("accounts_receivable", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id),
+  companyId: integer("company_id").references(() => companies.id),
+  currentBalance: real("current_balance").notNull().default(0),
+  aging0Days: real("aging_0_days").notNull().default(0), // Current
+  aging30Days: real("aging_30_days").notNull().default(0), // 0-30 days overdue
+  aging60Days: real("aging_60_days").notNull().default(0), // 31-60 days overdue
+  aging90Days: real("aging_90_days").notNull().default(0), // 61-90 days overdue
+  aging90PlusDays: real("aging_90_plus_days").notNull().default(0), // 90+ days overdue
+  creditLimit: real("credit_limit").notNull().default(0),
+  accountStatus: arAccountStatusEnum("account_status").default("active").notNull(),
+  lastPaymentDate: timestamp("last_payment_date"),
+  suspensionDate: timestamp("suspension_date"),
+  collectionStatus: collectionStatusEnum("collection_status").default("none").notNull(),
+  badDebtReserve: real("bad_debt_reserve").notNull().default(0),
+  writeOffAmount: real("write_off_amount").notNull().default(0),
+  totalPaid: real("total_paid").notNull().default(0),
+  totalBilled: real("total_billed").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Billing communications table
+export const billingCommunications = pgTable("billing_communications", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id),
+  companyId: integer("company_id").references(() => companies.id),
+  invoiceId: integer("invoice_id").references(() => invoices.id),
+  type: billingCommunicationTypeEnum("type").notNull(),
+  templateId: integer("template_id"),
+  channel: communicationChannelEnum("channel").notNull(),
+  recipientAddress: text("recipient_address").notNull(),
+  subject: text("subject"),
+  messageContent: text("message_content").notNull(),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  sentDate: timestamp("sent_date"),
+  status: communicationStatusEnum("status").default("scheduled").notNull(),
+  deliveryAttempts: integer("delivery_attempts").default(0).notNull(),
+  responseReceived: boolean("response_received").default(false).notNull(),
+  responseDate: timestamp("response_date"),
+  nextActionDate: timestamp("next_action_date"),
+  metadata: text("metadata"), // JSON string for additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Communication templates table
+export const billingCommunicationTemplates = pgTable("billing_communication_templates", {
+  id: serial("id").primaryKey(),
+  templateName: text("template_name").notNull().unique(),
+  templateType: billingCommunicationTypeEnum("template_type").notNull(),
+  channel: communicationChannelEnum("channel").notNull(),
+  subjectTemplate: text("subject_template"),
+  messageTemplate: text("message_template").notNull(),
+  variables: text("variables"), // JSON array of template variables
+  isActive: boolean("is_active").default(true).notNull(),
+  language: text("language").default("en").notNull(),
+  clientType: text("client_type").notNull(), // individual, corporate, both
+  approvalRequired: boolean("approval_required").default(false).notNull(),
+  createdById: integer("created_by_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Communication rules table
+export const communicationRules = pgTable("communication_rules", {
+  id: serial("id").primaryKey(),
+  ruleName: text("rule_name").notNull().unique(),
+  triggerEvent: text("trigger_event").notNull(),
+  triggerCondition: text("trigger_condition").notNull(),
+  templateId: integer("template_id").references(() => billingCommunicationTemplates.id).notNull(),
+  channel: communicationChannelEnum("channel").notNull(),
+  delayDays: integer("delay_days").default(0).notNull(),
+  frequency: text("frequency").notNull(), // once, weekly, monthly
+  isActive: boolean("is_active").default(true).notNull(),
+  priority: integer("priority").default(5).notNull(),
+  clientType: text("client_type").notNull(), // individual, corporate, both
+  stopOnPayment: boolean("stop_on_payment").default(true).notNull(),
+  maxAttempts: integer("max_attempts").default(3).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Collection workflows table
+export const collectionWorkflows = pgTable("collection_workflows", {
+  id: serial("id").primaryKey(),
+  arRecordId: integer("ar_record_id").references(() => accountsReceivable.id).notNull(),
+  workflowType: text("workflow_type").notNull(), // reminder, suspension, termination, collection_agency, legal_action
+  triggerCondition: text("trigger_condition").notNull(),
+  triggerDays: integer("trigger_days").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  templateId: integer("template_id").references(() => billingCommunicationTemplates.id),
+  escalationRules: text("escalation_rules"), // JSON array of escalation rules
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Collection actions table
+export const collectionActions = pgTable("collection_actions", {
+  id: serial("id").primaryKey(),
+  arRecordId: integer("ar_record_id").references(() => accountsReceivable.id).notNull(),
+  actionType: text("action_type").notNull(), // contact_attempt, payment_arrangement, suspension, referral, write_off
+ actionDate: timestamp("action_date").defaultNow().notNull(),
+  outcome: text("outcome").notNull(),
+  nextActionDate: timestamp("next_action_date"),
+  notes: text("notes"),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Dunning rules table
+export const dunningRules = pgTable("dunning_rules", {
+  id: serial("id").primaryKey(),
+  ruleName: text("rule_name").notNull().unique(),
+  agingThreshold: integer("aging_threshold").notNull(),
+  actionType: text("action_type").notNull(), // email, sms, letter, phone, suspend, terminate
+  templateId: integer("template_id").references(() => billingCommunicationTemplates.id),
+  isActive: boolean("is_active").default(true).notNull(),
+  priority: integer("priority").default(5).notNull(),
+  frequency: text("frequency").notNull(), // once, weekly, monthly
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Finance Management Module 1 Insert Schemas
+export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoiceLineItemSchema = createInsertSchema(invoiceLineItems).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertInvoicePaymentSchema = createInsertSchema(invoicePayments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertAccountsReceivableSchema = createInsertSchema(accountsReceivable).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBillingCommunicationSchema = createInsertSchema(billingCommunications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBillingCommunicationTemplateSchema = createInsertSchema(billingCommunicationTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCommunicationRuleSchema = createInsertSchema(communicationRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCollectionWorkflowSchema = createInsertSchema(collectionWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCollectionActionSchema = createInsertSchema(collectionActions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertDunningRuleSchema = createInsertSchema(dunningRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Finance Management Module 1 Types
+export type Invoice = typeof invoices.$inferSelect;
+export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
+
+export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect;
+export type InsertInvoiceLineItem = z.infer<typeof insertInvoiceLineItemSchema>;
+
+export type InvoicePayment = typeof invoicePayments.$inferSelect;
+export type InsertInvoicePayment = z.infer<typeof insertInvoicePaymentSchema>;
+
+export type AccountsReceivable = typeof accountsReceivable.$inferSelect;
+export type InsertAccountsReceivable = z.infer<typeof insertAccountsReceivableSchema>;
+
+export type BillingCommunication = typeof billingCommunications.$inferSelect;
+export type InsertBillingCommunication = z.infer<typeof insertBillingCommunicationSchema>;
+
+export type BillingCommunicationTemplate = typeof billingCommunicationTemplates.$inferSelect;
+export type InsertBillingCommunicationTemplate = z.infer<typeof insertBillingCommunicationTemplateSchema>;
+
+export type CommunicationRule = typeof communicationRules.$inferSelect;
+export type InsertCommunicationRule = z.infer<typeof insertCommunicationRuleSchema>;
+
+export type CollectionWorkflow = typeof collectionWorkflows.$inferSelect;
+export type InsertCollectionWorkflow = z.infer<typeof insertCollectionWorkflowSchema>;
+
+export type CollectionAction = typeof collectionActions.$inferSelect;
+export type InsertCollectionAction = z.infer<typeof insertCollectionActionSchema>;
+
+export type DunningRule = typeof dunningRules.$inferSelect;
+export type InsertDunningRule = z.infer<typeof insertDunningRuleSchema>;
+
+// ============================================================================
+// COMPREHENSIVE FINANCE MANAGEMENT SYSTEM - MODULE 2: PAYMENT MANAGEMENT
+// ============================================================================
+
+// Payment Management Enums
+export const financePaymentStatusEnum = pgEnum('finance_payment_status', ['pending', 'completed', 'failed', 'reversed', 'refunded']);
+export const paymentMethodTypeEnum = pgEnum('payment_method_type', ['bank', 'card', 'mobile_money', 'digital_wallet', 'ach', 'wire']);
+export const paymentGatewayTypeEnum = pgEnum('payment_gateway_type', ['stripe', 'paypal', 'mpesa', 'bank_transfer', 'square', 'adyen']);
+export const paymentNotificationTypeEnum = pgEnum('payment_notification_type', ['payment_receipt', 'payment_failure', 'payment_retry', 'upcoming_payment', 'auto_payment_confirmation', 'payment_method_expiry', 'payment_method_update_request', 'payment_allocation_confirmation', 'refund_confirmation', 'chargeback_notification', 'reversal_notification', 'payment_method_added', 'payment_method_removed', 'subscription_renewal', 'payment_reminder', 'overdue_payment', 'payment_plan_update']);
+export const paymentNotificationChannelEnum = pgEnum('payment_notification_channel', ['email', 'sms', 'push', 'in_app', 'postal_mail', 'whatsapp']);
+export const paymentNotificationStatusEnum = pgEnum('payment_notification_status', ['scheduled', 'sent', 'delivered', 'failed', 'bounced', 'opened', 'clicked', 'replied']);
+export const reconciliationStatusEnum = pgEnum('reconciliation_status', ['pending', 'in_progress', 'completed', 'requires_review']);
+export const exceptionTypeEnum = pgEnum('exception_type', ['unmatched_payment', 'partial_match', 'overpayment', 'duplicate_payment', 'chargeback', 'refund_mismatch']);
+export const exceptionSeverityEnum = pgEnum('exception_severity', ['low', 'medium', 'high', 'critical']);
+export const paymentReversalTypeEnum = pgEnum('payment_reversal_type', ['chargeback', 'refund', 'bank_error', 'duplicate', 'fraud']);
+
+// Payments table
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id),
+  companyId: integer("company_id").references(() => companies.id),
+  amount: real("amount").notNull(),
+  currency: text("currency").notNull().default("USD"),
+  paymentMethod: paymentMethodTypeEnum("payment_method").notNull(),
+  gatewayTransactionId: text("gateway_transaction_id"),
+  gatewayProvider: text("gateway_provider").notNull(),
+  status: paymentStatusEnum("status").default("pending").notNull(),
+  invoiceIds: integer("invoice_ids").array(), // Array of invoice IDs
+  allocationDetails: text("allocation_details"), // JSON string for allocation details
+  reversalReason: text("reversal_reason"),
+  refundDetails: text("refund_details"), // JSON string for refund details
+  processedDate: timestamp("processed_date"),
+  failureReason: text("failure_reason"),
+  retryCount: integer("retry_count").default(0),
+  nextRetryDate: timestamp("next_retry_date"),
+  metadata: text("metadata"), // JSON string for additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Payment methods table
+export const paymentMethods = pgTable("payment_methods", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id),
+  companyId: integer("company_id").references(() => companies.id),
+  type: paymentMethodTypeEnum("type").notNull(),
+  gatewayProvider: text("gateway_provider").notNull(),
+  tokenizedData: text("tokenized_data"), // Encrypted tokenized payment method details
+  cardDetails: text("card_details"), // JSON string for card details (last4, brand, etc.)
+  bankDetails: text("bank_details"), // JSON string for bank details
+  mobileMoneyDetails: text("mobile_money_details"), // JSON string for mobile money details
+  digitalWalletDetails: text("digital_wallet_details"), // JSON string for digital wallet details
+  isDefault: boolean("is_default").default(false).notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  expiryDate: timestamp("expiry_date"),
+  lastUsedDate: timestamp("last_used_date"),
+  metadata: text("metadata"), // JSON string for additional data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Payment allocations table
+export const paymentAllocations = pgTable("payment_allocations", {
+  id: serial("id").primaryKey(),
+  paymentId: integer("payment_id").references(() => payments.id).notNull(),
+  invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
+  amount: real("amount").notNull(),
+  allocationType: text("allocation_type").notNull(), // full, partial, overpayment, prepayment
+  allocationDate: timestamp("allocation_date").defaultNow().notNull(),
+  allocatedBy: integer("allocated_by").references(() => users.id),
+  method: text("method").default("auto").notNull(), // auto, manual
+  confidence: real("confidence").default(0).notNull(), // 0-1 confidence score
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Payment reconciliations table
+export const paymentReconciliations = pgTable("payment_reconciliations", {
+  id: serial("id").primaryKey(),
+  statementDate: date("statement_date").notNull(),
+  totalPayments: integer("total_payments").notNull(),
+  totalAmount: real("total_amount").notNull(),
+  matchedPayments: integer("matched_payments").notNull(),
+  matchedAmount: real("matched_amount").notNull(),
+  unmatchedAmount: real("unmatched_amount").notNull(),
+  reviewedBy: integer("reviewed_by").references(() => users.id),
+  reviewDate: timestamp("review_date"),
+  status: reconciliationStatusEnum("status").default("pending").notNull(),
+  metadata: text("metadata").notNull(), // JSON string for reconciliation metadata
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Bank statement imports table
+export const bankStatementImports = pgTable("bank_statement_imports", {
+  id: serial("id").primaryKey(),
+  financialInstitution: text("financial_institution").notNull(),
+  accountNumber: text("account_number").notNull(),
+  accountType: text("account_type").notNull(), // checking, savings, business
+  statementPeriodStart: date("statement_period_start").notNull(),
+  statementPeriodEnd: date("statement_period_end").notNull(),
+  fileName: text("file_name").notNull(),
+  fileSize: integer("file_size").notNull(),
+  importStatus: text("import_status").notNull(), // pending, processing, completed, failed, needs_review
+  importedTransactions: integer("imported_transactions").notNull(),
+  matchedTransactions: integer("matched_transactions").notNull(),
+  exceptionsCount: integer("exceptions_count").notNull(),
+  uploadedBy: integer("uploaded_by").references(() => users.id).notNull(),
+  uploadDate: timestamp("upload_date").defaultNow().notNull(),
+  processedDate: timestamp("processed_date"),
+  errorDetails: text("error_details"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Bank transactions table
+export const bankTransactions = pgTable("bank_transactions", {
+  id: serial("id").primaryKey(),
+  statementImportId: integer("statement_import_id").references(() => bankStatementImports.id).notNull(),
+  transactionDate: date("transaction_date").notNull(),
+  description: text("description").notNull(),
+  amount: real("amount").notNull(),
+  balance: real("balance"),
+  transactionType: text("transaction_type").notNull(), // credit, debit
+  referenceNumber: text("reference_number"),
+  checkNumber: text("check_number"),
+  category: text("category"),
+  status: text("status").default("unmatched").notNull(), // unmatched, matched, exception, excluded
+  paymentId: integer("payment_id").references(() => payments.id),
+  invoiceId: integer("invoice_id").references(() => invoices.id),
+  matchingScore: real("matching_score"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Payment reversals table
+export const paymentReversals = pgTable("payment_reversals", {
+  id: serial("id").primaryKey(),
+  originalPaymentId: integer("original_payment_id").references(() => payments.id).notNull(),
+  reversalAmount: real("reversal_amount").notNull(),
+  reversalReason: text("reversal_reason").notNull(),
+  reversalType: paymentReversalTypeEnum("reversal_type").notNull(),
+  initiatedBy: integer("initiated_by").references(() => users.id).notNull(),
+  initiatedDate: timestamp("initiated_date").defaultNow().notNull(),
+  gatewayTransactionId: text("gateway_transaction_id"),
+  status: text("status").default("pending").notNull(), // pending, processing, completed, failed
+  evidence: text("evidence"), // JSON array of URLs to supporting documents
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedDate: timestamp("approved_date"),
+  processedBy: integer("processed_by").references(() => users.id),
+  processedDate: timestamp("processed_date"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Payment notifications table
+export const paymentNotifications = pgTable("payment_notifications", {
+  id: serial("id").primaryKey(),
+  paymentId: integer("payment_id").references(() => payments.id),
+  memberId: integer("member_id").references(() => members.id),
+  companyId: integer("company_id").references(() => companies.id),
+  type: paymentNotificationTypeEnum("type").notNull(),
+  channel: notificationChannelEnum("channel").notNull(),
+  recipientAddress: text("recipient_address").notNull(),
+  subject: text("subject"),
+  messageContent: text("message_content").notNull(),
+  scheduledDate: timestamp("scheduled_date").notNull(),
+  sentDate: timestamp("sent_date"),
+  status: notificationStatusEnum("status").default("scheduled").notNull(),
+  deliveryAttempts: integer("delivery_attempts").default(0).notNull(),
+  responseReceived: boolean("response_received").default(false).notNull(),
+  responseDate: timestamp("response_date"),
+  nextActionDate: timestamp("next_action_date"),
+  metadata: text("metadata").notNull(), // JSON string for payment notification metadata
+  templateId: integer("template_id").references(() => paymentNotificationTemplates.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Payment notification templates table
+export const paymentNotificationTemplates = pgTable("payment_notification_templates", {
+  id: serial("id").primaryKey(),
+  templateName: text("template_name").notNull().unique(),
+  templateType: paymentNotificationTypeEnum("template_type").notNull(),
+  channel: notificationChannelEnum("channel").notNull(),
+  subjectTemplate: text("subject_template"),
+  messageTemplate: text("message_template").notNull(),
+  variables: text("variables"), // JSON array of template variables
+  language: text("language").default("en").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  clientType: text("client_type").notNull(), // individual, corporate, both
+  approvalRequired: boolean("approval_required").default(false).notNull(),
+  createdById: integer("created_by_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Reconciliation exceptions table
+export const reconciliationExceptions = pgTable("reconciliation_exceptions", {
+  id: serial("id").primaryKey(),
+  reconciliationId: integer("reconciliation_id").references(() => paymentReconciliations.id),
+  type: exceptionTypeEnum("type").notNull(),
+  severity: exceptionSeverityEnum("severity").notNull(),
+  description: text("description").notNull(),
+  details: text("details").notNull(), // JSON string for exception details
+  status: text("status").default("open").notNull(), // open, investigating, resolved, closed
+  assignedTo: integer("assigned_to").references(() => users.id),
+  resolution: text("resolution"),
+  resolvedBy: integer("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Finance Management Module 2 Insert Schemas
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentMethodSchema = createInsertSchema(paymentMethods).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentAllocationSchema = createInsertSchema(paymentAllocations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentReconciliationSchema = createInsertSchema(paymentReconciliations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBankStatementImportSchema = createInsertSchema(bankStatementImports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBankTransactionSchema = createInsertSchema(bankTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentReversalSchema = createInsertSchema(paymentReversals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentNotificationSchema = createInsertSchema(paymentNotifications).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentNotificationTemplateSchema = createInsertSchema(paymentNotificationTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertReconciliationExceptionSchema = createInsertSchema(reconciliationExceptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Finance Management Module 2 Types
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+
+export type PaymentMethod = typeof paymentMethods.$inferSelect;
+export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
+
+export type PaymentAllocation = typeof paymentAllocations.$inferSelect;
+export type InsertPaymentAllocation = z.infer<typeof insertPaymentAllocationSchema>;
+
+export type PaymentReconciliation = typeof paymentReconciliations.$inferSelect;
+export type InsertPaymentReconciliation = z.infer<typeof insertPaymentReconciliationSchema>;
+
+export type BankStatementImport = typeof bankStatementImports.$inferSelect;
+export type InsertBankStatementImport = z.infer<typeof insertBankStatementImportSchema>;
+
+export type BankTransaction = typeof bankTransactions.$inferSelect;
+export type InsertBankTransaction = z.infer<typeof insertBankTransactionSchema>;
+
+export type PaymentReversal = typeof paymentReversals.$inferSelect;
+export type InsertPaymentReversal = z.infer<typeof insertPaymentReversalSchema>;
+
+export type PaymentNotification = typeof paymentNotifications.$inferSelect;
+export type InsertPaymentNotification = z.infer<typeof insertPaymentNotificationSchema>;
+
+export type PaymentNotificationTemplate = typeof paymentNotificationTemplates.$inferSelect;
+export type InsertPaymentNotificationTemplate = z.infer<typeof insertPaymentNotificationTemplateSchema>;
+
+export type ReconciliationException = typeof reconciliationExceptions.$inferSelect;
+export type InsertReconciliationException = z.infer<typeof insertReconciliationExceptionSchema>;
+
+// ============================================================================
+// COMPREHENSIVE FINANCE MANAGEMENT SYSTEM - MODULE 3: COMMISSION PAYMENTS
+// ============================================================================
+
+// Commission Management Enums
+export const commissionStatusEnum = pgEnum('commission_status', ['accrued', 'earned', 'paid', 'clawed_back', 'adjusted']);
+export const commissionFinanceTransactionTypeEnum = pgEnum('commission_finance_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
+export const clawbackTypeEnum = pgEnum('clawback_type', ['early_cancellation', 'policy_lapse', 'fraud', 'compliance', 'performance']);
+export const paymentRunStatusEnum = pgEnum('payment_run_status', ['draft', 'pending_approval', 'approved', 'processing', 'processed', 'failed']);
+export const auditStatusEnum = pgEnum('audit_status', ['pending', 'in_progress', 'completed', 'exceptions_found']);
+export const auditTypeEnum = pgEnum('audit_type', ['pre_payment', 'post_payment', 'random', 'targeted', 'investigative']);
+export const findingTypeEnum = pgEnum('finding_type', ['calculation_error', 'policy_violation', 'documentation_gap', 'compliance_issue', 'fraud_detection']);
+export const findingSeverityEnum = pgEnum('finding_severity', ['low', 'medium', 'high', 'critical']);
+export const adjustmentTypeEnum = pgEnum('adjustment_type', ['bonus', 'penalty', 'correction', 'retroactive', 'clawback_recovery']);
+export const taxTypeEnum = pgEnum('tax_type', ['income_tax', 'withholding_tax', 'vat', 'gst']);
+export const taxCalculationMethodEnum = pgEnum('tax_calculation_method', ['flat_rate', 'progressive', 'tiered']);
+export const reportStatusEnum = pgEnum('report_status', ['generating', 'completed', 'failed']);
+export const reportTypeEnum = pgEnum('report_type', ['summary', 'detailed', 'tax', 'compliance', 'agent_performance']);
+export const leaderboardCategoryEnum = pgEnum('leaderboard_category', ['total_sales', 'new_business', 'renewals', 'commission_earned', 'growth_rate', 'customer_satisfaction', 'quality_score']);
+export const performancePeriodTypeEnum = pgEnum('performance_period_type', ['daily', 'weekly', 'monthly', 'quarterly', 'annual']);
+
+// Commission accruals table
+export const commissionAccruals = pgTable("commission_accruals", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").references(() => agents.id).notNull(),
+  policyId: integer("policy_id").references(() => policies.id),
+  productId: integer("product_id").references(() => benefits.id),
+  memberId: integer("member_id").references(() => members.id),
+  companyId: integer("company_id").references(() => companies.id),
+  transactionId: text("transaction_id").notNull().unique(),
+  originalCalculation: text("original_calculation").notNull(), // JSON string for original calculation result
+  accrualDate: timestamp("accrual_date").defaultNow().notNull(),
+  earnedDate: timestamp("earned_date").notNull(),
+  payableDate: timestamp("payable_date").notNull(),
+  status: commissionStatusEnum("status").default("accrued").notNull(),
+  amount: real("amount").notNull(),
+  paidAmount: real("paid_amount").default(0).notNull(),
+  clawbackAmount: real("clawback_amount").default(0).notNull(),
+  adjustments: text("adjustments"), // JSON array of adjustment details
+  paymentRunId: integer("payment_run_id").references(() => commissionPaymentRuns.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Commission payment runs table
+export const commissionPaymentRuns = pgTable("commission_payment_runs", {
+  id: serial("id").primaryKey(),
+  runName: text("run_name").notNull(),
+  runDate: timestamp("run_date").defaultNow().notNull(),
+  paymentDate: timestamp("payment_date").notNull(),
+  status: paymentRunStatusEnum("status").default("draft").notNull(),
+  totalAgents: integer("total_agents").notNull(),
+  totalAmount: real("total_amount").notNull(),
+  totalTaxWithheld: real("total_tax_withheld").notNull(),
+  totalNetAmount: real("total_net_amount").notNull(),
+  agentPayments: integer("agent_payments").array().default([]), // Array of agent payment IDs
+  adjustments: integer("adjustments").array().default([]), // Array of adjustment IDs
+  exceptions: integer("exceptions").array().default([]), // Array of exception IDs
+  approvedBy: integer("approved_by").references(() => users.id),
+  approvedDate: timestamp("approved_date"),
+  processedBy: integer("processed_by").references(() => users.id),
+  processedDate: timestamp("processed_date"),
+  paymentBatchId: text("payment_batch_id"),
+  bankTransferFile: text("bank_transfer_file"),
+  reportFile: text("report_file"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Agent commission payments table
+export const agentCommissionPayments = pgTable("agent_commission_payments", {
+  id: serial("id").primaryKey(),
+  paymentRunId: integer("payment_run_id").references(() => commissionPaymentRuns.id).notNull(),
+  agentId: integer("agent_id").references(() => agents.id).notNull(),
+  agentName: text("agent_name").notNull(),
+  totalCommission: real("total_commission").notNull(),
+  taxWithheld: real("tax_withheld").notNull(),
+  netAmount: real("net_amount").notNull(),
+  currency: text("currency").default("USD").notNull(),
+  paymentMethod: text("payment_method").notNull(), // bank_transfer, check, direct_deposit
+  bankDetails: text("bank_details").notNull(), // JSON string for bank details
+  accrualIds: integer("accrual_ids").array().notNull(), // Array of commission accrual IDs
+  breakdown: text("breakdown").notNull(), // JSON string for payment breakdown
+  status: text("status").default("pending").notNull(), // pending, processing, processed, failed, reversed
+  transactionId: text("transaction_id"),
+  processedDate: timestamp("processed_date"),
+  failureReason: text("failure_reason"),
+  reversalDate: timestamp("reversal_date"),
+  reversalReason: text("reversal_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Payment run adjustments table
+export const paymentRunAdjustments = pgTable("payment_run_adjustments", {
+  id: serial("id").primaryKey(),
+  paymentRunId: integer("payment_run_id").references(() => commissionPaymentRuns.id).notNull(),
+  agentId: integer("agent_id").references(() => agents.id).notNull(),
+  adjustmentType: adjustmentTypeEnum("adjustment_type").notNull(),
+  amount: real("amount").notNull(),
+  description: text("description").notNull(),
+  approvedBy: integer("approved_by").references(() => users.id).notNull(),
+  approvedDate: timestamp("approved_date").defaultNow().notNull(),
+  category: text("category").notNull(), // performance, compliance, administrative, retroactive
+  relatedPeriodStart: date("related_period_start"),
+  relatedPeriodEnd: date("related_period_end"),
+  supportingDocuments: text("supporting_documents").array(), // JSON array of file URLs
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Payment run exceptions table
+export const paymentRunExceptions = pgTable("payment_run_exceptions", {
+  id: serial("id").primaryKey(),
+  paymentRunId: integer("payment_run_id").references(() => commissionPaymentRuns.id).notNull(),
+  agentId: integer("agent_id").references(() => agents.id),
+  exceptionType: text("exception_type").notNull(), // compliance_issue, payment_method_error, tax_issue, calculation_error, bank_error
+  severity: text("severity").notNull(), // low, medium, high, critical
+  description: text("description").notNull(),
+  impact: real("impact").notNull(), // Financial impact
+  resolution: text("resolution"),
+  resolvedBy: integer("resolved_by").references(() => users.id),
+  resolvedDate: timestamp("resolved_date"),
+  status: text("status").default("open").notNull(), // open, investigating, resolved, escalated
+  escalationLevel: integer("escalation_level").default(1).notNull(),
+  nextFollowUp: timestamp("next_follow_up"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tax configuration table
+export const taxConfigurations = pgTable("tax_configurations", {
+  id: serial("id").primaryKey(),
+  country: text("country").notNull(),
+  state: text("state"),
+  taxType: taxTypeEnum("tax_type").notNull(),
+  taxRate: real("tax_rate").notNull(),
+  thresholdAmount: real("threshold_amount").default(0).notNull(),
+  taxExemptAmount: real("tax_exempt_amount").default(0).notNull(),
+  calculationMethod: taxCalculationMethodEnum("calculation_method").default("flat_rate").notNull(),
+  isActive: boolean("is_active").default(true).notNull(),
+  effectiveDate: date("effective_date").notNull(),
+  expiryDate: date("expiry_date"),
+  filingRequirements: text("filing_requirements"), // JSON array of filing requirements
+  createdBy: integer("created_by").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Tax withholding calculations table
+export const taxWithholdingCalculations = pgTable("tax_withholding_calculations", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").references(() => agents.id).notNull(),
+  paymentAmount: real("payment_amount").notNull(),
+  grossAmount: real("gross_amount").notNull(),
+  taxableAmount: real("taxable_amount").notNull(),
+  taxRate: real("tax_rate").notNull(),
+  taxWithheld: real("tax_withheld").notNull(),
+  netAmount: real("net_amount").notNull(),
+  taxYear: integer("tax_year").notNull(),
+  taxPeriod: text("tax_period").notNull(),
+  taxConfigurationId: integer("tax_configuration_id").references(() => taxConfigurations.id),
+  exemptions: text("exemptions"), // JSON array of tax exemptions
+  calculations: text("calculations"), // JSON array of calculation details
+  paymentRunId: integer("payment_run_id").references(() => commissionPaymentRuns.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Commission audits table
+export const commissionAudits = pgTable("commission_audits", {
+  id: serial("id").primaryKey(),
+  paymentRunId: integer("payment_run_id").references(() => commissionPaymentRuns.id),
+  auditType: auditTypeEnum("audit_type").notNull(),
+  auditedBy: integer("audited_by").references(() => users.id).notNull(),
+  auditDate: timestamp("audit_date").defaultNow().notNull(),
+  status: auditStatusEnum("status").default("pending").notNull(),
+  agentsAudited: integer("agents_audited").notNull(),
+  totalAmount: real("total_amount").notNull(),
+  exceptionsFound: integer("exceptions_found").default(0).notNull(),
+  adjustmentsMade: integer("adjustments_made").default(0).notNull(),
+  findings: text("findings"), // JSON array of audit findings
+  recommendations: text("recommendations").array(), // JSON array of recommendations
+  correctiveActions: text("corrective_actions").array(), // JSON array of corrective actions
+  reportGenerated: boolean("report_generated").default(false).notNull(),
+  reportFile: text("report_file"),
+  score: integer("score"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Audit findings table
+export const auditFindings = pgTable("audit_findings", {
+  id: serial("id").primaryKey(),
+  auditId: integer("audit_id").references(() => commissionAudits.id).notNull(),
+  agentId: integer("agent_id").references(() => agents.id),
+  findingType: findingTypeEnum("finding_type").notNull(),
+  severity: findingSeverityEnum("severity").notNull(),
+  description: text("description").notNull(),
+  financialImpact: real("financial_impact").notNull(),
+  recommendedAction: text("recommended_action").notNull(),
+  assignedTo: integer("assigned_to").references(() => users.id),
+  dueDate: timestamp("due_date"),
+  status: text("status").default("open").notNull(), // open, in_progress, resolved
+  resolvedBy: integer("resolved_by").references(() => users.id),
+  resolvedDate: timestamp("resolved_date"),
+  evidence: text("evidence").array(), // JSON array of supporting evidence
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Agent performance metrics table
+export const agentPerformanceMetrics = pgTable("agent_performance_metrics", {
+  id: serial("id").primaryKey(),
+  agentId: integer("agent_id").references(() => agents.id).notNull(),
+  period: text("period").notNull(),
+  periodType: performancePeriodTypeEnum("period_type").notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  policiesSold: integer("policies_sold").notNull(),
+  premiumVolume: real("premium_volume").notNull(),
+  commissionEarned: real("commission_earned").notNull(),
+  conversionRate: real("conversion_rate").notNull(),
+  retentionRate: real("retention_rate").notNull(),
+  averagePolicySize: real("average_policy_size").notNull(),
+  tierLevel: text("tier_level").notNull(),
+  performanceScore: integer("performance_score"),
+  qualityScore: integer("quality_score"),
+  customerSatisfaction: real("customer_satisfaction"),
+  claimRatio: real("claim_ratio"),
+  productivityMetrics: text("productivity_metrics"), // JSON string for productivity metrics
+  ranking: text("ranking"), // JSON string for ranking data
+  trends: text("trends"), // JSON string for trend data
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Agent leaderboards table
+export const agentLeaderboards = pgTable("agent_leaderboards", {
+  id: serial("id").primaryKey(),
+  leaderboardCategory: leaderboardCategoryEnum("leaderboard_category").notNull(),
+  period: text("period").notNull(),
+  periodType: performancePeriodTypeEnum("period_type").notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  rankings: text("rankings").notNull(), // JSON array of leaderboard entries
+  summary: text("summary").notNull(), // JSON string for summary statistics
+  trends: text("trends"), // JSON string for trend data
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  generatedBy: integer("generated_by").references(() => users.id).notNull(),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Commission reports table
+export const commissionReports = pgTable("commission_reports", {
+  id: serial("id").primaryKey(),
+  reportId: text("report_id").notNull().unique(),
+  reportType: reportTypeEnum("report_type").notNull(),
+  reportPeriod: text("report_period").notNull(),
+  generatedDate: timestamp("generated_date").defaultNow().notNull(),
+  generatedBy: integer("generated_by").references(() => users.id).notNull(),
+  status: reportStatusEnum("status").notNull(),
+  data: text("data").notNull(), // JSON string for report data
+  fileUrl: text("file_url"),
+  fileSize: integer("file_size"),
+  format: text("format"), // pdf, excel, csv
+  parameters: text("parameters"), // JSON string for report parameters
+  filters: text("filters"), // JSON string for applied filters
+  errorMessage: text("error_message"),
+  accessLevel: text("access_level").default("all").notNull(), // all, management, executive
+  downloads: integer("downloads").default(0),
+  lastDownloaded: timestamp("last_downloaded"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Policies table (needed for commission accruals)
+export const policies = pgTable("policies", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id),
+  companyId: integer("company_id").references(() => companies.id),
+  agentId: integer("agent_id").references(() => agents.id),
+  policyNumber: text("policy_number").notNull().unique(),
+  policyType: text("policy_type").notNull(), // individual, corporate, family, group
+  productType: text("product_type").notNull(),
+  premiumAmount: real("premium_amount").notNull(),
+  coverageAmount: real("coverage_amount").notNull(),
+  startDate: date("start_date").notNull(),
+  endDate: date("end_date").notNull(),
+  status: text("status").default("active").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Finance Management Module 3 Insert Schemas
+export const insertCommissionAccrualSchema = createInsertSchema(commissionAccruals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCommissionPaymentRunSchema = createInsertSchema(commissionPaymentRuns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAgentCommissionPaymentSchema = createInsertSchema(agentCommissionPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentRunAdjustmentSchema = createInsertSchema(paymentRunAdjustments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPaymentRunExceptionSchema = createInsertSchema(paymentRunExceptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaxConfigurationSchema = createInsertSchema(taxConfigurations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertTaxWithholdingCalculationSchema = createInsertSchema(taxWithholdingCalculations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCommissionAuditSchema = createInsertSchema(commissionAudits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAuditFindingSchema = createInsertSchema(auditFindings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAgentPerformanceMetricSchema = createInsertSchema(agentPerformanceMetrics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAgentLeaderboardSchema = createInsertSchema(agentLeaderboards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCommissionReportSchema = createInsertSchema(commissionReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertPolicySchema = createInsertSchema(policies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Finance Management Module 3 Types
+export type CommissionAccrual = typeof commissionAccruals.$inferSelect;
+export type InsertCommissionAccrual = z.infer<typeof insertCommissionAccrualSchema>;
+
+export type CommissionPaymentRun = typeof commissionPaymentRuns.$inferSelect;
+export type InsertCommissionPaymentRun = z.infer<typeof insertCommissionPaymentRunSchema>;
+
+export type AgentCommissionPayment = typeof agentCommissionPayments.$inferSelect;
+export type InsertAgentCommissionPayment = z.infer<typeof insertAgentCommissionPaymentSchema>;
+
+export type PaymentRunAdjustment = typeof paymentRunAdjustments.$inferSelect;
+export type InsertPaymentRunAdjustment = z.infer<typeof insertPaymentRunAdjustmentSchema>;
+
+export type PaymentRunException = typeof paymentRunExceptions.$inferSelect;
+export type InsertPaymentRunException = z.infer<typeof insertPaymentRunExceptionSchema>;
+
+export type TaxConfiguration = typeof taxConfigurations.$inferSelect;
+export type InsertTaxConfiguration = z.infer<typeof insertTaxConfigurationSchema>;
+
+export type TaxWithholdingCalculation = typeof taxWithholdingCalculations.$inferSelect;
+export type InsertTaxWithholdingCalculation = z.infer<typeof insertTaxWithholdingCalculationSchema>;
+
+export type CommissionAudit = typeof commissionAudits.$inferSelect;
+export type InsertCommissionAudit = z.infer<typeof insertCommissionAuditSchema>;
+
+export type AuditFinding = typeof auditFindings.$inferSelect;
+export type InsertAuditFinding = z.infer<typeof insertAuditFindingSchema>;
+
+export type AgentPerformanceMetric = typeof agentPerformanceMetrics.$inferSelect;
+export type InsertAgentPerformanceMetric = z.infer<typeof insertAgentPerformanceMetricSchema>;
+
+export type AgentLeaderboard = typeof agentLeaderboards.$inferSelect;
+export type InsertAgentLeaderboard = z.infer<typeof insertAgentLeaderboardSchema>;
+
+export type CommissionReport = typeof commissionReports.$inferSelect;
+export type InsertCommissionReport = z.infer<typeof insertCommissionReportSchema>;
+
+export type Policy = typeof policies.$inferSelect;
+export type InsertPolicy = z.infer<typeof insertPolicySchema>;
+
+// ========================================
+// FINANCE MANAGEMENT MODULE 4: CLAIMS FINANCIAL MANAGEMENT
+// ========================================
+
+// Enums for Claims Financial Management
+export enum ClaimReserveType {
+  INCURRED_LOSS = 'INCURRED_LOSS',
+  EXPENSE = 'EXPENSE',
+  SALVAGE_RECOVERY = 'SALVAGE_RECOVERY',
+  LEGAL_EXPENSES = 'LEGAL_EXPENSES'
+}
+
+export enum ClaimReserveStatus {
+  ACTIVE = 'ACTIVE',
+  CLOSED = 'CLOSED',
+  EXHAUSTED = 'EXHAUSTED',
+  SUPERSEDED = 'SUPERSEDED'
+}
+
+export enum ClaimPaymentType {
+  INDEMNITY = 'INDEMNITY',
+  EXPENSE = 'EXPENSE',
+  LEGAL = 'LEGAL',
+  MEDICAL = 'MEDICAL',
+  REHABILITATION = 'REHABILITATION',
+  LOSS_OF_EARNINGS = 'LOSS_OF_EARNINGS'
+}
+
+export enum ClaimPaymentStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  PROCESSING = 'PROCESSING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+  ESCALATED = 'ESCALATED'
+}
+
+export enum ClaimApprovalStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+  COMPLETED = 'COMPLETED'
+}
+
+export enum FinancialTransactionType {
+  PAYMENT_REQUEST = 'PAYMENT_REQUEST',
+  PAYMENT_EXECUTION = 'PAYMENT_EXECUTION',
+  RESERVE_INCREASE = 'RESERVE_INCREASE',
+  RESERVE_DECREASE = 'RESERVE_DECREASE',
+  RECOVERY_RECEIVED = 'RECOVERY_RECEIVED',
+  EXPENSE_ALLOCATION = 'EXPENSE_ALLOCATION'
+}
+
+export enum FinancialTransactionStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  POSTED = 'POSTED',
+  REJECTED = 'REJECTED',
+  FAILED = 'FAILED'
+}
+
+// Claim Reserves Table - Financial reserves set aside for claims
+export const claimReserves = pgTable('claim_reserves', {
+  id: serial('id').primaryKey(),
+  claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull(),
+  reserveType: claimReserveTypeEnum('reserve_type').notNull(),
+  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).notNull().default('USD'),
+  status: claimReserveStatusEnum('status').notNull().default(ClaimReserveStatus.ACTIVE),
+  notes: text('notes'),
+  reservedAt: timestamp('reserved_at').notNull().defaultNow(),
+  lastAdjustmentAt: timestamp('last_adjustment_at'),
+  lastAdjustmentBy: integer('last_adjustment_by').references(() => users.id),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+}, (table) => ({
+  claimIdx: index('claim_reserves_claim_idx').on(table.claimId),
+  statusIdx: index('claim_reserves_status_idx').on(table.status),
+  typeIdx: index('claim_reserves_type_idx').on(table.reserveType)
+}));
+
+// Claim Reserve Transactions Table - History of reserve changes
+export const claimReserveTransactions = pgTable('claim_reserve_transactions', {
+  id: serial('id').primaryKey(),
+  reserveId: integer('reserve_id').references(() => claimReserves.id, { onDelete: 'cascade' }).notNull(),
+  transactionType: varchar('transaction_type', { length: 20 }).notNull(), // INITIAL, ADJUSTMENT, RELEASE, CLOSE
+  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+  previousAmount: decimal('previous_amount', { precision: 15, scale: 2 }).notNull(),
+  newAmount: decimal('new_amount', { precision: 15, scale: 2 }).notNull(),
+  reason: text('reason').notNull(),
+  createdBy: integer('created_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow()
+}, (table) => ({
+  reserveIdx: index('claim_reserve_transactions_reserve_idx').on(table.reserveId),
+  transactionTypeIdx: index('claim_reserve_transactions_type_idx').on(table.transactionType),
+  createdAtIdx: index('claim_reserve_transactions_created_idx').on(table.createdAt)
+}));
+
+// Claim Payments Table - Actual payments made for claims
+export const claimFinancePayments = pgTable('claim_finance_payments', {
+  id: serial('id').primaryKey(),
+  claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull(),
+  paymentType: claimPaymentTypeEnum('payment_type').notNull(),
+  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).notNull().default('USD'),
+  description: text('description').notNull(),
+  payeeName: varchar('payee_name', { length: 255 }).notNull(),
+  payeeType: varchar('payee_type', { length: 20 }).notNull(), // MEMBER, PROVIDER, LAWYER, OTHER
+  payeeReference: varchar('payee_reference', { length: 100 }),
+  paymentMethod: varchar('payment_method', { length: 50 }), // BANK_TRANSFER, CHECK, MOBILE_MONEY, CREDIT_CARD
+  paymentReference: varchar('payment_reference', { length: 100 }),
+  status: claimPaymentStatusEnum('status').notNull().default(ClaimPaymentStatus.PENDING),
+  dueDate: timestamp('due_date').notNull(),
+  requestedBy: integer('requested_by').references(() => users.id),
+  approvedBy: integer('approved_by').references(() => users.id),
+  approvedAt: timestamp('approved_at'),
+  executedBy: integer('executed_by').references(() => users.id),
+  executedAt: timestamp('executed_at'),
+  completedAt: timestamp('completed_at'),
+  confirmedBy: integer('confirmed_by').references(() => users.id),
+  failureReason: text('failure_reason'),
+  failureCode: varchar('failure_code', { length: 50 }),
+  confirmationData: json('confirmation_data'),
+  attachments: json('attachments'), // Array of file references
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+}, (table) => ({
+  claimIdx: index('claim_payments_claim_idx').on(table.claimId),
+  statusIdx: index('claim_payments_status_idx').on(table.status),
+  paymentTypeIdx: index('claim_payments_type_idx').on(table.paymentType),
+  dueDateIdx: index('claim_payments_due_date_idx').on(table.dueDate),
+  payeeTypeIdx: index('claim_payments_payee_type_idx').on(table.payeeType)
+}));
+
+// Claim Approval Workflows Table - Workflow management for claim approvals
+export const claimApprovalWorkflows = pgTable('claim_approval_workflows', {
+  id: serial('id').primaryKey(),
+  claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull(),
+  paymentId: integer('payment_id').references(() => claimPayments.id, { onDelete: 'cascade' }),
+  workflowType: varchar('workflow_type', { length: 50 }).notNull(), // CLAIM_APPROVAL, PAYMENT_APPROVAL, RESERVE_APPROVAL
+  currentStep: integer('current_step').notNull().default(1),
+  totalSteps: integer('total_steps'),
+  status: claimApprovalStatusEnum('status').notNull().default(ClaimApprovalStatus.PENDING),
+  initiatorId: integer('initiator_id').references(() => users.id).notNull(),
+  currentAssigneeId: integer('current_assignee_id').references(() => users.id),
+  priority: varchar('priority', { length: 20 }).default('NORMAL'), // LOW, NORMAL, HIGH, URGENT
+  dueDate: timestamp('due_date'),
+  completedAt: timestamp('completed_at'),
+  metadata: json('metadata'), // Additional workflow-specific data
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+}, (table) => ({
+  claimIdx: index('claim_approval_workflows_claim_idx').on(table.claimId),
+  paymentIdx: index('claim_approval_workflows_payment_idx').on(table.paymentId),
+  statusIdx: index('claim_approval_workflows_status_idx').on(table.status),
+  assigneeIdx: index('claim_approval_workflows_assignee_idx').on(table.currentAssigneeId),
+  workflowTypeIdx: index('claim_approval_workflows_type_idx').on(table.workflowType)
+}));
+
+// Claim Approval Steps Table - Individual steps in approval workflows
+export const claimApprovalSteps = pgTable('claim_approval_steps', {
+  id: serial('id').primaryKey(),
+  workflowId: integer('workflow_id').references(() => claimApprovalWorkflows.id, { onDelete: 'cascade' }).notNull(),
+  stepNumber: integer('step_number').notNull(),
+  stepType: varchar('step_type', { length: 50 }).notNull(), // REVIEW, APPROVAL, VERIFICATION, NOTIFICATION
+  stepName: varchar('step_name', { length: 100 }).notNull(),
+  description: text('description'),
+  assignedTo: integer('assigned_to').references(() => users.id),
+  status: varchar('status', { length: 20 }).notNull().default('PENDING'), // PENDING, IN_PROGRESS, APPROVED, REJECTED, SKIPPED
+  decision: varchar('decision', { length: 20 }), // APPROVED, REJECTED, NEEDS_INFO
+  comments: text('comments'),
+  attachments: json('attachments'),
+  completedAt: timestamp('completed_at'),
+  dueDate: timestamp('due_date'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+}, (table) => ({
+  workflowIdx: index('claim_approval_steps_workflow_idx').on(table.workflowId),
+  stepNumberIdx: index('claim_approval_steps_step_number_idx').on(table.stepNumber),
+  assignedToIdx: index('claim_approval_steps_assigned_to_idx').on(table.assignedTo),
+  statusIdx: index('claim_approval_steps_status_idx').on(table.status)
+}));
+
+// Claim Financial Transactions Table - All financial transactions related to claims
+export const claimFinancialTransactions = pgTable('claim_financial_transactions', {
+  id: serial('id').primaryKey(),
+  claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull(),
+  transactionType: financialTransactionTypeEnum('transaction_type').notNull(),
+  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 3 }).notNull().default('USD'),
+  status: financialTransactionStatusEnum('status').notNull().default(FinancialTransactionStatus.PENDING),
+  description: text('description').notNull(),
+  referenceId: integer('reference_id'), // References payment_id, reserve_id, or other entity
+  paymentReference: varchar('payment_reference', { length: 100 }),
+  category: varchar('category', { length: 50 }), // For categorizing transactions
+  glAccountCode: varchar('gl_account_code', { length: 20 }), // General ledger account code
+  costCenter: varchar('cost_center', { length: 20 }),
+  taxAmount: decimal('tax_amount', { precision: 12, scale: 2 }),
+  metadata: json('metadata'), // Additional transaction-specific data
+  approvedBy: integer('approved_by').references(() => users.id),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+}, (table) => ({
+  claimIdx: index('claim_financial_transactions_claim_idx').on(table.claimId),
+  transactionTypeIdx: index('claim_financial_transactions_type_idx').on(table.transactionType),
+  statusIdx: index('claim_financial_transactions_status_idx').on(table.status),
+  referenceIdx: index('claim_financial_transactions_reference_idx').on(table.referenceId),
+  createdAtIdx: index('claim_financial_transactions_created_idx').on(table.createdAt),
+  glAccountIdx: index('claim_financial_transactions_gl_account_idx').on(table.glAccountCode)
+}));
+
+// Claim Analytics Table - Pre-computed analytics for claims
+export const claimAnalytics = pgTable('claim_analytics', {
+  id: serial('id').primaryKey(),
+  claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull().unique(),
+  totalIncurred: decimal('total_incurred', { precision: 15, scale: 2 }).notNull().default('0'),
+  totalPaid: decimal('total_paid', { precision: 15, scale: 2 }).notNull().default('0'),
+  totalReserved: decimal('total_reserved', { precision: 15, scale: 2 }).notNull().default('0'),
+  outstandingReserve: decimal('outstanding_reserve', { precision: 15, scale: 2 }).notNull().default('0'),
+  recoveryAmount: decimal('recovery_amount', { precision: 15, scale: 2 }).notNull().default('0'),
+  netIncurred: decimal('net_incurred', { precision: 15, scale: 2 }).notNull().default('0'),
+  settlementRatio: decimal('settlement_ratio', { precision: 5, scale: 4 }),
+  reserveAdequacyRatio: decimal('reserve_adequacy_ratio', { precision: 5, scale: 4 }),
+  paymentEfficiency: decimal('payment_efficiency', { precision: 5, scale: 4 }),
+  costContainment: decimal('cost_containment', { precision: 5, scale: 4 }),
+  averagePaymentTime: integer('average_payment_time'), // in days
+  paymentCount: integer('payment_count').notNull().default(0),
+  lastPaymentDate: timestamp('last_payment_date'),
+  lastReserveAdjustmentDate: timestamp('last_reserve_adjustment_date'),
+  riskScore: decimal('risk_score', { precision: 3, scale: 2 }), // 0-100 risk assessment
+  complexity: varchar('complexity', { length: 20 }), // LOW, MEDIUM, HIGH, VERY_HIGH
+  analyticsData: json('analytics_data'), // Additional analytics fields
+  lastCalculatedAt: timestamp('last_calculated_at').notNull().defaultNow(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+}, (table) => ({
+  claimIdx: index('claim_analytics_claim_idx').on(table.claimId).unique(),
+  lastCalculatedIdx: index('claim_analytics_last_calculated_idx').on(table.lastCalculatedAt),
+  riskScoreIdx: index('claim_analytics_risk_score_idx').on(table.riskScore)
+}));
+
+// Claim Financial Metrics Table - Key performance indicators
+export const claimFinancialMetrics = pgTable('claim_financial_metrics', {
+  id: serial('id').primaryKey(),
+  claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull().unique(),
+  metricPeriod: varchar('metric_period', { length: 20 }).notNull(), // DAILY, WEEKLY, MONTHLY, QUARTERLY, YEARLY
+  metricDate: date('metric_date').notNull(),
+  totalIncurred: decimal('total_incurred', { precision: 15, scale: 2 }).notNull().default('0'),
+  totalPaid: decimal('total_paid', { precision: 15, scale: 2 }).notNull().default('0'),
+  totalReserved: decimal('total_reserved', { precision: 15, scale: 2 }).notNull().default('0'),
+  outstandingReserve: decimal('outstanding_reserve', { precision: 15, scale: 2 }).notNull().default('0'),
+  incurredLoss: decimal('incurred_loss', { precision: 15, scale: 2 }).notNull().default('0'),
+  expenseRatio: decimal('expense_ratio', { precision: 5, scale: 4 }),
+  lossRatio: decimal('loss_ratio', { precision: 5, scale: 4 }),
+  combinedRatio: decimal('combined_ratio', { precision: 5, scale: 4 }),
+  reserveChange: decimal('reserve_change', { precision: 15, scale: 2 }),
+  paymentVelocity: decimal('payment_velocity', { precision: 5, scale: 2 }), // Payments per day
+  settlementSpeed: integer('settlement_speed'), // Days to settlement
+  costEfficiency: decimal('cost_efficiency', { precision: 5, scale: 4 }),
+  recoveryRate: decimal('recovery_rate', { precision: 5, scale: 4 }),
+  predictedFinalCost: decimal('predicted_final_cost', { precision: 15, scale: 2 }),
+  confidenceLevel: decimal('confidence_level', { precision: 3, scale: 2 }), // 0-100
+  customMetrics: json('custom_metrics'), // Additional custom metrics
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+}, (table) => ({
+  claimPeriodIdx: index('claim_financial_metrics_claim_period_idx').on(table.claimId, table.metricPeriod).unique(),
+  metricDateIdx: index('claim_financial_metrics_date_idx').on(table.metricDate),
+  lossRatioIdx: index('claim_financial_metrics_loss_ratio_idx').on(table.lossRatio)
+}));
+
+// Schema Validation
+export const claimReserveTypeEnum = pgEnum('reserve_type', Object.values(ClaimReserveType));
+export const claimReserveStatusEnum = pgEnum('reserve_status', Object.values(ClaimReserveStatus));
+export const claimPaymentTypeEnum = pgEnum('payment_type', Object.values(ClaimPaymentType));
+export const claimPaymentStatusEnum = pgEnum('payment_status', Object.values(ClaimPaymentStatus));
+export const claimApprovalStatusEnum = pgEnum('approval_status', Object.values(ClaimApprovalStatus));
+export const financialTransactionTypeEnum = pgEnum('financial_transaction_type', Object.values(FinancialTransactionType));
+export const financialTransactionStatusEnum = pgEnum('financial_transaction_status', Object.values(FinancialTransactionStatus));
+
+// Zod schemas for validation
+export const insertClaimReserveSchema = createInsertSchema(claimReserves).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClaimReserveTransactionSchema = createInsertSchema(claimReserveTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertClaimFinancePaymentSchema = createInsertSchema(claimFinancePayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClaimApprovalWorkflowSchema = createInsertSchema(claimApprovalWorkflows).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClaimApprovalStepSchema = createInsertSchema(claimApprovalSteps).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClaimFinancialTransactionSchema = createInsertSchema(claimFinancialTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClaimAnalyticsSchema = createInsertSchema(claimAnalytics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertClaimFinancialMetricsSchema = createInsertSchema(claimFinancialMetrics).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Type exports for Module 4
+export type ClaimReserve = typeof claimReserves.$inferSelect;
+export type InsertClaimReserve = z.infer<typeof insertClaimReserveSchema>;
+
+export type ClaimReserveTransaction = typeof claimReserveTransactions.$inferSelect;
+export type InsertClaimReserveTransaction = z.infer<typeof insertClaimReserveTransactionSchema>;
+
+export type ClaimPayment = typeof claimPayments.$inferSelect;
+export type InsertClaimPayment = z.infer<typeof insertClaimPaymentSchema>;
+
+export type ClaimApprovalWorkflow = typeof claimApprovalWorkflows.$inferSelect;
+export type InsertClaimApprovalWorkflow = z.infer<typeof insertClaimApprovalWorkflowSchema>;
+
+export type ClaimApprovalStep = typeof claimApprovalSteps.$inferSelect;
+export type InsertClaimApprovalStep = z.infer<typeof insertClaimApprovalStepSchema>;
+
+export type ClaimFinancialTransaction = typeof claimFinancialTransactions.$inferSelect;
+export type InsertClaimFinancialTransaction = z.infer<typeof insertClaimFinancialTransactionSchema>;
+
+export type ClaimAnalytics = typeof claimAnalytics.$inferSelect;
+export type InsertClaimAnalytics = z.infer<typeof insertClaimAnalyticsSchema>;
+
+export type ClaimFinancialMetrics = typeof claimFinancialMetrics.$inferSelect;
+export type InsertClaimFinancialMetrics = z.infer<typeof insertClaimFinancialMetricsSchema>;
+
+// Additional analytics types for complex financial structures
+export type ClaimCostBreakdown = {
+  indemnityPayments: number;
+  expensePayments: number;
+  legalExpenses: number;
+  administrativeCosts: number;
+};
+
+export type ClaimPaymentPatterns = {
+  paymentFrequency: number;
+  averagePaymentAmount: number;
+  paymentTiming: any;
+  seasonalPatterns: any;
+};
+
+export type ClaimReserveAnalysis = {
+  initialReserve: number;
+  finalReserve: number;
+  reserveChanges: number;
+  adequacyRatio: number;
+  reserveAccuracy: number;
+};
+
+export type ClaimLossRatioAnalysis = {
+  incurredLoss: number;
+  earnedPremium: number;
+  lossRatio: number;
+  expenseRatio: number;
+  combinedRatio: number;
+};

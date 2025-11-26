@@ -10,6 +10,7 @@ interface SidebarLink {
 
 const mainLinks: SidebarLink[] = [
   { path: "/", label: "Dashboard", icon: "dashboard" },
+  { path: "/finance", label: "Finance", icon: "account_balance" },
   { path: "/schemes-management", label: "Schemes & Benefits", icon: "layers" },
   { path: "/provider-schemes-management", label: "Provider Networks", icon: "network" },
   { path: "/companies", label: "Companies", icon: "business" },

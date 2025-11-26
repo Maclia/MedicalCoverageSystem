@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  medical-coverage-finance:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: medical-coverage-finance
+    ports:
+      - "5000:5000"
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - HOST=0.0.0.0
+      - JWT_SECRET=finance-demo-jwt-secret-change-in-production
+      - JWT_REFRESH_SECRET=finance-demo-refresh-secret-change-in-production
+      - DB_SSL=false
+      - CORS_ORIGIN=http://localhost:3000
+      # Finance Service Configuration
+      - FINANCE_SERVICES_ENABLED=true
+      - BILLING_SERVICE_ENABLED=true
+      - PAYMENT_SERVICE_ENABLED=true
+      - COMMISSION_SERVICE_ENABLED=true
+      - CLAIMS_FINANCIAL_SERVICE_ENABLED=true
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+      - ./backups:/app/backups
+    networks:
+      - finance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health", "&&", "curl", "-f", "http://localhost:5000/api/finance/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.finance.rule=Host(`finance.localhost`)"
+      - "traefik.http.services.finance.loadbalancer.server.port=5000"
+      - "app.medical.finance=true"
+      - "version=3.0.0"
+
+  # PostgreSQL Database (if needed for testing)
+  postgres-finance:
+    image: postgres:15-alpine
+    container_name: postgres-finance
+    environment:
+      - POSTGRES_DB=medical_coverage_finance
+      - POSTGRES_USER=finance_user
+      - POSTGRES_PASSWORD=finance_password
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_finance_data:/var/lib/postgresql/data
+      - ./server/database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - finance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U finance_user -d medical_coverage_finance"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis for caching and session management
+  redis-finance:
+    image: redis:7-alpine
+    container_name: redis-finance
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_finance_data:/data
+    networks:
+      - finance-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    command: redis-server --appendonly yes --requirepass redis_password
+
+  # Nginx reverse proxy for development
+  nginx-finance:
+    image: nginx:alpine
+    container_name: nginx-finance
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx-finance.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - finance-network
+    depends_on:
+      - medical-coverage-finance
+    restart: unless-stopped
+
+volumes:
+  postgres_finance_data:
+    driver: local
+  redis_finance_data:
+    driver: local
+
+networks:
+  finance-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

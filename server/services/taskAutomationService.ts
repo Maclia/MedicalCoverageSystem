@@ -5,10 +5,7 @@ import {
   agents,
   leads,
   salesOpportunities,
-  activities,
   tasks,
-  notificationService,
-  workflowAutomationService,
   insertTaskSchema
 } from '../../shared/schema.js';
 
@@ -330,7 +327,7 @@ export class TaskAutomationService {
       if (entityData.customDueDate) {
         dueDate = entityData.customDueDate;
       } else {
-        dueDate = this.calculateDueDate(template.dueDateOffset, entityData);
+        dueDate = await this.calculateDueDate(template.dueDateOffset, entityData);
       }
 
       // Determine assignee
@@ -394,7 +391,7 @@ export class TaskAutomationService {
     }
   }
 
-  private calculateDueDate(offset: TaskTemplate['dueDateOffset'], entityData: any): Date {
+  private async calculateDueDate(offset: TaskTemplate['dueDateOffset'], entityData: any): Promise<Date> {
     const now = new Date();
     let fromDate = now;
 

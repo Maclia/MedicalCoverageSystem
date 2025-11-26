@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, requireRole, requireOwnership, AuthenticatedRequest } from '../../middleware/auth';
+import { authenticate, requireRole, requireOwnership, AuthenticatedRequest } from '../middleware/auth';
 import {
   getCommunications,
   getCommunication,
@@ -64,7 +64,7 @@ import {
   downloadAttachment,
   getCommunicationSettings,
   updateCommunicationSettings
-} from '../../services/communicationService';
+} from '../services/communicationService';
 
 const router = Router();
 

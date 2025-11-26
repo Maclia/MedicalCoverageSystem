@@ -3,6 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { FinanceProvider } from "@/contexts/FinanceContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Login from "@/components/auth/Login";
 import AppLayout from "@/components/layout/AppLayout";
@@ -34,6 +35,7 @@ import RiskAssessment from "@/pages/RiskAssessment";
 import { ClaimsManagement } from "@/pages/ClaimsManagement";
 import SchemesManagement from "@/pages/SchemesManagement";
 import ProviderSchemesManagement from "@/pages/ProviderSchemesManagement";
+import Finance from "@/pages/Finance";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -105,6 +107,15 @@ function Router() {
               <Route path="/schemes-management" component={() => (
                 <ProtectedRoute allowedRoles={['insurance']}>
                   <SchemesManagement />
+                </ProtectedRoute>
+              )} />
+
+              {/* Finance Routes */}
+              <Route path="/finance" component={() => (
+                <ProtectedRoute allowedRoles={['insurance']}>
+                  <FinanceProvider>
+                    <Finance />
+                  </FinanceProvider>
                 </ProtectedRoute>
               )} />
 

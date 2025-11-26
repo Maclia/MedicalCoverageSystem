@@ -34,7 +34,7 @@ import {
   updatePremiumRiskHistory,
   processBulkRiskAssessment,
   calculateRiskAdjustmentFactor
-} from '../src/services/riskAssessmentService';
+} from '../services/riskAssessmentService';
 
 const router = express.Router();
 
