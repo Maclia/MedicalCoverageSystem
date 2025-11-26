@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, requireRole, AuthenticatedRequest } from '../../middleware/auth';
+import { authenticate, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import {
   getCurrentRiskAssessment,
   createRiskAssessment,
@@ -25,7 +25,7 @@ import {
   updateInterventionPlan,
   getRiskConfig,
   updateRiskConfig
-} from '../../services/riskAssessmentService';
+} from '../services/riskAssessmentService';
 
 const router = Router();
 

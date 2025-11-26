@@ -5,8 +5,6 @@ import {
   workflowExecutions,
   users,
   leads,
-  opportunities,
-  activities,
   insertWorkflowDefinitionSchema,
   insertWorkflowExecutionSchema
 } from '../../shared/schema.js';

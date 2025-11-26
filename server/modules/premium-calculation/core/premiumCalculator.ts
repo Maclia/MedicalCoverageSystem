@@ -6,7 +6,7 @@
 import { IStorage } from '../../../storage';
 import * as schema from '../../shared/schema.js';
 import { getActivePeriod, countMembersByType, getLatestPremium } from '../../../utils/dbOperations';
-import { getCurrentRiskAssessment } from '../../../src/services/riskAssessmentService';
+import { getCurrentRiskAssessment } from '../../../services/riskAssessmentService';
 
 // Enhanced premium calculation interfaces
 export interface PremiumCalculationInput {

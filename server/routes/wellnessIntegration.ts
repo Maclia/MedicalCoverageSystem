@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { authenticate, requireRole, AuthenticatedRequest } from '../../middleware/auth';
+import { authenticate, requireRole, AuthenticatedRequest } from '../middleware/auth';
 import {
   getWellnessIntegrations,
   connectDevice,
@@ -19,7 +19,7 @@ import {
   getWellnessStats,
   revokeDeviceAccess,
   refreshDeviceToken
-} from '../../services/wellnessIntegrationService';
+} from '../services/wellnessIntegrationService';
 
 const router = Router();
 

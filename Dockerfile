@@ -57,6 +57,8 @@ COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 COPY --from=builder --chown=nodejs:nodejs /app/client/dist ./client/dist
 COPY --from=builder --chown=nodejs:nodejs /app/server/database ./server/database
+COPY --from=builder --chown=nodejs:nodejs /app/server/services ./server/services
+COPY --from=builder --chown=nodejs:nodejs /app/server/routes ./server/routes
 
 # Create necessary directories with proper permissions
 RUN mkdir -p \
@@ -86,15 +88,17 @@ ENV JWT_REFRESH_SECRET=your-production-refresh-secret-change-this
 ENV DB_SSL=true
 ENV CORS_ORIGIN=https://your-production-domain.com
 
-# Add health check with proper timeout and retry logic
+# Add health check with proper timeout and retry logic including finance services
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-  CMD curl -f http://localhost:5000/api/health || exit 1
+  CMD curl -f http://localhost:5000/api/health && curl -f http://localhost:5000/api/finance/health || exit 1
 
 # Add custom labels for better orchestration
 LABEL maintainer="MedicalCoverageSystem Team" \
-      version="2.0.0" \
-      description="Medical Coverage System with Authentication and Role-Based Access" \
-      org.opencontainers.image.source="https://github.com/your-org/medical-coverage-system"
+      version="3.0.0" \
+      description="Medical Coverage System with Finance Management, Authentication and Role-Based Access" \
+      org.opencontainers.image.source="https://github.com/your-org/medical-coverage-system" \
+      finance.modules="billing,payments,commissions,claims-financial" \
+      finance.api.version="1.0.0"
 
 # Start the application with proper signal handling and optimized memory usage
 ENTRYPOINT ["dumb-init", "--"]

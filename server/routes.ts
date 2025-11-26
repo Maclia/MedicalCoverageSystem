@@ -46,12 +46,13 @@ import * as premiumCalculator from "./utils/premiumCalculator";
 import { addDays, differenceInYears, parseISO } from "date-fns";
 import { z } from "zod";
 import { emailService, emailWorkflows } from "./emailService";
+import financeRoutes from "./routes/finance.js";
 
 // Import and use schemes & benefits management routes
 import { registerSchemesRoutes } from "./routes/schemes";
-import wellnessIntegrationRoutes from "./src/routes/wellnessIntegration";
-import riskAssessmentRoutes from "./src/routes/riskAssessment";
-import communicationRoutes from "./src/routes/communication";
+import wellnessIntegrationRoutes from "./routes/wellnessIntegration";
+import riskAssessmentRoutes from "./routes/riskAssessment";
+import communicationRoutes from "./routes/communication";
 import cardManagementRoutes from "./routes/cardManagement";
 import providerNetworkRoutes from "./api/provider-networks";
 import providerContractRoutes from "./api/provider-contracts";
@@ -4069,6 +4070,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/crm/task-automation", crmTaskAutomationRoutes);
   app.use("/api/crm/lead-scoring", crmLeadScoringRoutes);
   app.use("/api/crm/lead-nurturing", crmLeadNurturingRoutes);
+
+  // Use Finance Management routes
+  app.use("/api/finance", financeRoutes);
 
   // Use schemes & benefits management routes
   registerSchemesRoutes(app);
