@@ -1,0 +1,19 @@
+{
+    "generated_at": "2025-12-01T19:06:40Z",
+    "deployment_type": "dev",
+    "certificates": {
+        "development": {
+            "type": "self-signed",
+            "certificate_file": "deployment/ssl/dev/localhost.crt",
+            "key_file": "deployment/ssl/dev/localhost.key",
+            "ca_bundle": "deployment/ssl/dev/ca-bundle.crt",
+            "subject": "C=US, ST=CA, L=San Francisco, O=MedicalCoverageSystem, OU=Development, CN=localhost",
+            "issuer": "C=US, ST=CA, L=San Francisco, O=MedicalCoverageSystem, OU=Development, CN=localhost",
+            "serial_number": "5C65D3CA91F49F210EB37AE2B348C57E5F12B2A3",
+            "fingerprint_sha256": "sha256 Fingerprint=B3:44:EC:1F:7F:AD:D1:A5:46:BA:70:C4:26:67:35:31:F9:00:BC:A0:2D:B1:A1:9E:60:38:06:36:BB:9D:61:8C",
+            "domains": "localhost,*.localhost",
+            "valid_for": "development only",
+            "bypass_required": true
+        }
+    }
+}

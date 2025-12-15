@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: medcoverage-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-medical_coverage_dev}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-devpassword}
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./deployment/configs/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    networks:
+      - medcoverage-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-medical_coverage_dev}"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # Redis for development
+  redis:
+    image: redis:7-alpine
+    container_name: medcoverage-redis-dev
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_dev_data:/data
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    networks:
+      - medcoverage-dev-network
+
+  # Backend Development Server
+  backend:
+    build:
+      context: ..
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: medcoverage-backend-dev
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-devpassword}@postgres:5432/${POSTGRES_DB:-medical_coverage_dev}
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-key}
+      CORS_ORIGIN: ${FRONTEND_URL:-http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+      - "9229:9229"  # Node.js debugging port
+    networks:
+      - medcoverage-dev-network
+    volumes:
+      - ..:/app
+      - /app/node_modules
+      - ./deployment/logs/backend:/app/logs
+    command: npm run dev
+
+  # Frontend Development Server
+  frontend:
+    build:
+      context: ../client
+      dockerfile: Dockerfile.dev
+    container_name: medcoverage-frontend-dev
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: ${BACKEND_URL:-http://localhost:3001}
+      VITE_ENVIRONMENT: development
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    networks:
+      - medcoverage-dev-network
+    volumes:
+      - ../client:/app
+      - /app/node_modules
+    command: npm run dev
+
+volumes:
+  postgres_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+
+networks:
+  medcoverage-dev-network:
+    driver: bridge

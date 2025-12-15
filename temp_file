@@ -1,0 +1,34 @@
+# syntax=docker/dockerfile:1.7-labs
+
+##############################
+# Base image
+##############################
+FROM node:20-slim AS base
+ENV NODE_ENV=production
+WORKDIR /app
+
+##############################
+# Dependency stage (cached with PNPM)
+##############################
+FROM base AS deps
+
+# Install build tools for native modules
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ ca-certificates curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PNPM globally
+RUN npm install -g pnpm
+
+# Copy only package files
+COPY package.json pnpm-lock.yaml* ./
+
+# Configure PNPM for network resilience
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+# Configure PNPM for network resilience
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+RUN if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
+    if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
+EOF && tail -n +35 Dockerfile.pnpm >> temp_file && mv temp_file Dockerfile.pnpm

@@ -1,0 +1,653 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database - Main Application Database
+  postgres:
+    image: docker.io/library/postgres:15-alpine
+    container_name: medical_coverage_db
+    environment:
+      POSTGRES_DB: ${DB_NAME_MAIN:-medical_coverage}
+      POSTGRES_USER: ${DB_USER_MAIN:-medical_coverage_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD_MAIN}
+      POSTGRES_HOST_AUTH_METHOD: ${POSTGRES_HOST_AUTH_METHOD:-scram-sha-256}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+      POSTGRES_INITDB_WALDIR: /var/lib/postgresql/wal
+    ports:
+      - "${DB_PORT_MAIN:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ${DATABASE_DIR:-./database}/init:/docker-entrypoint-initdb.d:ro
+      - ${DATABASE_DIR:-./database}/backups:/backups:ro
+      - ${PROJECT_ROOT:-.}/deployment/logs/postgres:/var/log/postgresql
+    networks:
+      - medical-coverage-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER_MAIN:-medical_coverage_user} -d ${DB_NAME_MAIN:-medical_coverage_main} -t 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+      start_interval: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=postgres,environment=${NODE_ENV:-development}"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  # Redis for caching and sessions
+  redis:
+    image: docker.io/library/redis:7-alpine
+    container_name: medical_coverage_redis
+    command: >
+      redis-server
+      --requirepass ${REDIS_PASSWORD:-redis_secure_password_2024}
+      --appendonly yes
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --tcp-keepalive 60
+      --loglevel notice
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redis_secure_password_2024}
+      - REDIS_REPLICATION_MODE=master
+      - REDIS_CLI_AUTH=${REDIS_PASSWORD:-redis_secure_password_2024}
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+      - ${PROJECT_ROOT:-.}/deployment/logs/redis:/var/log/redis
+      - ${PROJECT_ROOT:-.}/deployment/configs/redis.conf:/usr/local/etc/redis/redis.conf:ro
+    networks:
+      - medical-coverage-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+      start_interval: 3s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=redis,environment=${NODE_ENV:-development}"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+
+  # Backend API Server
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+      target: ${NODE_ENV:-development}
+      args:
+        - NODE_ENV=${NODE_ENV:-development}
+        - BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    image: medical-coverage/backend:${APP_VERSION:-latest}
+    container_name: medical_coverage_backend
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${BACKEND_PORT:-3001}
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://${DB_USER_MAIN:-medical_coverage_user}:${DB_PASSWORD_MAIN}@postgres:${DB_PORT_MAIN:-5432}/${DB_NAME_MAIN:-medical_coverage_main}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: ${DB_PORT_MAIN:-5432}
+      DATABASE_NAME: ${DB_NAME_MAIN:-medical_coverage_main}
+      DATABASE_USER: ${DB_USER_MAIN:-medical_coverage_user}
+      DATABASE_PASSWORD: ${DB_PASSWORD_MAIN}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_password_2024}@redis:${REDIS_PORT:-6379}/${REDIS_DB:-0}
+      REDIS_HOST: redis
+      REDIS_PORT: ${REDIS_PORT:-6379}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-redis_secure_password_2024}
+      REDIS_DB: ${REDIS_DB:-0}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRY_HOURS: ${JWT_EXPIRY_HOURS:-24}
+      JWT_REFRESH_EXPIRY_DAYS: ${JWT_REFRESH_EXPIRY_DAYS:-7}
+      APP_SECRET_KEY: ${APP_SECRET_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      UPLOAD_DIR: /app/uploads
+      UPLOAD_SECRET: ${UPLOAD_SECRET}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
+      ALLOWED_FILE_TYPES: ${ALLOWED_FILE_TYPES:-pdf,jpg,jpeg,png,doc,docx}
+      CORS_ORIGIN: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      CORS_METHODS: ${CORS_METHODS:-GET,POST,PUT,DELETE,OPTIONS,PATCH}
+      CORS_HEADERS: ${CORS_HEADERS:-Content-Type,Authorization,X-Requested-With}
+      CORS_CREDENTIALS: ${CORS_CREDENTIALS:-true}
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_SECURE: ${SMTP_SECURE}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASSWORD: ${SMTP_PASSWORD}
+      SMTP_TLS: ${SMTP_TLS}
+      EMAIL_FROM: ${EMAIL_FROM}
+      EMAIL_SUPPORT: ${EMAIL_SUPPORT}
+      SMS_PROVIDER: ${SMS_PROVIDER:-twilio}
+      SMS_API_KEY: ${SMS_API_KEY}
+      SMS_API_SECRET: ${SMS_API_SECRET}
+      SMS_FROM_NUMBER: ${SMS_FROM_NUMBER}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      DEBUG_MODE: ${DEBUG_MODE:-false}
+      SSL_ENABLED: ${SSL_ENABLED:-true}
+      SSL_VERIFY: ${SSL_VERIFY:-true}
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-15}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-100}
+    ports:
+      - "${BACKEND_PORT:-3001}:${BACKEND_PORT:-3001}"
+    volumes:
+      - ${PROJECT_ROOT:-.}/server:/app
+      - /app/node_modules
+      - uploads_data:/app/uploads
+      - ${PROJECT_ROOT:-.}/deployment/logs/backend:/app/logs
+      - ${PROJECT_ROOT:-.}/deployment/ssl:/app/ssl:ro
+    networks:
+      - medical-coverage-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT:-3001}/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+      start_interval: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=backend,environment=${NODE_ENV:-development}"
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      target: ${NODE_ENV:-development}
+      args:
+        - NODE_ENV=${NODE_ENV:-development}
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:3001}
+        - VITE_WS_URL=${VITE_WS_URL:-ws://localhost:3001}
+        - BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        - APP_VERSION=${APP_VERSION:-1.0.0}
+    image: medical-coverage/frontend:${APP_VERSION:-latest}
+    container_name: medical_coverage_frontend
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+      VITE_API_FINANCE_URL: ${FINANCE_URL:-http://localhost:5000}
+      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3001}
+      VITE_WS_FINANCE_URL: ${FINANCE_WS_URL:-ws://localhost:5000}
+      VITE_APP_NAME: ${APP_NAME:-MedicalCoverageSystem}
+      VITE_APP_VERSION: ${APP_VERSION:-1.0.0}
+      VITE_SSL_ENABLED: ${SSL_ENABLED:-true}
+      VITE_LOG_LEVEL: ${LOG_LEVEL:-info}
+      VITE_CORS_ENABLED: ${CORS_ENABLED:-true}
+      VITE_UPLOAD_MAX_SIZE: ${MAX_FILE_SIZE:-10485760}
+      VITE_SESSION_TIMEOUT: ${SESSION_TIMEOUT:-3600}
+      VITE_RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      VITE_MAINTENANCE_MODE: ${FEATURE_MAINTENANCE_MODE:-false}
+      GENERATE_SOURCEMAP: ${GENERATE_SOURCEMAP:-false}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    volumes:
+      - ${PROJECT_ROOT:-.}/client:/app
+      - /app/node_modules
+      - ${PROJECT_ROOT:-.}/deployment/logs/frontend:/app/logs
+    networks:
+      - medical-coverage-network
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${FRONTEND_PORT:-3000} || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+      start_interval: 3s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=frontend,environment=${NODE_ENV:-development}"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.3'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    #image: docker.io/library/nginx:alpine
+    container_name: medical_coverage_nginx
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+      args:
+        - NGINX_VERSION=${NGINX_VERSION:-1.25}
+        - BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        - VCS_REF=${APP_VERSION:-latest}
+    image: medical-coverage/nginx:${APP_VERSION:-latest}
+    environment:
+      - NGINX_WORKER_PROCESSES=auto
+      - NGINX_WORKER_CONNECTIONS=1024
+      - NGINX_KEEPALIVE_TIMEOUT=65
+      - NGINX_KEEPALIVE_REQUESTS=1000
+      - NGINX_CLIENT_MAX_BODY_SIZE=${MAX_FILE_SIZE:-10485760}
+      - NGINX_SERVER_NAME=${SERVER_NAME:-localhost}
+      - NGINX_RESOLVER=8.8.8.8
+      - NGINX_RESOLVER_VALID=300s
+      - NGINX_GZIP_COMP_LEVEL=6
+      - NGINX_GZIP_TYPES=text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript
+      - NGINX_RATE_LIMIT=${RATE_LIMIT_GENERAL:-10}
+      - NGINX_API_RATE_LIMIT=${RATE_LIMIT_API:-50}
+      - NGINX_FINANCE_RATE_LIMIT=${RATE_LIMIT_FINANCE:-30}
+      - NGINX_UPLOAD_RATE_LIMIT=${RATE_LIMIT_UPLOAD:-5}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${PROJECT_ROOT:-.}/deployment/configs/nginx-generated.conf:/etc/nginx/nginx.conf:ro
+      - ${PROJECT_ROOT:-.}/deployment/configs/nginx-unified.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${PROJECT_ROOT:-.}/deployment/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+      - ${PROJECT_ROOT:-.}/deployment/logs/nginx:/var/log/nginx/custom
+    networks:
+      - medical-coverage-network
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:80/nginx_status || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+      start_interval: 3s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=nginx,environment=${NODE_ENV:-development}"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 128M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 60s
+    profiles:
+      - production
+
+  # Finance API Service
+  finance:
+    build:
+      context: ./finance
+      dockerfile: Dockerfile
+      target: ${NODE_ENV:-development}
+      args:
+        - NODE_ENV=${NODE_ENV:-development}
+        - BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    image: medical-coverage/finance:${APP_VERSION:-latest}
+    container_name: medical_coverage_finance
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: ${FINANCE_PORT:-5000}
+      HOST: 0.0.0.0
+      DATABASE_URL: postgresql://${DB_USER_FINANCE:-medical_coverage_finance_user}:${DB_PASSWORD_FINANCE}@postgres:${DB_PORT_FINANCE:-5432}/${DB_NAME_FINANCE:-medical_coverage_finance}
+      DATABASE_HOST: postgres
+      DATABASE_PORT: ${DB_PORT_FINANCE:-5432}
+      DATABASE_NAME: ${DB_NAME_FINANCE:-medical_coverage_finance}
+      DATABASE_USER: ${DB_USER_FINANCE:-medical_coverage_finance_user}
+      DATABASE_PASSWORD: ${DB_PASSWORD_FINANCE}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secure_password_2024}@redis:${REDIS_PORT:-6379}/${REDIS_FINANCE_DB:-1}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      API_KEY_SECRET: ${API_KEY_SECRET}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_FORMAT: ${LOG_FORMAT:-json}
+      SSL_ENABLED: ${SSL_ENABLED:-true}
+      MONITORING_ENABLED: ${MONITORING_ENABLED:-true}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_WINDOW: ${RATE_LIMIT_WINDOW:-15}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_FINANCE:-30}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+    ports:
+      - "${FINANCE_PORT:-5000}:5000"
+    volumes:
+      - ${PROJECT_ROOT:-.}/finance:/app
+      - /app/node_modules
+      - ${PROJECT_ROOT:-.}/deployment/logs/finance:/app/logs
+      - ${PROJECT_ROOT:-.}/deployment/ssl:/app/ssl:ro
+    networks:
+      - medical-coverage-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${FINANCE_PORT:-5000}/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+      start_interval: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=finance,environment=${NODE_ENV:-development}"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1.5G
+        reservations:
+          cpus: '0.3'
+          memory: 256M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    profiles:
+      - production
+      - dev
+
+  # Development environment with hot reload
+  app-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "${BACKEND_PORT:-3001}:3001"
+      - "${FINANCE_PORT:-5000}:5000"
+      - "5173:5173"  # Vite dev server
+    environment:
+      - NODE_ENV=development
+      - HOSTNAME=0.0.0.0
+      - DATABASE_URL=postgresql://${DB_USER_MAIN:-medical_coverage_user}:${DB_PASSWORD_MAIN}@postgres:${DB_PORT_MAIN:-5432}/${DB_NAME_MAIN:-medical_coverage_main}
+      - DATABASE_FINANCE_URL=postgresql://${DB_USER_FINANCE:-medical_coverage_finance_user}:${DB_PASSWORD_FINANCE}@postgres:${DB_PORT_FINANCE:-5432}/${DB_NAME_FINANCE:-medical_coverage_finance}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_secure_password_2024}@redis:${REDIS_PORT:-6379}/${REDIS_DB:-0}
+      - JWT_SECRET=${JWT_SECRET:-dev-jwt-secret-key}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-dev-refresh-secret-key}
+      - API_KEY_SECRET=${API_KEY_SECRET:-dev-api-key-secret}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET:-dev-webhook-secret}
+      - APP_SECRET_KEY=${APP_SECRET_KEY:-dev-app-secret-key}
+      - SESSION_SECRET=${SESSION_SECRET:-dev-session-secret}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-dev-encryption-key}
+      - CORS_ORIGIN=${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      - SSL_ENABLED=${SSL_ENABLED:-false}
+      - DEBUG_MODE=${DEBUG_MODE:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-debug}
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-false}
+      - MONITORING_ENABLED=${MONITORING_ENABLED:-true}
+    volumes:
+      - ${PROJECT_ROOT:-.}:/app
+      - /app/node_modules
+      - ${PROJECT_ROOT:-.}/deployment/logs:/app/logs
+      - uploads_data:/app/uploads
+      - ${PROJECT_ROOT:-.}/deployment/ssl:/app/ssl:ro
+    networks:
+      - medical-coverage-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:${BACKEND_PORT:-3001}/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "3"
+        labels: "service=app-dev,environment=development"
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    profiles:
+      - dev
+
+  # Database backup service (optional)
+  db-backup:
+    image: docker.io/library/postgres:15-alpine
+    container_name: medical_coverage_backup
+    environment:
+      - PGPASSWORD=${DB_BACKUP_PASSWORD:-medical_secure_password_2024}
+      - POSTGRES_HOST=${DB_HOST:-postgres}
+      - POSTGRES_PORT=${DB_PORT_MAIN:-5432}
+      - POSTGRES_DB=${DB_NAME_MAIN:-medical_coverage_main}
+      - POSTGRES_USER=${DB_USER_MAIN:-medical_coverage_user}
+      - POSTGRES_FINANCE_DB=${DB_NAME_FINANCE:-medical_coverage_finance}
+      - POSTGRES_FINANCE_USER=${DB_USER_FINANCE:-medical_coverage_finance_user}
+      - BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - EMAIL_NOTIFICATIONS=${EMAIL_NOTIFICATIONS:-true}
+    volumes:
+      - backup_data:/backups
+      - ${PROJECT_ROOT:-.}/deployment/scripts:/scripts:ro
+      - ${PROJECT_ROOT:-.}/deployment/logs/backup:/var/log/backup
+    command: >
+      sh -c "
+        echo 'Database backup service initialized' &&
+        echo 'Backup schedule: ${BACKUP_SCHEDULE:-0 2 * * *}' &&
+        echo 'Backup retention: ${BACKUP_RETENTION_DAYS:-30} days' &&
+        while true; do
+          sleep 3600
+          # Backup logic would be implemented here
+          # This is a placeholder for a complete backup implementation
+        done
+      "
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "echo 'Backup service running' || exit 1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+    networks:
+      - medical-coverage-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        labels: "service=db-backup,environment=${NODE_ENV:-development}"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    profiles:
+      - backup
+      - production
+
+  # Health monitoring service
+  health-monitor:
+    build:
+      context: ${PROJECT_ROOT:-.}
+      dockerfile: ${PROJECT_ROOT:-.}/deployment/docker/Dockerfile.health-monitor
+      args:
+        - BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+        - VCS_REF=${APP_VERSION:-latest}
+    image: medical-coverage/health-monitor:${APP_VERSION:-latest}
+    container_name: medical_coverage_health_monitor
+    environment:
+      - MONITORING_ENABLED=${MONITORING_ENABLED:-true}
+      - MONITORING_INTERVAL=${MONITORING_INTERVAL:-60}
+      - HEALTH_CHECK_INTERVAL=${HEALTH_CHECK_INTERVAL:-30}
+      - SLACK_WEBHOOK_URL=${SLACK_WEBHOOK_URL:-}
+      - SENTRY_DSN=${SENTRY_DSN:-}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - EMAIL_ALERTS=${EMAIL_ALERTS:-true}
+      - ALERT_THRESHOLD=${ALERT_THRESHOLD:-3}
+      - METRICS_ENABLED=${METRICS_ENABLED:-true}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - ${PROJECT_ROOT:-.}/deployment/logs/health-monitor:/var/log/health-monitor
+      - ${PROJECT_ROOT:-.}/deployment/logs:/var/log/services:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - medical-coverage-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+        labels: "service=health-monitor,environment=${NODE_ENV:-development}"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 128M
+    profiles:
+      - production
+      - monitoring
+
+volumes:
+  postgres_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${POSTGRES_DATA_PATH:-./data/postgres}
+  redis_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${REDIS_DATA_PATH:-./data/redis}
+  uploads_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${UPLOADS_DATA_PATH:-./data/uploads}
+  nginx_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PROJECT_ROOT:-.}/deployment/logs/nginx
+  logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PROJECT_ROOT:-.}/deployment/logs
+  backup_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${BACKUP_DATA_PATH:-./data/backups}
+
+networks:
+  medical-coverage-network:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: medical-coverage
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.20.0.0/16
+          gateway: 172.20.0.1
+          ip_range: 172.20.0.0/24

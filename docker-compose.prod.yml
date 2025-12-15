@@ -1,0 +1,154 @@
+version: '3.8'
+
+services:
+  # Production Database
+  postgres-prod:
+    image: postgres:15-alpine
+    container_name: medcov_postgres_prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-medical_coverage_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - medcov_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-medical_coverage_prod}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cache
+  redis-prod:
+    image: redis:7-alpine
+    container_name: medcov_redis_prod
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis_data_prod:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - medcov_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Application Server
+  app-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: medcov_app_prod
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres-prod:5432/${POSTGRES_DB:-medical_coverage_prod}
+      REDIS_URL: redis://redis-prod:6379
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      - uploads:/app/uploads
+      - logs:/app/logs
+      - email_templates:/app/server/emailTemplates
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+      redis-prod:
+        condition: service_healthy
+    networks:
+      - medcov_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${PORT:-3000}/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Nginx Reverse Proxy
+  nginx-prod:
+    image: nginx:alpine
+    container_name: medcov_nginx_prod
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - static_files:/var/www/static:ro
+    depends_on:
+      - app-prod
+    networks:
+      - medcov_network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Background Job Processor
+  worker-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: medcov_worker_prod
+    restart: unless-stopped
+    command: ["npm", "run", "worker"]
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgres://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres-prod:5432/${POSTGRES_DB:-medical_coverage_prod}
+      REDIS_URL: redis://redis-prod:6379
+    volumes:
+      - uploads:/app/uploads
+      - logs:/app/logs
+      - email_templates:/app/server/emailTemplates
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+      redis-prod:
+        condition: service_healthy
+    networks:
+      - medcov_network
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+
+volumes:
+  postgres_data_prod:
+    driver: local
+  redis_data_prod:
+    driver: local
+  uploads:
+    driver: local
+  logs:
+    driver: local
+  email_templates:
+    driver: local
+  static_files:
+    driver: local
+
+networks:
+  medcov_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

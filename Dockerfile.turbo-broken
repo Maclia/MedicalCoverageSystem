@@ -1,0 +1,142 @@
+# syntax=docker/dockerfile:1.7-labs
+
+##############################
+# Base image
+##############################
+FROM node:20-slim AS base
+ENV NODE_ENV=production
+WORKDIR /app
+
+##############################
+# Dependency stage (Turbo optimized)
+##############################
+FROM base AS deps
+
+# Install build tools for native modules
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Turbo
+RUN npm install -g turbo
+
+# Copy package files and turbo.json
+COPY package.json package-lock.json* turbo.json ./
+COPY packages/server/package.json ./packages/server/
+COPY packages/client/package.json ./packages/client/
+COPY packages/shared/package.json ./packages/shared/
+
+# Configure npm for network resilience (without use-ipv4)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set prefer-online true && \
+    if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
+    if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
+
+# Install dependencies — use BuildKit caching
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --omit=dev
+
+##############################
+# Builder stage (Turbo optimized)
+##############################
+FROM base AS builder
+
+# Install build tools and Turbo
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 make g++ ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g turbo
+
+WORKDIR /app
+
+# Copy package files and turbo.json
+COPY package.json package-lock.json* turbo.json ./
+COPY packages/server/package.json ./packages/server/
+COPY packages/client/package.json ./packages/client/
+COPY packages/shared/package.json ./packages/shared/
+
+# Configure npm for network resilience (without use-ipv4)
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+RUN npm config set registry https://registry.npmjs.org/ && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
+    npm config set prefer-online true && \
+    if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
+    if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
+
+# Install ALL dependencies (with cache)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+
+# Copy full source (turbo prune optimized context)
+COPY . .
+
+# Build with Turbo (optimized for monorepo)
+RUN turbo run build --filter=...^
+
+##############################
+# Runtime (lean, secure)
+##############################
+FROM node:20-slim AS runner
+
+ENV NODE_ENV=production
+ENV PORT=3001
+ENV HOST=0.0.0.0
+
+WORKDIR /app
+
+# Install only what runtime needs
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    dumb-init curl postgresql-client ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create non-root user
+RUN addgroup --system nodejs && \
+    adduser --system --ingroup nodejs nodejs
+
+# Copy production dependency tree
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --from=deps --chown=nodejs:nodejs /app/packages/server/node_modules ./packages/server/node_modules
+COPY --from=deps --chown=nodejs:nodejs /app/packages/client/node_modules ./packages/client/node_modules
+COPY --from=deps --chown=nodejs:nodejs /app/packages/shared/node_modules ./packages/shared/node_modules
+
+# Copy runtime files
+COPY --from=builder --chown=nodejs:nodejs /app/package.json .
+COPY --from=builder --chown=nodejs:nodejs /app/turbo.json ./
+COPY --from=builder --chown=nodejs:nodejs /app/packages/server/package.json ./packages/server/
+COPY --from=builder --chown=nodejs:nodejs /app/packages/client/package.json ./packages/client/
+COPY --from=builder --chown=nodejs:nodejs /app/packages/shared/package.json ./packages/shared/
+
+# Copy built application files
+COPY --from=builder --chown=nodejs:nodejs /app/packages/server/dist ./packages/server/dist
+COPY --from=builder --chown=nodejs:nodejs /app/packages/client/dist ./packages/client/dist
+COPY --from=builder --chown=nodejs:nodejs /app/packages/shared ./packages/shared
+
+# Prepare folders
+RUN mkdir -p uploads logs backups temp && \
+    chown -R nodejs:nodejs .
+
+USER nodejs
+
+EXPOSE 3001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
+  CMD curl -f http://localhost:3001/api/health || exit 1
+
+# Add custom labels for better orchestration
+LABEL maintainer="MedicalCoverageSystem Team" \
+      version="3.0.0" \
+      description="Medical Coverage System with Turborepo optimization" \
+      org.opencontainers.image.source="https://github.com/your-org/medical-coverage-system"
+
+# Start application with proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["node", "--max-old-space-size=2048", "packages/server/dist/index.js"]

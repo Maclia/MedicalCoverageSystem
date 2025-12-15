@@ -1,0 +1,73 @@
+version: "3.9"
+
+# WSL-specific overrides for MedicalCoverageSystem development
+# Use with: docker-compose -f docker-compose.dev.yml -f docker-compose.wsl.yml up
+
+services:
+  app:
+    volumes:
+      # WSL volume mounts (better performance for development)
+      - ./server:/app/server:cached
+      - ./client:/app/client:cached
+      - ./shared:/app/shared:cached
+      - ./config:/app/config:cached
+      - ./package.json:/app/package.json:cached
+      - ./tsconfig.json:/app/tsconfig.json:cached
+      - ./vite.config.ts:/app/vite.config.ts:cached
+      - ./tailwind.config.js:/app/tailwind.config.js:cached
+      - ./drizzle.config.ts:/app/drizzle.config.ts:cached
+
+      # Persistent data on WSL filesystem (faster than Windows mounts)
+      - uploads_wsl:/app/uploads
+      - logs_wsl:/app/logs
+      - node_modules_wsl:/app/node_modules
+
+    environment:
+      # WSL-specific optimizations
+      - WSL_ENABLED=1
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - CHOKIDAR_USEPOLLING=true
+      - FAST_REFRESH=true
+
+    # WSL-specific development settings
+    stdin_open: true
+    tty: true
+
+  postgres:
+    volumes:
+      # Use WSL filesystem for better database performance
+      - postgres_wsl_data:/var/lib/postgresql/data
+
+    environment:
+      # WSL-specific PostgreSQL settings
+      - POSTGRES_HOST_AUTH_METHOD=scram-sha-256
+
+  redis:
+    volumes:
+      # Use WSL filesystem for better Redis performance
+      - redis_wsl_data:/data
+
+    # WSL-specific Redis settings
+    sysctls:
+      - net.core.somaxconn=1024
+
+volumes:
+  postgres_wsl_data:
+    driver: local
+  redis_wsl_data:
+    driver: local
+  uploads_wsl_data:
+    driver: local
+  logs_wsl_data:
+    driver: local
+  node_modules_wsl_data:
+    driver: local
+
+# WSL-specific network settings
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
+      com.docker.network.bridge.enable_ip_masquerade: "true"
+      com.docker.network.driver.mtu: "1500"

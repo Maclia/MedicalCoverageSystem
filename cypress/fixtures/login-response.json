@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "user": {
+    "id": 1,
+    "email": "admin@test.com",
+    "role": "insurance",
+    "firstName": "Admin",
+    "lastName": "User",
+    "permissions": [
+      "member_management",
+      "onboarding_management",
+      "document_review",
+      "email_management",
+      "analytics"
+    ]
+  },
+  "token": "mock-jwt-token-for-testing",
+  "refreshToken": "mock-refresh-token-for-testing"
+}

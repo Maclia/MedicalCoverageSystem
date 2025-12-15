@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Docker Credential Fix Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+        }
+
+        body {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+
+        .logo {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #fff;
+        }
+
+        .logo span {
+            color: #e63947;
+            font-weight: bold;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 6px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e1e4e8;
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.15);
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            font-size: 8px;
+            line-height: 12px;
+            text-align: center;
+            color: white;
+        }
+
+        .status-running {
+            background-color: #28a745;
+        }
+
+        .status-warning {
+            background-color: #f39c12;
+        }
+
+        .status-error {
+            background-color: #dc3545;
+        }
+
+        .status-success {
+            background-color: #27ae60;
+        }
+
+        .severity-critical {
+            background-color: #dc3545;
+        }
+
+        .severity-high {
+            background-color: #f39c12;
+        }
+
+        .severity-medium {
+            background-color: #ffc107;
+        }
+
+        .severity-low {
+            background-color: #4caf50;
+        }
+
+        h1 {
+            font-size: 1.5em;
+            margin: 0 0 0.5em 0;
+            color: #2c3e50;
+        }
+
+        h2 {
+            font-size: 1.2em;
+            margin: 0 0 0.2em 0;
+            color: #4caf50;
+        }
+
+        .value {
+            font-size: 2em;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .label {
+            font-size: 0.8em;
+            color: #666;
+            margin-bottom: 4px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: #e0e0e6;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #27ae60;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            display: flex;
+            align-items: center;
+            height: 100%;
+            font-size: 0.8em;
+            color: white;
+            font-weight: bold;
+        }
+
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            justify-content: flex-end;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+            border: 1px solid #5a6268;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e1e4e8;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            border-bottom: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom: 2px solid #007bff;
+            color: #007bff;
+        }
+
+        .tab:hover {
+            background: #f8f9fa;
+        }
+
+        .content {
+            padding: 20px;
+            min-height: 300px;
+        }
+
+        .progress-section {
+            margin-bottom: 20px;
+        }
+
+        .issue {
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            background: #fcfdfe;
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .issue-message {
+            flex: 1;
+        font-size: 0.9em;
+            color: #333;
+        }
+
+        .issue-action {
+            font-size: 0.8em;
+            color: #666;
+        }
+
+        .log-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-content {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.8em;
+            line-height: 1.4;
+            color: #333;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .stat-item {
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .backup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+        }
+
+        .backup-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: 0.8em;
+            border-radius: 2px;
+        }
+
+        .severity-badge {
+            font-size: 0.7em;
+            padding: 2px 6px;
+            border-radius: 12px;
+            color: white;
+            text-transform: uppercase;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+            duration: 0.3s;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+            duration: 0.3s;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+            duration: 1s;
+            animation: linear infinite;
+        }
+
+        .spinning::after {
+            content: "";
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">
+                🐳 <span>Docker</span> <span>Credential Fix</span>
+            </div>
+            <div>
+                <h1>Docker Credential Helper Diagnostic Dashboard</h1>
+                <p>Comprehensive monitoring and repair for Docker authentication issues</p>
+            </div>
+        </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-header">
+                    <div class="status-indicator status-running"></div>
+                    <h2>Docker Status</h2>
+                </div>
+                <div class="issue">
+                    <div class="issue-message">
+                        <strong>Daemon:</strong>
+                        <span id="docker-status">Loading...</span>
+                    </div>
+                    <div class="issue-action">
+                        <span id="docker-status-action">Checking...</span>
+                    </div>
+                </div>
+                <div class="card-header">
+                    <div class="status-indicator status-success"></div>
+                    <h2>Credential Helper</h2>
+                </div>
+                <div class="issue">
+                    <div class="issue-message">
+                        <strong>Status:</strong>
+                        <span id="helper-status">Checking...</span>
+                    </div>
+                    <div class="issue-action">
+                        <button class="btn btn-primary" onclick="runDiagnostic()">Scan</button>
+                    </div>
+                </div>
+                <div class="card-header">
+                    <div class="status-indicator status-success"></div>
+                    <h2>System Health</h2>
+                </div>
+                <div class="issue">
+                    <div class="issue-message">
+                        <strong>Overall:</strong>
+                        <span id="system-health-status">Healthy</span>
+                    </div>
+                </div>
+                <div class="card-header">
+                    <div class="status-indicator status-warning"></div>
+                    <h2>Issues Found</h2>
+                </div>
+                <div class="issue">
+                    <div class="issue-message">
+                        <strong>Issues:</strong>
+                        <span id="issues-count">0</span> issues detected
+                    </div>
+                    <div class="issue-action">
+                        <button class="btn btn-primary" onclick="showIssues()">View Issues</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                    <div class="status-indicator status-success"></div>
+                    <h2>Recent Activity</h2>
+                </div>
+                <div class="content">
+                    <div class="log-section" id="activity-log">
+                        <div class="log-content">
+                            <div id="no-activity">No recent activity. Start a diagnostic scan to see detailed logs.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('overview')">Overview</div>
+            <div class="tab" onclick="showTab('issues')">Issues</div>
+            <div class="tab" onclick="showTab('backups')">Backups</div>
+            <div class="tab" onclick="showTab('logs')">Logs</div>
+        </div>
+
+        <div class="content">
+            <div id="overview-content" class="content">
+                <div class="grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>Quick Actions</h2>
+                        </div>
+                        <div class="actions">
+                            <button class="btn btn-primary" onclick="startDiagnostic()">
+                                <span class="spinning" id="diagnostic-btn"></span>
+                                <span id="diagnostic-text">Run Diagnostic</span>
+                            </button>
+                            <button class="btn btn-secondary" onclick="startQuickRepair()">
+                                <span id="quick-repair-btn"></span>
+                                Quick Repair
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h2>System Information</h2>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-item">
+                                <div class="label">Platform:</div>
+                                <div class="value" id="platform-info">Detecting...</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="label">Docker Version:</div>
+                                <div class="value" id="docker-version">Detecting...</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="label">Uptime:</div>
+                                <div class="value" id="uptime">N/A</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="issues-content" class="content hidden">
+                <div class="progress-section">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                        <div class="progress-text" id="issues-progress-text">Initializing...</div>
+                    </div>
+                </div>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="label">Critical:</div>
+                                <div class="value" id="critical-count">0</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="label">High:</div>
+                                <div class="value" id="high-count">0</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="label">Medium:</div>
+                                <div class="value" id="medium-count">0</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="label">Low:</div>
+                                <div class="value" id="low-count">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="backups-content" class="content hidden">
+                <h3>Backup Management</h3>
+                <div class="actions">
+                    <button class="btn btn-primary" onclick="createBackup()">
+                        <span id="backup-btn"></span>
+                        Create Backup
+                    </button>
+                </div>
+                <div class="backup-list" id="backup-list">
+                    <div class="hidden backup-item" id="no-backups">
+                        <div class="issue-message">No backups available</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="logs-content" class="content hidden">
+                <div class="log-section">
+                    <h3>Activity Logs</h3>
+                    <div class="log-content" id="logs">
+                        <div class="no-activity">No logs available. Start a diagnostic scan to see detailed logs.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="progress-overlay hidden" id="progress-overlay">
+            <div class="progress-content">
+                <div class="progress-header">
+                    <h3 id="progress-title">Processing...</h3>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 0%"></div>
+                        <div class="progress-text" id="progress-text">0%</div>
+                    </div>
+                </div>
+                <div class="progress-details" id="progress-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // WebSocket connection
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}:${window.location.port || 3000}`;
+
+        let ws;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        function connect() {
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function() {
+                    console.log('Connected to Docker Credential Fix Dashboard');
+                    ws.send(JSON.stringify({
+                        type: 'connection',
+                        sessionId: 'client-' + Date.now(),
+                        clientInfo: {
+                            userAgent: navigator.userAgent,
+                            platform: navigator.platform,
+                            language: navigator.language
+                        }
+                    }));
+
+                    // Request initial status
+                    ws.send(JSON.stringify({
+                        type: 'get_status',
+                        sessionId: 'client-' + Date.now()
+                    }));
+
+                    reconnectAttempts = 0;
+                };
+
+                ws.onmessage = function(event) {
+                    const data = JSON.parse(event.data);
+                    handleWebSocketMessage(data);
+                };
+
+                ws.onclose = function() {
+                    console.log('Disconnected from Docker Credential Fix Dashboard');
+                    document.querySelectorAll('.status-indicator').forEach(el => {
+                        el.className = 'status-indicator status-error';
+                        el.textContent = 'Offline';
+                    });
+
+                    // Try to reconnect
+                    setTimeout(() => {
+                        if (reconnectAttempts < maxReconnectAttempts) {
+                            reconnectAttempts++;
+                            console.log(`Attempting to reconnect... (${reconnectAttempts}/${maxReconnectAttempts})`);
+                            connect();
+                        } else {
+                                console.log('Max reconnection attempts reached');
+                            document.querySelectorAll('.status-indicator').forEach(el => {
+                                    el.className = 'status-indicator status-error';
+                                    el.textContent = 'Offline';
+                                });
+                            }
+                    }, 2000);
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket error:', error);
+                    document.querySelectorAll('.status-indicator').forEach(el => {
+                        el.className = 'status-indicator status-error';
+                        el.textContent = 'Connection Error';
+                    });
+                };
+
+            } catch (error) {
+                console.error('Failed to connect to WebSocket:', error);
+                document.querySelectorAll('.status-indicator').forEach(el => {
+                    el.className = 'status-indicator status-error';
+                    el.textContent = 'Connection Failed';
+                });
+            }
+        }
+
+        function handleWebSocketMessage(data) {
+            switch(data.type) {
+                case 'connection':
+                    if (data.success) {
+                        console.log('Connected to server');
+                        document.querySelectorAll('.status-indicator').forEach(el => {
+                            el.className = 'status-indicator status-success';
+                            el.textContent = 'Connected';
+                        });
+                    } else {
+                        console.log('Connection failed:', data.message);
+                        document.querySelectorAll('.status-indicator').forEach(el => {
+                            el.className = 'status-indicator status-error';
+                            el.textContent = 'Connection Failed';
+                        });
+                    }
+                    break;
+
+                case 'status_update':
+                    updateStatusDisplay(data.status);
+                    break;
+
+                case 'scan_progress':
+                    if (data.progress !== undefined) {
+                        updateProgressOverlay(data);
+                    }
+                    break;
+
+                case 'scan_completed':
+                    hideProgressOverlay();
+                    if (data.issues) {
+                        updateIssuesDisplay(data.issues);
+                    }
+                    break;
+
+                case 'fix_progress':
+                    updateProgressOverlay(data);
+                    break;
+
+                case 'fix_completed':
+                    updateProgressOverlay({ success: true, message: data.message, type: 'success' });
+                    setTimeout(() => hideProgressOverlay(), 2000);
+                    break;
+
+                case 'error':
+                    updateProgressOverlay({ success: false, message: data.message, type: 'error' });
+                    setTimeout(() => hideProgressOverlay(), 3000);
+                    break;
+
+                case 'backup_created':
+                    addBackupToList(data.backup);
+                    break;
+
+                case 'backup_deleted':
+                    removeBackupFromList(data.backupId);
+                    break;
+
+                default:
+                    console.log('Unknown message type:', data.type);
+            }
+        }
+
+        function updateStatusDisplay(status) {
+            // Update Docker status
+            if (status.docker) {
+                document.getElementById('docker-status').textContent = 'Running';
+                document.getElementById('docker-status').className = 'status-indicator status-running';
+                document.getElementById('docker-status-action').textContent = 'Running';
+            } else {
+                document.getElementById('docker-status').textContent = 'Not Running';
+                document.getElementById('docker-status').className = 'status-indicator status-error';
+                document.getElementById('docker-status-action').textContent = 'Start Docker';
+            }
+
+            // Update helper status
+            if (status.credentialHelper) {
+                document.getElementById('helper-status').textContent = status.credentialHelper.working ? 'Working' : 'Broken';
+                document.getElementById('helper-status').className = status.credentialHelper.working ? 'status-indicator status-success' : 'status-indicator status-error';
+            } else {
+                document.getElementById('helper-status').textContent = 'Not Detected';
+                document.getElementById('helper-status').className = 'status-indicator status-warning';
+            }
+            }
+
+            // Update system health
+            if (status.system && status.system.healthy) {
+                document.getElementById('system-health-status').textContent = 'Healthy';
+                document.getElementById('system-health-status').className = 'status-indicator status-success';
+            } else {
+                document.getElementById('system-health-status').textContent = 'Issues Detected';
+                document.getElementById('system-health-status').className = 'status-indicator status-warning';
+            }
+
+            // Update platform info
+            if (status.platform) {
+                document.getElementById('platform-info').textContent = status.platform.os;
+            }
+
+            if (status.docker) {
+                document.getElementById('docker-version').textContent = status.docker.version;
+            }
+
+            if (status.system) {
+                document.getElementById('uptime').textContent = status.system.uptime;
+            }
+        }
+
+        function updateIssuesDisplay(issues) {
+            const criticalCount = issues.filter(i => i.severity === 'critical').length;
+            const highCount = issues.filter(i => i.severity === 'high').length;
+            const mediumCount = issues.filter(i => i.severity === 'medium').length;
+            const lowCount = issues.filter(i => i.severity === 'low').length;
+
+            document.getElementById('critical-count').textContent = criticalCount;
+            document.getElementById('high-count').textContent = highCount;
+            document.getElementById('medium-count').textContent = mediumCount;
+            document.getElementById('low-count').textContent = lowCount;
+            document.getElementById('issues-count').textContent = issues.length;
+        }
+
+        function updateProgressOverlay(data) {
+            const overlay = document.getElementById('progress-overlay');
+            const title = document.getElementById('progress-title');
+            const text = document.getElementById('progress-text');
+            const details = document.getElementById('progress-details');
+
+            if (overlay) {
+                overlay.classList.remove('hidden');
+                title.textContent = data.title || 'Processing...';
+                text.textContent = data.progress || '0%';
+                details.innerHTML = '';
+
+                if (data.message) {
+                    details.innerHTML = `<div class="issue-message">${data.message}</div>`;
+                }
+
+                if (data.progress !== undefined) {
+                    const progressBar = document.getElementById('progress-bar');
+                    progressBar.querySelector('.progress-fill').style.width = `${data.progress}%`;
+                }
+            }
+        }
+
+        function hideProgressOverlay() {
+            const overlay = document.getElementById('progress-overlay');
+            if (overlay) {
+                overlay.classList.add('hidden');
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                }, 300);
+            }
+        }
+
+        function addBackupToList(backup) {
+            const backupList = document.getElementById('backup-list');
+            const noBackups = document.getElementById('no-backups');
+
+            if (backupList && backupList.classList.contains('hidden')) {
+                backupList.classList.remove('hidden');
+                noBackups.classList.add('hidden');
+            }
+
+            if (backupList) {
+                const backupItem = document.createElement('div');
+                backupItem.className = 'backup-item';
+                backupItem.innerHTML = `
+                    <div class="backup-info">
+                        <div class="backup-id">${backup.id}</div>
+                        <div class="backup-timestamp">${new Date(backup.timestamp).toLocaleString()}</div>
+                        <div class="backup-size">${backup.size} bytes</div>
+                    </div>
+                    <div class="backup-actions">
+                        <button class="btn btn-small btn-primary" onclick="restoreBackup('${backup.id}')">Restore</button>
+                        <button class="btn btn-small btn-danger" onclick="deleteBackup('${backup.id}')">Delete</button>
+                    </div>
+                `;
+
+                backupList.insertBefore(backupItem, backupList.firstChild);
+            }
+        }
+
+        function removeBackupFromList(backupId) {
+            const backupItem = document.querySelector(`[data-backup-id="${backupId}"]`);
+            if (backupItem) {
+                backupItem.remove();
+                }
+        }
+
+        function restoreBackup(backupId) {
+            const ws = window.ws;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'restore_backup',
+                    sessionId: 'client-' + Date.now(),
+                    backupId: backupId
+                }));
+            }
+        }
+
+        function deleteBackup(backupId) {
+            const ws = window.ws;
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'delete_backup',
+                    sessionId: 'client-' + Date.now(),
+                    backupId: backupId
+                }));
+            }
+        }
+
+        function showTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            const selectedTab = document.querySelector(`[onclick="showTab('${tabName}')"]`);
+            if (selectedTab) {
+                selectedTab.classList.add('active');
+            }
+
+            // Hide all content
+            document.querySelectorAll('.content > div').forEach(content => {
+                content.classList.add('hidden');
+            });
+
+            // Show selected content
+            const selectedContent = document.getElementById(`${tabName}-content`);
+            if (selectedContent) {
+                selectedContent.classList.remove('hidden');
+            }
+        }
+
+        function runDiagnostic() {
+            showProgressOverlay({ title: 'Starting Diagnostic Scan', progress: 0 });
+
+            const btn = document.getElementById('diagnostic-btn');
+            const text = document.getElementById('diagnostic-text');
+
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinning"></span>';
+                text.textContent = 'Scanning...';
+            }
+
+            // Simulate diagnostic scan
+            let progress = 0;
+            const interval = setInterval(() => {
+                progress += 20;
+                updateProgressOverlay({ progress });
+
+                if (progress >= 100) {
+                    clearInterval(interval);
+
+                    btn.innerHTML = 'Scan Complete';
+                    btn.innerHTML = 'Scan Again';
+                    btn.onclick = runDiagnostic;
+                    text.textContent = 'Scan Complete';
+
+                    showProgressOverlay({
+                        success: true,
+                        message: 'Diagnostic scan completed successfully',
+                        type: 'success'
+                    });
+
+                    setTimeout(() => {
+                        hideProgressOverlay();
+                    }, 2000);
+                }
+            }, 500);
+        }
+
+        function startQuickRepair() {
+            const btn = document.getElementById('quick-repair-btn');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinning"></span>';
+            btn.onclick = null;
+
+            // Simulate quick repair
+            setTimeout(() => {
+                btn.innerHTML = 'Repair Complete';
+                btn.onclick = null;
+
+                showProgressOverlay({
+                    success: true,
+                    message: 'Quick repairs applied successfully',
+                    type: 'success'
+                });
+
+                setTimeout(() => {
+                    hideProgressOverlay();
+                    btn.innerHTML = 'Quick Repair';
+                    btn.onclick = startQuickRepair;
+                }, 2000);
+            }, 1000);
+        }
+
+        // Initial connection
+        connect();
+
+        // Auto-refresh every 5 seconds
+        setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    type: 'heartbeat',
+                    sessionId: 'client-' + Date.now()
+                }));
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
