@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: medical-coverage
+  labels:
+    name: medical-coverage
+    environment: production
+    project: medical-coverage-system
+  annotations:
+    description: "Medical Coverage System Production Namespace"
+    created: "2025-01-15"
+    managed-by: "github-actions"

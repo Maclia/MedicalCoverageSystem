@@ -1,0 +1,434 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-primary
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    role: primary
+    environment: production
+spec:
+  serviceName: postgres-primary
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+      role: primary
+  template:
+    metadata:
+      labels:
+        app: postgres
+        role: primary
+        environment: production
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_DB
+        - name: POSTGRES_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_REPLICATION_USER
+        - name: POSTGRES_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_REPLICATION_PASSWORD
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_HOST
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_PORT
+        - name: POSTGRES_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_SSL_MODE
+        - name: POSTGRES_MAX_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_MAX_CONNECTIONS
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+        - name: postgres-hba
+          mountPath: /etc/postgresql/pg_hba.conf
+          subPath: pg_hba.conf
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - $(POSTGRES_USER)
+            - -d
+            - $(POSTGRES_DB)
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - $(POSTGRES_USER)
+            - -d
+            - $(POSTGRES_DB)
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-config
+        configMap:
+          name: postgres-config-files
+      - name: postgres-hba
+        configMap:
+          name: postgres-config-files
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: gp2
+      resources:
+        requests:
+          storage: 200Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres-replica
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    role: replica
+    environment: production
+spec:
+  serviceName: postgres-replica
+  replicas: 2
+  selector:
+    matchLabels:
+      app: postgres
+      role: replica
+  template:
+    metadata:
+      labels:
+        app: postgres
+        role: replica
+        environment: production
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_DB
+        - name: POSTGRES_REPLICATION_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_REPLICATION_USER
+        - name: POSTGRES_REPLICATION_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_REPLICATION_PASSWORD
+        - name: POSTGRES_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_HOST
+        - name: POSTGRES_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_PORT
+        - name: POSTGRES_SSL_MODE
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_SSL_MODE
+        - name: POSTGRES_MAX_CONNECTIONS
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_MAX_CONNECTIONS
+        - name: PGDATA
+          value: /var/lib/postgresql/data/pgdata
+        - name: POSTGRES_PRIMARY_HOST
+          value: postgres-primary-0.postgres-primary
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-config-replica
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+        - name: postgres-recovery
+          mountPath: /etc/postgresql/recovery.conf
+          subPath: recovery.conf
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - $(POSTGRES_USER)
+            - -d
+            - $(POSTGRES_DB)
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - $(POSTGRES_USER)
+            - -d
+            - $(POSTGRES_DB)
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-config-replica
+        configMap:
+          name: postgres-config-files
+      - name: postgres-recovery
+        configMap:
+          name: postgres-config-files
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-storage
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      storageClassName: gp2
+      resources:
+        requests:
+          storage: 200Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-primary
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    role: primary
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres
+    role: primary
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-replica
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    role: replica
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres
+    role: replica
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres-service
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config-files
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    environment: production
+data:
+  postgresql.conf: |
+    # PostgreSQL configuration file
+
+    # Connection settings
+    listen_addresses = '*'
+    port = 5432
+    max_connections = 200
+    superuser_reserved_connections = 3
+
+    # Memory settings
+    shared_buffers = 1GB
+    effective_cache_size = 3GB
+    work_mem = 4MB
+    maintenance_work_mem = 64MB
+
+    # WAL settings
+    wal_level = replica
+    max_wal_size = 1GB
+    min_wal_size = 80MB
+    checkpoint_completion_target = 0.9
+    wal_buffers = 16MB
+
+    # Replication settings
+    max_wal_senders = 3
+    max_replication_slots = 3
+    wal_keep_segments = 32
+
+    # Query tuning
+    random_page_cost = 1.1
+    effective_io_concurrency = 200
+
+    # Logging
+    log_destination = 'stderr'
+    logging_collector = on
+    log_directory = 'pg_log'
+    log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'
+    log_statement = 'all'
+    log_min_duration_statement = 1000
+    log_checkpoints = on
+    log_connections = on
+    log_disconnections = on
+    log_lock_waits = on
+
+    # Autovacuum
+    autovacuum = on
+    autovacuum_max_workers = 3
+    autovacuum_naptime = 1min
+
+    # Statistics
+    track_activities = on
+    track_counts = on
+    track_io_timing = on
+    track_functions = pl
+
+    # Performance monitoring
+    shared_preload_libraries = 'pg_stat_statements,auto_explain'
+    pg_stat_statements.max = 10000
+    pg_stat_statements.track = all
+    auto_explain.log_min_duration = 1000
+    auto_explain.log_analyze = on
+
+  pg_hba.conf: |
+    # PostgreSQL Client Authentication Configuration File
+
+    # TYPE  DATABASE        USER            ADDRESS                 METHOD
+
+    # Local connections
+    local   all             postgres                                peer
+    local   all             all                                     md5
+
+    # IPv4 local connections
+    host    all             all             127.0.0.1/32            md5
+    host    all             all             10.0.0.0/8              md5
+    host    all             all             172.16.0.0/12           md5
+    host    all             all             192.168.0.0/16          md5
+
+    # IPv6 local connections
+    host    all             all             ::1/128                 md5
+
+    # Replication connections
+    host    replication     replicator      10.0.0.0/8              md5
+    host    replication     replicator      172.16.0.0/12           md5
+    host    replication     replicator      192.168.0.0/16          md5
+
+    # Allow replication connections from localhost, by a user with the
+    # replication privilege.
+    host    replication     replicator      ::1/128                 md5
+
+  recovery.conf: |
+    # Recovery configuration for replica
+
+    standby_mode = 'on'
+    primary_conninfo = 'host=postgres-primary-0.postgres-primary port=5432 user=replicator password=replicator_password123'
+    restore_command = 'cp /var/lib/postgresql/wal_archive/%f %p'
+    recovery_target_timeline = 'latest'

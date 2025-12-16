@@ -1,0 +1,461 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: medical-coverage
+  labels:
+    name: medical-coverage
+    environment: production
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: medical-coverage-sa
+  namespace: medical-coverage
+  labels:
+    app: medical-coverage
+    environment: production
+automountServiceAccountToken: false
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: medical-coverage
+  name: medical-coverage-role
+  labels:
+    app: medical-coverage
+    environment: production
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: medical-coverage-rolebinding
+  namespace: medical-coverage
+  labels:
+    app: medical-coverage
+    environment: production
+subjects:
+- kind: ServiceAccount
+  name: medical-coverage-sa
+  namespace: medical-coverage
+roleRef:
+  kind: Role
+  name: medical-coverage-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: medical-coverage-cluster-role
+  labels:
+    app: medical-coverage
+    environment: production
+rules:
+- apiGroups: [""]
+  resources: ["nodes", "namespaces"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["metrics.k8s.io"]
+  resources: ["pods", "nodes"]
+  verbs: ["get", "list"]
+- apiGroups: ["custom.metrics.k8s.io"]
+  resources: ["*"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: medical-coverage-cluster-rolebinding
+  labels:
+    app: medical-coverage
+    environment: production
+subjects:
+- kind: ServiceAccount
+  name: prometheus
+  namespace: medical-coverage
+- kind: ServiceAccount
+  name: node-exporter
+  namespace: medical-coverage
+roleRef:
+  kind: ClusterRole
+  name: medical-coverage-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: api-gateway-sa
+  namespace: medical-coverage
+  labels:
+    app: api-gateway
+    environment: production
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: auth-service-sa
+  namespace: medical-coverage
+  labels:
+    app: auth-service
+    environment: production
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: hospital-service-sa
+  namespace: medical-coverage
+  labels:
+    app: hospital-service
+    environment: production
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: insurance-service-sa
+  namespace: medical-coverage
+  labels:
+    app: insurance-service
+    environment: production
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: billing-service-sa
+  namespace: medical-coverage
+  labels:
+    app: billing-service
+    environment: production
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-sa
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    environment: production
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: redis-sa
+  namespace: medical-coverage
+  labels:
+    app: redis
+    environment: production
+automountServiceAccountToken: false
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: monitoring-sa
+  namespace: medical-coverage
+  labels:
+    app: monitoring
+    environment: production
+automountServiceAccountToken: true
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: medical-coverage
+  name: monitoring-role
+  labels:
+    app: monitoring
+    environment: production
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "nodes"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: monitoring-rolebinding
+  namespace: medical-coverage
+  labels:
+    app: monitoring
+    environment: production
+subjects:
+- kind: ServiceAccount
+  name: monitoring-sa
+  namespace: medical-coverage
+roleRef:
+  kind: Role
+  name: monitoring-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cert-manager-sa
+  namespace: medical-coverage
+  labels:
+    app: cert-manager
+    environment: production
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cert-manager-cluster-role
+  labels:
+    app: cert-manager
+    environment: production
+rules:
+- apiGroups: ["cert-manager.io"]
+  resources: ["certificates", "certificaterequests", "issuers", "clusterissuers"]
+  verbs: ["create", "get", "list", "update", "watch"]
+- apiGroups: ["extensions", "networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: [""]
+  resources: ["secrets", "events"]
+  verbs: ["create", "get", "list", "update", "watch"]
+- apiGroups: ["extensions"]
+  resources: ["ingresses/finalizers"]
+  verbs: ["update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cert-manager-cluster-rolebinding
+  labels:
+    app: cert-manager
+    environment: production
+subjects:
+- kind: ServiceAccount
+  name: cert-manager-sa
+  namespace: medical-coverage
+roleRef:
+  kind: ClusterRole
+  name: cert-manager-cluster-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: internal-auth
+  namespace: medical-coverage
+  labels:
+    app: internal-services
+    environment: production
+type: Opaque
+data:
+  auth: YWRtaW46JGFwcjEkNWYkN3VITE15NFBmJFFVZ0pCc3hFUnU4Zml6L0JjR2c4Lwo=  # admin:$apr1$5f$7uHLMy4Pf$QUgJBsxEru8fiz/BcGg8/
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api-gateway-pdb
+  namespace: medical-coverage
+  labels:
+    app: api-gateway
+    environment: production
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: api-gateway
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: auth-service-pdb
+  namespace: medical-coverage
+  labels:
+    app: auth-service
+    environment: production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: auth-service
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: postgres-pdb
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    environment: production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: postgres
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: redis-pdb
+  namespace: medical-coverage
+  labels:
+    app: redis
+    environment: production
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: redis
+---
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: medical-coverage-limits
+  namespace: medical-coverage
+  labels:
+    app: medical-coverage
+    environment: production
+spec:
+  limits:
+  - default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+    type: Container
+  - max:
+      cpu: "2"
+      memory: "4Gi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+    type: Container
+  - max:
+      storage: "10Gi"
+    min:
+      storage: "1Gi"
+    type: PersistentVolumeClaim
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: medical-coverage-quota
+  namespace: medical-coverage
+  labels:
+    app: medical-coverage
+    environment: production
+spec:
+  hard:
+    requests.cpu: "10"
+    requests.memory: 20Gi
+    limits.cpu: "20"
+    limits.memory: 40Gi
+    persistentvolumeclaims: "10"
+    requests.storage: "1Ti"
+    pods: "50"
+    services: "20"
+    secrets: "20"
+    configmaps: "20"
+    count/deployments.apps: "20"
+    count/replicasets.apps: "20"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-all-ingress
+  namespace: medical-coverage
+  labels:
+    app: medical-coverage
+    environment: production
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-same-namespace
+  namespace: medical-coverage
+  labels:
+    app: medical-coverage
+    environment: production
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: medical-coverage
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-kube-system
+  namespace: medical-coverage
+  labels:
+    app: medical-coverage
+    environment: production
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: kube-system
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-monitoring
+  namespace: medical-coverage
+  labels:
+    app: medical-coverage
+    environment: production
+spec:
+  podSelector:
+    matchLabels:
+      app: prometheus
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          name: monitoring
+  - from:
+    - podSelector:
+        matchLabels:
+          app: node-exporter
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: registry-credentials
+  namespace: medical-coverage
+  labels:
+    app: medical-coverage
+    environment: production
+type: kubernetes.io/dockerconfigjson
+data:
+  .dockerconfigjson: eyJhdXRocyI6eyJnaGNyLmlvIjp7InVzZXJuYW1lIjoiIiwicGFzc3dvcmQiOiIiLCJhdXRoIjoiIn19fQ==  # Replace with actual docker config

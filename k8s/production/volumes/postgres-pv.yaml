@@ -1,0 +1,75 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-pv
+  namespace: medical-coverage
+  labels:
+    type: gp2
+    zone: us-west-2a
+spec:
+  capacity:
+    storage: 200Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: gp2
+  gcePersistentDisk:
+    pdName: medical-coverage-postgres-pd
+    type: pd-ssd
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: redis-pv
+  namespace: medical-coverage
+  labels:
+    type: gp2
+    zone: us-west-2b
+spec:
+  capacity:
+    storage: 50Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: gp2
+  gcePersistentDisk:
+    pdName: medical-coverage-redis-pd
+    type: pd-ssd
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: logs-pv
+  namespace: medical-coverage
+  labels:
+    type: gp2
+    zone: us-west-2c
+spec:
+  capacity:
+    storage: 100Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: gp2
+  gcePersistentDisk:
+    pdName: medical-coverage-logs-pd
+    type: pd-ssd
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: backups-pv
+  namespace: medical-coverage
+  labels:
+    type: gp2
+    zone: us-west-2a
+spec:
+  capacity:
+    storage: 500Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: gp2
+  gcePersistentDisk:
+    pdName: medical-coverage-backups-pd
+    type: pd-ssd

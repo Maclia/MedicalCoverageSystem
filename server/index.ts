@@ -4,13 +4,30 @@ import { setupVite, serveStatic, log } from "./vite";
 import { backgroundScheduler } from "./backgroundScheduler";
 import { setupApiDocs } from "./api-docs";
 import { getConfig } from "./config/system-config";
+import {
+  correlationIdMiddleware,
+  requestTimingMiddleware,
+  errorAuditMiddleware
+} from "./middleware/auditMiddleware";
+import {
+  globalErrorHandler,
+  notFoundHandler,
+  setupGlobalErrorHandlers
+} from "./middleware/errorHandler";
 
 const config = getConfig();
 const app = express();
 
+// Setup global error handlers
+setupGlobalErrorHandlers();
+
 // Enhanced middleware with configuration
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
+
+// Add correlation ID and timing middleware
+app.use(correlationIdMiddleware);
+app.use(requestTimingMiddleware);
 
 // Security headers
 app.use((req, res, next) => {
@@ -94,26 +111,12 @@ app.use((req, res, next) => {
   // Setup API documentation
   setupApiDocs(app);
 
-  // Enhanced error handling
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = config.integration.logging.level === 'debug' ? err.message : "Internal Server Error";
+  // Enhanced error handling with audit logging
+  app.use(errorAuditMiddleware);
+  app.use(globalErrorHandler);
 
-    // Log error if logging is enabled
-    if (config.integration.logging.enabled) {
-      console.error(`[${status}] ${err.name}: ${err.message}`);
-      if (err.stack) {
-        console.error(err.stack);
-      }
-    }
-
-    res.status(status).json({
-      success: false,
-      error: message,
-      ...(config.integration.logging.level === 'debug' && { details: err.stack, timestamp: new Date().toISOString() })
-    });
-    throw err;
-  });
+  // Handle 404 errors
+  app.use(notFoundHandler);
 
   // Enhanced server configuration
   if (app.get("env") === "development") {

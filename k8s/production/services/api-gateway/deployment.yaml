@@ -1,0 +1,260 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-gateway
+  namespace: medical-coverage
+  labels:
+    app: api-gateway
+    environment: production
+    version: v1
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: api-gateway
+  template:
+    metadata:
+      labels:
+        app: api-gateway
+        environment: production
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9090"
+        prometheus.io/path: "/metrics"
+        checksum/config: "{{ .Values.apiGatewayConfig checksum }}"
+        checksum/secrets: "{{ .Values.apiGatewaySecrets checksum }}"
+    spec:
+      serviceAccountName: api-gateway-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 1001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: api-gateway
+        image: ghcr.io/medical-coverage-system/api-gateway:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        - containerPort: 9090
+          name: metrics
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: NODE_ENV
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: PORT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: LOG_LEVEL
+        - name: RATE_LIMIT_WINDOW_MS
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: RATE_LIMIT_WINDOW_MS
+        - name: RATE_LIMIT_MAX_REQUESTS
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: RATE_LIMIT_MAX_REQUESTS
+        - name: CIRCUIT_BREAKER_THRESHOLD
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: CIRCUIT_BREAKER_THRESHOLD
+        - name: CIRCUIT_BREAKER_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: CIRCUIT_BREAKER_TIMEOUT
+        - name: HEALTH_CHECK_INTERVAL
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: HEALTH_CHECK_INTERVAL
+        - name: METRICS_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: METRICS_ENABLED
+        - name: TRACING_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: TRACING_ENABLED
+        - name: CORS_ORIGINS
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: CORS_ORIGINS
+        - name: CORS_CREDENTIALS
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: CORS_CREDENTIALS
+        - name: REQUEST_TIMEOUT
+          valueFrom:
+            configMapKeyRef:
+              name: api-gateway-config
+              key: REQUEST_TIMEOUT
+        - name: API_GATEWAY_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: api-gateway-secrets
+              key: API_GATEWAY_SECRET
+        - name: GOOGLE_OAUTH_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: api-gateway-secrets
+              key: GOOGLE_OAUTH_CLIENT_ID
+        - name: GOOGLE_OAUTH_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: api-gateway-secrets
+              key: GOOGLE_OAUTH_CLIENT_SECRET
+        - name: DATABASE_URL
+          value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres-service:5432/$(POSTGRES_DB)"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_DB
+        - name: REDIS_URL
+          value: "redis://$(REDIS_PASSWORD)@redis-service:6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secrets
+              key: REDIS_PASSWORD
+        - name: AUTH_SERVICE_URL
+          value: "http://auth-service-service:3001"
+        - name: HOSPITAL_SERVICE_URL
+          value: "http://hospital-service-service:3002"
+        - name: INSURANCE_SERVICE_URL
+          value: "http://insurance-service-service:3003"
+        - name: BILLING_SERVICE_URL
+          value: "http://billing-service-service:3004"
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secrets
+              key: JWT_SECRET
+        - name: INTER_SERVICE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: service-communication-secrets
+              key: INTER_SERVICE_SECRET
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: logs-volume
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 3000
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1001
+      volumes:
+      - name: config-volume
+        configMap:
+          name: api-gateway-config
+      - name: logs-volume
+        emptyDir: {}
+      imagePullSecrets:
+      - name: registry-credentials
+      terminationGracePeriodSeconds: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - api-gateway
+              topologyKey: kubernetes.io/hostname
+          - weight: 50
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - api-gateway
+              topologyKey: topology.kubernetes.io/zone
+      nodeSelector:
+        node-type: application
+        environment: production
+      tolerations:
+      - key: "application"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"

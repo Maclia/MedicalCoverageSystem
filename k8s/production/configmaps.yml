@@ -1,0 +1,254 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-config
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    environment: production
+data:
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"
+  POSTGRES_SSL_MODE: "require"
+  POSTGRES_MAX_CONNECTIONS: "200"
+  POSTGRES_CONNECTION_TIMEOUT: "30"
+  POSTGRES_STATEMENT_TIMEOUT: "60000"
+  POSTGRES_LOG_MIN_DURATION_STATEMENT: "1000"
+  POSTGRES_SHARED_PRELOAD_LIBRARIES: "pg_stat_statements,auto_explain"
+  POSTGRES_TRACK_ACTIVITY_QUERY_SIZE: "2048"
+  POSTGRES_LOG_CHECKPOINTS: "on"
+  POSTGRES_LOG_CONNECTIONS: "on"
+  POSTGRES_LOG_DISCONNECTIONS: "on"
+  POSTGRES_LOG_LOCK_WAITS: "on"
+  POSTGRES_DEADLOCK_TIMEOUT: "1s"
+  POSTGRES_LOG_MIN_ERROR_STATEMENT: "error"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: redis-config
+  namespace: medical-coverage
+  labels:
+    app: redis
+    environment: production
+data:
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  REDIS_DB: "0"
+  REDIS_MAX_MEMORY: "2gb"
+  REDIS_MAX_MEMORY_POLICY: "allkeys-lru"
+  REDIS_SAVE: "900 1 300 10 60 10000"
+  REDIS_APPENDONLY: "yes"
+  REDIS_APPENDFSYNC: "everysec"
+  REDIS_AUTO_AOF_REWRITE_PERCENTAGE: "100"
+  REDIS_AUTO_AOF_REWRITE_MIN_SIZE: "64mb"
+  REDIS_TIMEOUT: "300"
+  REDIS_TCP_KEEPALIVE: "300"
+  REDIS_LOGLEVEL: "notice"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: api-gateway-config
+  namespace: medical-coverage
+  labels:
+    app: api-gateway
+    environment: production
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  LOG_LEVEL: "info"
+  RATE_LIMIT_WINDOW_MS: "900000"
+  RATE_LIMIT_MAX_REQUESTS: "1000"
+  CIRCUIT_BREAKER_THRESHOLD: "10"
+  CIRCUIT_BREAKER_TIMEOUT: "60000"
+  HEALTH_CHECK_INTERVAL: "30000"
+  METRICS_ENABLED: "true"
+  TRACING_ENABLED: "true"
+  CORS_ORIGINS: "https://app.medical-coverage.com,https://admin.medical-coverage.com"
+  CORS_CREDENTIALS: "true"
+  REQUEST_TIMEOUT: "30000"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-service-config
+  namespace: medical-coverage
+  labels:
+    app: auth-service
+    environment: production
+data:
+  NODE_ENV: "production"
+  PORT: "3001"
+  LOG_LEVEL: "info"
+  JWT_EXPIRES_IN: "15m"
+  JWT_REFRESH_EXPIRES_IN: "7d"
+  PASSWORD_MIN_LENGTH: "8"
+  PASSWORD_SALT_ROUNDS: "12"
+  MAX_LOGIN_ATTEMPTS: "5"
+  LOCKOUT_DURATION: "900000"
+  SESSION_TIMEOUT: "1800000"
+  AUDIT_LOG_ENABLED: "true"
+  TWO_FACTOR_ENABLED: "true"
+  OAUTH_GOOGLE_ENABLED: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: hospital-service-config
+  namespace: medical-coverage
+  labels:
+    app: hospital-service
+    environment: production
+data:
+  NODE_ENV: "production"
+  PORT: "3002"
+  LOG_LEVEL: "info"
+  APPOINTMENT_BUFFER_TIME: "15"
+  MAX_APPOINTMENTS_PER_DAY: "50"
+  APPOINTMENT_CANCELLATION_DEADLINE: "24"
+  PATIENT_RECORD_RETENTION_YEARS: "7"
+  MAX_UPLOAD_SIZE_MB: "10"
+  ALLOWED_FILE_TYPES: "jpg,jpeg,png,pdf,doc,docx"
+  NOTIFICATION_ADVANCE_HOURS: "24"
+  AUTO_REMINDER_ENABLED: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: insurance-service-config
+  namespace: medical-coverage
+  labels:
+    app: insurance-service
+    environment: production
+data:
+  NODE_ENV: "production"
+  PORT: "3003"
+  LOG_LEVEL: "info"
+  CLAIM_PROCESSING_DEADLINE_HOURS: "72"
+  MAX_CLAIM_AMOUNT: "100000"
+  AUTO_APPROVAL_THRESHOLD: "5000"
+  CLAIM_RETRY_ATTEMPTS: "3"
+  POLICY_RENEWAL_REMINDER_DAYS: "30"
+  COVERAGE_VERIFICATION_TIMEOUT: "5000"
+  BENEFIT_CALCULATION_PRECISION: "2"
+  AUDIT_CLAIM_CHANGES: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: billing-service-config
+  namespace: medical-coverage
+  labels:
+    app: billing-service
+    environment: production
+data:
+  NODE_ENV: "production"
+  PORT: "3004"
+  LOG_LEVEL: "info"
+  INVOICE_GENERATION_SCHEDULE: "0 6 * * *"
+  PAYMENT_TIMEOUT_MINUTES: "30"
+  LATE_FEE_PERCENTAGE: "5"
+  MAX_LATE_FEE_AMOUNT: "100"
+  CURRENCY: "USD"
+  TAX_RATE: "0.08"
+  DISCOUNT_RULES_ENABLED: "true"
+  RECURRING_BILLING_ENABLED: "true"
+  STATEMENT_GENERATION_DAY: "1"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: monitoring-config
+  namespace: medical-coverage
+  labels:
+    app: monitoring
+    environment: production
+data:
+  PROMETHEUS_RETENTION: "30d"
+  PROMETHEUS_SCRAPE_INTERVAL: "15s"
+  PROMETHEUS_EVALUATION_INTERVAL: "15s"
+  GRAFANA_ADMIN_USER: "admin"
+  GRAFANA_SMTP_ENABLED: "true"
+  GRAFANA_ALERTING_ENABLED: "true"
+  ALERT_RESOLUTION_TIMEOUT: "5m"
+  ALERT_FORGOTEN_TIMEOUT: "1h"
+  ALERT_RETRY_INTERVAL: "30s"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: service-mesh-config
+  namespace: medical-coverage
+  labels:
+    app: service-mesh
+    environment: production
+data:
+  MESH_ENABLED: "true"
+  TRAFFIC_SPLIT_WEIGHT: "100"
+  CANARY_DEPLOYMENT_ENABLED: "true"
+  FAULT_INJECTION_ENABLED: "false"
+  RATE_LIMIT_GLOBAL: "1000"
+  RATE_LIMIT_PER_SERVICE: "100"
+  CIRCUIT_BREAKER_ENABLED: "true"
+  RETRY_POLICY_ENABLED: "true"
+  TIMEOUT_DEFAULT: "30s"
+  TIMEOUT_LONG_RUNNING: "300s"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-config
+  namespace: medical-coverage
+  labels:
+    app: backup
+    environment: production
+data:
+  BACKUP_SCHEDULE: "0 2 * * *"
+  BACKUP_RETENTION_DAYS: "30"
+  BACKUP_COMPRESSION: "gzip"
+  BACKUP_ENCRYPTION_ENABLED: "true"
+  S3_BACKUP_ENABLED: "true"
+  LOCAL_BACKUP_ENABLED: "true"
+  BACKUP_VALIDATION_ENABLED: "true"
+  BACKUP_NOTIFICATION_ENABLED: "true"
+  INCREMENTAL_BACKUP_ENABLED: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logging-config
+  namespace: medical-coverage
+  labels:
+    app: logging
+    environment: production
+data:
+  LOG_LEVEL: "info"
+  LOG_FORMAT: "json"
+  LOG_ROTATION_ENABLED: "true"
+  LOG_MAX_SIZE: "100m"
+  LOG_MAX_FILES: "10"
+  LOG_COMPRESSION: "gzip"
+  AUDIT_LOG_RETENTION_DAYS: "365"
+  PERFORMANCE_LOG_ENABLED: "true"
+  ERROR_LOG_ENABLED: "true"
+  DEBUG_LOG_ENABLED: "false"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cache-config
+  namespace: medical-coverage
+  labels:
+    app: cache
+    environment: production
+data:
+  CACHE_DEFAULT_TTL: "3600"
+  CACHE_MAX_KEYS: "100000"
+  CACHE_CLEANUP_INTERVAL: "300"
+  CACHE_WARMUP_ENABLED: "true"
+  CACHE_METRICS_ENABLED: "true"
+  CACHE_DISTRIBUTION_ENABLED: "true"
+  CACHE_ENCRYPTION_ENABLED: "true"
+  CACHE_BACKUP_ENABLED: "false"
+  CACHE_HEALTH_CHECK_INTERVAL: "60"
