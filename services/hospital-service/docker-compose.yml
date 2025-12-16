@@ -1,0 +1,141 @@
+version: '3.8'
+
+services:
+  hospital-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: medical-coverage/hospital-service:latest
+    container_name: hospital-service
+    restart: unless-stopped
+    ports:
+      - "${HOSPITAL_SERVICE_PORT:-3002}:3002"
+    environment:
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=3002
+      - SERVER_HOST=0.0.0.0
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-meduser}:${POSTGRES_PASSWORD:-medpass}@hospital-db:5432/${POSTGRES_DB:-hospital_db}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-24h}
+      - REDIS_URL=redis://hospital-redis:6379
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001}
+      - API_GATEWAY_URL=${API_GATEWAY_URL:-http://api-gateway:3000}
+      - AUTH_SERVICE_URL=${AUTH_SERVICE_URL:-http://auth-service:3001}
+      - INSURANCE_SERVICE_URL=${INSURANCE_SERVICE_URL:-http://insurance-service:3003}
+      - BILLING_SERVICE_URL=${BILLING_SERVICE_URL:-http://billing-service:3004}
+    volumes:
+      - ./logs:/app/logs
+      - uploads:/app/uploads
+    depends_on:
+      hospital-db:
+        condition: service_healthy
+      hospital-redis:
+        condition: service_healthy
+    networks:
+      - medical-coverage-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  hospital-db:
+    image: postgres:15-alpine
+    container_name: hospital-db
+    restart: unless-stopped
+    ports:
+      - "${HOSPITAL_DB_PORT:-5433}:5432"
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-hospital_db}
+      - POSTGRES_USER=${POSTGRES_USER:-meduser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-medpass}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --lc-collate=C --lc-ctype=C
+    volumes:
+      - hospital_db_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - medical-coverage-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-meduser} -d ${POSTGRES_DB:-hospital_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  hospital-redis:
+    image: redis:7-alpine
+    container_name: hospital-redis
+    restart: unless-stopped
+    ports:
+      - "${HOSPITAL_REDIS_PORT:-6380}:6379"
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redispass}
+    volumes:
+      - hospital_redis_data:/data
+    networks:
+      - medical-coverage-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Hospital service monitoring with Prometheus
+  hospital-prometheus:
+    image: prom/prometheus:latest
+    container_name: hospital-prometheus
+    restart: unless-stopped
+    ports:
+      - "${HOSPITAL_PROMETHEUS_PORT:-9091}:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - hospital_prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - medical-coverage-network
+    profiles:
+      - monitoring
+
+  # Hospital service logs with Grafana
+  hospital-grafana:
+    image: grafana/grafana:latest
+    container_name: hospital-grafana
+    restart: unless-stopped
+    ports:
+      - "${HOSPITAL_GRAFANA_PORT:-3009}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - hospital_grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - medical-coverage-network
+    profiles:
+      - monitoring
+
+volumes:
+  hospital_db_data:
+    driver: local
+  hospital_redis_data:
+    driver: local
+  hospital_prometheus_data:
+    driver: local
+  hospital_grafana_data:
+    driver: local
+  uploads:
+    driver: local
+
+networks:
+  medical-coverage-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

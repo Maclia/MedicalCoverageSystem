@@ -1,11 +1,9 @@
 #!/bin/bash
 
-# ==============================================
-# Medical Coverage System - Production Deployment
-# ==============================================
-# This script automates the production deployment process
+# Medical Coverage System - Production Deployment Script
+# This script automates the deployment of all production Kubernetes resources
 
-set -e  # Exit on any error
+set -e
 
 # Colors for output
 RED='\033[0;31m'
@@ -15,298 +13,276 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-PROJECT_NAME="medcov"
-BACKUP_DIR="/opt/backups/${PROJECT_NAME}"
-DEPLOY_LOG="/var/log/${PROJECT_NAME}-deploy.log"
-HEALTH_CHECK_URL="http://localhost:3000/health"
-ROLLBACK_FILE="/tmp/rollback-marker"
+NAMESPACE="medical-coverage"
+KUBECONTEXT="k8s-medical-coverage-production"
+REGION="us-west-2"
+CLUSTER_NAME="medical-coverage-prod"
 
-# Function to log messages
-log() {
-    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1" | tee -a "$DEPLOY_LOG"
+# Function to print colored output
+print_status() {
+    echo -e "${BLUE}[INFO]${NC} $1"
 }
 
-# Function to log errors
-error() {
-    echo -e "${RED}[ERROR]${NC} $1" | tee -a "$DEPLOY_LOG"
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
-# Function to log success
-success() {
-    echo -e "${GREEN}[SUCCESS]${NC} $1" | tee -a "$DEPLOY_LOG"
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
 }
 
-# Function to log warnings
-warning() {
-    echo -e "${YELLOW}[WARNING]${NC} $1" | tee -a "$DEPLOY_LOG"
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Function to check prerequisites
-check_prerequisites() {
-    log "Checking deployment prerequisites..."
+# Function to check if command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
 
-    # Check if Docker is installed and running
-    if ! command -v docker &> /dev/null; then
-        error "Docker is not installed"
+# Function to verify prerequisites
+verify_prerequisites() {
+    print_status "Verifying prerequisites..."
+
+    # Check required tools
+    if ! command_exists kubectl; then
+        print_error "kubectl is not installed"
         exit 1
     fi
 
-    if ! docker info &> /dev/null; then
-        error "Docker daemon is not running"
+    if ! command_exists helm; then
+        print_error "helm is not installed"
         exit 1
     fi
 
-    # Check if Docker Compose is installed
-    if ! command -v docker-compose &> /dev/null; then
-        error "Docker Compose is not installed"
+    # Check kubectl context
+    if ! kubectl config current-context >/dev/null 2>&1; then
+        print_error "No kubectl context is set"
         exit 1
     fi
 
-    # Check if .env file exists
-    if [ ! -f .env ]; then
-        error ".env file not found. Please create it from .env.example"
+    # Verify we can connect to the cluster
+    if ! kubectl cluster-info >/dev/null 2>&1; then
+        print_error "Cannot connect to Kubernetes cluster"
         exit 1
     fi
 
-    # Check required environment variables
-    source .env
-    required_vars=("DATABASE_URL" "JWT_SECRET")
-    for var in "${required_vars[@]}"; do
-        if [ -z "${!var}" ]; then
-            error "Required environment variable $var is not set"
-            exit 1
-        fi
-    done
-
-    success "Prerequisites check passed"
+    print_success "Prerequisites verified"
 }
 
-# Function to create backup
-create_backup() {
-    log "Creating backup of current deployment..."
+# Function to create namespace
+create_namespace() {
+    print_status "Creating namespace: $NAMESPACE"
 
-    # Create backup directory if it doesn't exist
-    mkdir -p "$BACKUP_DIR/$(date +%Y%m%d_%H%M%S)"
-    BACKUP_PATH="$BACKUP_DIR/$(date +%Y%m%d_%H%M%S)"
-
-    # Backup database
-    if docker-compose ps postgres-prod | grep -q "Up"; then
-        log "Backing up database..."
-        docker-compose exec postgres-prod pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > "$BACKUP_PATH/database.sql"
-        success "Database backup created"
-    fi
-
-    # Backup uploads
-    if [ -d "uploads" ]; then
-        log "Backing up uploads..."
-        cp -r uploads "$BACKUP_PATH/"
-        success "Uploads backup created"
-    fi
-
-    # Backup configuration
-    log "Backing up configuration..."
-    cp .env "$BACKUP_PATH/"
-    cp docker-compose.prod.yml "$BACKUP_PATH/" 2>/dev/null || true
-    success "Configuration backup created"
-
-    # Create rollback marker
-    echo "$BACKUP_PATH" > "$ROLLBACK_FILE"
-    success "Backup completed: $BACKUP_PATH"
-}
-
-# Function to build and deploy
-deploy_application() {
-    log "Starting application deployment..."
-
-    # Pull latest images
-    log "Pulling latest Docker images..."
-    docker-compose -f docker-compose.prod.yml pull
-
-    # Build application
-    log "Building application image..."
-    docker-compose -f docker-compose.prod.yml build --no-cache
-
-    # Stop existing services
-    log "Stopping existing services..."
-    docker-compose -f docker-compose.prod.yml down
-
-    # Run database migrations
-    log "Running database migrations..."
-    docker-compose -f docker-compose.prod.yml run --rm app-prod npm run db:migrate
-
-    # Start services
-    log "Starting services..."
-    docker-compose -f docker-compose.prod.yml up -d
-
-    success "Application deployed successfully"
-}
-
-# Function to perform health checks
-health_check() {
-    log "Performing health checks..."
-
-    # Wait for services to start
-    log "Waiting for services to start..."
-    sleep 30
-
-    # Check application health
-    max_attempts=30
-    attempt=1
-
-    while [ $attempt -le $max_attempts ]; do
-        if curl -f "$HEALTH_CHECK_URL" &> /dev/null; then
-            success "Application health check passed"
-            break
-        fi
-
-        if [ $attempt -eq $max_attempts ]; then
-            error "Health check failed after $max_attempts attempts"
-            return 1
-        fi
-
-        log "Health check attempt $attempt/$max_attempts failed. Retrying in 10 seconds..."
-        sleep 10
-        ((attempt++))
-    done
-
-    # Check database connection
-    log "Checking database connection..."
-    if docker-compose -f docker-compose.prod.yml exec postgres-prod pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"; then
-        success "Database connection check passed"
+    if kubectl get namespace $NAMESPACE >/dev/null 2>&1; then
+        print_warning "Namespace $NAMESPACE already exists"
     else
-        error "Database connection check failed"
-        return 1
+        kubectl apply -f k8s/production/infrastructure/namespace.yaml
+        print_success "Namespace $NAMESPACE created"
     fi
-
-    # Check Redis connection
-    if docker-compose -f docker-compose.prod.yml exec redis-prod redis-cli ping | grep -q "PONG"; then
-        success "Redis connection check passed"
-    else
-        warning "Redis connection check failed (Redis might be disabled)"
-    fi
-
-    success "All health checks passed"
 }
 
-# Function to cleanup old containers and images
-cleanup() {
-    log "Cleaning up old Docker resources..."
+# Function to create secrets
+create_secrets() {
+    print_status "Creating secrets..."
 
-    # Remove unused containers
-    docker container prune -f
+    # Check if secrets need to be updated
+    kubectl apply -f k8s/production/secrets.yml
+    kubectl apply -f k8s/production/security/rbac.yaml
 
-    # Remove unused images
-    docker image prune -f
-
-    # Remove unused volumes (with confirmation)
-    read -p "Remove unused Docker volumes? (y/N): " -n 1 -r
-    echo
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        docker volume prune -f
-    fi
-
-    success "Cleanup completed"
+    print_success "Secrets created"
 }
 
-# Function to rollback deployment
-rollback() {
-    if [ ! -f "$ROLLBACK_FILE" ]; then
-        error "No rollback information found"
-        exit 1
-    fi
+# Function to create ConfigMaps
+create_configmaps() {
+    print_status "Creating ConfigMaps..."
 
-    BACKUP_PATH=$(cat "$ROLLBACK_FILE")
-    log "Rolling back to previous deployment: $BACKUP_PATH"
+    kubectl apply -f k8s/production/configmaps.yml
+    kubectl apply -f k8s/production/monitoring/prometheus-config.yml
+    kubectl apply -f k8s/production/monitoring/alertmanager-config.yml
+    kubectl apply -f k8s/production/monitoring/grafana-config.yml
 
-    # Stop current services
-    docker-compose -f docker-compose.prod.yml down
+    print_success "ConfigMaps created"
+}
 
-    # Restore database if backup exists
-    if [ -f "$BACKUP_PATH/database.sql" ]; then
-        log "Restoring database..."
-        docker-compose -f docker-compose.prod.yml up -d postgres-prod
-        sleep 10
-        docker-compose -f docker-compose.prod.yml exec postgres-prod psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < "$BACKUP_PATH/database.sql"
-    fi
+# Function to deploy infrastructure
+deploy_infrastructure() {
+    print_status "Deploying infrastructure components..."
 
-    # Restore uploads if backup exists
-    if [ -d "$BACKUP_PATH/uploads" ]; then
-        log "Restoring uploads..."
-        rm -rf uploads
-        cp -r "$BACKUP_PATH/uploads" .
-    fi
+    # Deploy persistent volumes and claims
+    kubectl apply -f k8s/production/volumes/postgres-pv.yaml
+    kubectl apply -f k8s/production/volumes/postgres-pvc.yaml
 
-    # Start services
-    log "Starting services..."
-    docker-compose -f docker-compose.prod.yml up -d
+    # Deploy database services
+    print_status "Deploying PostgreSQL..."
+    kubectl apply -f k8s/production/infrastructure/postgres.yaml
 
-    success "Rollback completed"
+    print_status "Deploying Redis..."
+    kubectl apply -f k8s/production/infrastructure/redis.yaml
+
+    print_success "Infrastructure deployed"
+}
+
+# Function to wait for infrastructure
+wait_for_infrastructure() {
+    print_status "Waiting for infrastructure to be ready..."
+
+    # Wait for PostgreSQL
+    kubectl wait --for=condition=available --timeout=300s deployment/postgres-primary -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=300s deployment/postgres-replica -n $NAMESPACE
+
+    # Wait for Redis
+    kubectl wait --for=condition=available --timeout=300s statefulset/redis-master -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=300s statefulset/redis-slave -n $NAMESPACE
+
+    print_success "Infrastructure is ready"
+}
+
+# Function to deploy monitoring
+deploy_monitoring() {
+    print_status "Deploying monitoring stack..."
+
+    # Deploy monitoring components
+    kubectl apply -f k8s/production/infrastructure/monitoring.yaml
+
+    # Wait for monitoring components
+    kubectl wait --for=condition=available --timeout=300s deployment/prometheus -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=300s deployment/grafana -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=300s deployment/alertmanager -n $NAMESPACE
+
+    print_success "Monitoring stack deployed"
+}
+
+# Function to deploy applications
+deploy_applications() {
+    print_status "Deploying application services..."
+
+    # Deploy services
+    kubectl apply -f k8s/production/services/api-gateway/deployment.yaml
+    kubectl apply -f k8s/production/services/auth-service/deployment.yaml
+    kubectl apply -f k8s/production/services/other-services/deployments.yaml
+
+    # Wait for services to be ready
+    kubectl wait --for=condition=available --timeout=600s deployment/api-gateway -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=600s deployment/auth-service -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=600s deployment/hospital-service -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=600s deployment/insurance-service -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=600s deployment/billing-service -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=300s deployment/frontend-app -n $NAMESPACE
+    kubectl wait --for=condition=available --timeout=300s deployment/admin-frontend -n $NAMESPACE
+
+    print_success "Application services deployed"
+}
+
+# Function to configure ingress and load balancing
+configure_networking() {
+    print_status "Configuring networking..."
+
+    kubectl apply -f k8s/production/infrastructure/ingress.yaml
+
+    print_success "Networking configured"
+}
+
+# Function to verify deployment
+verify_deployment() {
+    print_status "Verifying deployment..."
+
+    # Check all pods are running
+    kubectl get pods -n $NAMESPACE
+
+    # Check services
+    kubectl get services -n $NAMESPACE
+
+    # Check ingress
+    kubectl get ingress -n $NAMESPACE
+
+    print_success "Deployment verification completed"
 }
 
 # Function to show deployment status
-status() {
-    log "Deployment Status:"
-    echo
+show_status() {
+    print_status "Deployment Status:"
+    echo ""
+    echo "=== Namespace ==="
+    kubectl get namespace $NAMESPACE
+    echo ""
+    echo "=== Pods ==="
+    kubectl get pods -n $NAMESPACE -o wide
+    echo ""
+    echo "=== Services ==="
+    kubectl get services -n $NAMESPACE
+    echo ""
+    echo "=== Ingress ==="
+    kubectl get ingress -n $NAMESPACE
+    echo ""
+    echo "=== Persistent Volumes ==="
+    kubectl get pv,pvc -n $NAMESPACE
+    echo ""
 
-    # Show running containers
-    echo "=== Docker Containers ==="
-    docker-compose -f docker-compose.prod.yml ps
-    echo
+    # Show access information
+    print_status "Access Information:"
+    API_URL=$(kubectl get ingress medical-coverage-ingress -n $NAMESPACE -o jsonpath='{.spec.rules[0].host}' 2>/dev/null || echo "Not available")
+    GRAFANA_URL=$(kubectl get ingress medical-coverage-ingress -n $NAMESPACE -o jsonpath='{.spec.rules[4].host}' 2>/dev/null || echo "Not available")
 
-    # Show resource usage
-    echo "=== Resource Usage ==="
-    docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.NetIO}}"
-    echo
-
-    # Show recent logs
-    echo "=== Recent Logs (last 20 lines) ==="
-    docker-compose -f docker-compose.prod.yml logs --tail=20
+    echo "API URL: https://$API_URL"
+    echo "Grafana URL: https://$GRAFANA_URL"
+    echo "Namespace: $NAMESPACE"
+    echo "Kube Context: $(kubectl config current-context)"
 }
 
 # Main deployment function
 main() {
-    log "Starting production deployment of Medical Coverage System"
+    print_status "Starting Medical Coverage System Production Deployment"
+    print_status "Target: $NAMESPACE in context $(kubectl config current-context)"
+    echo ""
 
-    # Parse command line arguments
-    case "${1:-deploy}" in
-        "deploy")
-            check_prerequisites
-            create_backup
-            deploy_application
-            health_check
-            cleanup
-            success "Deployment completed successfully! 🎉"
-            ;;
-        "rollback")
-            rollback
-            health_check
-            success "Rollback completed successfully!"
-            ;;
-        "status")
-            status
-            ;;
-        "health")
-            health_check
-            ;;
-        "cleanup")
-            cleanup
-            ;;
-        *)
-            echo "Usage: $0 {deploy|rollback|status|health|cleanup}"
-            echo
-            echo "Commands:"
-            echo "  deploy   - Deploy the application to production"
-            echo "  rollback - Rollback to previous deployment"
-            echo "  status   - Show deployment status"
-            echo "  health   - Perform health checks"
-            echo "  cleanup  - Clean up Docker resources"
-            exit 1
-            ;;
-    esac
+    # Execute deployment steps
+    verify_prerequisites
+    create_namespace
+    create_secrets
+    create_configmaps
+    deploy_infrastructure
+    wait_for_infrastructure
+    deploy_monitoring
+    deploy_applications
+    configure_networking
+    verify_deployment
+    show_status
+
+    print_success "🎉 Production deployment completed successfully!"
+    print_status "The Medical Coverage System is now running in production."
+    echo ""
+    print_status "Next steps:"
+    echo "1. Monitor the system health at the Grafana dashboard"
+    echo "2. Set up alerts and notifications"
+    echo "3. Configure backup and disaster recovery"
+    echo "4. Update DNS records for the load balancer"
+    echo "5. Run smoke tests to verify functionality"
 }
 
-# Trap to handle script interruption
-trap 'error "Deployment interrupted"; exit 1' INT TERM
-
-# Run main function
-main "$@"
+# Parse command line arguments
+case "${1:-deploy}" in
+    "deploy")
+        main
+        ;;
+    "status")
+        show_status
+        ;;
+    "verify")
+        verify_deployment
+        ;;
+    "help"|"-h"|"--help")
+        echo "Usage: $0 [COMMAND]"
+        echo ""
+        echo "Commands:"
+        echo "  deploy   - Deploy the entire system (default)"
+        echo "  status   - Show deployment status"
+        echo "  verify   - Verify deployment health"
+        echo "  help     - Show this help message"
+        ;;
+    *)
+        print_error "Unknown command: $1"
+        echo "Use '$0 help' for available commands"
+        exit 1
+        ;;
+esac

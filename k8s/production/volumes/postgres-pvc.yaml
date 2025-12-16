@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc
+  namespace: medical-coverage
+  labels:
+    app: postgres
+    environment: production
+    tier: database
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp2
+  resources:
+    requests:
+      storage: 200Gi
+  selector:
+    matchLabels:
+      type: gp2
+      zone: us-west-2a
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: medical-coverage
+  labels:
+    app: redis
+    environment: production
+    tier: cache
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp2
+  resources:
+    requests:
+      storage: 50Gi
+  selector:
+    matchLabels:
+      type: gp2
+      zone: us-west-2b
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: logs-pvc
+  namespace: medical-coverage
+  labels:
+    app: logging
+    environment: production
+    tier: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp2
+  resources:
+    requests:
+      storage: 100Gi
+  selector:
+    matchLabels:
+      type: gp2
+      zone: us-west-2c
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backups-pvc
+  namespace: medical-coverage
+  labels:
+    app: backup
+    environment: production
+    tier: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp2
+  resources:
+    requests:
+      storage: 500Gi
+  selector:
+    matchLabels:
+      type: gp2
+      zone: us-west-2a
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: medical-coverage
+  labels:
+    app: prometheus
+    environment: production
+    tier: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp2
+  resources:
+    requests:
+      storage: 300Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: medical-coverage
+  labels:
+    app: grafana
+    environment: production
+    tier: monitoring
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: gp2
+  resources:
+    requests:
+      storage: 20Gi

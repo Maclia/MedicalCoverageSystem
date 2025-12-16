@@ -1,0 +1,258 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wellness-service
+  namespace: medical-coverage
+  labels:
+    app: wellness-service
+    environment: production
+    version: v1
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: wellness-service
+  template:
+    metadata:
+      labels:
+        app: wellness-service
+        environment: production
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9098"
+        prometheus.io/path: "/metrics"
+        checksum/config: "{{ .Values.wellnessServiceConfig checksum }}"
+        checksum/secrets: "{{ .Values.wellnessServiceSecrets checksum }}"
+    spec:
+      serviceAccountName: wellness-service-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1009
+        runAsGroup: 1009
+        fsGroup: 1009
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: wellness-service
+        image: ghcr.io/medical-coverage-system/wellness-service:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 3008
+          name: http
+          protocol: TCP
+        - containerPort: 9098
+          name: metrics
+          protocol: TCP
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef:
+              name: wellness-service-config
+              key: NODE_ENV
+        - name: PORT
+          valueFrom:
+            configMapKeyRef:
+              name: wellness-service-config
+              key: PORT
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: wellness-service-config
+              key: LOG_LEVEL
+        - name: DATABASE_URL
+          value: "postgresql://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@postgres-service:5432/$(POSTGRES_DB)"
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: database-secrets
+              key: POSTGRES_DB
+        - name: REDIS_URL
+          value: "redis://$(REDIS_PASSWORD)@redis-service:6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secrets
+              key: REDIS_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secrets
+              key: JWT_SECRET
+        - name: INTER_SERVICE_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: service-communication-secrets
+              key: INTER_SERVICE_SECRET
+        - name: FITBIT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: wellness-secrets
+              key: FITBIT_CLIENT_ID
+        - name: FITBIT_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: wellness-secrets
+              key: FITBIT_CLIENT_SECRET
+        - name: APPLE_HEALTH_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: wellness-secrets
+              key: APPLE_HEALTH_CLIENT_ID
+        - name: GOOGLE_FIT_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: wellness-secrets
+              key: GOOGLE_FIT_CLIENT_ID
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        - name: logs-volume
+          mountPath: /app/logs
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3008
+            scheme: HTTP
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3008
+            scheme: HTTP
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health
+            port: 3008
+            scheme: HTTP
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+          runAsNonRoot: true
+          runAsUser: 1009
+      volumes:
+      - name: config-volume
+        configMap:
+          name: wellness-service-config
+      - name: logs-volume
+        emptyDir: {}
+      imagePullSecrets:
+      - name: registry-credentials
+      terminationGracePeriodSeconds: 30
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - wellness-service
+              topologyKey: kubernetes.io/hostname
+          - weight: 50
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - wellness-service
+              topologyKey: topology.kubernetes.io/zone
+      nodeSelector:
+        node-type: application
+        environment: production
+      tolerations:
+      - key: "application"
+        operator: "Equal"
+        value: "true"
+        effect: "NoSchedule"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: wellness-service-service
+  namespace: medical-coverage
+  labels:
+    app: wellness-service
+    environment: production
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3008
+    targetPort: 3008
+    protocol: TCP
+    name: http
+  - port: 9098
+    targetPort: 9098
+    protocol: TCP
+    name: metrics
+  selector:
+    app: wellness-service
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: wellness-service-hpa
+  namespace: medical-coverage
+  labels:
+    app: wellness-service
+    environment: production
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: wellness-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
