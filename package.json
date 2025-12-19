@@ -15,6 +15,8 @@
     "check:client": "cd client && tsc --noEmit",
     "check:server": "tsc --noEmit --skipLibCheck server/**/*.ts",
     "db:push": "drizzle-kit push",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -28,7 +30,9 @@
     "test:e2e:chrome": "cypress run --browser chrome",
     "test:e2e:component": "cypress run --component",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
-    "docker:start": "./scripts/production/docker-start.sh"
+    "vercel:deploy": "vercel --prod",
+    "vercel:dev": "vercel dev",
+    "neon:connect": "psql $DATABASE_URL"
   },
   "dependencies": {
     "@faker-js/faker": "^9.6.0",

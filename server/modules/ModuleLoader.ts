@@ -11,6 +11,7 @@ import { BillingModule } from './billing/index';
 import { PaymentsModule } from './payments/index';
 import { CommissionsModule } from './commissions/index.js';
 import { ClaimsFinancialModule } from './claims-financial/index.js';
+import { FraudDetectionModule } from './fraud-detection/index';
 
 export interface ModuleLoadOptions {
   autoInitialize?: boolean;
@@ -73,6 +74,9 @@ export class ModuleLoader {
       new PaymentsModule(),
       new CommissionsModule(),
       new ClaimsFinancialModule(),
+
+      // Fraud Detection module
+      new FraudDetectionModule(),
 
       // Core business modules
       new CoreModule(),
