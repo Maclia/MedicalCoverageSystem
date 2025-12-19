@@ -4754,3 +4754,279 @@ export type ClaimLossRatioAnalysis = {
   expenseRatio: number;
   combinedRatio: number;
 };
+
+// ============================================================================
+// FRAUD DETECTION MODULE TABLES
+// ============================================================================
+
+// Fraud Detection Enums
+export const fraudAlertSeverityEnum = pgEnum('fraud_alert_severity', ['low', 'medium', 'high', 'critical']);
+export const fraudAlertStatusEnum = pgEnum('fraud_alert_status', ['open', 'investigating', 'resolved', 'dismissed', 'escalated']);
+export const fraudRuleTypeEnum = pgEnum('fraud_rule_type', ['pattern', 'threshold', 'behavioral', 'statistical', 'network']);
+export const fraudRuleStatusEnum = pgEnum('fraud_rule_status', ['active', 'inactive', 'draft', 'testing']);
+export const fraudInvestigationStatusEnum = pgEnum('fraud_investigation_status', ['open', 'in_progress', 'completed', 'closed', 'escalated']);
+export const fraudInvestigationPriorityEnum = pgEnum('fraud_investigation_priority', ['low', 'medium', 'high', 'urgent']);
+export const mlModelTypeEnum = pgEnum('ml_model_type', ['supervised', 'unsupervised', 'semi_supervised', 'reinforcement']);
+export const mlModelStatusEnum = pgEnum('ml_model_status', ['training', 'active', 'inactive', 'deprecated', 'failed']);
+export const behavioralPatternTypeEnum = pgEnum('behavioral_pattern_type', ['frequency', 'amount', 'timing', 'provider', 'diagnosis', 'geographic']);
+export const networkAnalysisTypeEnum = pgEnum('network_analysis_type', ['social', 'provider', 'billing', 'geographic', 'temporal']);
+export const riskScoreLevelEnum = pgEnum('risk_score_level', ['very_low', 'low', 'medium', 'high', 'very_high', 'critical']);
+export const fraudAnalyticsPeriodEnum = pgEnum('fraud_analytics_period', ['daily', 'weekly', 'monthly', 'quarterly', 'yearly']);
+
+// Fraud Alerts Table
+export const fraudAlerts = pgTable("fraud_alerts", {
+  id: serial("id").primaryKey(),
+  alertId: text("alert_id").notNull().unique(),
+  claimId: integer("claim_id").references(() => claims.id),
+  memberId: integer("member_id").references(() => members.id),
+  providerId: integer("provider_id").references(() => providers.id),
+  severity: fraudAlertSeverityEnum("severity").notNull(),
+  status: fraudAlertStatusEnum("status").notNull().default("open"),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  riskScore: real("risk_score").notNull(),
+  confidence: real("confidence").notNull(),
+  triggeredRules: text("triggered_rules").notNull(), // JSON array of rule IDs
+  indicators: text("indicators").notNull(), // JSON array of fraud indicators
+  evidence: text("evidence"), // JSON object with supporting evidence
+  recommendedActions: text("recommended_actions"), // JSON array of recommended actions
+  assignedTo: integer("assigned_to").references(() => users.id),
+  priority: integer("priority").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+});
+
+// Fraud Rules Table
+export const fraudRules = pgTable("fraud_rules", {
+  id: serial("id").primaryKey(),
+  ruleId: text("rule_id").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  type: fraudRuleTypeEnum("type").notNull(),
+  status: fraudRuleStatusEnum("status").notNull().default("draft"),
+  conditions: text("conditions").notNull(), // JSON object defining rule conditions
+  actions: text("actions").notNull(), // JSON object defining rule actions
+  severity: fraudAlertSeverityEnum("severity").notNull(),
+  threshold: real("threshold"),
+  weight: real("weight").notNull().default(1.0),
+  falsePositiveRate: real("false_positive_rate"),
+  truePositiveRate: real("true_positive_rate"),
+  createdBy: integer("created_by").references(() => users.id),
+  approvedBy: integer("approved_by").references(() => users.id),
+  version: text("version").notNull().default("1.0"),
+  effectiveDate: timestamp("effective_date").notNull(),
+  expiryDate: timestamp("expiry_date"),
+  testResults: text("test_results"), // JSON object with testing results
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Fraud Investigations Table
+export const fraudInvestigations = pgTable("fraud_investigations", {
+  id: serial("id").primaryKey(),
+  investigationId: text("investigation_id").notNull().unique(),
+  alertId: integer("alert_id").references(() => fraudAlerts.id),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  status: fraudInvestigationStatusEnum("status").notNull().default("open"),
+  priority: fraudInvestigationPriorityEnum("priority").notNull().default("medium"),
+  assignedTo: integer("assigned_to").references(() => users.id),
+  supervisorId: integer("supervisor_id").references(() => users.id),
+  riskAmount: real("risk_amount"),
+  potentialSavings: real("potential_savings"),
+  investigationSteps: text("investigation_steps"), // JSON array of investigation steps
+  findings: text("findings"), // JSON object with investigation findings
+  evidence: text("evidence"), // JSON array of evidence files/documents
+  recommendations: text("recommendations"), // JSON array of recommendations
+  outcome: text("outcome"),
+  fraudConfirmed: boolean("fraud_confirmed"),
+  fraudType: text("fraud_type"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  closedAt: timestamp("closed_at"),
+});
+
+// ML Models Table
+export const mlModels = pgTable("ml_models", {
+  id: serial("id").primaryKey(),
+  modelId: text("model_id").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  type: mlModelTypeEnum("type").notNull(),
+  status: mlModelStatusEnum("status").notNull().default("training"),
+  algorithm: text("algorithm").notNull(),
+  features: text("features").notNull(), // JSON array of feature names
+  target: text("target").notNull(),
+  hyperparameters: text("hyperparameters"), // JSON object with model hyperparameters
+  trainingData: text("training_data"), // JSON object with training data info
+  performanceMetrics: text("performance_metrics"), // JSON object with accuracy, precision, recall, etc.
+  accuracy: real("accuracy"),
+  precision: real("precision"),
+  recall: real("recall"),
+  f1Score: real("f1_score"),
+  auc: real("auc"),
+  modelPath: text("model_path").notNull(),
+  version: text("version").notNull(),
+  trainedAt: timestamp("trained_at"),
+  deployedAt: timestamp("deployed_at"),
+  lastUsed: timestamp("last_used"),
+  createdBy: integer("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Behavioral Profiles Table
+export const behavioralProfiles = pgTable("behavioral_profiles", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  profileId: text("profile_id").notNull().unique(),
+  patternType: behavioralPatternTypeEnum("pattern_type").notNull(),
+  baselineMetrics: text("baseline_metrics").notNull(), // JSON object with baseline behavior
+  currentMetrics: text("current_metrics").notNull(), // JSON object with current behavior
+  deviations: text("deviations"), // JSON object with statistical deviations
+  riskScore: real("risk_score").notNull(),
+  confidence: real("confidence").notNull(),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  nextReview: timestamp("next_review"),
+  alertsTriggered: integer("alerts_triggered").default(0),
+  investigationsCount: integer("investigations_count").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Network Analysis Table
+export const networkAnalysis = pgTable("network_analysis", {
+  id: serial("id").primaryKey(),
+  analysisId: text("analysis_id").notNull().unique(),
+  analysisType: networkAnalysisTypeEnum("analysis_type").notNull(),
+  entityType: text("entity_type").notNull(), // 'member', 'provider', 'diagnosis', 'location'
+  entityId: text("entity_id").notNull(),
+  connections: text("connections").notNull(), // JSON array of network connections
+  centrality: real("centrality"),
+  clusteringCoefficient: real("clustering_coefficient"),
+  degree: integer("degree"),
+  betweenness: real("betweenness"),
+  riskScore: real("risk_score"),
+  anomalies: text("anomalies"), // JSON array of detected anomalies
+  patterns: text("patterns"), // JSON object with identified patterns
+  analysisDate: timestamp("analysis_date").defaultNow().notNull(),
+  dataPeriod: text("data_period"), // Date range analyzed
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Risk Scores Table
+export const riskScores = pgTable("risk_scores", {
+  id: serial("id").primaryKey(),
+  entityType: text("entity_type").notNull(), // 'member', 'provider', 'claim', 'diagnosis'
+  entityId: text("entity_id").notNull(),
+  scoreId: text("score_id").notNull().unique(),
+  overallScore: real("overall_score").notNull(),
+  scoreLevel: riskScoreLevelEnum("score_level").notNull(),
+  componentScores: text("component_scores").notNull(), // JSON object with individual component scores
+  factors: text("factors").notNull(), // JSON array of risk factors
+  confidence: real("confidence").notNull(),
+  modelVersion: text("model_version"),
+  calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
+  validUntil: timestamp("valid_until"),
+  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
+  alertsCount: integer("alerts_count").default(0),
+  investigationsCount: integer("investigations_count").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Fraud Analytics Table
+export const fraudAnalytics = pgTable("fraud_analytics", {
+  id: serial("id").primaryKey(),
+  period: fraudAnalyticsPeriodEnum("period").notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  totalClaims: integer("total_claims").notNull(),
+  fraudulentClaims: integer("fraudulent_claims").notNull(),
+  fraudRate: real("fraud_rate").notNull(),
+  totalLoss: real("total_loss").notNull(),
+  preventedLoss: real("prevented_loss").notNull(),
+  investigationCount: integer("investigation_count").notNull(),
+  resolutionRate: real("resolution_rate").notNull(),
+  averageDetectionTime: integer("average_detection_time"), // in days
+  falsePositiveRate: real("false_positive_rate"),
+  truePositiveRate: real("true_positive_rate"),
+  topFraudTypes: text("top_fraud_types"), // JSON array of fraud types
+  riskDistribution: text("risk_distribution"), // JSON object with risk score distribution
+  geographicHotspots: text("geographic_hotspots"), // JSON array of high-risk locations
+  providerRiskProfile: text("provider_risk_profile"), // JSON object with provider risk metrics
+  memberRiskProfile: text("member_risk_profile"), // JSON object with member risk metrics
+  modelPerformance: text("model_performance"), // JSON object with ML model performance
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Insert Schemas for Fraud Detection Module
+export const insertFraudAlertSchema = createInsertSchema(fraudAlerts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFraudRuleSchema = createInsertSchema(fraudRules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertFraudInvestigationSchema = createInsertSchema(fraudInvestigations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMlModelSchema = createInsertSchema(mlModels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBehavioralProfileSchema = createInsertSchema(behavioralProfiles).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertNetworkAnalysisSchema = createInsertSchema(networkAnalysis).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertRiskScoreSchema = createInsertSchema(riskScores).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFraudAnalyticsSchema = createInsertSchema(fraudAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Type exports for Fraud Detection Module
+export type FraudAlert = typeof fraudAlerts.$inferSelect;
+export type InsertFraudAlert = z.infer<typeof insertFraudAlertSchema>;
+
+export type FraudRule = typeof fraudRules.$inferSelect;
+export type InsertFraudRule = z.infer<typeof insertFraudRuleSchema>;
+
+export type FraudInvestigation = typeof fraudInvestigations.$inferSelect;
+export type InsertFraudInvestigation = z.infer<typeof insertFraudInvestigationSchema>;
+
+export type MlModel = typeof mlModels.$inferSelect;
+export type InsertMlModel = z.infer<typeof insertMlModelSchema>;
+
+export type BehavioralProfile = typeof behavioralProfiles.$inferSelect;
+export type InsertBehavioralProfile = z.infer<typeof insertBehavioralProfileSchema>;
+
+export type NetworkAnalysis = typeof networkAnalysis.$inferSelect;
+export type InsertNetworkAnalysis = z.infer<typeof insertNetworkAnalysisSchema>;
+
+export type RiskScore = typeof riskScores.$inferSelect;
+export type InsertRiskScore = z.infer<typeof insertRiskScoreSchema>;
+
+export type FraudAnalytics = typeof fraudAnalytics.$inferSelect;
+export type InsertFraudAnalytics = z.infer<typeof insertFraudAnalyticsSchema>;
