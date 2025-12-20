@@ -8,7 +8,7 @@ COPY package*.json ./
 COPY tsconfig.json ./
 
 # Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+RUN npm ci
 
 # Copy source code
 COPY src/ ./src/
@@ -25,10 +25,12 @@ RUN addgroup -g 1001 -S nodejs && \
 
 WORKDIR /app
 
+# Copy package files
+COPY --from=builder --chown=membership:nodejs /app/package*.json ./
+
 # Copy built application
 COPY --from=builder --chown=membership:nodejs /app/dist ./dist
 COPY --from=builder --chown=membership:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=membership:nodejs /app/package*.json ./
 
 # Create logs directory
 RUN mkdir -p /app/logs && chown membership:nodejs /app/logs
