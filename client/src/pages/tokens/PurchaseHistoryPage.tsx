@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useSearch } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +19,8 @@ import { tokensAPI } from "@/api/tokens";
 import type { TokenPurchase } from "@/api/tokens";
 
 export default function PurchaseHistoryPage() {
-  const [searchParams] = useSearchParams();
+  const search = useSearch();
+  const searchParams = new URLSearchParams(search);
   const organizationId = parseInt(searchParams.get("organizationId") || "1");
 
   const [currentPage, setCurrentPage] = useState(0);

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams } from "react-router-dom";
+import { useSearch } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,8 @@ import { Zap, Bell, Settings, Trash2, Plus } from "lucide-react";
 import { tokensAPI } from "@/api/tokens";
 
 export default function TokenSettingsPage() {
-  const [searchParams] = useSearchParams();
+  const search = useSearch();
+  const searchParams = new URLSearchParams(search);
   const queryClient = useQueryClient();
   const organizationId = parseInt(searchParams.get("organizationId") || "1");
 

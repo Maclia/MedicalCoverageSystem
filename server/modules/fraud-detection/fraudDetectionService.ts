@@ -331,7 +331,7 @@ export class FraudDetectionService {
 
     // Count alerts generated today
     const alertsGenerated = await db
-      .select({ count: sql<number>count(*) })
+      .select({ count: sql<number>`count(*)` })
       .from(fraudAlerts)
       .where(gte(fraudAlerts.createdAt, today));
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useSearch } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,8 @@ import { tokensAPI } from "@/api/tokens";
 import type { TokenPackage } from "@/api/tokens";
 
 export default function TokenPurchasePage() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+  const search = useSearch();
+  const searchParams = new URLSearchParams(search);
   const queryClient = useQueryClient();
 
   const organizationId = parseInt(searchParams.get("organizationId") || "1");
@@ -208,7 +208,7 @@ export default function TokenPurchasePage() {
             )}
 
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => navigate(-1)}>
+              <Button variant="outline" onClick={() => window.history.back()}>
                 Cancel
               </Button>
               <Button
@@ -352,10 +352,10 @@ export default function TokenPurchasePage() {
                   </div>
 
                   <div className="flex justify-center gap-2 mt-6">
-                    <Button onClick={() => navigate(`/tokens/history?organizationId=${organizationId}`)}>
+                    <Button onClick={() => window.location.href = `/tokens/history?organizationId=${organizationId}`}>
                       View History
                     </Button>
-                    <Button variant="outline" onClick={() => navigate(-1)}>
+                    <Button variant="outline" onClick={() => window.history.back()}>
                       Back to Dashboard
                     </Button>
                   </div>
@@ -370,7 +370,7 @@ export default function TokenPurchasePage() {
                     <Button onClick={() => setStep("select")}>
                       Try Again
                     </Button>
-                    <Button variant="outline" onClick={() => navigate(-1)}>
+                    <Button variant="outline" onClick={() => window.history.back()}>
                       Cancel
                     </Button>
                   </div>

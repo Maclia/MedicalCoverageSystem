@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Coins, TrendingDown, Clock, AlertTriangle } from "lucide-react";
 import { tokensAPI } from "@/api/tokens";
-import { Link } from "react-router-dom";
+import { Link } from "wouter";
 
 interface TokenWalletWidgetProps {
   organizationId: number;
