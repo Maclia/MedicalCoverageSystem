@@ -106,12 +106,12 @@ export const insertProviderContractSchema = createInsertSchema(providerContracts
 export const insertMedicalPersonnelSchema = createInsertSchema(medicalPersonnel);
 
 // Types
-export type Provider = typeof providers.;
-export type MedicalInstitution = typeof medicalInstitutions.;
-export type ProviderNetwork = typeof providerNetworks.;
-export type ProviderNetworkAssignment = typeof providerNetworkAssignments.;
-export type ProviderContract = typeof providerContracts.;
-export type MedicalPersonnel = typeof medicalPersonnel.;
+export type Provider = typeof providers.$inferSelect;
+export type MedicalInstitution = typeof medicalInstitutions.$inferSelect;
+export type ProviderNetwork = typeof providerNetworks.$inferSelect;
+export type ProviderNetworkAssignment = typeof providerNetworkAssignments.$inferSelect;
+export type ProviderContract = typeof providerContracts.$inferSelect;
+export type MedicalPersonnel = typeof medicalPersonnel.$inferSelect;
 
 export type InsertProvider = z.infer<typeof insertProviderSchema>;
 export type InsertMedicalInstitution = z.infer<typeof insertMedicalInstitutionSchema>;

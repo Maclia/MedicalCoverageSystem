@@ -5,7 +5,7 @@ if (!process.env.FINANCE_DATABASE_URL) {
 }
 
 export default defineConfig({
-  out: "./migrations/finance",
+  out: "./services/finance-service/migrations/finance",
   schema: "./shared/schemas/finance.ts",
   dialect: "postgresql",
   dbCredentials: {

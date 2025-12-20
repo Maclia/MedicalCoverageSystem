@@ -108,12 +108,12 @@ export const insertCommissionPaymentSchema = createInsertSchema(commissionPaymen
 export const insertFinancialReportSchema = createInsertSchema(financialReports);
 
 // Types
-export type PaymentTransaction = typeof paymentTransactions.;
-export type PremiumInvoice = typeof premiumInvoices.;
-export type FinancialAccount = typeof financialAccounts.;
-export type GeneralLedgerEntry = typeof generalLedgerEntries.;
-export type CommissionPayment = typeof commissionPayments.;
-export type FinancialReport = typeof financialReports.;
+export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
+export type PremiumInvoice = typeof premiumInvoices.$inferSelect;
+export type FinancialAccount = typeof financialAccounts.$inferSelect;
+export type GeneralLedgerEntry = typeof generalLedgerEntries.$inferSelect;
+export type CommissionPayment = typeof commissionPayments.$inferSelect;
+export type FinancialReport = typeof financialReports.$inferSelect;
 
 export type InsertPaymentTransaction = z.infer<typeof insertPaymentTransactionSchema>;
 export type InsertPremiumInvoice = z.infer<typeof insertPremiumInvoiceSchema>;

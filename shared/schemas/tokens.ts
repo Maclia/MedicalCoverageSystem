@@ -123,13 +123,13 @@ export const insertTokenBlacklistSchema = createInsertSchema(tokenBlacklist);
 export const insertSessionTokenSchema = createInsertSchema(sessionTokens);
 
 // Types
-export type AccessToken = typeof accessTokens.;
-export type RefreshToken = typeof refreshTokens.;
-export type ApiKey = typeof apiKeys.;
-export type OauthClient = typeof oauthClients.;
-export type AuthorizationCode = typeof authorizationCodes.;
-export type TokenBlacklist = typeof tokenBlacklist.;
-export type SessionToken = typeof sessionTokens.;
+export type AccessToken = typeof accessTokens.$inferSelect;
+export type RefreshToken = typeof refreshTokens.$inferSelect;
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type OauthClient = typeof oauthClients.$inferSelect;
+export type AuthorizationCode = typeof authorizationCodes.$inferSelect;
+export type TokenBlacklist = typeof tokenBlacklist.$inferSelect;
+export type SessionToken = typeof sessionTokens.$inferSelect;
 
 export type InsertAccessToken = z.infer<typeof insertAccessTokenSchema>;
 export type InsertRefreshToken = z.infer<typeof insertRefreshTokenSchema>;

@@ -129,13 +129,13 @@ export const insertSchemeVersionSchema = createInsertSchema(schemeVersions);
 export const insertSchemeEligibilityRuleSchema = createInsertSchema(schemeEligibilityRules);
 
 // Types
-export type InsuranceScheme = typeof insuranceSchemes.;
-export type SchemeBenefit = typeof schemeBenefits.;
-export type SchemeNetwork = typeof schemeNetworks.;
-export type SchemeRider = typeof schemeRiders.;
-export type SchemePricing = typeof schemePricing.;
-export type SchemeVersion = typeof schemeVersions.;
-export type SchemeEligibilityRule = typeof schemeEligibilityRules.;
+export type InsuranceScheme = typeof insuranceSchemes.$inferSelect;
+export type SchemeBenefit = typeof schemeBenefits.$inferSelect;
+export type SchemeNetwork = typeof schemeNetworks.$inferSelect;
+export type SchemeRider = typeof schemeRiders.$inferSelect;
+export type SchemePricing = typeof schemePricing.$inferSelect;
+export type SchemeVersion = typeof schemeVersions.$inferSelect;
+export type SchemeEligibilityRule = typeof schemeEligibilityRules.$inferSelect;
 
 export type InsertInsuranceScheme = z.infer<typeof insertInsuranceSchemeSchema>;
 export type InsertSchemeBenefit = z.infer<typeof insertSchemeBenefitSchema>;

@@ -171,16 +171,16 @@ export const insertBehavioralProfileSchema = createInsertSchema(behavioralProfil
 export const insertFraudPreventionRuleSchema = createInsertSchema(fraudPreventionRules);
 
 // Types
-export type FraudAlert = typeof fraudAlerts.;
-export type FraudRule = typeof fraudRules.;
-export type FraudInvestigation = typeof fraudInvestigations.;
-export type FraudPattern = typeof fraudPatterns.;
-export type RiskScore = typeof riskScores.;
-export type FraudAnalytics = typeof fraudAnalytics.;
-export type MlModel = typeof mlModels.;
-export type NetworkAnalysis = typeof networkAnalysis.;
-export type BehavioralProfile = typeof behavioralProfiles.;
-export type FraudPreventionRule = typeof fraudPreventionRules.;
+export type FraudAlert = typeof fraudAlerts.$inferSelect;
+export type FraudRule = typeof fraudRules.$inferSelect;
+export type FraudInvestigation = typeof fraudInvestigations.$inferSelect;
+export type FraudPattern = typeof fraudPatterns.$inferSelect;
+export type RiskScore = typeof riskScores.$inferSelect;
+export type FraudAnalytics = typeof fraudAnalytics.$inferSelect;
+export type MlModel = typeof mlModels.$inferSelect;
+export type NetworkAnalysis = typeof networkAnalysis.$inferSelect;
+export type BehavioralProfile = typeof behavioralProfiles.$inferSelect;
+export type FraudPreventionRule = typeof fraudPreventionRules.$inferSelect;
 
 export type InsertFraudAlert = z.infer<typeof insertFraudAlertSchema>;
 export type InsertFraudRule = z.infer<typeof insertFraudRuleSchema>;

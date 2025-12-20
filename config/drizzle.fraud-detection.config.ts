@@ -5,11 +5,11 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 export default defineConfig({
-  schema: "./shared/schema.ts",
+  schema: "./shared/schemas/fraud-detection.ts",
   out: "./database/fraud-detection",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.FRAUD_DATABASE_URL || "postgresql://user:pass@localhost:5432/medical-coverage-fraud",
+    url: process.env.HOSPITAL_DB_URL,
   },
   verbose: true,
   strict: true,

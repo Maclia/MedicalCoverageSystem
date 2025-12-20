@@ -166,16 +166,16 @@ export const insertDataQualityCheckSchema = createInsertSchema(dataQualityChecks
 export const insertPredictiveModelSchema = createInsertSchema(predictiveModels);
 
 // Types
-export type AnalyticsMetric = typeof analyticsMetrics.;
-export type MetricData = typeof metricData.;
-export type Report = typeof reports.;
-export type ReportExecution = typeof reportExecutions.;
-export type Dashboard = typeof dashboards.;
-export type DashboardWidget = typeof dashboardWidgets.;
-export type Alert = typeof alerts.;
-export type AlertInstance = typeof alertInstances.;
-export type DataQualityCheck = typeof dataQualityChecks.;
-export type PredictiveModel = typeof predictiveModels.;
+export type AnalyticsMetric = typeof analyticsMetrics.$inferSelect;
+export type MetricData = typeof metricData.$inferSelect;
+export type Report = typeof reports.$inferSelect;
+export type ReportExecution = typeof reportExecutions.$inferSelect;
+export type Dashboard = typeof dashboards.$inferSelect;
+export type DashboardWidget = typeof dashboardWidgets.$inferSelect;
+export type Alert = typeof alerts.$inferSelect;
+export type AlertInstance = typeof alertInstances.$inferSelect;
+export type DataQualityCheck = typeof dataQualityChecks.$inferSelect;
+export type PredictiveModel = typeof predictiveModels.$inferSelect;
 
 export type InsertAnalyticsMetric = z.infer<typeof insertAnalyticsMetricSchema>;
 export type InsertMetricData = z.infer<typeof insertMetricDataSchema>;
