@@ -24,6 +24,7 @@
     "compression": "^1.7.4",
     "drizzle-orm": "^0.39.1",
     "@neondatabase/serverless": "^0.10.4",
+    "postgres": "^3.4.3",
     "zod": "^3.23.8",
     "joi": "^17.11.0",
     "redis": "^4.6.10",

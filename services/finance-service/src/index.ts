@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { createApp } from './app';
 import { Database } from './models/database';
-import { Logger } from './utils/logger';
+import { WinstonLogger } from './utils/WinstonLogger';
 import { CacheService } from './services/cache.service';
 import { AuditService } from './services/audit.service';
 import { MetricsService } from './services/metrics.service';
@@ -13,7 +13,7 @@ const PORT = process.env.PORT || 3007;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 async function bootstrap() {
-  const logger = new Logger('FinanceService');
+const logger = new WinstonLogger('FinanceService');
 
   try {
     logger.info('Starting Finance Service', {
@@ -23,8 +23,7 @@ async function bootstrap() {
     });
 
     // Initialize database connection
-    const database = new Database();
-    await database.connect();
+    const database = Database.getInstance();
     logger.info('Database connected successfully');
 
     // Initialize cache service
@@ -68,7 +67,7 @@ async function bootstrap() {
 
         try {
           await cacheService.disconnect();
-          await database.disconnect();
+          await database.close();
           await metricsService.shutdown();
 
           logger.info('All services disconnected gracefully');
