@@ -60,24 +60,45 @@ CLAIMS_DATABASE_URL=postgresql://...
 vercel --prod
 ```
 
+#### **4. Docker Deployment (Alternative)**
+The project includes Docker support for containerized deployment.
+
+```bash
+# Ensure Docker and Docker Compose are installed
+
+# Build and run all services
+./run-all-services.sh  # Linux/Mac
+# or
+run-all-services.bat   # Windows
+
+# Or build individually
+docker build -t medical-client ./client
+docker build -t medical-server ./server
+# Build other services as needed
+
+# For orchestrated deployment, create a docker-compose.yml
+# See docs/DOCKER_README.md for details
+```
+
 ---
 
 ## 🏗️ **Microservices Architecture**
 
-This system is built on a **microservices architecture** with 8 independent services, each with its own database and domain responsibility.
+This system is built on a **microservices architecture** with 9 independent services, each with its own database and domain responsibility.
 
 ### **Service Overview**
 
 | Service | Database | Responsibility | Key Features |
 |---------|----------|----------------|--------------|
+| **API Gateway** | `medical-coverage-api-gateway` | API Routing & Authentication | Request routing, auth, rate limiting |
+| **Billing** | `medical-coverage-billing` | Invoicing & Payments | Invoice generation, payment processing |
 | **Core** | `medical-coverage-core` | Member & Company Management | Member registry, company management, cards |
 | **CRM** | `medical-coverage-crm` | Sales & Commissions | Lead management, agent performance, commissions |
-| **Claims** | `medical-coverage-claims` | Claims Processing | Adjudication, fraud detection, EOB generation |
-| **Providers** | `medical-coverage-providers` | Healthcare Networks | Provider management, contracts, networks |
-| **Finance** | `medical-coverage-finance` | Billing & Payments | Premium billing, payment processing, ledger |
-| **Tokens** | `medical-coverage-tokens` | Digital Wallets | Token management, subscriptions, balances |
-| **Schemes** | `medical-coverage-schemes` | Benefits & Plans | Scheme definitions, pricing, eligibility |
-| **Analytics** | `medical-coverage-analytics` | Reporting & BI | Dashboards, metrics, predictive analytics |
+| **Finance** | `medical-coverage-finance` | Financial Operations | Premium billing, payment processing, ledger |
+| **Hospital** | `medical-coverage-hospital` | Hospital Management | Hospital data, integrations |
+| **Insurance** | `medical-coverage-insurance` | Insurance Policies | Policy management, underwriting |
+| **Membership** | `medical-coverage-membership` | Membership Services | Enrollment, renewals, benefits |
+| **Wellness** | `medical-coverage-wellness` | Wellness Programs | Health programs, incentives |
 
 ### **Architecture Benefits**
 - ✅ **Independent Scaling**: Each service scales based on its load
