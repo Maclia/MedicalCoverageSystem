@@ -2,7 +2,7 @@
 
 # MedicalCoverageSystem Database Setup Script
 # Automated database initialization and migrations
-# Usage: ./scripts/db-setup.sh [dev|prod] [--skip-migrations] [--seed-data]
+# Usage: ./database/scripts/general/db-setup.sh [dev|prod] [--skip-migrations] [--seed-data]
 
 set -euo pipefail
 
@@ -17,7 +17,7 @@ NC='\033[0m' # No Color
 
 # Script configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+PROJECT_ROOT="$(dirname "$(dirname "$(dirname "$(dirname "$SCRIPT_DIR")")")")"
 DEPLOYMENT_TYPE="dev"
 SKIP_MIGRATIONS=false
 SEED_DATA=false
