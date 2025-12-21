@@ -126,9 +126,39 @@ This medical coverage system has been architected into 8 independent microservic
 ## 🚀 **Setup Instructions**
 
 ### **Prerequisites:**
-- Neon account with PostgreSQL databases
+- Neon account with PostgreSQL databases (for production)
 - Node.js 18+ and npm
 - Vercel account (for deployment)
+- Docker and Docker Compose (for local development)
+
+### **Development vs Production Setup:**
+
+#### **Option A: Docker Development Setup (Recommended for Development)**
+For local development with Docker containers:
+
+```bash
+# Start PostgreSQL and Redis containers
+docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:15
+docker run -d --name redis -p 6379:6379 redis:7
+
+# Create databases for each service
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_core;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_crm;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_claims;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_providers;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_finance;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_tokens;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_schemes;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_analytics;"
+
+# Configure environment variables for Docker
+echo "CORE_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_core" >> .env
+echo "CRM_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_crm" >> .env
+# ... add other database URLs
+```
+
+#### **Option B: Neon Production Setup**
+For production deployment with Neon PostgreSQL:
 
 ### **Step 1: Create Neon Databases**
 
@@ -149,32 +179,65 @@ medical-coverage-analytics
 
 ### **Step 2: Configure Environment Variables**
 
-Update your `.env` file with the database connection strings:
+### **Step 2: Configure Environment Variables**
 
+Choose the appropriate configuration based on your deployment environment:
+
+#### **Docker Development Configuration:**
 ```bash
 # Core Service Database
-CORE_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-core?sslmode=require
+CORE_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_core
 
 # CRM Service Database
-CRM_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-crm?sslmode=require
+CRM_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_crm
 
 # Claims Service Database
-CLAIMS_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-claims?sslmode=require
+CLAIMS_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_claims
 
 # Providers Service Database
-PROVIDER_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-providers?sslmode=require
+PROVIDER_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_providers
 
 # Finance Service Database
-FINANCE_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-finance?sslmode=require
+FINANCE_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_finance
 
 # Tokens Service Database
-TOKEN_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-tokens?sslmode=require
+TOKEN_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_tokens
 
 # Schemes Service Database
-SCHEMES_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-schemes?sslmode=require
+SCHEMES_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_schemes
 
 # Analytics Service Database
-ANALYTICS_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-analytics?sslmode=require
+ANALYTICS_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_analytics
+
+# Redis Configuration
+REDIS_URL=redis://redis:6379
+```
+
+#### **Neon Production Configuration:**
+```bash
+# Core Service Database
+CORE_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-core?sslmode=require&channel_binding=require
+
+# CRM Service Database
+CRM_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-crm?sslmode=require&channel_binding=require
+
+# Claims Service Database
+CLAIMS_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-claims?sslmode=require&channel_binding=require
+
+# Providers Service Database
+PROVIDER_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-providers?sslmode=require&channel_binding=require
+
+# Finance Service Database
+FINANCE_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-finance?sslmode=require&channel_binding=require
+
+# Tokens Service Database
+TOKEN_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-tokens?sslmode=require&channel_binding=require
+
+# Schemes Service Database
+SCHEMES_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-schemes?sslmode=require&channel_binding=require
+
+# Analytics Service Database
+ANALYTICS_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-analytics?sslmode=require&channel_binding=require
 ```
 
 ### **Step 3: Deploy Database Schemas**
@@ -383,5 +446,5 @@ Each schema file includes:
 
 ---
 
-*Last Updated: December 19, 2025*  
-*Microservices Database Setup v2.0*
+*Last Updated: December 21, 2025*  
+*Microservices Database Setup v2.1*

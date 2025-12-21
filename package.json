@@ -1,6 +1,7 @@
 {
-  "name": "rest-express",
-  "version": "1.0.0",
+  "name": "medical-coverage-system",
+  "version": "3.0.0",
+  "description": "Comprehensive medical coverage/insurance management system with microservices architecture",
   "type": "module",
   "license": "MIT",
   "scripts": {

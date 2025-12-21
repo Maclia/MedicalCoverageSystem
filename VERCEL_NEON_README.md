@@ -24,14 +24,21 @@ This system supports multiple deployment strategies. Choose based on your needs:
 
 ### Database Configuration (Neon)
 ```bash
-# Main database
-DATABASE_URL=postgresql://[user]:[password]@[host]/medical_coverage?sslmode=require&channel_binding=require
+# Service-specific databases (8 total)
+CORE_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-core?sslmode=require&channel_binding=require
+CRM_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-crm?sslmode=require&channel_binding=require
+CLAIMS_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-claims?sslmode=require&channel_binding=require
+PROVIDER_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-providers?sslmode=require&channel_binding=require
+FINANCE_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-finance?sslmode=require&channel_binding=require
+TOKEN_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-tokens?sslmode=require&channel_binding=require
+SCHEMES_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-schemes?sslmode=require&channel_binding=require
+ANALYTICS_DATABASE_URL=postgresql://[user]:[password]@[host]/medical-coverage-analytics?sslmode=require&channel_binding=require
 
-# Service-specific databases
-FINANCE_DATABASE_URL=postgresql://[user]:[password]@[host]/medical_coverage_finance?sslmode=require&channel_binding=require
-CORE_DB_URL=postgresql://[user]:[password]@[host]/medical_coverage?sslmode=require&channel_binding=require
-HOSPITAL_DB_URL=postgresql://[user]:[password]@[host]/medical_coverage?sslmode=require&channel_binding=require
-INSURANCE_DB_URL=postgresql://[user]:[password]@[host]/medical_coverage?sslmode=require&channel_binding=require
+# Legacy/compatibility URLs (can be removed after migration)
+DATABASE_URL=postgresql://[user]:[password]@[host]/medical_coverage?sslmode=require&channel_binding=require
+CORE_DB_URL=postgresql://[user]:[password]@[host]/medical-coverage-core?sslmode=require&channel_binding=require
+HOSPITAL_DB_URL=postgresql://[user]:[password]@[host]/medical-coverage-providers?sslmode=require&channel_binding=require
+INSURANCE_DB_URL=postgresql://[user]:[password]@[host]/medical-coverage-insurance?sslmode=require&channel_binding=require
 
 # Authentication
 JWT_SECRET=your-super-secret-jwt-key-at-least-32-chars
@@ -213,3 +220,7 @@ npm run test:e2e         # E2E tests
 - Database connection pooling
 - API response monitoring
 - Error logging and alerting
+
+---
+
+*Last Updated: December 21, 2025*

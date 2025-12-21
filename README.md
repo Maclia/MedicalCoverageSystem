@@ -22,13 +22,30 @@ npm install
 
 # Set up environment variables
 cp .env.example .env
-# Edit .env with your 8 Neon database URLs
+# Edit .env with your database URLs (see Environment Configuration below)
+
+# For Docker Development (Recommended):
+# Start PostgreSQL and Redis containers
+docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=postgres postgres:15
+docker run -d --name redis -p 6379:6379 redis:7
+
+# Create databases for each service
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_core;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_crm;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_claims;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_providers;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_finance;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_tokens;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_schemes;"
+docker exec -it postgres psql -U postgres -c "CREATE DATABASE medical_coverage_analytics;"
 
 # Deploy database schemas for all services
 npm run db:push:all
 
 # Start development server
-npm run dev
+npm run dev:all        # Runs all 9 services + frontend
+npm run dev:client     # Frontend only (port 5173)
+npm run dev:gateway    # API Gateway only (port 5000)
 ```
 
 ### **Production Deployment**
@@ -183,28 +200,70 @@ MedicalCoverageSystem/
 ### **Available Scripts**
 ```bash
 # Development
-npm run dev              # Start all services in development
-npm run dev:client       # Frontend only
-npm run dev:server       # Backend only
+npm run dev:all         # Start all 9 services + frontend
+npm run dev:client      # Frontend only (port 5173)
+npm run dev:gateway     # API Gateway only (port 5000)
+npm run dev:core        # Core service only
+npm run dev:crm         # CRM service only
+# ... individual service commands available
 
 # Database
-npm run db:push:all      # Deploy all service schemas
-npm run db:push:core     # Deploy core service schema only
-npm run db:studio        # Open Drizzle Studio
+npm run db:push:all     # Deploy all service schemas
+npm run db:push:core    # Deploy core service schema only
+npm run db:push:crm     # Deploy CRM service schema only
+npm run db:studio       # Open Drizzle Studio for database management
 
 # Testing
-npm run test:all         # Run complete test suite
-npm run test:unit        # Unit tests only
+npm run test:all        # Run complete test suite
+npm run test:unit       # Unit tests only
 npm run test:integration # Integration tests
-npm run test:e2e         # End-to-end tests
+npm run test:e2e        # End-to-end tests
 
-# Deployment
-npm run build            # Build all services
-npm run vercel:deploy    # Deploy to Vercel
+# Build & Validation
+npm run build:all       # Build all services and client
+npm run build:client    # Build frontend only
+npm run build:services  # Build all microservices
 ```
 
-### **Environment Variables**
-See `.env.example` for the complete list of required environment variables (8 database URLs + other configs).
+### **Configuration Validation**
+Before starting development, ensure your configuration is correct:
+```bash
+# Validate environment variables
+node -e "require('dotenv').config(); console.log('✅ Environment loaded successfully');"
+
+# Check database connectivity (requires running containers)
+npm run db:push:all
+
+# Validate TypeScript compilation
+npm run build:all
+```
+
+### **Environment Configuration**
+
+The system supports two deployment environments:
+
+#### **Docker Development Environment**
+For local development with Docker containers:
+```bash
+# Database URLs use Docker container names
+CORE_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_core
+CRM_DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_coverage_crm
+# ... etc for all services
+
+# Redis uses Docker container name
+REDIS_URL=redis://redis:6379
+```
+
+#### **Production Environment (Neon)**
+For production deployment with Neon PostgreSQL:
+```bash
+# Database URLs use Neon connection strings
+CORE_DATABASE_URL=postgresql://user:pass@host/medical-coverage-core?sslmode=require&channel_binding=require
+CRM_DATABASE_URL=postgresql://user:pass@host/medical-coverage-crm?sslmode=require&channel_binding=require
+# ... etc for all services
+```
+
+See `.env.example` for the complete list of required environment variables.
 
 ### **Adding New Features**
 1. **Identify Service**: Determine which microservice owns the feature
@@ -343,10 +402,12 @@ npm run test:db          # Schema validation, migrations
 
 ## 📚 **Documentation**
 
+- **[API Documentation](./docs/API_DOCUMENTATION.md)** - Complete API reference for all services
+- **[API Quick Reference](./docs/API_QUICK_REFERENCE.md)** - Concise endpoint reference
+- **[Postman Collection](./docs/MedicalCoverageSystemAPI.postman_collection.json)** - Importable Postman collection for testing
 - **[Microservices Setup](./MICROSERVICES_DATABASE_SETUP.md)** - Complete database setup guide
 - **[Vercel Deployment](./VERCEL_NEON_README.md)** - Deployment and hosting guide
-- **[API Documentation](./docs/)** - Service API references
-- **[Migration Guide](./docs/migration.md)** - Legacy system migration
+- **[User Guides](./docs/user-guides/)** - End-user documentation
 
 ---
 
@@ -373,4 +434,4 @@ MIT License - see LICENSE file for details.
 ---
 
 *Built with ❤️ using modern web technologies and microservices architecture*  
-*Last Updated: December 19, 2025*
+*Last Updated: December 21, 2025*

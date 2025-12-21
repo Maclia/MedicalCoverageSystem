@@ -1,0 +1,881 @@
+{
+  "info": {
+    "name": "Medical Coverage System API",
+    "description": "Complete API collection for Medical Coverage System microservices",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://api.medical-coverage.com",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "correlation_id",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"securepassword123\",\n  \"userType\": \"insurance\",\n  \"entityId\": 123\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/register",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', response.data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"securepassword123\",\n  \"userType\": \"insurance\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your_refresh_token_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/core/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "core", "profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Insurance Service",
+      "item": [
+        {
+          "name": "List Schemes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/insurance/schemes?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "insurance", "schemes"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Scheme",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Premium Health Plan\",\n  \"description\": \"Comprehensive health coverage\",\n  \"pricingMethodology\": \"community_rated\",\n  \"status\": \"active\",\n  \"effectiveDate\": \"2025-01-01\",\n  \"expiryDate\": \"2025-12-31\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/insurance/schemes",
+              "host": ["{{base_url}}"],
+              "path": ["api", "insurance", "schemes"]
+            }
+          }
+        },
+        {
+          "name": "List Benefits",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/insurance/benefits?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "insurance", "benefits"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Benefit",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Annual Health Checkup\",\n  \"description\": \"Comprehensive annual health screening\",\n  \"category\": \"wellness\",\n  \"coverageType\": \"covered\",\n  \"defaultLimit\": 500\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/insurance/benefits",
+              "host": ["{{base_url}}"],
+              "path": ["api", "insurance", "benefits"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hospital Service",
+      "item": [
+        {
+          "name": "List Patients",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/hospital/patients?page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "hospital", "patients"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Register Patient",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"dateOfBirth\": \"1980-01-01\",\n  \"gender\": \"male\",\n  \"contactNumber\": \"+1234567890\",\n  \"email\": \"john.doe@example.com\",\n  \"address\": \"123 Main St\",\n  \"emergencyContact\": {\n    \"name\": \"Jane Doe\",\n    \"relationship\": \"spouse\",\n    \"contactNumber\": \"+1234567891\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/hospital/patients",
+              "host": ["{{base_url}}"],
+              "path": ["api", "hospital", "patients"]
+            }
+          }
+        },
+        {
+          "name": "List Appointments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/hospital/appointments?date=2025-12-21",
+              "host": ["{{base_url}}"],
+              "path": ["api", "hospital", "appointments"],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "2025-12-21"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Schedule Appointment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": 456,\n  \"doctorId\": 123,\n  \"appointmentDate\": \"2025-12-21T10:00:00Z\",\n  \"duration\": 30,\n  \"appointmentType\": \"consultation\",\n  \"notes\": \"Follow-up visit\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/hospital/appointments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "hospital", "appointments"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Billing Service",
+      "item": [
+        {
+          "name": "List Invoices",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/billing/invoices?page=1&limit=10&status=pending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "billing", "invoices"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": 456,\n  \"items\": [\n    {\n      \"description\": \"Consultation\",\n      \"quantity\": 1,\n      \"unitPrice\": 150,\n      \"total\": 150\n    }\n  ],\n  \"dueDate\": \"2025-01-15\",\n  \"notes\": \"Medical consultation fee\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/billing/invoices",
+              "host": ["{{base_url}}"],
+              "path": ["api", "billing", "invoices"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Claims Service",
+      "item": [
+        {
+          "name": "List Claims",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/claims?page=1&limit=10&status=pending",
+              "host": ["{{base_url}}"],
+              "path": ["api", "claims"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "pending"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Submit Claim",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": 456,\n  \"serviceDate\": \"2025-12-15\",\n  \"diagnosisCode\": \"J00\",\n  \"procedureCode\": \"99201\",\n  \"claimedAmount\": 150,\n  \"serviceProvider\": \"Dr. Smith\",\n  \"documents\": [\"receipt.pdf\", \"prescription.pdf\"],\n  \"notes\": \"Routine consultation\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/claims",
+              "host": ["{{base_url}}"],
+              "path": ["api", "claims"]
+            }
+          }
+        }
+      ]
+    },
+    {
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Smith\",\n  \"email\": \"john.smith@example.com\",\n  \"phone\": \"+1234567890\",\n  \"company\": \"Tech Corp\",\n  \"leadSource\": \"website\",\n  \"interestLevel\": \"high\",\n  \"notes\": \"Interested in premium health plan\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/crm/leads",
+              "host": ["{{base_url}}"],
+              "path": ["api", "crm", "leads"]
+            }
+          }
+        },
+        {
+          "name": "Convert Lead",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"convertTo\": \"opportunity\",\n  \"assignedAgentId\": 123\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/crm/leads/123/convert",
+              "host": ["{{base_url}}"],
+              "path": ["api", "crm", "leads", "123", "convert"]
+            }
+          }
+        },
+        {
+          "name": "List Agents",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/crm/agents?page=1&limit=10&status=active&team=premium",
+              "host": ["{{base_url}}"],
+              "path": ["api", "crm", "agents"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "team",
+                  "value": "premium"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Agent Performance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/crm/agents/123/performance?period=2025-12",
+              "host": ["{{base_url}}"],
+              "path": ["api", "crm", "agents", "123", "performance"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "2025-12"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Membership Service",
+      "item": [
+        {
+          "name": "List Members",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/membership/members?page=1&limit=10&status=active&search=name",
+              "host": ["{{base_url}}"],
+              "path": ["api", "membership", "members"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                },
+                {
+                  "key": "search",
+                  "value": "name"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Member Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/membership/members/123",
+              "host": ["{{base_url}}"],
+              "path": ["api", "membership", "members", "123"]
+            }
+          }
+        },
+        {
+          "name": "Register Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"dateOfBirth\": \"1980-01-01\",\n  \"gender\": \"male\",\n  \"contactNumber\": \"+1234567890\",\n  \"email\": \"john.doe@example.com\",\n  \"address\": \"123 Main St\",\n  \"schemeId\": 123,\n  \"effectiveDate\": \"2025-01-01\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/membership/members",
+              "host": ["{{base_url}}"],
+              "path": ["api", "membership", "members"]
+            }
+          }
+        },
+        {
+          "name": "Process Enrollment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": 456,\n  \"schemeId\": 123,\n  \"effectiveDate\": \"2025-01-01\",\n  \"premiumAmount\": 150\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/membership/enrollment",
+              "host": ["{{base_url}}"],
+              "path": ["api", "membership", "enrollment"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wellness Service",
+      "item": [
+        {
+          "name": "List Programs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/wellness/programs?page=1&limit=10&category=fitness&status=active",
+              "host": ["{{base_url}}"],
+              "path": ["api", "wellness", "programs"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "category",
+                  "value": "fitness"
+                },
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Program Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/wellness/programs/123",
+              "host": ["{{base_url}}"],
+              "path": ["api", "wellness", "programs", "123"]
+            }
+          }
+        },
+        {
+          "name": "Create Program",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Healthy Living Challenge\",\n  \"description\": \"30-day wellness program\",\n  \"category\": \"fitness\",\n  \"duration\": 30,\n  \"pointsReward\": 1000,\n  \"startDate\": \"2025-01-01\",\n  \"endDate\": \"2025-01-31\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/wellness/programs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "wellness", "programs"]
+            }
+          }
+        },
+        {
+          "name": "List Activities",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/wellness/activities?page=1&limit=10&programId=123&memberId=456",
+              "host": ["{{base_url}}"],
+              "path": ["api", "wellness", "activities"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "programId",
+                  "value": "123"
+                },
+                {
+                  "key": "memberId",
+                  "value": "456"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Log Activity",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"memberId\": 456,\n  \"programId\": 123,\n  \"activityType\": \"exercise\",\n  \"description\": \"30-minute run\",\n  \"pointsEarned\": 50,\n  \"date\": \"2025-12-21\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/wellness/activities",
+              "host": ["{{base_url}}"],
+              "path": ["api", "wellness", "activities"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Gateway Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "Service Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "X-Correlation-ID",
+                "value": "{{correlation_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/services",
+              "host": ["{{base_url}}"],
+              "path": ["services"]
+            }
+          }
+        },
+        {
+          "name": "API Documentation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/docs",
+              "host": ["{{base_url}}"],
+              "path": ["docs"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
