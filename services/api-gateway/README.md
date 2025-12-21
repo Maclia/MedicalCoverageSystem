@@ -1,53 +1,335 @@
-# API Gateway
+# API Gateway - Medical Coverage System
 
-The API Gateway serves as the central entry point for all client requests to the Medical Coverage System microservices architecture.
+The API Gateway serves as the central entry point for all microservices in the Medical Coverage System, providing authentication, rate limiting, request routing, and comprehensive API documentation.
 
-## Features
+## 🚀 Quick Start
 
-- **Central Request Routing** to all microservices
-- **Authentication & Authorization** with JWT validation
-- **Rate Limiting** with Redis-backed storage
-- **Circuit Breaker Pattern** for service resilience
-- **Health Monitoring** of all downstream services
-- **Request Correlation** for distributed tracing
-- **Standardized API Responses** across all services
-- **Security Headers** and CORS configuration
-- **Load Balancing** support for service instances
-- **WebSocket Support** for real-time features
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+- Access to microservice endpoints
 
-## Architecture
+### Installation
 
-### Service Discovery
-- **Service Registry** maintains health status of all microservices
-- **Circuit Breakers** prevent cascading failures
-- **Health Checks** monitor service availability
-- **Retry Logic** with exponential backoff
+```bash
+# Install dependencies
+npm install
 
-### Security
-- **JWT Authentication** with token validation
-- **Role-based Access Control** (RBAC)
-- **Rate Limiting** per endpoint and user type
-- **CORS Configuration** for cross-origin requests
-- **Security Headers** (helmet.js)
+# Development mode
+npm run dev
 
-### Monitoring & Observability
-- **Correlation IDs** for request tracing
-- **Structured Logging** with Winston
-- **Performance Metrics** and response times
-- **Health Endpoints** for service monitoring
+# Build for production
+npm run build
 
-## API Routes
+# Start production server
+npm start
+```
 
-### Gateway Endpoints
-- `GET /health` - Gateway health check
-- `GET /services` - Service status overview
-- `GET /docs` - API documentation
+## 🏗️ Architecture
 
-### Service Routes
-- `GET /api/auth/*` - Core authentication service
-- `GET /api/insurance/*` - Insurance service
-- `GET /api/hospital/*` - Hospital service
-- `GET /api/billing/*` - Billing service
+### Core Features
+- **JWT Authentication**: Bearer token validation with role-based access
+- **Rate Limiting**: Configurable limits per endpoint and user type
+- **Service Proxy**: Dynamic routing to 9 microservices
+- **Health Monitoring**: Real-time service health checks
+- **Swagger Documentation**: Complete OpenAPI 3.0 specification
+- **Circuit Breakers**: Automatic failover protection
+- **Request Tracing**: Correlation IDs for debugging
+
+### Service Routing
+
+| Path Pattern | Target Service | Authentication |
+|--------------|----------------|----------------|
+| `/api/auth/*` | Core Service | Auth rate limit |
+| `/api/core/*` | Core Service | JWT required |
+| `/api/insurance/*` | Insurance Service | JWT required |
+| `/api/schemes/*` | Insurance Service | JWT required |
+| `/api/benefits/*` | Insurance Service | JWT required |
+| `/api/coverage/*` | Insurance Service | JWT required |
+| `/api/hospital/*` | Hospital Service | JWT required |
+| `/api/patients/*` | Hospital Service | User rate limit |
+| `/api/appointments/*` | Hospital Service | JWT required |
+| `/api/medical-records/*` | Hospital Service | JWT required |
+| `/api/personnel/*` | Hospital Service | JWT required |
+| `/api/billing/*` | Billing Service | JWT required |
+| `/api/invoices/*` | Billing Service | User rate limit |
+| `/api/accounts-receivable/*` | Billing Service | JWT required |
+| `/api/tariffs/*` | Billing Service | JWT required |
+| `/api/claims/*` | Claims Service | User rate limit |
+| `/api/disputes/*` | Claims Service | JWT required |
+| `/api/reconciliation/*` | Claims Service | JWT required |
+| `/api/finance/*` | Finance Service | JWT required |
+| `/api/payments/*` | Finance Service | User rate limit |
+| `/api/ledger/*` | Finance Service | JWT required |
+| `/api/crm/*` | CRM Service | JWT required |
+| `/api/leads/*` | CRM Service | JWT required |
+| `/api/agents/*` | CRM Service | JWT required |
+| `/api/commissions/*` | CRM Service | JWT required |
+| `/api/membership/*` | Membership Service | JWT required |
+| `/api/enrollments/*` | Membership Service | JWT required |
+| `/api/renewals/*` | Membership Service | JWT required |
+| `/api/wellness/*` | Wellness Service | JWT required |
+| `/api/programs/*` | Wellness Service | JWT required |
+| `/api/activities/*` | Wellness Service | JWT required |
+| `/api/incentives/*` | Wellness Service | JWT required |
+
+## 📚 API Documentation
+
+### Swagger UI
+Access the interactive API documentation at:
+```
+http://localhost:5000/api-docs
+```
+
+### OpenAPI Specification
+Download the OpenAPI JSON specification at:
+```
+http://localhost:5000/swagger.json
+```
+
+## 🔧 Configuration
+
+### Environment Variables
+
+```bash
+# Server Configuration
+PORT=5000
+NODE_ENV=development
+
+# JWT Configuration
+JWT_SECRET=your-jwt-secret
+JWT_ISSUER=medical-coverage-system
+JWT_AUDIENCE=medical-api-gateway
+
+# Redis Configuration
+REDIS_URL=redis://localhost:6379
+
+# Service URLs (examples)
+CORE_SERVICE_URL=http://localhost:3001
+INSURANCE_SERVICE_URL=http://localhost:3002
+HOSPITAL_SERVICE_URL=http://localhost:3003
+BILLING_SERVICE_URL=http://localhost:3004
+CLAIMS_SERVICE_URL=http://localhost:3005
+FINANCE_SERVICE_URL=http://localhost:3006
+CRM_SERVICE_URL=http://localhost:3007
+MEMBERSHIP_SERVICE_URL=http://localhost:3008
+WELLNESS_SERVICE_URL=http://localhost:3009
+
+# Rate Limiting
+RATE_LIMIT_WINDOW_MS=60000
+RATE_LIMIT_MAX_REQUESTS=100
+
+# Security
+CORS_ORIGINS=http://localhost:3000,http://localhost:3001
+ENABLE_CSP=true
+TRUST_PROXY=false
+
+# Health Checks
+HEALTH_CHECK_INTERVAL=30000
+HEALTH_CHECK_TIMEOUT=2000
+HEALTH_CHECK_RETRIES=3
+
+# Logging
+LOG_LEVEL=info
+LOGGING_ENABLED=true
+```
+
+## 🛠️ Development
+
+### Available Scripts
+
+```bash
+# Development
+npm run dev          # Start development server with hot reload
+npm run build:check  # TypeScript compilation check
+npm run lint         # Run ESLint
+npm run lint:fix     # Fix ESLint issues
+
+# Building
+npm run build        # Build for production
+npm run start        # Start production server
+
+# Testing
+npm test             # Run tests
+npm run test:watch   # Watch mode tests
+npm run test:coverage # Test coverage
+
+# Utilities
+npm run validate     # Validate build setup
+npm run clean        # Clean build artifacts
+npm run rebuild      # Full rebuild
+```
+
+### Project Structure
+
+```
+src/
+├── api/
+│   └── routes.ts           # Main routing configuration
+├── config/
+│   └── index.ts            # Configuration management
+├── middleware/
+│   ├── proxy.ts            # Service proxy middleware
+│   ├── auth.ts             # Authentication middleware
+│   ├── rateLimiting.ts     # Rate limiting middleware
+│   ├── auditMiddleware.ts  # Request auditing
+│   └── responseStandardization.ts # Response formatting
+├── services/
+│   ├── ServiceRegistry.ts  # Service discovery
+│   └── CircuitBreaker.ts   # Circuit breaker pattern
+├── utils/
+│   └── logger.ts           # Logging utilities
+├── swagger.ts              # Swagger configuration
+└── index.ts                # Application entry point
+```
+
+## 🔍 Troubleshooting
+
+### Build Issues
+
+#### 1. TypeScript Compilation Errors
+```bash
+# Check for compilation errors
+npm run build:check
+
+# Clean and rebuild
+npm run rebuild
+```
+
+#### 2. Missing Dependencies
+```bash
+# Clean install
+npm run clean
+npm install
+```
+
+#### 3. Port Already in Use
+```bash
+# Find process using port 5000
+lsof -i :5000
+# Kill the process
+kill -9 <PID>
+```
+
+### Runtime Issues
+
+#### 1. Service Connection Errors
+- Verify all microservice URLs in environment variables
+- Check service health: `GET /health`
+- Review service status: `GET /services`
+
+#### 2. Authentication Issues
+- Verify JWT_SECRET is set
+- Check token format: `Authorization: Bearer <token>`
+- Validate token expiration
+
+#### 3. Rate Limiting Issues
+- Check rate limit headers in responses
+- Adjust RATE_LIMIT_* environment variables
+- Review request patterns
+
+### Common Error Codes
+
+| Error Code | Description | Solution |
+|------------|-------------|----------|
+| `SERVICE_UNAVAILABLE` | Target service is down | Check service health and restart |
+| `CIRCUIT_BREAKER_OPEN` | Service circuit breaker triggered | Wait for automatic recovery or restart |
+| `RATE_LIMIT_EXCEEDED` | Too many requests | Wait for rate limit reset |
+| `AUTHENTICATION_FAILED` | Invalid JWT token | Provide valid Bearer token |
+| `AUTHORIZATION_FAILED` | Insufficient permissions | Check user roles and permissions |
+
+## 📊 Monitoring
+
+### Health Endpoints
+
+```bash
+# Gateway health
+GET /health
+
+# Service status overview
+GET /services
+
+# Detailed service health
+GET /services/{serviceName}/health
+```
+
+### Metrics
+
+The gateway provides real-time metrics for:
+- Request/response times
+- Error rates
+- Service availability
+- Rate limiting status
+- Circuit breaker states
+
+## 🔐 Security
+
+### Authentication
+- JWT Bearer token authentication
+- Role-based access control (RBAC)
+- Token refresh mechanism
+
+### Rate Limiting
+- Configurable per endpoint
+- User-based and IP-based limits
+- Burst handling
+
+### Security Headers
+- CORS configuration
+- Content Security Policy (CSP)
+- Helmet security middleware
+
+## 📝 API Response Format
+
+### Success Response
+```json
+{
+  "success": true,
+  "data": {},
+  "message": "Optional success message",
+  "correlationId": "request-tracking-id",
+  "meta": {
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 100,
+      "totalPages": 10
+    },
+    "timestamp": "2025-12-21T10:00:00.000Z",
+    "requestId": "uuid-v4"
+  }
+}
+```
+
+### Error Response
+```json
+{
+  "success": false,
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed",
+    "details": {},
+    "correlationId": "request-tracking-id"
+  }
+}
+```
+
+## 🤝 Contributing
+
+1. Follow the existing code style
+2. Add tests for new features
+3. Update documentation
+4. Ensure TypeScript compilation passes
+5. Run linting before committing
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
+
+---
+
+**Version**: 1.0.0
+**Last Updated**: December 21, 2025
 - `GET /api/claims/*` - Claims service
 - `GET /api/payment/*` - Payment service
 
