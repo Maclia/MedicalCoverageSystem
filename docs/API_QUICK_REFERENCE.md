@@ -3,6 +3,7 @@
 ## Base URL
 ```
 https://api.medical-coverage.com
+http://localhost:5000 (development)
 ```
 
 ## Authentication
@@ -10,9 +11,20 @@ https://api.medical-coverage.com
 Authorization: Bearer <jwt_token>
 ```
 
-## Common Endpoints
+## API Gateway Endpoints
 
-### Authentication
+### Gateway Management
+```http
+GET  /health                    # Gateway health check
+GET  /services                  # Service status overview
+GET  /docs                      # API documentation summary
+GET  /api-docs                  # Swagger UI documentation
+GET  /swagger.json              # OpenAPI specification
+```
+
+## Service-Specific Endpoints
+
+### Authentication & Core
 ```http
 POST /api/auth/register          # Register new user
 POST /api/auth/login             # User login
@@ -20,6 +32,14 @@ POST /api/auth/refresh           # Refresh access token
 POST /api/auth/logout            # User logout
 GET  /api/core/profile           # Get user profile
 PUT  /api/core/profile           # Update user profile
+GET  /api/core/members           # List members
+POST /api/core/members           # Create member
+GET  /api/core/members/{id}      # Get member details
+PUT  /api/core/members/{id}      # Update member
+GET  /api/core/companies         # List companies
+POST /api/core/companies         # Create company
+GET  /api/core/cards             # List member cards
+POST /api/core/cards             # Issue member card
 ```
 
 ### Insurance Management
@@ -31,14 +51,14 @@ PUT  /api/insurance/schemes/{id}               # Update scheme
 DEL  /api/insurance/schemes/{id}               # Delete scheme
 POST /api/insurance/schemes/{id}/benefits      # Add benefit to scheme
 
-GET  /api/insurance/benefits                   # List benefits
-POST /api/insurance/benefits                   # Create benefit
-GET  /api/insurance/benefits/{id}              # Get benefit details
-PUT  /api/insurance/benefits/{id}              # Update benefit
-DEL  /api/insurance/benefits/{id}              # Delete benefit
-GET  /api/insurance/benefits/categories        # Get benefit categories
-
-GET  /api/insurance/coverage/verify/{memberId} # Verify member coverage
+GET  /api/schemes                              # List schemes (alternative)
+GET  /api/benefits                             # List benefits
+POST /api/benefits                             # Create benefit
+GET  /api/benefits/{id}                        # Get benefit details
+PUT  /api/benefits/{id}                        # Update benefit
+DEL  /api/benefits/{id}                        # Delete benefit
+GET  /api/benefits/categories                  # Get benefit categories
+GET  /api/coverage/verify/{memberId}           # Verify member coverage
 ```
 
 ### Hospital Operations
@@ -46,8 +66,22 @@ GET  /api/insurance/coverage/verify/{memberId} # Verify member coverage
 GET  /api/hospital/patients                    # List patients
 POST /api/hospital/patients                    # Register patient
 GET  /api/hospital/patients/{id}               # Get patient details
+PUT  /api/hospital/patients/{id}               # Update patient
+DEL  /api/hospital/patients/{id}               # Delete patient
 
-GET  /api/hospital/appointments                # List appointments
+GET  /api/patients                             # List patients (alternative)
+GET  /api/appointments                         # List appointments
+POST /api/appointments                         # Schedule appointment
+GET  /api/appointments/{id}                    # Get appointment details
+PUT  /api/appointments/{id}                    # Update appointment
+DEL  /api/appointments/{id}                    # Cancel appointment
+
+GET  /api/medical-records                      # List medical records
+POST /api/medical-records                      # Create medical record
+GET  /api/medical-records/{id}                 # Get medical record
+GET  /api/personnel                            # List hospital personnel
+POST /api/personnel                            # Add personnel
+```
 POST /api/hospital/appointments                # Schedule appointment
 PUT  /api/hospital/appointments/{id}           # Update appointment
 
@@ -65,16 +99,10 @@ POST /api/billing/invoices                     # Create invoice
 GET  /api/billing/invoices/{id}                # Get invoice details
 PUT  /api/billing/invoices/{id}/status         # Update invoice status
 
-GET  /api/billing/accounts-receivable/summary  # AR summary
-GET  /api/billing/accounts-receivable/outstanding # Outstanding payments
-
-GET  /api/billing/tariffs                      # List service tariffs
-PUT  /api/billing/tariffs/{id}                 # Update tariff
-
-POST /api/finance/payments                     # Process payment
-GET  /api/finance/payments/{id}                # Get payment status
-
-POST /api/finance/refunds                      # Process refund
+GET  /api/invoices                             # List invoices (alternative)
+GET  /api/accounts-receivable                  # Accounts receivable
+GET  /api/tariffs                              # List service tariffs
+PUT  /api/tariffs/{id}                         # Update tariff
 ```
 
 ### Claims Processing
@@ -84,21 +112,43 @@ POST /api/claims                               # Submit claim
 GET  /api/claims/{id}                          # Get claim details
 PUT  /api/claims/{id}/status                   # Update claim status
 
-GET  /api/claims/disputes                      # List disputes
-POST /api/claims/disputes                      # Create dispute
-PUT  /api/claims/disputes/{id}/resolve         # Resolve dispute
+GET  /api/disputes                             # List disputes
+POST /api/disputes                             # Create dispute
+PUT  /api/disputes/{id}/resolve                # Resolve dispute
+GET  /api/reconciliation                       # Reconciliation report
+```
 
-GET  /api/claims/reconciliation                # Reconciliation report
+### Finance & Payments
+```http
+GET  /api/finance/payments                     # List payments
+POST /api/finance/payments                     # Process payment
+GET  /api/finance/payments/{id}                # Get payment status
+POST /api/finance/refunds                      # Process refund
+GET  /api/finance/ledger                       # General ledger
+GET  /api/payments                             # List payments (alternative)
+GET  /api/ledger                               # Ledger entries (alternative)
 ```
 
 ### CRM & Sales
 ```http
 GET  /api/crm/leads                            # List leads
 POST /api/crm/leads                            # Create lead
+GET  /api/crm/leads/{id}                       # Get lead details
+PUT  /api/crm/leads/{id}                       # Update lead
 POST /api/crm/leads/{id}/convert               # Convert lead to opportunity
 
 GET  /api/crm/agents                           # List agents
+POST /api/crm/agents                           # Create agent
+GET  /api/crm/agents/{id}                      # Get agent details
 GET  /api/crm/agents/{id}/performance          # Agent performance
+
+GET  /api/crm/commissions                      # List commissions
+POST /api/crm/commissions                      # Create commission
+GET  /api/crm/commissions/{id}                 # Get commission details
+
+GET  /api/leads                                # List leads (alternative)
+GET  /api/agents                               # List agents (alternative)
+GET  /api/commissions                          # List commissions (alternative)
 ```
 
 ### Membership Management
@@ -106,14 +156,49 @@ GET  /api/crm/agents/{id}/performance          # Agent performance
 GET  /api/membership/members                   # List members
 POST /api/membership/members                   # Register member
 GET  /api/membership/members/{id}              # Get member details
+PUT  /api/membership/members/{id}              # Update member
 
-POST /api/membership/enrollment                # Process enrollment
-PUT  /api/membership/enrollment/{id}           # Update enrollment
+GET  /api/membership/enrollments               # List enrollments
+POST /api/membership/enrollments               # Process enrollment
+GET  /api/membership/enrollments/{id}          # Get enrollment details
+PUT  /api/membership/enrollments/{id}          # Update enrollment
+
+GET  /api/membership/renewals                  # List renewals
+POST /api/membership/renewals                  # Process renewal
+GET  /api/membership/renewals/{id}             # Get renewal details
+
+GET  /api/enrollments                          # List enrollments (alternative)
+GET  /api/renewals                             # List renewals (alternative)
 ```
 
 ### Wellness Programs
 ```http
 GET  /api/wellness/programs                    # List programs
+POST /api/wellness/programs                    # Create program
+GET  /api/wellness/programs/{id}               # Get program details
+PUT  /api/wellness/programs/{id}               # Update program
+
+GET  /api/wellness/activities                  # List activities
+POST /api/wellness/activities                  # Log activity
+GET  /api/wellness/activities/{id}             # Get activity details
+
+GET  /api/wellness/incentives                  # List incentives
+POST /api/wellness/incentives                  # Create incentive
+GET  /api/wellness/incentives/{id}             # Get incentive details
+
+GET  /api/programs                             # List programs (alternative)
+GET  /api/activities                           # List activities (alternative)
+GET  /api/incentives                           # List incentives (alternative)
+```
+
+### Administration
+```http
+GET  /api/admin/health                         # System health dashboard
+GET  /api/admin/metrics                        # System metrics
+GET  /api/admin/logs                           # System logs
+GET  /api/admin/services                       # Service management
+POST /api/admin/services/{id}/restart          # Restart service
+```
 POST /api/wellness/programs                    # Create program
 GET  /api/wellness/programs/{id}               # Get program details
 

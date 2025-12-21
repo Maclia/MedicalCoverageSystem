@@ -161,7 +161,8 @@ const server = app.listen(config.port, '0.0.0.0', () => {
   logger.info(`🔄 Services: ${serviceRegistry.getAllServices().length} registered`);
   logger.info(`📊 Health: http://localhost:${config.port}/health`);
   logger.info(`📚 Docs: http://localhost:${config.port}/docs`);
-  logger.info(`📈 Services: http://localhost:${config.port}/services`);
+  logger.info(`� Swagger UI: http://localhost:${config.port}/api-docs`);
+  logger.info(`�📈 Services: http://localhost:${config.port}/services`);
 
   // Log service registry status
   const healthyServices = serviceRegistry.getHealthyServices();

@@ -48,10 +48,25 @@ export const config = {
       timeout: parseInt(process.env.CLAIMS_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.CLAIMS_SERVICE_RETRIES || '3', 10),
     },
-    payment: {
-      url: process.env.PAYMENT_SERVICE_URL || 'http://localhost:3006',
-      timeout: parseInt(process.env.PAYMENT_SERVICE_TIMEOUT || '5000', 10),
-      retries: parseInt(process.env.PAYMENT_SERVICE_RETRIES || '3', 10),
+    finance: {
+      url: process.env.FINANCE_SERVICE_URL || 'http://localhost:3006',
+      timeout: parseInt(process.env.FINANCE_SERVICE_TIMEOUT || '5000', 10),
+      retries: parseInt(process.env.FINANCE_SERVICE_RETRIES || '3', 10),
+    },
+    crm: {
+      url: process.env.CRM_SERVICE_URL || 'http://localhost:3007',
+      timeout: parseInt(process.env.CRM_SERVICE_TIMEOUT || '5000', 10),
+      retries: parseInt(process.env.CRM_SERVICE_RETRIES || '3', 10),
+    },
+    membership: {
+      url: process.env.MEMBERSHIP_SERVICE_URL || 'http://localhost:3008',
+      timeout: parseInt(process.env.MEMBERSHIP_SERVICE_TIMEOUT || '5000', 10),
+      retries: parseInt(process.env.MEMBERSHIP_SERVICE_RETRIES || '3', 10),
+    },
+    wellness: {
+      url: process.env.WELLNESS_SERVICE_URL || 'http://localhost:3009',
+      timeout: parseInt(process.env.WELLNESS_SERVICE_TIMEOUT || '5000', 10),
+      retries: parseInt(process.env.WELLNESS_SERVICE_RETRIES || '3', 10),
     },
   },
 

@@ -48,6 +48,13 @@ npm run dev:client     # Frontend only (port 5173)
 npm run dev:gateway    # API Gateway only (port 5000)
 ```
 
+### **API Documentation**
+The system includes comprehensive Swagger/OpenAPI documentation for all microservices:
+
+- **Swagger UI**: `http://localhost:5000/api-docs` (when running API Gateway)
+- **API Documentation**: See `docs/API_DOCUMENTATION.md`
+- **Postman Collection**: `docs/MedicalCoverageSystemAPI.postman_collection.json`
+
 ### **Production Deployment**
 
 #### **1. Database Setup (Neon)**
@@ -96,6 +103,32 @@ docker build -t medical-server ./server
 # For orchestrated deployment, create a docker-compose.yml
 # See docs/DOCKER_README.md for details
 ```
+
+---
+
+## 📊 **Current System Status** (December 21, 2025)
+
+### ✅ **Completed Components**
+- **API Gateway**: Fully operational with comprehensive routing for all 9 microservices
+- **Swagger Documentation**: Complete OpenAPI 3.0 specification with interactive docs
+- **Authentication System**: JWT-based authentication with role-based access control
+- **Rate Limiting**: Configurable limits per endpoint and user type
+- **Service Monitoring**: Health checks, circuit breakers, and performance tracking
+- **Database Architecture**: 8 separate PostgreSQL databases configured
+- **Documentation**: Comprehensive API and system documentation
+
+### 🚧 **In Development**
+- **Microservice Endpoints**: Individual service API implementations
+- **Database Schemas**: Service-specific data models and migrations
+- **Integration Testing**: Cross-service workflow validation
+- **Frontend Components**: React components for all system features
+
+### 🎯 **Key Features**
+- **Complete API Routing**: All 9 microservices accessible through unified gateway
+- **Interactive Documentation**: Swagger UI at `http://localhost:5000/api-docs`
+- **Security First**: JWT authentication, rate limiting, and audit logging
+- **Monitoring Ready**: Health checks and service status tracking
+- **Production Ready**: Docker support and environment configuration
 
 ---
 

@@ -12,6 +12,7 @@ The Medical Coverage System is built on a microservices architecture with 9 inde
 - **Authentication**: JWT Bearer Token
 - **Rate Limiting**: Applied per endpoint and user type
 - **Request Tracing**: X-Correlation-ID header
+- **Swagger Documentation**: `http://localhost:5000/api-docs` (development)
 
 ### Service Architecture
 
@@ -19,16 +20,35 @@ The Medical Coverage System is built on a microservices architecture with 9 inde
 |---------|--------------|----------|---------|
 | **API Gateway** | `/` | N/A | Request routing & authentication |
 | **Core** | `/api/auth`, `/api/core` | `medical-coverage-core` | Authentication & user management |
-| **Insurance** | `/api/insurance` | `medical-coverage-insurance` | Insurance schemes & benefits |
-| **Hospital** | `/api/hospital` | `medical-coverage-hospital` | Hospital operations |
-| **Billing** | `/api/billing` | `medical-coverage-billing` | Financial transactions |
-| **Claims** | `/api/claims` | `medical-coverage-claims` | Claims processing |
-| **Finance** | `/api/finance` | `medical-coverage-finance` | Payment processing |
-| **CRM** | `/api/crm` | `medical-coverage-crm` | Sales & agent management |
-| **Membership** | `/api/membership` | `medical-coverage-membership` | Member lifecycle |
-| **Wellness** | `/api/wellness` | `medical-coverage-wellness` | Wellness programs |
+| **Insurance** | `/api/insurance`, `/api/schemes`, `/api/benefits`, `/api/coverage` | `medical-coverage-insurance` | Insurance schemes & benefits |
+| **Hospital** | `/api/hospital`, `/api/patients`, `/api/appointments`, `/api/medical-records`, `/api/personnel` | `medical-coverage-hospital` | Hospital operations |
+| **Billing** | `/api/billing`, `/api/invoices`, `/api/accounts-receivable`, `/api/tariffs` | `medical-coverage-billing` | Financial transactions |
+| **Claims** | `/api/claims`, `/api/disputes`, `/api/reconciliation` | `medical-coverage-claims` | Claims processing |
+| **Finance** | `/api/finance`, `/api/payments`, `/api/ledger` | `medical-coverage-finance` | Payment processing |
+| **CRM** | `/api/crm`, `/api/leads`, `/api/agents`, `/api/commissions` | `medical-coverage-crm` | Sales & agent management |
+| **Membership** | `/api/membership`, `/api/enrollments`, `/api/renewals` | `medical-coverage-membership` | Member lifecycle |
+| **Wellness** | `/api/wellness`, `/api/programs`, `/api/activities`, `/api/incentives` | `medical-coverage-wellness` | Wellness programs |
 
-*Note: Each service has one primary API path prefix. The API Gateway routes requests to the appropriate service based on these prefixes.*
+*Note: Each service has multiple API path prefixes. The API Gateway routes requests to the appropriate service based on these prefixes with proper authentication and rate limiting.*
+
+## API Gateway Features
+
+### Health Monitoring
+- **Health Check**: `GET /health` - Gateway and service health status
+- **Service Status**: `GET /services` - Detailed service health information
+- **API Documentation**: `GET /docs` - Available endpoints summary
+
+### Swagger Documentation
+- **Interactive API Docs**: `GET /api-docs` - Complete Swagger UI documentation
+- **OpenAPI JSON**: `GET /swagger.json` - Machine-readable API specification
+- **Comprehensive Coverage**: All 9 microservices fully documented with examples
+
+### Security & Performance
+- **JWT Authentication**: Bearer token validation for protected routes
+- **Rate Limiting**: Configurable limits per endpoint and user type
+- **Circuit Breakers**: Automatic service failover protection
+- **Request Tracing**: Correlation IDs for debugging
+- **Audit Logging**: Comprehensive request/response logging
 
 ## Authentication
 

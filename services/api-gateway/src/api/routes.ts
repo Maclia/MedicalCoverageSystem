@@ -5,6 +5,7 @@ import { standardRateLimit, authRateLimit, userRateLimit } from '../middleware/r
 import { createSuccessResponse, createErrorResponse } from '../middleware/responseStandardization';
 import { createLogger } from '../utils/logger';
 import { serviceRegistry } from '../services/ServiceRegistry';
+import { swaggerUi, specs } from '../swagger';
 
 const router = Router();
 const logger = createLogger();
@@ -40,7 +41,53 @@ router.get('/health', (req, res) => {
   res.json(createSuccessResponse(health, undefined, req.correlationId));
 });
 
-// Service status endpoint
+/**
+ * @swagger
+ * /services:
+ *   get:
+ *     summary: Service status overview
+ *     description: Returns the status of all registered microservices
+ *     tags: [Gateway]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Service status retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     services:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           name:
+ *                             type: string
+ *                           url:
+ *                             type: string
+ *                           healthy:
+ *                             type: boolean
+ *                           lastChecked:
+ *                             type: string
+ *                             format: date-time
+ *                           responseTime:
+ *                             type: number
+ *                           errorCount:
+ *                             type: integer
+ *                           circuitBreakerOpen:
+ *                             type: boolean
+ *                     totalServices:
+ *                       type: integer
+ *                     healthyServices:
+ *                       type: integer
+ */
 router.get('/services', optionalAuth, (req, res) => {
   const serviceHealth = serviceRegistry.getServiceHealth();
   const services = Array.from(serviceHealth.entries()).map(([name, health]) => ({
@@ -72,6 +119,11 @@ router.get('/docs', (req, res) => {
         service: 'core',
         description: 'Authentication and user management'
       },
+      core: {
+        path: '/api/core/*',
+        service: 'core',
+        description: 'Member and company management'
+      },
       insurance: {
         path: '/api/insurance/*',
         service: 'insurance',
@@ -92,10 +144,25 @@ router.get('/docs', (req, res) => {
         service: 'claims',
         description: 'Claims processing and disputes'
       },
-      payment: {
-        path: '/api/payment/*',
-        service: 'payment',
-        description: 'Payment processing and commissions'
+      finance: {
+        path: '/api/finance/*',
+        service: 'finance',
+        description: 'Financial operations and ledger management'
+      },
+      crm: {
+        path: '/api/crm/*',
+        service: 'crm',
+        description: 'Customer relationship management'
+      },
+      membership: {
+        path: '/api/membership/*',
+        service: 'membership',
+        description: 'Membership and enrollment services'
+      },
+      wellness: {
+        path: '/api/wellness/*',
+        service: 'wellness',
+        description: 'Wellness programs and activities'
       },
       health: {
         path: '/health',
@@ -117,11 +184,250 @@ router.get('/docs', (req, res) => {
   res.json(createSuccessResponse(docs, undefined, req.correlationId));
 });
 
+// Swagger UI
+router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+
+// Swagger JSON
+router.get('/swagger.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(specs);
+});
+
 // Proxy routes for each microservice
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Creates a new user account in the system
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - userType
+ *               - entityId
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 minLength: 8
+ *                 example: securepassword123
+ *               userType:
+ *                 type: string
+ *                 enum: [insurance, hospital, provider]
+ *                 example: insurance
+ *               entityId:
+ *                 type: integer
+ *                 example: 123
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ *       409:
+ *         description: User already exists
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+/**
+ * @swagger
+ * /api/auth/login:
+ *   post:
+ *     summary: User login
+ *     description: Authenticates a user and returns access tokens
+ *     tags: [Authentication]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *               - password
+ *               - userType
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: user@example.com
+ *               password:
+ *                 type: string
+ *                 example: securepassword123
+ *               userType:
+ *                 type: string
+ *                 enum: [insurance, hospital, provider]
+ *                 example: insurance
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     accessToken:
+ *                       type: string
+ *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                     refreshToken:
+ *                       type: string
+ *                       example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+ *                     user:
+ *                       type: object
+ *                       properties:
+ *                         id:
+ *                           type: integer
+ *                         email:
+ *                           type: string
+ *                         userType:
+ *                           type: string
+ *       401:
+ *         description: Invalid credentials
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 
 // Core service routes (authentication)
 router.use('/api/auth', authRateLimit, dynamicProxyMiddleware('core'));
 router.use('/api/core', authenticateToken, dynamicProxyMiddleware('core'));
+
+/**
+ * @swagger
+ * /api/insurance/schemes:
+ *   get:
+ *     summary: List insurance schemes
+ *     description: Retrieves a paginated list of insurance schemes
+ *     tags: [Insurance]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Number of items per page
+ *     responses:
+ *       200:
+ *         description: Schemes retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     schemes:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                         properties:
+ *                           id:
+ *                             type: integer
+ *                           name:
+ *                             type: string
+ *                           description:
+ *                             type: string
+ *                           status:
+ *                             type: string
+ *                             enum: [active, inactive]
+ *                     pagination:
+ *                       type: object
+ *                       properties:
+ *                         page:
+ *                           type: integer
+ *                         limit:
+ *                           type: integer
+ *                         total:
+ *                           type: integer
+ *                         totalPages:
+ *                           type: integer
+ *   post:
+ *     summary: Create insurance scheme
+ *     description: Creates a new insurance scheme
+ *     tags: [Insurance]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - pricingMethodology
+ *               - status
+ *               - effectiveDate
+ *               - expiryDate
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 example: Premium Health Plan
+ *               description:
+ *                 type: string
+ *                 example: Comprehensive health coverage
+ *               pricingMethodology:
+ *                 type: string
+ *                 enum: [community_rated, experience_rated]
+ *                 example: community_rated
+ *               status:
+ *                 type: string
+ *                 enum: [active, inactive]
+ *                 example: active
+ *               effectiveDate:
+ *                 type: string
+ *                 format: date
+ *                 example: 2025-01-01
+ *               expiryDate:
+ *                 type: string
+ *                 format: date
+ *                 example: 2025-12-31
+ *     responses:
+ *       201:
+ *         description: Scheme created successfully
+ *       400:
+ *         description: Validation error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
 
 // Insurance service routes
 router.use('/api/insurance', authenticateToken, dynamicProxyMiddleware('insurance'));
@@ -147,11 +453,27 @@ router.use('/api/claims', authenticateToken, userRateLimit, dynamicProxyMiddlewa
 router.use('/api/disputes', authenticateToken, dynamicProxyMiddleware('claims'));
 router.use('/api/reconciliation', authenticateToken, dynamicProxyMiddleware('claims'));
 
-// Payment service routes
-router.use('/api/payment', authenticateToken, userRateLimit, dynamicProxyMiddleware('payment'));
-router.use('/api/payments', authenticateToken, userRateLimit, dynamicProxyMiddleware('payment'));
-router.use('/api/commissions', authenticateToken, dynamicProxyMiddleware('payment'));
-router.use('/api/refunds', authenticateToken, dynamicProxyMiddleware('payment'));
+// Finance service routes (payments and ledger)
+router.use('/api/finance', authenticateToken, dynamicProxyMiddleware('finance'));
+router.use('/api/payments', authenticateToken, userRateLimit, dynamicProxyMiddleware('finance'));
+router.use('/api/ledger', authenticateToken, dynamicProxyMiddleware('finance'));
+
+// CRM service routes (leads, agents, commissions)
+router.use('/api/crm', authenticateToken, dynamicProxyMiddleware('crm'));
+router.use('/api/leads', authenticateToken, dynamicProxyMiddleware('crm'));
+router.use('/api/agents', authenticateToken, dynamicProxyMiddleware('crm'));
+router.use('/api/commissions', authenticateToken, dynamicProxyMiddleware('crm'));
+
+// Membership service routes (enrollments, renewals, benefits)
+router.use('/api/membership', authenticateToken, dynamicProxyMiddleware('membership'));
+router.use('/api/enrollments', authenticateToken, dynamicProxyMiddleware('membership'));
+router.use('/api/renewals', authenticateToken, dynamicProxyMiddleware('membership'));
+
+// Wellness service routes (programs, activities, incentives)
+router.use('/api/wellness', authenticateToken, dynamicProxyMiddleware('wellness'));
+router.use('/api/programs', authenticateToken, dynamicProxyMiddleware('wellness'));
+router.use('/api/activities', authenticateToken, dynamicProxyMiddleware('wellness'));
+router.use('/api/incentives', authenticateToken, dynamicProxyMiddleware('wellness'));
 
 // Admin routes (restricted access)
 router.use('/api/admin', authenticateToken, userRateLimit, (req, res, next) => {
