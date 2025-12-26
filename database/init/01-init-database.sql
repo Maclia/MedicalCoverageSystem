@@ -1,8 +1,9 @@
 -- ==========================================
 -- Medical Coverage System - Database Initialization
 -- ==========================================
--- This script initializes the database with basic setup
--- and any required extensions
+-- This script initializes the cluster with safe, schema-agnostic setup
+-- that will not fail if application tables are not yet created.
+-- Table-specific indexes and data inserts are handled by service migrations.
 
 -- Set timezone
 SET timezone = 'UTC';
@@ -33,44 +34,16 @@ BEGIN
     END IF;
 END $$;
 
--- Create indexes for common queries
-CREATE INDEX IF NOT EXISTS idx_medical_institutions_name ON medical_institutions USING gin(name gin_trgm_ops);
-CREATE INDEX IF NOT EXISTS idx_medical_institutions_type ON medical_institutions(type);
-CREATE INDEX IF NOT EXISTS idx_medical_institutions_is_active ON medical_institutions(is_active);
-
-CREATE INDEX IF NOT EXISTS idx_provider_contracts_status ON provider_contracts(status);
-CREATE INDEX IF NOT EXISTS idx_provider_contracts_institution_id ON provider_contracts(institution_id);
-CREATE INDEX IF NOT EXISTS idx_provider_contracts_expiry_date ON provider_contracts(expiry_date);
-
-CREATE INDEX IF NOT EXISTS idx_provider_networks_network_tier ON provider_networks(network_tier);
-CREATE INDEX IF NOT EXISTS idx_provider_networks_is_active ON provider_networks(is_active);
-
-CREATE INDEX IF NOT EXISTS idx_provider_network_assignments_network_id ON provider_network_assignments(network_id);
-CREATE INDEX IF NOT EXISTS idx_provider_network_assignments_institution_id ON provider_network_assignments(institution_id);
-CREATE INDEX IF NOT EXISTS idx_provider_network_assignments_is_active ON provider_network_assignments(is_active);
-
-CREATE INDEX IF NOT EXISTS idx_contract_documents_contract_id ON contract_documents(contract_id);
-CREATE INDEX IF NOT EXISTS idx_contract_documents_document_type ON contract_documents(document_type);
-CREATE INDEX IF NOT EXISTS idx_contract_documents_is_active ON contract_documents(is_active);
-
-CREATE INDEX IF NOT EXISTS idx_contract_signatures_contract_id ON contract_signatures(contract_id);
-CREATE INDEX IF NOT EXISTS idx_contract_signatures_signer_type ON contract_signatures(signer_type);
-CREATE INDEX IF NOT EXISTS idx_contract_signatures_verification_status ON contract_signatures(verification_status);
-
-CREATE INDEX IF NOT EXISTS idx_tariff_catalogs_is_active ON tariff_catalogs(is_active);
-CREATE INDEX IF NOT EXISTS idx_tariff_items_catalog_id ON tariff_items(catalog_id);
-CREATE INDEX IF NOT EXISTS idx_tariff_items_procedure_code ON tariff_items(procedure_code);
-
--- Create trigger function for updated_at timestamp
+-- Trigger function to auto-update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = CURRENT_TIMESTAMP;
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE 'plpgsql';
 
--- Create trigger function for created_at if not set
+-- Trigger function to set created_at if not provided
 CREATE OR REPLACE FUNCTION set_created_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -79,13 +52,8 @@ BEGIN
     END IF;
     RETURN NEW;
 END;
-$$ language 'plpgsql';
+$$ LANGUAGE 'plpgsql';
 
--- Log initialization completion
-INSERT INTO system_logs (level, message, metadata, created_at)
-VALUES (
-    'INFO',
-    'Database initialized successfully',
-    '{"extensions": ["uuid-ossp", "pg_trgm", "btree_gin", "btree_gist"], "timestamp": "' || NOW() || '"}'::jsonb,
-    NOW()
-) ON CONFLICT DO NOTHING;
+-- NOTE:
+-- Index creation and data inserts that depend on application tables must be executed
+-- by service-specific migrations after those tables exist. This avoids init-time failures.
