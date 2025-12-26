@@ -4473,7 +4473,7 @@ export const claimReserveTransactions = pgTable('claim_reserve_transactions', {
 export const claimFinancePayments = pgTable('claim_finance_payments', {
   id: serial('id').primaryKey(),
   claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull(),
-  paymentType: claimPaymentTypeEnum('payment_type').notNull(),
+  paymentType: claimPaymentTypeEnum('claim_payment_type').notNull(),
   amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
   description: text('description').notNull(),
@@ -4482,7 +4482,7 @@ export const claimFinancePayments = pgTable('claim_finance_payments', {
   payeeReference: varchar('payee_reference', { length: 100 }),
   paymentMethod: varchar('payment_method', { length: 50 }), // BANK_TRANSFER, CHECK, MOBILE_MONEY, CREDIT_CARD
   paymentReference: varchar('payment_reference', { length: 100 }),
-  status: claimPaymentStatusEnum('status').notNull().default(ClaimPaymentStatus.PENDING),
+  status: claimPaymentStatusEnum('claim_payment_status').notNull().default(ClaimPaymentStatus.PENDING),
   dueDate: timestamp('due_date').notNull(),
   requestedBy: integer('requested_by').references(() => users.id),
   approvedBy: integer('approved_by').references(() => users.id),
@@ -4513,7 +4513,7 @@ export const claimApprovalWorkflows = pgTable('claim_approval_workflows', {
   workflowType: varchar('workflow_type', { length: 50 }).notNull(), // CLAIM_APPROVAL, PAYMENT_APPROVAL, RESERVE_APPROVAL
   currentStep: integer('current_step').notNull().default(1),
   totalSteps: integer('total_steps'),
-  status: claimApprovalStatusEnum('status').notNull().default(ClaimApprovalStatus.PENDING),
+  status: claimApprovalStatusEnum('claim_approval_status').notNull().default(ClaimApprovalStatus.PENDING),
   initiatorId: integer('initiator_id').references(() => users.id).notNull(),
   currentAssigneeId: integer('current_assignee_id').references(() => users.id),
   priority: varchar('priority', { length: 20 }).default('NORMAL'), // LOW, NORMAL, HIGH, URGENT
@@ -4645,9 +4645,9 @@ export const claimFinancialMetrics = pgTable('claim_financial_metrics', {
 // Schema Validation
 export const claimReserveTypeEnum = pgEnum('reserve_type', Object.values(ClaimReserveType));
 export const claimReserveStatusEnum = pgEnum('reserve_status', Object.values(ClaimReserveStatus));
-export const claimPaymentTypeEnum = pgEnum('payment_type', Object.values(ClaimPaymentType));
-export const claimPaymentStatusEnum = pgEnum('payment_status', Object.values(ClaimPaymentStatus));
-export const claimApprovalStatusEnum = pgEnum('approval_status', Object.values(ClaimApprovalStatus));
+export const claimPaymentTypeEnum = pgEnum('claim_payment_type', Object.values(ClaimPaymentType));
+export const claimPaymentStatusEnum = pgEnum('claim_payment_status', Object.values(ClaimPaymentStatus));
+export const claimApprovalStatusEnum = pgEnum('claim_approval_status', Object.values(ClaimApprovalStatus));
 export const financialTransactionTypeEnum = pgEnum('financial_transaction_type', Object.values(FinancialTransactionType));
 export const financialTransactionStatusEnum = pgEnum('financial_transaction_status', Object.values(FinancialTransactionStatus));
 
