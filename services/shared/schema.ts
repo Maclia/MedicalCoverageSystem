@@ -436,6 +436,8 @@ export const commissionTiers = pgTable('commission_tiers', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+export const commissionTransactionTypeEnum = pgEnum('commission_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
+
 export const commissionTransactions = pgTable('commission_transactions', {
   id: uuid('id').primaryKey().defaultRandom(),
   agentId: uuid('agent_id').references(() => agents.id).notNull(),
@@ -926,7 +928,7 @@ export const territoryTypeEnum = pgEnum('territory_type', ['geographic', 'indust
 // Agent Management Enums
 export const agentTypeEnum = pgEnum('agent_type', ['internal_agent', 'external_broker', 'independent_agent', 'captive_agent', 'agency']);
 export const licenseStatusEnum = pgEnum('license_status', ['active', 'expired', 'suspended', 'pending', 'revoked']);
-export const commissionTransactionTypeEnum = pgEnum('commission_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
+/* commissionTransactionTypeEnum moved above commissionTransactions */
 
 // Workflow Automation Enums
 export const triggerTypeEnum = pgEnum('trigger_type', ['lead_created', 'lead_status_changed', 'opportunity_stage_changed', 'date_based', 'manual', 'webhook', 'email_opened', 'link_clicked']);
