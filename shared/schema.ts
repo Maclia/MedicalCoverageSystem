@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, json } from "drizzle-orm/pg-core";
+import { index } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -4478,8 +4479,8 @@ export const claimFinancialMetrics = pgTable('claim_financial_metrics', {
 export const claimReserveTypeEnum = pgEnum('reserve_type', Object.values(ClaimReserveType));
 export const claimReserveStatusEnum = pgEnum('reserve_status', Object.values(ClaimReserveStatus));
 export const claimPaymentTypeEnum = pgEnum('payment_type', Object.values(ClaimPaymentType));
-export const claimPaymentStatusEnum = pgEnum('payment_status', Object.values(ClaimPaymentStatus));
-export const claimApprovalStatusEnum = pgEnum('approval_status', Object.values(ClaimApprovalStatus));
+export const claimPaymentStatusEnum = pgEnum('claim_payment_status', Object.values(ClaimPaymentStatus));
+export const claimApprovalStatusEnum = pgEnum('claim_approval_status', Object.values(ClaimApprovalStatus));
 export const financialTransactionTypeEnum = pgEnum('financial_transaction_type', Object.values(FinancialTransactionType));
 export const financialTransactionStatusEnum = pgEnum('financial_transaction_status', Object.values(FinancialTransactionStatus));
 
