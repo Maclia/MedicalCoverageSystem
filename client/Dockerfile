@@ -22,12 +22,11 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set prefer-online true && \
-    npm config set use-ipv4 true && \
     if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
     if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Development stage
 FROM base AS development
@@ -50,12 +49,11 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set prefer-online true && \
-    npm config set use-ipv4 true && \
     if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
     if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
 
-# Install all dependencies
-RUN npm ci
+# Install all dependencies (prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Copy source code
 COPY . .
@@ -91,12 +89,11 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set prefer-online true && \
-    npm config set use-ipv4 true && \
     if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
     if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
 
-# Install dependencies
-RUN npm ci
+# Install dependencies (prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Copy source code
 COPY . .
@@ -134,11 +131,11 @@ RUN touch /var/run/nginx.pid && \
 USER nginx
 
 # Expose port
-EXPOSE 3000
+EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3000 || exit 1
+    CMD curl -f http://localhost:80 || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
@@ -147,10 +144,11 @@ CMD ["nginx", "-g", "daemon off;"]
 FROM base AS test
 WORKDIR /app
 
-# Install test dependencies
-RUN apk add --no-cache \
+# Install test dependencies (Debian/Ubuntu base)
+RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    ca-certificates
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Copy package files
 COPY package.json package-lock.json* ./
@@ -163,12 +161,11 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set prefer-online true && \
-    npm config set use-ipv4 true && \
     if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
     if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
 
-# Install all dependencies
-RUN npm ci
+# Install all dependencies (prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Copy source code
 COPY . .

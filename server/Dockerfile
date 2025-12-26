@@ -26,12 +26,11 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set prefer-online true && \
-    npm config set use-ipv4 true && \
     if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
     if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
 
-# Install all dependencies
-RUN npm ci --include=dev
+# Install all dependencies (prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci --include=dev; else npm install; fi
 
 # Development stage
 FROM base AS development
@@ -57,12 +56,11 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set prefer-online true && \
-    npm config set use-ipv4 true && \
     if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
     if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
 
-# Install dependencies
-RUN npm ci --include=dev
+# Install dependencies (prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci --include=dev; else npm install; fi
 
 # Copy all source code (server, shared, client for types)
 COPY ../ .
@@ -105,12 +103,11 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set prefer-online true && \
-    npm config set use-ipv4 true && \
     if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
     if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
 
-# Install all dependencies
-RUN npm ci --include=dev
+# Install all dependencies (prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci --include=dev; else npm install; fi
 
 # Copy all source code
 COPY ../ .
@@ -186,12 +183,11 @@ RUN npm config set registry https://registry.npmjs.org/ && \
     npm config set fetch-retry-mintimeout 20000 && \
     npm config set fetch-retry-maxtimeout 120000 && \
     npm config set prefer-online true && \
-    npm config set use-ipv4 true && \
     if [ -n "$HTTP_PROXY" ]; then npm config set proxy $HTTP_PROXY; fi && \
     if [ -n "$HTTPS_PROXY" ]; then npm config set https-proxy $HTTPS_PROXY; fi
 
-# Install all dependencies
-RUN npm ci --include=dev
+# Install all dependencies (prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci --include=dev; else npm install; fi
 
 # Copy source code
 COPY . .

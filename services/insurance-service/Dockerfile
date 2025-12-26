@@ -7,8 +7,8 @@ WORKDIR /app
 # Copy package files
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --only=production && npm cache clean --force
+# Install dependencies (prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi && npm cache clean --force
 
 # Build the application
 FROM base AS builder
@@ -19,8 +19,8 @@ COPY package*.json ./
 COPY tsconfig.json ./
 COPY src ./src
 
-# Install all dependencies (including dev dependencies for build)
-RUN npm ci
+# Install all dependencies (including dev dependencies for build; prefer lockfile if present)
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Build TypeScript
 RUN npm run build
