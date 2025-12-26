@@ -1,18 +1,20 @@
 {
   "include": ["client/src/**/*", "shared/**/*", "server/**/*"],
-  "exclude": ["node_modules", "build", "dist", "**/*.test.ts"],
+  "exclude": ["node_modules", "build", "dist", "**/*.test.ts", "**/*.test.tsx"],
   "compilerOptions": {
     "incremental": true,
-    "tsBuildInfoFile": "./.tsbuildinfo",  // Moved build info file outside node_modules
-    "noEmit": false,  // Set to false for emitting JavaScript files during the build
+    "tsBuildInfoFile": "./.tsbuildinfo",
+    "target": "ES2020",
     "module": "ESNext",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
     "strict": true,
-    "lib": ["es2015", "es2016", "es2017", "es2018", "es2019", "es2020", "esnext", "dom", "dom.iterable"],
-    "jsx": "preserve",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "allowImportingTsExtensions": true,
-    "moduleResolution": "node",  // Changed to 'node' for broader compatibility
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "types": ["node", "vite/client"],
     "paths": {
