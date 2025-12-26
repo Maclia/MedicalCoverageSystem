@@ -277,6 +277,14 @@ export const companyBenefits = pgTable("company_benefits", {
 // ===================
 
 // Lead Management Tables
+// CRM Lead Management Enums (declared before usage)
+export const leadSourceEnum = pgEnum('lead_source', ['website', 'referral', 'campaign', 'cold_call', 'partner', 'event', 'social_media', 'email_marketing', 'third_party', 'manual']);
+export const leadStatusEnum = pgEnum('lead_status', ['new', 'contacted', 'qualified', 'nurturing', 'converted', 'lost', 'duplicate']);
+export const leadPriorityEnum = pgEnum('priority', ['low', 'medium', 'high', 'urgent']);
+export const opportunityStageEnum = pgEnum('opportunity_stage', ['lead', 'qualified', 'quotation', 'underwriting', 'issuance', 'closed_won', 'closed_lost']);
+export const activityTypeEnum = pgEnum('activity_type', ['call', 'email', 'meeting', 'sms', 'whatsapp', 'note', 'task', 'demo', 'proposal']);
+export const territoryTypeEnum = pgEnum('territory_type', ['geographic', 'industry', 'company_size', 'product_line', 'mixed']);
+
 export const leads = pgTable('leads', {
   id: uuid('id').primaryKey().defaultRandom(),
   // Basic Information
@@ -485,6 +493,11 @@ export const agentPerformance = pgTable('agent_performance', {
 });
 
 // Workflow Automation Tables
+// Workflow Automation Enums (declared before usage)
+export const triggerTypeEnum = pgEnum('trigger_type', ['lead_created', 'lead_status_changed', 'opportunity_stage_changed', 'date_based', 'manual', 'webhook', 'email_opened', 'link_clicked']);
+export const workflowExecutionStatusEnum = pgEnum('workflow_execution_status', ['running', 'completed', 'failed', 'cancelled', 'paused']);
+export const campaignStatusEnum = pgEnum('campaign_status', ['draft', 'scheduled', 'running', 'completed', 'paused', 'cancelled']);
+
 export const workflowDefinitions = pgTable('workflow_definitions', {
   id: uuid('id').primaryKey().defaultRandom(),
   workflowName: varchar('workflow_name', { length: 100 }).notNull(),
@@ -786,9 +799,9 @@ export const claims = pgTable("claims", {
   claimNumber: text("claim_number").unique().notNull(), // Unique claim identifier
   institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
   personnelId: integer("personnel_id").references(() => medicalPersonnel.id),
-  providerId: integer("provider_id").references(() => providers.id), // Link to providers table
+  providerId: integer("provider_id"), // External provider reference (no FK across services)
   memberId: integer("member_id").references(() => members.id).notNull(),
-  schemeId: integer("scheme_id").references(() => schemes.id), // Link to schemes table
+  schemeId: integer("scheme_id"), // External scheme reference (no FK across services)
   benefitId: integer("benefit_id").references(() => benefits.id).notNull(),
   claimDate: timestamp("claim_date").defaultNow().notNull(),
   serviceDate: timestamp("service_date").notNull(),
@@ -882,6 +895,18 @@ export const claims = pgTable("claims", {
 //   fraudReviewerId: z.number().optional(),
 // });
 
+// Insert schemas required by the types below
+export const insertCompanyBenefitSchema = createInsertSchema(companyBenefits);
+export const insertRegionSchema = createInsertSchema(regions);
+export const insertMedicalInstitutionSchema = createInsertSchema(medicalInstitutions);
+export const insertMedicalPersonnelSchema = createInsertSchema(medicalPersonnel);
+export const insertPanelDocumentationSchema = createInsertSchema(panelDocumentation);
+export const insertClaimSchema = createInsertSchema(claims);
+export const insertCompanyPeriodSchema = createInsertSchema(companyPeriods);
+export const insertAgeBandedRateSchema = createInsertSchema(ageBandedRates);
+export const insertFamilyRateSchema = createInsertSchema(familyRates);
+export const insertDiagnosisCodeSchema = createInsertSchema(diagnosisCodes);
+
 export type CompanyBenefit = typeof companyBenefits.$inferSelect;
 export type InsertCompanyBenefit = z.infer<typeof insertCompanyBenefitSchema>;
 
@@ -918,23 +943,14 @@ export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processin
 export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
 export const procedureCategoryEnum = pgEnum('procedure_category', ['consultation', 'surgery', 'diagnostic', 'laboratory', 'imaging', 'dental', 'vision', 'medication', 'therapy', 'emergency', 'maternity', 'preventative', 'other']);
 
-// CRM Lead Management Enums
-export const leadSourceEnum = pgEnum('lead_source', ['website', 'referral', 'campaign', 'cold_call', 'partner', 'event', 'social_media', 'email_marketing', 'third_party', 'manual']);
-export const leadStatusEnum = pgEnum('lead_status', ['new', 'contacted', 'qualified', 'nurturing', 'converted', 'lost', 'duplicate']);
-export const leadPriorityEnum = pgEnum('priority', ['low', 'medium', 'high', 'urgent']);
-export const opportunityStageEnum = pgEnum('opportunity_stage', ['lead', 'qualified', 'quotation', 'underwriting', 'issuance', 'closed_won', 'closed_lost']);
-export const activityTypeEnum = pgEnum('activity_type', ['call', 'email', 'meeting', 'sms', 'whatsapp', 'note', 'task', 'demo', 'proposal']);
-export const territoryTypeEnum = pgEnum('territory_type', ['geographic', 'industry', 'company_size', 'product_line', 'mixed']);
+// CRM Lead Management Enums (moved above)
 
 // Agent Management Enums
 export const agentTypeEnum = pgEnum('agent_type', ['internal_agent', 'external_broker', 'independent_agent', 'captive_agent', 'agency']);
 export const licenseStatusEnum = pgEnum('license_status', ['active', 'expired', 'suspended', 'pending', 'revoked']);
 /* commissionTransactionTypeEnum moved above commissionTransactions */
 
-// Workflow Automation Enums
-export const triggerTypeEnum = pgEnum('trigger_type', ['lead_created', 'lead_status_changed', 'opportunity_stage_changed', 'date_based', 'manual', 'webhook', 'email_opened', 'link_clicked']);
-export const workflowExecutionStatusEnum = pgEnum('workflow_execution_status', ['running', 'completed', 'failed', 'cancelled', 'paused']);
-export const campaignStatusEnum = pgEnum('campaign_status', ['draft', 'scheduled', 'running', 'completed', 'paused', 'cancelled']);
+// Workflow Automation Enums (moved above)
 
 // User type enum for authentication
 export const userTypeEnum = pgEnum('user_type', ['insurance', 'institution', 'provider', 'sales_admin', 'sales_manager', 'team_lead', 'sales_agent', 'broker', 'underwriter']);
@@ -1349,6 +1365,13 @@ export const actuarialRateTables = pgTable("actuarial_rate_tables", {
 // });
 
 // Types for payment entities
+// Insert schemas for payment tables (needed by types below)
+export const insertPremiumPaymentSchema = createInsertSchema(premiumPayments);
+export const insertClaimPaymentSchema = createInsertSchema(claimPayments);
+export const insertProviderDisbursementSchema = createInsertSchema(providerDisbursements);
+export const insertDisbursementItemSchema = createInsertSchema(disbursementItems);
+export const insertInsuranceBalanceSchema = createInsertSchema(insuranceBalances);
+
 export type PremiumPayment = typeof premiumPayments.$inferSelect;
 export type InsertPremiumPayment = z.infer<typeof insertPremiumPaymentSchema>;
 
@@ -1365,6 +1388,12 @@ export type InsuranceBalance = typeof insuranceBalances.$inferSelect;
 export type InsertInsuranceBalance = z.infer<typeof insertInsuranceBalanceSchema>;
 
 // Types for enhanced premium calculation entities
+// Insert schemas for enhanced premium calculation tables
+export const insertEnhancedPremiumCalculationSchema = createInsertSchema(enhancedPremiumCalculations);
+export const insertRiskAdjustmentFactorSchema = createInsertSchema(riskAdjustmentFactors);
+export const insertHealthcareInflationRateSchema = createInsertSchema(healthcareInflationRates);
+export const insertActuarialRateTableSchema = createInsertSchema(actuarialRateTables);
+
 export type EnhancedPremiumCalculation = typeof enhancedPremiumCalculations.$inferSelect;
 export type InsertEnhancedPremiumCalculation = z.infer<typeof insertEnhancedPremiumCalculationSchema>;
 
@@ -1553,6 +1582,11 @@ export const claimProcedureItems = pgTable("claim_procedure_items", {
 // });
 
 // Types for medical procedures entities
+// Insert schemas for medical procedures tables
+export const insertMedicalProcedureSchema = createInsertSchema(medicalProcedures);
+export const insertProviderProcedureRateSchema = createInsertSchema(providerProcedureRates);
+export const insertClaimProcedureItemSchema = createInsertSchema(claimProcedureItems);
+
 export type MedicalProcedure = typeof medicalProcedures.$inferSelect;
 export type InsertMedicalProcedure = z.infer<typeof insertMedicalProcedureSchema>;
 
