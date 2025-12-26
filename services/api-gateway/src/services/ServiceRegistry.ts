@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosResponse } from 'axios';
+import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
 import { config } from '../config';
 import { createLogger, generateCorrelationId } from '../utils/logger';
 import { CircuitBreaker } from './CircuitBreaker';
@@ -215,7 +215,7 @@ export class ServiceRegistry {
 
     // Add request interceptor for correlation ID and authentication
     client.interceptors.request.use(
-      (config) => {
+      (config: InternalAxiosRequestConfig) => {
         // Add correlation ID
         const correlationId = generateCorrelationId();
         config.headers['X-Correlation-ID'] = correlationId;
@@ -276,7 +276,9 @@ export class ServiceRegistry {
     return client;
   }
 
-  public getServiceHealth(serviceName?: string): ServiceHealth | Map<string, ServiceHealth> {
+  public getServiceHealth(): Map<string, ServiceHealth>;
+  public getServiceHealth(serviceName: string): ServiceHealth | null;
+  public getServiceHealth(serviceName?: string): ServiceHealth | Map<string, ServiceHealth> | null {
     if (serviceName) {
       return this.healthStatus.get(serviceName) || null;
     }

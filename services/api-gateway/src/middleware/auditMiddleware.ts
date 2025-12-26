@@ -1,17 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { createLogger, generateCorrelationId } from '../utils/logger';
 
-// Extend Request interface
-declare global {
-  namespace Express {
-    interface Request {
-      correlationId?: string;
-      user?: any;
-      startTime?: number;
-    }
-  }
-}
-
 export const correlationIdMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const correlationId = generateCorrelationId();
   req.correlationId = correlationId;

@@ -1,6 +1,6 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
-import { Redis } from 'redis';
+import { createClient, RedisClientType } from 'redis';
 import { config } from '../config';
 import { createLogger } from '../utils/logger';
 
@@ -11,18 +11,16 @@ const memoryStore = new Map<string, { count: number; resetTime: number }>();
 
 // Redis store for production
 class RedisStore {
-  private redis: Redis | null = null;
+  private redis: RedisClientType | null = null;
 
   constructor() {
     if (config.redis.url && config.redis.url !== 'redis://localhost:6379') {
       try {
-        this.redis = new Redis({
-          url: config.redis.url,
-          retryDelayOnFailover: 100,
-          maxRetriesPerRequest: 3,
+        this.redis = createClient({
+          url: config.redis.url
         });
 
-        this.redis.on('error', (error) => {
+        this.redis.on('error', (error: Error) => {
           logger.error('Redis store error', error);
         });
 
@@ -50,7 +48,7 @@ class RedisStore {
 
         return { totalHits, resetTime };
       } catch (error) {
-        logger.error('Redis increment failed, using memory store', error);
+        logger.error('Redis increment failed, using memory store', error as Error);
         return this.memoryIncrement(key);
       }
     }

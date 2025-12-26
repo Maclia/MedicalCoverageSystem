@@ -114,7 +114,7 @@ app.use(addRequestTiming);
 app.use((req, res, next) => {
   req.startTime = Date.now();
   res.on('finish', () => {
-    const responseTime = Date.now() - req.startTime;
+    const responseTime = Date.now() - (req.startTime || Date.now());
     logger.info('Request completed', {
       method: req.method,
       url: req.originalUrl,

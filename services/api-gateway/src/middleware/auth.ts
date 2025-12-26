@@ -6,21 +6,6 @@ import { createLogger } from '../utils/logger';
 
 const logger = createLogger();
 
-// Extend Request interface
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        userId: number;
-        userType: 'insurance' | 'institution' | 'provider';
-        entityId: number;
-        email: string;
-      };
-      correlationId?: string;
-    }
-  }
-}
-
 export interface JWTPayload {
   userId: number;
   userType: 'insurance' | 'institution' | 'provider';
@@ -40,7 +25,7 @@ export const authenticateToken = async (
     const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
     if (!token) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: {
           code: 'AUTHENTICATION_REQUIRED',
@@ -48,6 +33,7 @@ export const authenticateToken = async (
         },
         correlationId: req.correlationId
       });
+      return;
     }
 
     // Validate JWT token
@@ -59,7 +45,7 @@ export const authenticateToken = async (
     // Verify user exists by calling core service
     const coreClient = serviceRegistry.createServiceClient('core');
     if (!coreClient) {
-      return res.status(503).json({
+      res.status(503).json({
         success: false,
         error: {
           code: 'SERVICE_UNAVAILABLE',
@@ -67,6 +53,7 @@ export const authenticateToken = async (
         },
         correlationId: req.correlationId
       });
+      return;
     }
 
     try {
@@ -78,7 +65,7 @@ export const authenticateToken = async (
       });
 
       if (!response.data.success) {
-        return res.status(401).json({
+        res.status(401).json({
           success: false,
           error: {
             code: 'INVALID_TOKEN',
@@ -86,6 +73,7 @@ export const authenticateToken = async (
           },
           correlationId: req.correlationId
         });
+        return;
       }
 
       req.user = {
@@ -109,7 +97,7 @@ export const authenticateToken = async (
         correlationId: req.correlationId
       });
 
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: {
           code: 'USER_VERIFICATION_FAILED',
@@ -117,6 +105,7 @@ export const authenticateToken = async (
         },
         correlationId: req.correlationId
       });
+      return;
     }
 
   } catch (error) {
@@ -137,7 +126,7 @@ export const authenticateToken = async (
       correlationId: req.correlationId
     });
 
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       error: {
         code: errorCode,
@@ -145,13 +134,14 @@ export const authenticateToken = async (
       },
       correlationId: req.correlationId
     });
+    return;
   }
 };
 
 export const requireUserType = (allowedTypes: ('insurance' | 'institution' | 'provider')[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: {
           code: 'AUTHENTICATION_REQUIRED',
@@ -159,6 +149,7 @@ export const requireUserType = (allowedTypes: ('insurance' | 'institution' | 'pr
         },
         correlationId: req.correlationId
       });
+      return;
     }
 
     if (!allowedTypes.includes(req.user.userType)) {
@@ -169,7 +160,7 @@ export const requireUserType = (allowedTypes: ('insurance' | 'institution' | 'pr
         correlationId: req.correlationId
       });
 
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: {
           code: 'INSUFFICIENT_PERMISSIONS',
@@ -177,6 +168,7 @@ export const requireUserType = (allowedTypes: ('insurance' | 'institution' | 'pr
         },
         correlationId: req.correlationId
       });
+      return;
     }
 
     logger.debug('User type authorization successful', {
@@ -198,7 +190,7 @@ export const requireMedicalUser = requireUserType(['institution', 'provider']);
 export const requireEntityAccess = (entityType: 'company' | 'institution' | 'personnel') => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
-      return res.status(401).json({
+      res.status(401).json({
         success: false,
         error: {
           code: 'AUTHENTICATION_REQUIRED',
@@ -206,13 +198,14 @@ export const requireEntityAccess = (entityType: 'company' | 'institution' | 'per
         },
         correlationId: req.correlationId
       });
+      return;
     }
 
     // Get the entity ID from request parameters or query
     const entityId = req.params.id || req.params.entityId || req.query.entityId;
 
     if (!entityId) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: {
           code: 'MISSING_ENTITY_ID',
@@ -220,12 +213,13 @@ export const requireEntityAccess = (entityType: 'company' | 'institution' | 'per
         },
         correlationId: req.correlationId
       });
+      return;
     }
 
     const requestedEntityId = parseInt(entityId as string, 10);
 
     if (isNaN(requestedEntityId)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: {
           code: 'INVALID_ENTITY_ID',
@@ -233,6 +227,7 @@ export const requireEntityAccess = (entityType: 'company' | 'institution' | 'per
         },
         correlationId: req.correlationId
       });
+      return;
     }
 
     // Check if user has access to the requested entity
@@ -246,7 +241,7 @@ export const requireEntityAccess = (entityType: 'company' | 'institution' | 'per
         correlationId: req.correlationId
       });
 
-      return res.status(403).json({
+      res.status(403).json({
         success: false,
         error: {
           code: 'ENTITY_ACCESS_DENIED',
@@ -254,6 +249,7 @@ export const requireEntityAccess = (entityType: 'company' | 'institution' | 'per
         },
         correlationId: req.correlationId
       });
+      return;
     }
 
     logger.debug('Entity access authorization successful', {
@@ -345,7 +341,7 @@ export const serviceAuth = (req: Request, res: Response, next: NextFunction): vo
   const serviceToken = req.headers['x-service-token'] as string;
 
   if (!serviceToken) {
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       error: {
         code: 'SERVICE_TOKEN_REQUIRED',
@@ -353,6 +349,7 @@ export const serviceAuth = (req: Request, res: Response, next: NextFunction): vo
       },
       correlationId: req.correlationId
     });
+    return;
   }
 
   try {
@@ -381,7 +378,7 @@ export const serviceAuth = (req: Request, res: Response, next: NextFunction): vo
       correlationId: req.correlationId
     });
 
-    return res.status(401).json({
+    res.status(401).json({
       success: false,
       error: {
         code: 'INVALID_SERVICE_TOKEN',
@@ -389,5 +386,6 @@ export const serviceAuth = (req: Request, res: Response, next: NextFunction): vo
       },
       correlationId: req.correlationId
     });
+    return;
   }
 };

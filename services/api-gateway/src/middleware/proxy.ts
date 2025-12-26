@@ -7,8 +7,13 @@ const logger = createLogger();
 
 // Proxy middleware factory for each service
 export const createServiceProxy = (serviceName: string, pathRewrite?: Record<string, string>) => {
+  const targetUrl = serviceRegistry.getServiceUrl(serviceName);
+  if (!targetUrl) {
+    throw new Error(`Service ${serviceName} not found`);
+  }
+  
   return createProxyMiddleware({
-    target: serviceRegistry.getServiceUrl(serviceName),
+    target: targetUrl,
     changeOrigin: true,
     pathRewrite: pathRewrite || {},
 
@@ -24,7 +29,7 @@ export const createServiceProxy = (serviceName: string, pathRewrite?: Record<str
       // Check if service is down
       const serviceHealth = serviceRegistry.getServiceHealth(serviceName);
 
-      if (!serviceHealth?.healthy || serviceHealth?.circuitBreakerOpen) {
+      if (serviceHealth && (!serviceHealth.healthy || serviceHealth.circuitBreakerOpen)) {
         res.status(503).json({
           success: false,
           error: {
@@ -62,7 +67,7 @@ export const createServiceProxy = (serviceName: string, pathRewrite?: Record<str
 
       // Add gateway identification
       proxyReq.setHeader('X-Gateway-Version', '1.0.0');
-      proxyReq.setHeader('X-Forwarded-For', req.ip);
+      proxyReq.setHeader('X-Forwarded-For', req.ip || '');
       proxyReq.setHeader('X-Forwarded-Proto', req.protocol);
       proxyReq.setHeader('X-Forwarded-Host', req.get('host') || '');
 
@@ -79,14 +84,14 @@ export const createServiceProxy = (serviceName: string, pathRewrite?: Record<str
     onProxyRes: (proxyRes, req, res) => {
       // Add gateway response headers
       res.setHeader('X-Gateway-Service', serviceName);
-      res.setHeader('X-Gateway-Response-Time', Date.now() - req.startTime);
+      res.setHeader('X-Gateway-Response-Time', Date.now() - (req.startTime || Date.now()));
 
       logger.debug('Proxy response received', {
         serviceName,
         method: req.method,
         url: req.url,
         statusCode: proxyRes.statusCode,
-        responseTime: Date.now() - req.startTime,
+        responseTime: Date.now() - (req.startTime || Date.now()),
         correlationId: req.correlationId
       });
     },
@@ -234,8 +239,13 @@ export const createLoadBalancedProxy = (serviceName: string, instances: string[]
 
 // WebSocket proxy for real-time features
 export const createWebSocketProxy = (serviceName: string, wsPath: string) => {
+  const targetUrl = serviceRegistry.getServiceUrl(serviceName);
+  if (!targetUrl) {
+    throw new Error(`Service ${serviceName} not found for WebSocket proxy`);
+  }
+  
   return createProxyMiddleware({
-    target: serviceRegistry.getServiceUrl(serviceName),
+    target: targetUrl,
     changeOrigin: true,
     ws: true, // Enable WebSocket proxying
     pathRewrite: {
