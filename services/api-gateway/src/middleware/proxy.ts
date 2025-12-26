@@ -239,7 +239,7 @@ export const createWebSocketProxy = (serviceName: string, wsPath: string) => {
     changeOrigin: true,
     ws: true, // Enable WebSocket proxying
     pathRewrite: {
-      [`^${wsPath}`: ''
+      [`^${wsPath}`]: ''
     },
 
     onError: (err, req, res) => {
