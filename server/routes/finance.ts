@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 const router = Router();
 
-// Token Management Routes
-// TODO: Implement token management endpoints
+// Finance Management Routes
+// TODO: Implement finance management endpoints
 
 export default router;

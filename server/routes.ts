@@ -99,10 +99,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const loginSchema = z.object({
     email: z.string().email("Invalid email format"),
     password: z.string().min(6, "Password must be at least 6 characters"),
-    userType: z.enum(["insurance", "institution", "provider"], {
-      required_error: "User type is required",
-      invalid_type_error: "User type must be insurance, institution, or provider"
-    })
+    userType: z.enum(["insurance", "institution", "provider"])
   });
 
   const refreshSchema = z.object({

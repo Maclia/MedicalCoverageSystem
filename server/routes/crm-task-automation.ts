@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 const router = Router();
 
-// Token Management Routes
-// TODO: Implement token management endpoints
+// CRM Task Automation Routes
+// TODO: Implement CRM task automation endpoints
 
 export default router;

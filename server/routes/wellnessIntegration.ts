@@ -2,7 +2,7 @@ import { Router } from 'express';
 
 const router = Router();
 
-// Token Management Routes
-// TODO: Implement token management endpoints
+// Wellness Integration Routes
+// TODO: Implement wellness integration endpoints
 
 export default router;
