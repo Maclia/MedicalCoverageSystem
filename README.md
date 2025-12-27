@@ -360,23 +360,3 @@ MIT License - see LICENSE file for details.
 Built with ❤️ using modern web technologies and microservices architecture
 Last Updated: December 21, 2025
 
-Releases
-No releases published
-Create a new release
-Packages
-No packages published
-Publish your first package
-Contributors
-2
-@Maclia
-Maclia mac
-@google-labs-jules[bot]
-google-labs-jules[bot]
-Deployments
-5
- Production
- Preview
-+ 3 deployments
-Languages
-TypeScript
-95.7%
