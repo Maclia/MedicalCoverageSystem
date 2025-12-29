@@ -114,10 +114,45 @@ run_service() {
             echo "Failed to build $service_name"
             return 1
         fi
+        # Set service-specific environment variables
+        case $service_name in
+            "api-gateway")
+                ENV_VARS="-e API_GATEWAY_DATABASE_URL=postgresql://postgres:postgres@$POSTGRES_CONTAINER:5432/medical-coverage-api-gateway"
+                ;;
+            "billing-service")
+                ENV_VARS="-e BILLING_DATABASE_URL=postgresql://postgres:postgres@$POSTGRES_CONTAINER:5432/medical-coverage-billing"
+                ;;
+            "core-service")
+                ENV_VARS="-e CORE_DATABASE_URL=postgresql://postgres:postgres@$POSTGRES_CONTAINER:5432/medical-coverage-core"
+                ;;
+            "crm-service")
+                ENV_VARS="-e CRM_DATABASE_URL=postgresql://postgres:postgres@$POSTGRES_CONTAINER:5432/medical-coverage-crm"
+                ;;
+            "finance-service")
+                ENV_VARS="-e FINANCE_DATABASE_URL=postgresql://postgres:postgres@$POSTGRES_CONTAINER:5432/medical-coverage-finance"
+                ;;
+            "hospital-service")
+                ENV_VARS="-e HOSPITAL_DATABASE_URL=postgresql://postgres:postgres@$POSTGRES_CONTAINER:5432/medical-coverage-hospital"
+                ;;
+            "insurance-service")
+                ENV_VARS="-e INSURANCE_DATABASE_URL=postgresql://postgres:postgres@$POSTGRES_CONTAINER:5432/medical-coverage-insurance"
+                ;;
+            "membership-service")
+                ENV_VARS="-e MEMBERSHIP_DATABASE_URL=postgresql://postgres:postgres@$POSTGRES_CONTAINER:5432/medical-coverage-membership"
+                ;;
+            "wellness-service")
+                ENV_VARS="-e WELLNESS_DATABASE_URL=postgresql://postgres:postgres@$POSTGRES_CONTAINER:5432/medical-coverage-wellness"
+                ;;
+            *)
+                ENV_VARS=""
+                ;;
+        esac
+
         docker run -d --name "medical-$service_name" \
             --network $NETWORK_NAME \
             -e POSTGRES_HOST=$POSTGRES_CONTAINER \
             -e REDIS_HOST=$REDIS_CONTAINER \
+            $ENV_VARS \
             "medical-$service_name"
         if [ $? -ne 0 ]; then
             echo "Failed to run $service_name"
