@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { db } from "../db";
 import { storage } from "../storage";
-dimport logger from "../logger";
+import logger from "../logger";
 import {
   companies,
   members,
@@ -43,7 +43,7 @@ export class AnalyticsEngine {
     }
 
     const claimsData = await db.select().from(claims)
-      .where(claims.claimDate >= startDate.toISOString())
+      .where(gte(claims.claimDate, startDate.toISOString()))
       .orderBy(claims.claimDate)
 
     // Group by month and calculate frequency
@@ -2106,7 +2106,7 @@ export class AnalyticsEngine {
 
   static async getTotalMembers() {
     try {
-      const totalMembers = await db.select().from(members).all();
+      const totalMembers = await db.select().from(members);
       return {
         totalMembers: totalMembers.length
       };
@@ -2571,7 +2571,7 @@ export function setupAnalyticsRoutes(router: any) {
 
   // Welcome endpoint
   router.get('/welcome', async (req: Request, res: Response) => {
-    console.log(`Request received: ${req.method} ${req.path}`);
+    logger.info(`Request received: ${req.method} ${req.path}`);
     res.json({ message: 'Welcome to the Analytics API Service!' });
   });
 
