@@ -41,11 +41,15 @@ timeout /t 2 /nobreak >nul
 set /a attempt+=1
 goto wait_loop
 
+REM Create Docker network
+echo Creating Docker network: %NETWORK_NAME%
+docker network create %NETWORK_NAME% 2>nul || echo Network %NETWORK_NAME% may already exist
+
 REM Start PostgreSQL container
 call :is_container_running %POSTGRES_CONTAINER%
 if %errorlevel% neq 0 (
     echo Starting PostgreSQL container...
-    docker run -d --name %POSTGRES_CONTAINER% -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:15
+    docker run -d --name %POSTGRES_CONTAINER% --network %NETWORK_NAME% -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:15
     if %errorlevel% neq 0 (
         echo Failed to start PostgreSQL
         exit /b 1
@@ -58,7 +62,7 @@ REM Start Redis container
 call :is_container_running %REDIS_CONTAINER%
 if %errorlevel% neq 0 (
     echo Starting Redis container...
-    docker run -d --name %REDIS_CONTAINER% -p 6379:6379 redis:7
+    docker run -d --name %REDIS_CONTAINER% --network %NETWORK_NAME% -p 6379:6379 redis:7
     if %errorlevel% neq 0 (
         echo Failed to start Redis
         exit /b 1
