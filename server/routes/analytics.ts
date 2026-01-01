@@ -2571,7 +2571,7 @@ export function setupAnalyticsRoutes(router: any) {
 
   // Welcome endpoint
   router.get('/welcome', async (req: Request, res: Response) => {
-    logger.info(`Request received: ${req.method} ${req.path}`);
+  logger.info(`Request received: ${req.method} ${req.originalUrl}`);
     res.json({ message: 'Welcome to the Analytics API Service!' });
   });
 

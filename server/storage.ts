@@ -350,6 +350,71 @@ class EnhancedStorage implements IStorage {
     this.queryCache.clear();
     console.log('Query cache cleared');
   }
+
+  async getSchemesByMember(memberId: number): Promise<Scheme[]> {
+    // Mock implementation
+    return [];
+  }
+
+  async getPremiumsByMember(memberId: number, activeOnly?: boolean): Promise<Premium[]> {
+    // Mock implementation
+    return [];
+  }
+
+  async getClaimsByMember(memberId: number): Promise<Claim[]> {
+    // Mock implementation
+    return [];
+  }
+
+  async getWellnessActivitiesByMember(memberId: number): Promise<WellnessActivity[]> {
+    // Mock implementation
+    return [];
+  }
+
+  async getProvider(providerId: number): Promise<Provider | undefined> {
+    // Mock implementation
+    return undefined;
+  }
+
+  async getClaimsByProvider(providerId: number, fromDate: Date): Promise<Claim[]> {
+    // Mock implementation
+    return [];
+  }
+
+  async updateProvider(providerId: number, data: Partial<Provider>): Promise<Provider | undefined> {
+    // Mock implementation
+    return undefined;
+  }
+
+  async getWellnessScoreByMember(memberId: number): Promise<number> {
+    // Mock implementation
+    return 0;
+  }
+
+  async getProviderQuality(providerId: number): Promise<ProviderQuality | undefined> {
+    // Mock implementation
+    return undefined;
+  }
+
+  async getProviderSatisfaction(providerId: number): Promise<ProviderSatisfaction | undefined> {
+    // Mock implementation
+    return undefined;
+  }
+
+  async getProviderCompliance(providerId: number): Promise<ProviderCompliance | undefined> {
+    // Mock implementation
+    return undefined;
+  }
+
+  async getProvidersInNetwork(filters: { specialty?: string; location?: string }): Promise<Provider[]> {
+    // Mock implementation
+    return [];
+  }
+
+  async createCommunicationLog(payload: any): Promise<any> {
+    // Mock implementation
+    return {};
+  }
 }
 
 // Export enhanced storage instance

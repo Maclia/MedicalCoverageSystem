@@ -1,25 +1,26 @@
 // Comprehensive System Integration Routes
 // Connects all modules with cross-module data flows and workflows
 
-import { Request, Response } from "express";
-import { storage } from "../storage";
+import { Request, Response, Router } from "express";
 import { z } from "zod";
-import { getConfig } from "../config/system-config";
+import { and, eq, gte, inArray, desc, or, isNotNull } from 'drizzle-orm';
+import { differenceInYears, differenceInDays } from 'date-fns';
+import { storage } from '../storage';
 import {
   members,
-  companies,
-  claims,
   schemes,
-  providers,
   premiums,
-  documents,
-  communicationLogs,
-  auditLogs,
+  claims,
   wellnessActivities,
   riskAssessments,
+  communicationLogs,
+  providers,
+  auditLogs,
+  companies,
+  documents,
   benefits
-} from "../../shared/schema.js";
-import { eq, and, desc, asc, inArray, or, isNotNull, gte } from "drizzle-orm";
+} from '../../shared/schema';
+import { getConfig } from "../config/system-config";
 
 // Get system configuration
 const config = getConfig();
@@ -76,7 +77,7 @@ const crossModuleNotificationSchema = z.object({
   }))
 });
 
-export function setupSystemIntegrationRoutes(app: any) {
+export function setupSystemIntegrationRoutes(app: Router) {
   // Helper function to extract authenticated user ID from request
   const getAuthenticatedUserId = (req: Request): number => {
     // Try to get user ID from various authentication sources
@@ -266,8 +267,14 @@ export function setupSystemIntegrationRoutes(app: any) {
       let riskScore = 50; // Base risk score
       const memberProfile = member[0];
 
-      // Age-based risk
-      const age = new Date().getFullYear() - new Date(memberProfile.dateOfBirth).getFullYear();
+      // Age-based risk with proper date validation
+      let age = 30; // Default age
+      if (memberProfile.dateOfBirth && typeof memberProfile.dateOfBirth === 'string') {
+        const birthDate = new Date(memberProfile.dateOfBirth);
+        if (!isNaN(birthDate.getTime()) && birthDate.getTime() > 0) {
+          age = differenceInYears(new Date(), birthDate);
+        }
+      }
       if (age < 25) riskScore -= 10;
       else if (age > 60) riskScore += 15;
 
@@ -412,6 +419,14 @@ export function setupSystemIntegrationRoutes(app: any) {
         negotiatedRates: true
       } : null;
 
+      // Get recent claims for this provider (fetch before metrics calculation)
+      const recentProviderClaims = await storage.db
+        .select()
+        .from(claims)
+        .where(eq(claims.providerId, providerId))
+        .orderBy(desc(claims.createdAt))
+        .limit(10);
+
       // Get provider performance metrics
       const performanceMetrics = performanceUpdate ? {
         totalClaims: recentProviderClaims.length,
@@ -430,14 +445,6 @@ export function setupSystemIntegrationRoutes(app: any) {
         qualityScore: provider[0].qualityScore || 0,
         complianceScore: provider[0].complianceScore || 0
       } : null;
-
-      // Get recent claims for this provider
-      const recentProviderClaims = await storage.db
-        .select()
-        .from(claims)
-        .where(eq(claims.providerId, providerId))
-        .orderBy(desc(claims.createdAt))
-        .limit(10);
 
       // Calculate analytics data
       const analyticsData = analyticsUpdate ? {
@@ -913,6 +920,16 @@ export function setupSystemIntegrationRoutes(app: any) {
         return score + activityScore;
       }, 0);
 
+      // Get member's active premiums for eligibility check
+      const activePremiums = await storage.db
+        .select()
+        .from(premiums)
+        .where(and(
+          eq(premiums.memberId, memberId),
+          eq(premiums.status, "active")
+        ))
+        .orderBy(desc(premiums.createdAt));
+
       // Enhanced eligibility benefits based on wellness
       const enhancedBenefits = memberScheme[0]?.scheme ? {
         baseBenefits: await storage.db
@@ -1260,6 +1277,8 @@ export function setupSystemIntegrationRoutes(app: any) {
     }
   });
 
+
+
   // Intelligent Referral Routing
   app.post("/api/integration/provider-referral-routing", async (req: Request, res: Response) => {
     try {
@@ -1293,10 +1312,11 @@ export function setupSystemIntegrationRoutes(app: any) {
             .orderBy(desc(claims.createdAt))
             .limit(20);
 
-          const avgProcessingTime = recentClaims.length > 0
-            ? recentClaims.reduce((sum, claim) => {
+          const processedClaims = recentClaims.filter(claim => claim.processedAt);
+          const avgProcessingTime = processedClaims.length > 0
+            ? processedClaims.reduce((sum, claim) => {
                 return sum + Math.ceil((new Date(claim.processedAt!).getTime() - new Date(claim.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-              }, 0) / recentClaims.length
+              }, 0) / processedClaims.length
             : 0;
 
           return {
@@ -1322,7 +1342,7 @@ export function setupSystemIntegrationRoutes(app: any) {
         score += (performance.satisfactionScore / 5) * 30;
 
         // Processing time (20% weight) - lower is better
-        const processingScore = Math.max(0, 20 - (avgProcessingTime * 2));
+        const processingScore = Math.max(0, 20 - (performance.avgProcessingTime * 2));
         score += processingScore;
 
         // Availability/Utilization (10% weight)
@@ -1351,7 +1371,7 @@ export function setupSystemIntegrationRoutes(app: any) {
           },
           performance,
           score: Math.round(score * 100) / 100,
-          recommendation: this.generateProviderRecommendation(score, urgency, performance)
+          recommendation: generateProviderRecommendation(score, urgency, performance)
         };
       }).sort((a, b) => b.score - a.score);
 
@@ -1431,7 +1451,13 @@ export function setupSystemIntegrationRoutes(app: any) {
 
       switch (eventType) {
         case 'age_increase':
-          const age = new Date().getFullYear() - new Date(member[0].dateOfBirth).getFullYear();
+          let age = 30; // Default age
+          if (member[0].dateOfBirth && typeof member[0].dateOfBirth === 'string') {
+            const birthDate = new Date(member[0].dateOfBirth);
+            if (!isNaN(birthDate.getTime()) && birthDate.getTime() > 0) {
+              age = differenceInYears(new Date(), birthDate);
+            }
+          }
           if (age >= 65) riskAdjustment = 15;
           else if (age >= 50) riskAdjustment = 10;
           adjustmentReason = `Age-based risk adjustment for age ${age}`;
@@ -1624,8 +1650,7 @@ export function setupSystemIntegrationRoutes(app: any) {
             const recipient = memberId || providerId || companyId;
             const entityType = memberId ? 'member' : providerId ? 'provider' : 'company';
 
-            const notification = await storage.db.insert(communicationLogs).values({
-              [entityType === 'member' ? 'memberId' : entityType === 'provider' ? 'providerId' : 'companyId']: recipient,
+            const payload: any = {
               communicationType: 'contextual_notification',
               channel,
               subject: eventTitle,
@@ -1641,7 +1666,13 @@ export function setupSystemIntegrationRoutes(app: any) {
               }),
               sentAt: new Date(),
               createdAt: new Date()
-            }).returning();
+            };
+
+            if (entityType === 'member') payload.memberId = recipient;
+            else if (entityType === 'provider') payload.providerId = recipient;
+            else if (entityType === 'company') payload.companyId = recipient;
+
+            const notification = await storage.db.insert(communicationLogs).values(payload).returning();
 
             return {
               channel,
@@ -1891,7 +1922,7 @@ export function setupSystemIntegrationRoutes(app: any) {
           },
           risk: {
             status: 'active',
-            endpoints: ['//api/risk'],
+            endpoints: ['/api/risk'],
             lastActivity: new Date().toISOString()
           },
           premiums: {

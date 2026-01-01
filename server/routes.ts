@@ -1,7 +1,7 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { AnalyticsEngine } from './routes/analytics.js';
+import logger from "./logger";
 import {
   insertCompanySchema,
   insertPrincipalMemberSchema,
@@ -306,9 +306,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return [];
     }
   }
-
-  // Import analytics engine
-  const analyticsEngine = new AnalyticsEngine();
 
   // API Routes
   // Companies - Protected routes
