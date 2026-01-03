@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, json, sql } from "drizzle-orm/pg-core";
+import { relations, sql } from "drizzle-orm";
+import { boolean, date, decimal, integer, jsonb, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
 import { index } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -4546,7 +4547,7 @@ export const claimFinancePayments = pgTable('claim_finance_payments', {
 export const claimApprovalWorkflows = pgTable('claim_approval_workflows', {
   id: serial('id').primaryKey(),
   claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull(),
-  paymentId: integer('payment_id').references(() => claimPayments.id, { onDelete: 'cascade' }),
+  paymentId: integer('payment_id').references(() => claimFinancePayments.id, { onDelete: 'cascade' }),
   workflowType: varchar('workflow_type', { length: 50 }).notNull(), // CLAIM_APPROVAL, PAYMENT_APPROVAL, RESERVE_APPROVAL
   currentStep: integer('current_step').notNull().default(1),
   totalSteps: integer('total_steps'),
@@ -4743,8 +4744,8 @@ export type InsertClaimReserve = z.infer<typeof insertClaimReserveSchema>;
 export type ClaimReserveTransaction = typeof claimReserveTransactions.$inferSelect;
 export type InsertClaimReserveTransaction = z.infer<typeof insertClaimReserveTransactionSchema>;
 
-export type ClaimPayment = typeof claimPayments.$inferSelect;
-export type InsertClaimPayment = z.infer<typeof insertClaimPaymentSchema>;
+export type ClaimPayment = typeof claimFinancePayments.$inferSelect;
+export type InsertClaimPayment = z.infer<typeof insertClaimFinancePaymentSchema>;
 
 export type ClaimApprovalWorkflow = typeof claimApprovalWorkflows.$inferSelect;
 export type InsertClaimApprovalWorkflow = z.infer<typeof insertClaimApprovalWorkflowSchema>;

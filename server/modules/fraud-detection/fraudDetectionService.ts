@@ -19,6 +19,7 @@ import {
   type InsertNetworkAnalysis,
   type InsertBehavioralProfile
 } from "../../../shared/schema";
+import { storage } from "../../storage";
 
 export class FraudDetectionService {
   // 1. REAL-TIME MONITORING CAPABILITIES
@@ -49,14 +50,14 @@ export class FraudDetectionService {
     const behavioralAnalysis = await this.analyzeBehavioralPatterns(claimData);
 
     // Network analysis
-    const networkAnalysis = await this.analyzeNetworkConnections(claimData);
+    const networkAnalysisResult = await this.analyzeNetworkConnections(claimData);
 
     const recommendations = this.generateRecommendations(
       riskScore,
       triggeredRules,
       mlPredictions,
       behavioralAnalysis,
-      networkAnalysis
+      networkAnalysisResult
     );
 
     return {
@@ -147,10 +148,7 @@ export class FraudDetectionService {
    * Get ML model predictions for fraud detection
    */
   async getMLPredictions(claimData: any): Promise<any> {
-    const activeModels = await db!
-      .select()
-      .from(mlModels)
-      .where(eq(mlModels.status, 'active'));
+    const activeModels = await storage.getMlModelsByStatus('active');
 
     const predictions = [];
 
@@ -184,19 +182,18 @@ export class FraudDetectionService {
    */
   async trainMLModel(modelConfig: any, trainingData: any[]): Promise<any> {
     // Implement ML training logic here
-    const model = {
+    const model: InsertMlModel = {
       name: modelConfig.name,
       type: modelConfig.type,
       algorithm: modelConfig.algorithm,
       version: '1.0',
       accuracy: Math.random() * 0.3 + 0.7, // Mock accuracy
-      trainedAt: new Date()
+      trainedAt: new Date(),
+      status: 'active',
+      performanceMetrics: '{}',
     };
 
-    const [newModel] = await db!
-      .insert(mlModels)
-      .values(model)
-      .returning();
+    const newModel = await storage.createMlModel(model);
 
     return newModel;
   }
@@ -207,10 +204,7 @@ export class FraudDetectionService {
    * Evaluate fraud rules against claim data
    */
   async evaluateRules(claimData: any, riskFactors: any): Promise<FraudRule[]> {
-    const activeRules = await db!
-      .select()
-      .from(fraudRules)
-      .where(eq(fraudRules.status, 'active'));
+    const activeRules = await storage.getFraudRulesByStatus('active');
 
     const triggeredRules = [];
 
@@ -236,12 +230,8 @@ export class FraudDetectionService {
    * Create or update a fraud rule
    */
   async createFraudRule(ruleData: InsertFraudRule): Promise<FraudRule> {
-    const [rule] = await db!
-      .insert(fraudRules)
-      .values(ruleData)
-      .returning();
-
-    return rule!;
+    const rule = await storage.createFraudRule(ruleData);
+    return rule;
   }
 
   // 5. INTEGRATION & ALERTS CAPABILITIES
@@ -263,7 +253,7 @@ export class FraudDetectionService {
           riskScore,
           detectionMethod: 'rule_based',
           description: `Rule triggered: ${rule.ruleName}`,
-          indicators: triggeredRules.map(r => r.ruleName)
+          indicators: JSON.stringify(triggeredRules.map(r => r.ruleName))
         });
         alerts.push(alert);
       }
@@ -276,17 +266,19 @@ export class FraudDetectionService {
    * Create a fraud alert
    */
   async createAlert(alertData: Partial<InsertFraudAlert>): Promise<FraudAlert> {
-    const alert = {
+    const alert: InsertFraudAlert = {
       alertId: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ...alertData,
       createdAt: new Date(),
-      updatedAt: new Date()
+      updatedAt: new Date(),
+      status: 'open',
+      assigneeId: null,
+      resolutionDetails: null,
+      title: alertData.title || 'Fraud Alert',
+      severity: alertData.severity || 'medium',
     };
 
-    const [newAlert] = await db!
-      .insert(fraudAlerts)
-      .values(alert)
-      .returning();
+    const newAlert = await storage.createFraudAlert(alert);
 
     // Trigger notification
     await this.sendAlertNotification(newAlert!);
@@ -308,11 +300,7 @@ export class FraudDetectionService {
    * Generate fraud analytics report
    */
   async generateFraudAnalytics(timePeriod: string = 'monthly'): Promise<any> {
-    const analytics = await db!
-      .select()
-      .from(fraudAnalytics)
-      .where(eq(fraudAnalytics.period, timePeriod as any))
-      .orderBy(desc(fraudAnalytics.createdAt));
+    const analytics = await storage.getFraudAnalyticsByPeriod(timePeriod);
 
     const summary = {
       totalAlerts: analytics[0]?.totalClaims || 0,
@@ -333,17 +321,14 @@ export class FraudDetectionService {
     today.setHours(0, 0, 0, 0);
 
     // Count alerts generated today
-    const alertsGenerated = await db!
-      .select({ count: sql<number>`count(*)` })
-      .from(fraudAlerts)
-      .where(gte(fraudAlerts.createdAt, today));
+    const alertsGenerated = await storage.getFraudAlertsByDateRange(today, new Date());
 
     // Insert analytics record
-    await db!.insert(fraudAnalytics).values({
+    await storage.createFraudAnalytic({
       period: 'daily',
       periodStart: today,
       periodEnd: today,
-      totalClaims: alertsGenerated[0].count,
+      totalClaims: alertsGenerated.length,
       fraudulentClaims: 0,
       fraudRate: 0,
       totalLoss: 0,
@@ -369,7 +354,7 @@ export class FraudDetectionService {
     const suspiciousPatterns = this.identifySuspiciousNetworks(connections);
 
     if (suspiciousPatterns.length > 0) {
-      await db!.insert(networkAnalysis).values({
+      await storage.createNetworkAnalysis({
         analysisId: `network_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         analysisType: 'provider',
         entityType: 'provider',
@@ -418,33 +403,26 @@ export class FraudDetectionService {
    */
   async analyzeBehavioralPatterns(claimData: any): Promise<any> {
     const memberId = claimData.memberId;
-    const profile = await db!
-      .select()
-      .from(behavioralProfiles)
-      .where(eq(behavioralProfiles.memberId, memberId))
-      .limit(1);
+    const profile = await storage.getBehavioralProfileByMember(memberId);
 
-    if (profile.length === 0) {
+    if (!profile) {
       // Create new behavioral profile
       return await this.createBehavioralProfile(memberId, claimData);
     }
 
     // Compare current behavior with baseline
-    const anomalies = this.detectBehavioralAnomalies(claimData, profile[0]);
+    const anomalies = this.detectBehavioralAnomalies(claimData, profile);
 
     if (anomalies.length > 0) {
       // Update profile with anomalies
-      await db!
-        .update(behavioralProfiles)
-        .set({
-          anomalies: JSON.stringify(anomalies),
-          lastUpdated: new Date()
-        })
-        .where(eq(behavioralProfiles.id, profile[0]!.id));
+      await storage.updateBehavioralProfile(profile.id, {
+        anomalies: JSON.stringify(anomalies),
+        lastUpdated: new Date()
+      });
     }
 
     return {
-      profile: profile[0],
+      profile: profile,
       anomalies,
       riskScore: anomalies.length * 10
     };
@@ -454,7 +432,7 @@ export class FraudDetectionService {
    * Create behavioral profile for an entity
    */
   private async createBehavioralProfile(entityId: number, claimData: any): Promise<any> {
-    const profile = {
+    const profile: InsertBehavioralProfile = {
       memberId: entityId,
       profileId: `profile_${entityId}`,
       patternType: 'frequency',
@@ -465,12 +443,9 @@ export class FraudDetectionService {
       lastUpdated: new Date()
     };
 
-    const [newProfile] = await db!
-      .insert(behavioralProfiles)
-      .values(profile)
-      .returning();
+    const newProfile = await storage.createBehavioralProfile(profile);
 
-    return newProfile!;
+    return newProfile;
   }
 
   /**
