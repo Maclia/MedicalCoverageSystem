@@ -42,14 +42,14 @@ router.post('/api/providers/onboarding/start', async (req, res) => {
       initiatedBy
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       onboarding
     });
 
   } catch (error) {
     console.error('Error starting onboarding:', error);
-    res.status(500).json({ error: "Failed to start onboarding" });
+    return res.status(500).json({ error: "Failed to start onboarding" });
   }
 });
 
@@ -69,14 +69,14 @@ router.get('/api/providers/onboarding/:onboardingId', async (req, res) => {
       return res.status(404).json({ error: "Onboarding not found" });
     }
 
-    res.json({
+    return res.json({
       success: true,
       onboarding
     });
 
   } catch (error) {
     console.error('Error fetching onboarding status:', error);
-    res.status(500).json({ error: "Failed to fetch onboarding status" });
+    return res.status(500).json({ error: "Failed to fetch onboarding status" });
   }
 });
 
@@ -192,14 +192,14 @@ router.post('/api/providers/onboarding/documents/upload', async (req, res) => {
       uploadedBy
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       document
     });
 
   } catch (error) {
     console.error('Error uploading document:', error);
-    res.status(500).json({ error: "Failed to upload document" });
+    return res.status(500).json({ error: "Failed to upload document" });
   }
 });
 
@@ -236,13 +236,11 @@ router.post('/api/providers/onboarding/documents/:documentId/verify', async (req
     const { documentId } = req.params;
     const { verified, verifiedBy, notes } = req.body;
 
+    // For now, we'll use the existing verifyDocument method
+    // This is a placeholder implementation
     const result = await providerOnboardingService.verifyDocument(
       Number(documentId),
-      {
-        verified,
-        verifiedBy,
-        notes
-      }
+      verified ? 'verified' : 'rejected'
     );
 
     res.json({

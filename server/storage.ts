@@ -48,8 +48,6 @@ import {
 
 import { getConfig } from "./config/system-config";
 
-import { getConfig } from "./config/system-config";
-
 // Storage interface with enhanced connection management with enhanced connection management
 export interface IStorage {
   // User authentication methods
@@ -267,11 +265,11 @@ export class DatabaseManager {
           metrics: this.getMetrics()
         }
       };
-    } catch (error) {
+    } catch (error: unknown) {
       return {
         status: 'unhealthy',
         details: {
-          error: error.message,
+          error: (error as Error).message,
           timestamp: new Date().toISOString(),
           metrics: this.getMetrics()
         }
@@ -282,7 +280,7 @@ export class DatabaseManager {
 
 // Enhanced storage implementation with connection pooling
 class EnhancedStorage implements IStorage {
-  private db: any;
+  public db: any;
   private dbManager: DatabaseManager;
   private queryCache = new Map<string, { data: any; timestamp: number }>();
   private cacheTimeout = 300000; // 5 minutes
@@ -416,9 +414,6 @@ class EnhancedStorage implements IStorage {
     return {};
   }
 }
-
-// Export enhanced storage instance
-export const storage = new EnhancedStorage();
 
 // In-memory storage implementation
 export class MemStorage implements IStorage {
@@ -650,7 +645,7 @@ export class MemStorage implements IStorage {
       startDate: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0],
       status: 'active',
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
     
     this.periods.set(period.id, period);
@@ -664,7 +659,7 @@ export class MemStorage implements IStorage {
       childRate: 175.00,
       specialNeedsRate: 225.00,
       taxRate: 0.10,
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
     
     this.premiumRates.set(premiumRate.id, premiumRate);
@@ -761,7 +756,7 @@ export class MemStorage implements IStorage {
       const newBenefit: Benefit = {
         ...benefit,
         id,
-        createdAt: new Date().toISOString()
+        createdAt: new Date()
       };
       this.benefits.set(id, newBenefit);
     });
@@ -884,7 +879,7 @@ export class MemStorage implements IStorage {
     const newPremiumRate: PremiumRate = {
       ...premiumRate,
       id,
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
     this.premiumRates.set(id, newPremiumRate);
     return newPremiumRate;
@@ -910,7 +905,7 @@ export class MemStorage implements IStorage {
     const newAgeBandedRate: AgeBandedRate = {
       ...ageBandedRate,
       id,
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
     this.ageBandedRates.set(id, newAgeBandedRate);
     return newAgeBandedRate;
@@ -936,7 +931,7 @@ export class MemStorage implements IStorage {
     const newFamilyRate: FamilyRate = {
       ...familyRate,
       id,
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
     this.familyRates.set(id, newFamilyRate);
     return newFamilyRate;
@@ -2830,7 +2825,7 @@ export class MemStorage implements IStorage {
 
   async getActiveMemberCards(memberId: number): Promise<MemberCard[]> {
     return Array.from(this.memberCards.values()).filter(
-      card => card.memberId === memberId && card.cardStatus === 'active'
+      card => card.memberId === memberId && card.status === 'active'
     );
   }
 
@@ -2840,7 +2835,7 @@ export class MemStorage implements IStorage {
       ...card,
       id,
       issuedAt: new Date(),
-      expiresAt: card.expiresAt || new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000), // 3 years default
+      expiryDate: card.expiryDate || new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000), // 3 years default
       lastUsedAt: null,
       deactivatedAt: null,
       deactivationReason: null,
