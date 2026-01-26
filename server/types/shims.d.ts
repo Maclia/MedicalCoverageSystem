@@ -28,6 +28,11 @@ declare var process: {
   on: (event: string, handler: (...args: any[]) => void) => void;
 };
 
+declare class Buffer {
+  static from(data: string | any[], encoding?: string): any;
+  toString(encoding?: string): string;
+}
+
 declare namespace NodeJS {
   type Timeout = any;
 }
