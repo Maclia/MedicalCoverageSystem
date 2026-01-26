@@ -19,5 +19,15 @@ declare module 'swagger-ui-express' {
   export default swaggerUi;
 }
 
-// Provide setImmediate when Node types are not installed
+// Provide setImmediate and process when Node types are not installed
 declare var setImmediate: (callback: (...args: any[]) => void, ...args: any[]) => any;
+
+declare var process: {
+  env: Record<string, string | undefined>;
+  exit: (code: number) => never;
+  on: (event: string, handler: (...args: any[]) => void) => void;
+};
+
+declare namespace NodeJS {
+  type Timeout = any;
+}
