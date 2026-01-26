@@ -1,0 +1,35 @@
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist
+build
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage
+.cypress
+
+# Development
+.git
+.gitignore
+
+# IDE
+.vscode
+.idea
+*.swp
+
+# Documentation
+*.md
+docs
+
+# Vite
+.vite

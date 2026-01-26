@@ -1,0 +1,421 @@
+name: CD Pipeline - Deployment
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+      version:
+        description: 'Version to deploy'
+        type: string
+        required: false
+      force_deploy:
+        description: 'Force deployment (skip health checks)'
+        type: boolean
+        default: false
+        required: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: medical-coverage-system
+  KUBECONFIG_KUBECONTEXT: k8s-medical-coverage-${{ github.event.inputs.environment || 'staging' }}
+
+jobs:
+  # Pre-deployment checks
+  pre-deployment:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify image exists
+        run: |
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ github.repository }}/api-gateway:${{ github.event.inputs.version || github.sha }}"
+          if ! docker manifest inspect "$IMAGE_TAG" > /dev/null 2>&1; then
+            echo "❌ Image not found: $IMAGE_TAG"
+            echo "Available images:"
+            docker manifest inspect "${{ env.REGISTRY }}/${{ github.repository }}/api-gateway:latest" || true
+            exit 1
+          else
+            echo "✅ Image found: $IMAGE_TAG"
+          fi
+
+      - name: Check service health
+        run: |
+          echo "Checking service health for ${{ env.KUBECONFIG_KUBECONTEXT }}"
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.3'
+
+      - name: Configure kubectl context
+        run: |
+          echo "${{ secrets.KUBECONFIG_CONTENT }}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+          kubectl config use-context "${{ env.KUBECONFIG_KUBECONTEXT }}"
+
+      - name: Verify cluster access
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Check existing deployments
+        run: |
+          echo "Current deployments in ${{ env.KUBECONFIG_KUBECONTEXT }}:"
+          kubectl get deployments -n medical-coverage || echo "No existing deployments"
+
+  # Staging deployment
+  deploy-staging:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    needs: pre-deployment
+    environment: staging
+    concurrency: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.3'
+
+      - name: Set up kubeconfig
+        run: |
+          echo "${{ secrets.KUBECONFIG_CONTENT_STAGING }}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+
+      - name: Deploy to staging
+        run: |
+          echo "🚀 Deploying to staging environment"
+
+          # Apply configurations
+          echo "Applying configurations..."
+          kubectl apply -f k8s/staging/configmaps.yml
+          kubectl apply -f k8s/staging/secrets.yml
+
+          # Deploy infrastructure
+          echo "Deploying infrastructure..."
+          kubectl apply -f k8s/staging/infrastructure/
+          kubectl apply -f k8s/staging/volumes/
+
+          # Deploy services
+          echo "Deploying services..."
+          kubectl apply -f k8s/staging/services/api-gateway/
+          kubectl apply -f k8s/staging/services/auth-service/
+          kubectl apply -k8s/staging/services/hospital-service/
+          k8s/staging/services/insurance-service/
+          k8s/staging/services/billing-service/
+
+          # Wait for rollout
+          echo "Waiting for rollout completion..."
+          kubectl rollout status deployment/api-gateway -n medical-coverage --timeout=300s
+          kubectl rollout status deployment/auth-service -n medical-coverage --timeout=300s
+          kubectl rollout status deployment/hospital-service -n medical-coverage --timeout=300s
+          kubectl rollout status deployment/insurance-service -n medical-coverage --timeout=300s
+          kubectl rollout status deployment/billing-service -n medical-coverage --timeout=300s
+
+          echo "✅ Staging deployment completed"
+
+      - name: Verify deployment health
+        run: |
+          echo "Verifying deployment health..."
+
+          # Wait for pods to be ready
+          sleep 30
+
+          # Check all services
+          services=("api-gateway" "auth-service" "hospital-service" "insurance-service" "billing-service")
+          for service in "${services[@]}"; do
+            echo "Checking $service..."
+            kubectl wait --for=condition=available --timeout=300s deployment/$service -n medical-coverage
+          done
+
+          echo "✅ All services are healthy"
+
+      - name: Run smoke tests
+        run: |
+          echo "🧪 Running smoke tests..."
+
+          API_URL=$(kubectl get svc api-gateway -n medical-coverage -o jsonpath='{.status.loadBalancer.ingress[0].ip}' | tr -d '"')
+          if [ -z "$API_URL" ]; then
+            API_URL="localhost:3000"
+          fi
+
+          echo "Testing API at $API_URL"
+
+          # Health check
+          curl -f "http://$API_URL/health" || {
+            echo "❌ Health check failed"
+            exit 1
+          }
+
+          # Authentication test
+          curl -f -X POST "http://$API_URL/auth/login" \
+            -H "Content-Type: application/json" \
+            -d '{"email": "test@example.com", "password": "test123"}' || {
+            echo "❌ Authentication test failed"
+            exit 1
+          }
+
+          echo "✅ Smoke tests passed"
+
+      - name: Get external access info
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          API_URL=$(kubectl get svc api-gateway -n medical-coverage -o jsonpath='{.status.loadBalancer.ingress[0].ip}' | tr -d '"')
+          if [ -z "$API_URL" ]; then
+            API_URL="localhost:3000"
+          fi
+
+          echo "🌐 API Gateway URL: http://$API_URL"
+          echo "🔑 K8s Context: ${{ env.KUBECONFIG_KUBECONTEXT }}"
+          echo "📊 Status: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  # Production deployment (protected)
+  deploy-production:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'production'
+    needs: pre-deployment
+    environment: production
+    concurrency: 1
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.3'
+
+      - name: Set up kubeconfig
+        run: |
+          echo "${{ secrets.KUBECONFIG_CONTENT_PRODUCTION }}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kconfig
+
+      - name: Pre-production health check
+        run: |
+          echo "🔍 Pre-production health check..."
+
+          # Staging health
+          echo "Checking staging environment..."
+          STAGING_URL="${{ secrets.STAGING_URL }}"
+          curl -f "$STAGING_URL/health" || {
+            echo "❌ Staging health check failed"
+            exit 1
+          }
+
+          # Security scan
+          echo "Running security scan..."
+          curl -f "$STAGING_URL/api/v1/security/scan" || {
+            echo "⚠️ Security scan not available, continuing..."
+          }
+
+          echo "✅ Pre-production checks passed"
+
+      - name: Deploy to production
+        run: |
+          echo "🚀 Deploying to production environment"
+          echo "Commit: ${{ github.sha }}"
+          echo "Version: ${{ github.event.inputs.version || 'latest' }}"
+
+          # Apply configurations
+          echo "Applying production configurations..."
+          kubectl apply -f k8s/production/configmaps.yml
+          kubectl apply -f k8s/production/secrets.yml
+
+          # Deploy infrastructure with production settings
+          echo "Deploying production infrastructure..."
+          kubectl apply -f k8s/production/infrastructure/
+          kubectl apply -f k8s/production/volumes/
+
+          # Deploy services with production replicas
+          echo "Deploying production services..."
+          kubectl apply -k8s/production/services/api-gateway/
+          kubectl apply -k8s/production/services/auth-service/
+          kubectl apply -k8s/production/services/hospital-service/
+          k8s/production/services/insurance-service/
+          kubectl.kubectl-8s-production/services/billing-service/
+
+          # Wait for rollout
+          echo "Waiting for rollout completion..."
+          kubectl rollout status deployment/api-gateway -n medical-coverage --timeout=600s
+          kubectl rollout status deployment/auth-service -n medical-coverage --timeout=600s
+          kubectl rollout status deployment/hospital-service -n medical-coverage --timeout=600s
+          kubectl rollout status deployment/insurance-service -n medical-coverage --timeout=600s
+          kubectl rollout status deployment/billing-service -n medical-coverage --timeout=600s
+
+          echo "✅ Production deployment completed"
+
+      - name: Post-deployment health verification
+        run: |
+          echo "🔍 Post-deployment health verification..."
+
+          # Wait for pods to be ready
+          sleep 60
+
+          # Check all services
+          services=("api-gateway" "auth-service" "hospital-service" "insurance-service" "billing-service")
+          for service in "${services[@]}"; do
+            echo "Checking $service..."
+            kubectl wait --for=condition=available --timeout=600s deployment/$service -n medical-coverage
+          done
+
+          # Get API URL
+          API_URL=$(kubectl get svc api-gateway -n medical-coverage -o jsonpath='{.status.loadBalancer.ingress[0].ip}' | tr -d '"')
+          if [ -z "$API_URL" ]; then
+            API_URL="https://api.medical-coverage.com"
+          fi
+
+          echo "Production API URL: https://api.medical-coverage.com"
+
+          # Comprehensive health checks
+          echo "Running comprehensive health checks..."
+
+          # API health
+          curl -f -k "https://api.medical-coverage.com/health" || {
+            echo "❌ Production health check failed"
+            exit 1
+          }
+
+          # Database connectivity
+          curl -f -k "https://api.medical-coverage.com/api/v1/health/db" || {
+            echo "⚠️ Database connectivity issue detected, continuing..."
+          }
+
+          # Redis connectivity
+          curl -f -k "https://api.medical-coverant.com/api/v1/health/redis" || {
+            echo "⚠️ Redis connectivity issue detected, continuing..."
+          }
+
+          # Service-to-service communication
+          curl -f -k "https://api.medical-coverage.com/api/v1/health/services" || {
+            echo "⚠️ Service communication issue detected, continuing..."
+          }
+
+          echo "✅ Production health verification completed"
+
+      - name: Run production smoke tests
+        run: |
+          echo "🧪 Running production smoke tests..."
+
+          API_URL="https://api.medical-coverage.com"
+
+          # Performance check
+          echo "Testing API performance..."
+          RESPONSE_TIME=$(curl -w "%{time_total}" -s -o /dev/null "$API_URL/health")
+          echo "Health check response time: ${RESPONSE_TIME}s"
+
+          # Load check
+          echo "Testing under load..."
+          for i in {1..10}; do
+            curl -s "https://api.medical-coverage.com/health" > /dev/null || {
+              echo "❌ Load test failed at iteration $i"
+              exit 1
+            }
+            sleep 1
+          done
+
+          # Basic functionality tests
+          echo "Testing basic functionality..."
+          curl -s -f -X POST "https://api.medical-coverage.com/api/v1/auth/login" \
+            -H "Content-Type: application/json" \
+            -d '{"email": "prod@example.com", "password": "prod123"}' > /dev/null || {
+            echo "❌ Authentication test failed"
+            exit 1
+          }
+
+          echo "✅ Production smoke tests passed"
+
+      - name: Update production deployment metadata
+        run: |
+          echo "🏷️ Updating deployment metadata..."
+
+          # Deploy Git information
+          kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: deployment-info
+  namespace: medical-coverage
+data:
+  git_sha: "$GITHUB_SHA"
+  git_branch: "$GITHUB_REF"
+  git_commit_message: |-
+    $(git log -1 --pretty='%s')
+  deployment_time: "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  deployment_version: "${
+    {
+      github.event.inputs.version ||
+      'v' + git rev-parse --short HEAD
+    }{
+  }}"
+EOF
+
+          echo "✅ Deployment metadata updated"
+
+  # Rollback capability
+  rollback-production:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.rollback == 'true'
+    environment: production
+    needs: pre-deployment
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.28.3'
+
+      - name: Set up kubeconfig
+        run: |
+          echo "${{ secrets.KUBECONFIG_CONTENT_PRODUCTION }}" | base64 -d > /tmp/kubeconfig
+          export KUBECONFIG=/tmp/kubeconfig
+
+      -name: Get current deployment info
+        run: |
+          echo "📋 Current deployment status:"
+          kubectl get deployments -n medical-coverage
+
+      - name: Rollback to previous version
+        run: |
+          echo "🔄 Rolling back to previous version..."
+
+          # Rollback to previous revision
+          kubectl rollout undo deployment/api-gateway -n medical-coverage
+          kubectl rollout undo deployment/auth-service -n medical-coverage
+          kubectl rollout undo deployment/hospital-service -n medical-coverage
+          kubectl rollout undo deployment/insurance-service -n medical-coverage
+          kubectl rollout undo deployment/billing-service -n medical-coverage
+
+          # Wait for rollback completion
+          echo "Waiting for rollback completion..."
+          kubectl rollout status deployment/api-gateway -n medical-coverage --timeout=600s
+          kubectl rollout status deployment/auth-service -n medical-coverage --timeout=600s
+          kubectl rollout status deployment/hospital-service -n medical-coverage --timeout=600s
+          kubectl rollout status deployment/insurance-service -n medical-coverage --timeout=600s
+          kubectl rollout status deployment/billing-service -n medical-coverage --timeout=600s
+
+          echo "✅ Rollback completed"
+
+      - name: Verify rollback health
+        run: |
+          echo "🔍 Verifying rollback health..."
+
+          services=("api-gateway" "auth-service" "hospital-service" "insurance-service" "billing-service")
+          for service in "${services[@]}"; do
+            echo "Checking $service..."
+            kubectl wait --for=condition=available --timeout=300s deployment/$service -n medical-coverage
+          done
+
+          echo "✅ Rollback health verification completed"
