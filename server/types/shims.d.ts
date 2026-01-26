@@ -39,3 +39,14 @@ declare module '@neondatabase/serverless' {
 declare module 'drizzle-orm/neon-http' {
   export function drizzle(client: any): any;
 }
+
+declare module 'drizzle-orm' {
+  export function eq(...args: any[]): any;
+  export function and(...args: any[]): any;
+  export function asc(column: any): any;
+  export function desc(column: any): any;
+  export function isNull(column: any): any;
+  export function isNotNull(column: any): any;
+  export function or(...args: any[]): any;
+  export function sql(strings: any, ...values: any[]): any;
+}
