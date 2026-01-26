@@ -148,4 +148,26 @@ declare module 'drizzle-orm' {
   export function count(column?: any): any;
   export function sum(column: any): any;
   export function avg(column: any): any;
+  export function index(name: string): any;
+}
+
+declare module 'drizzle-orm/pg-core' {
+  export function pgTable(name: string, columns: any): any;
+  export function pgEnum(name: string, values: string[]): any;
+  export const text: any;
+  export const serial: any;
+  export const integer: any;
+  export const boolean: any;
+  export const date: any;
+  export const timestamp: any;
+  export const real: any;
+  export const uuid: any;
+  export const varchar: any;
+  export const decimal: any;
+  export const json: any;
+  export const jsonb: any;
+}
+
+declare module 'drizzle-zod' {
+  export function createInsertSchema(table: any): any;
 }
