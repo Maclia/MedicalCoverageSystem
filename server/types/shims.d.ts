@@ -5,6 +5,9 @@ declare module 'express' {
   export type Response = http.ServerResponse & { json?: (body: any) => void; status?: (code: number) => Response };
   export type NextFunction = (err?: any) => void;
   export type Express = any;
+  namespace express {
+    type Express = any;
+  }
   const express: any;
   export default express;
 }
