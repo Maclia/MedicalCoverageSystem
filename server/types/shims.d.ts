@@ -6,14 +6,32 @@ declare module 'http' {
   export type ServerResponse = any;
 }
 
+declare module 'fs' {
+  export const promises: {
+    readFile(path: string, encoding: string): Promise<string>;
+    writeFile(path: string, data: string): Promise<void>;
+  };
+  export function existsSync(path: string): boolean;
+  export function readFileSync(path: string, encoding: string): string;
+  export function writeFileSync(path: string, data: string): void;
+}
+
+declare module 'path' {
+  export function resolve(...paths: string[]): string;
+  export function join(...paths: string[]): string;
+  export function dirname(path: string): string;
+  export function basename(path: string): string;
+}
+
 declare module 'express' {
   import type * as http from 'http';
-  export type Request = http.IncomingMessage & { body?: any; params?: any; query?: any };
-  export type Response = http.ServerResponse & { json?: (body: any) => void; status?: (code: number) => Response };
+  export type Request = http.IncomingMessage & { body?: any; params?: any; query?: any; originalUrl?: string; ip?: string; get?: (header: string) => string };
+  export type Response = http.ServerResponse & { json?: (body: any) => void; status?: (code: number) => Response; set?: (headers: any) => Response; end?: (data: string) => void; sendFile?: (path: string) => void };
   export type NextFunction = (err?: any) => void;
   export type Express = any;
   namespace express {
     type Express = any;
+    function static(path: string): any;
   }
   const express: any;
   export default express;
@@ -27,6 +45,15 @@ declare module 'swagger-jsdoc' {
 declare module 'swagger-ui-express' {
   const swaggerUi: any;
   export default swaggerUi;
+}
+
+declare module 'vite' {
+  export function createServer(options?: any): Promise<any>;
+  export function createLogger(level?: string): any;
+}
+
+declare module 'nanoid' {
+  export function nanoid(size?: number): string;
 }
 
 declare module 'zod-validation-error' {
@@ -79,6 +106,13 @@ declare module 'zod' {
 
 declare namespace NodeJS {
   type Timeout = any;
+}
+
+interface ImportMeta {
+  readonly url: string;
+  readonly dirname?: string;
+  readonly filename?: string;
+  readonly env?: Record<string, string>;
 }
 
 declare module '@neondatabase/serverless' {
