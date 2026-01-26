@@ -33,7 +33,17 @@ declare module 'express' {
     type Express = any;
     function static(path: string): any;
   }
-  const express: any;
+
+  interface ExpressStatic {
+    (): Express;
+    json(options?: any): any;
+    urlencoded(options?: any): any;
+    static(path: string): any;
+    text(options?: any): any;
+    raw(options?: any): any;
+  }
+
+  const express: ExpressStatic;
   export default express;
 }
 
