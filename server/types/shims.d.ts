@@ -154,6 +154,7 @@ declare module 'drizzle-orm' {
 declare module 'drizzle-orm/pg-core' {
   export function pgTable(name: string, columns: any): any;
   export function pgEnum(name: string, values: string[]): any;
+  export function jsonb(name: string, config?: any): any;
   export const text: any;
   export const serial: any;
   export const integer: any;
@@ -166,6 +167,27 @@ declare module 'drizzle-orm/pg-core' {
   export const decimal: any;
   export const json: any;
   export const jsonb: any;
+}
+
+declare module 'zod' {
+  export namespace z {
+    function string(): any;
+    function number(): any;
+    function boolean(): any;
+    function date(): any;
+    function any(): any;
+    function object<T extends Record<string, any>>(shape: T): any;
+    function array<T>(schema: T): any;
+    function optional<T>(schema: T): any;
+    function enum<T extends readonly [string, ...string[]]>(values: T): any;
+    function union<T extends readonly any[]>(options: T): any;
+    function literal<T extends string | number | boolean>(value: T): any;
+    function record<T>(valueSchema: T): any;
+    function tuple<T extends readonly any[]>(schemas: T): any;
+    function map<K, V>(keySchema: any, valueSchema: any): any;
+    function set<T>(valueSchema: T): any;
+  }
+  export const z: typeof z;
 }
 
 declare module 'drizzle-zod' {
