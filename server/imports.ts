@@ -42,6 +42,7 @@ export type {
 };
 export {
   db,
+  z,
   // Database operators
   eq,
   and,
@@ -146,13 +147,13 @@ export const createResponse = (res: Response) => ({
 });
 
 // Request validation utility
-export const validateRequest = (schema: z.ZodSchema) => {
+export const validateRequest = (schema: any) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       schema.parse(req.body);
       next();
     } catch (error: any) {
-      if (error instanceof z.ZodError) {
+      if (error instanceof (z as any).ZodError) {
         const errors = error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`);
         return createResponse(res).validationError(errors);
       }

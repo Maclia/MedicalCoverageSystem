@@ -39,7 +39,21 @@ declare class Buffer {
 declare function require(module: string): any;
 
 declare module 'zod' {
-  export const z: any;
+  export namespace z {
+    interface ZodError {
+      errors: Array<{ path: string[]; message: string }>;
+    }
+    interface ZodSchema {
+      parse(data: any): any;
+    }
+    class ZodError {
+      errors: Array<{ path: string[]; message: string }>;
+    }
+  }
+  export const z: {
+    ZodError: typeof z.ZodError;
+    ZodSchema: typeof z.ZodSchema;
+  } & any;
 }
 
 declare namespace NodeJS {
