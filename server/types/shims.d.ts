@@ -56,6 +56,11 @@ declare module 'swagger-ui-express' {
 declare module 'vite' {
   export function createServer(options?: any): Promise<any>;
   export function createLogger(level?: string): any;
+  export function defineConfig(config: any): any;
+}
+
+declare module '@vitejs/plugin-react' {
+  export default function react(options?: any): any;
 }
 
 declare module 'nanoid' {
@@ -74,6 +79,10 @@ declare module 'date-fns' {
 
 // Provide setImmediate and process when Node types are not installed
 declare var setImmediate: (callback: (...args: any[]) => void, ...args: any[]) => any;
+
+declare var __dirname: string;
+
+declare var __filename: string;
 
 declare var process: {
   env: Record<string, string | undefined>;
@@ -177,7 +186,8 @@ declare module 'zod' {
     function object<T extends Record<string, any>>(shape: T): any;
     function array<T>(schema: T): any;
     function optional<T>(schema: T): any;
-    function enum<T extends readonly [string, ...string[]]>(values: T): any;
+    // Use bracket notation for reserved keyword
+    const enum_: any;
     function union<T extends readonly any[]>(options: T): any;
     function literal<T extends string | number | boolean>(value: T): any;
     function record<T>(valueSchema: T): any;
