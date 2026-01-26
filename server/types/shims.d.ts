@@ -31,3 +31,11 @@ declare var process: {
 declare namespace NodeJS {
   type Timeout = any;
 }
+
+declare module '@neondatabase/serverless' {
+  export function neon(connectionString: string): any;
+}
+
+declare module 'drizzle-orm/neon-http' {
+  export function drizzle(client: any): any;
+}
