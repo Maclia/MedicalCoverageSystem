@@ -54,9 +54,7 @@ export {
   sql,
   count,
   sum,
-  avg,
-  // Validation
-  z
+  avg
 };
 
 // Export schema with more explicit naming
