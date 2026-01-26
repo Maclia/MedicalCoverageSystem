@@ -29,12 +29,8 @@ declare module 'express' {
   export type Response = http.ServerResponse & { json?: (body: any) => void; status?: (code: number) => Response; set?: (headers: any) => Response; end?: (data: string) => void; sendFile?: (path: string) => void };
   export type NextFunction = (err?: any) => void;
   export type Express = any;
-  namespace express {
-    type Express = any;
-    function static(path: string): any;
-  }
-
-  interface ExpressStatic {
+  
+  interface ExpressApp {
     (): Express;
     json(options?: any): any;
     urlencoded(options?: any): any;
@@ -43,8 +39,8 @@ declare module 'express' {
     raw(options?: any): any;
   }
 
-  const express: ExpressStatic;
-  export default express;
+  const express: ExpressApp;
+  export = express;
 }
 
 declare module 'swagger-jsdoc' {
@@ -148,11 +144,14 @@ declare module 'drizzle-orm' {
   export function count(column?: any): any;
   export function sum(column: any): any;
   export function avg(column: any): any;
-  export function index(name: string, ...args: any[]): any;
+  export function index(name: string, ...args: any[]): {
+    on(...columns: any[]): any;
+    unique(): any;
+  };
 }
 
 declare module 'drizzle-orm/pg-core' {
-  export function pgTable(name: string, columns: any): any;
+  export function pgTable(name: string, columns: any, indexBuilder?: (table: any) => any): any;
   export function pgEnum(name: string, values: string[]): any;
   export function jsonb(name: string, config?: any): any;
   export function json(name: string, config?: any): any;
@@ -185,10 +184,10 @@ declare module 'zod' {
     function tuple<T extends readonly any[]>(schemas: T): any;
     function map<K, V>(keySchema: any, valueSchema: any): any;
     function set<T>(valueSchema: T): any;
-    function infer<T>(schema: T): any;
+    function infer<T extends any>(schema: T): any;
   }
-  const z: typeof z;
-  export { z };
+  
+  export const z: typeof z;
 }
 
 declare module 'drizzle-zod' {
