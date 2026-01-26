@@ -22,7 +22,7 @@
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true,
     "outDir": "../dist",
-    "rootDir": ".",
+    "rootDir": "..",
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../shared/*"],
