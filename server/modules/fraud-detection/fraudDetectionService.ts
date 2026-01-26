@@ -421,7 +421,7 @@ export class FraudDetectionService {
     const profile = await db!
       .select()
       .from(behavioralProfiles)
-      .where(eq(behavioralProfiles.memberId, memberId));
+      .where(eq(behavioralProfiles.memberId, memberId))
       .limit(1);
 
     if (profile.length === 0) {

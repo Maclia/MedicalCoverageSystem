@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { db } from "../db";
 import { storage } from "../storage";
-dimport logger from "../logger";
+import logger from "../logger";
 import {
   companies,
   members,
@@ -11,7 +11,7 @@ import {
   medicalPersonnel,
   userSessions,
   auditLogs,
-  userBenefits,
+  benefits,
   providers,
   wellnessActivities,
   riskAssessments,
@@ -50,7 +50,7 @@ export class AnalyticsEngine {
     const monthlyData = this.groupByMonth(claimsData, startDate, now);
 
     // Detect anomalies (fraud indicators)
-    const anomalies = this.detectAnomalies(claimsData);
+    const anomalies = this.detectClaimAnomalies(claimsData);
 
     // Calculate frequency metrics safely
     let current = 0;
@@ -157,7 +157,7 @@ export class AnalyticsEngine {
       .where(members.createdAt >= startDate.toISOString());
 
     // Get claims per member
-    const memberIds = membersData.map(m => m.id);
+    const memberIds = membersData.map((m: any) => m.id);
     const claimsPerMember = await db.select().from(claims)
       .where(claims.memberId.inArray(memberIds));
 
@@ -275,8 +275,8 @@ export class AnalyticsEngine {
       .where(claims.claimDate >= startDate.toISOString());
 
     // Calculate ROI metrics
-    const totalPremiums = premiumsData.reduce((sum, p) => sum + p.total, 0);
-    const totalClaims = claimsData.reduce((sum, c) => sum + c.amount, 0);
+    const totalPremiums = premiumsData.reduce((sum: number, p: any) => sum + p.total, 0);
+    const totalClaims = claimsData.reduce((sum: number, c: any) => sum + c.amount, 0);
     const averageROI = totalPremiums > 0 ? ((totalPremiums - totalClaims) / totalPremiums) * 100 : 0;
 
     // Industry benchmarking (simulated data)
@@ -407,7 +407,7 @@ export class AnalyticsEngine {
     return months;
   }
 
-  private static detectAnomalies(claimsData: any[]) {
+  private static detectClaimAnomalies(claimsData: any[]) {
     // Simple anomaly detection
     const anomalies: Array<{type: string, risk: string, description: string, month: string}> = [];
 
@@ -510,15 +510,15 @@ export class AnalyticsEngine {
 
   private static findPotentialDuplicates(claimsData: any[]) {
     // Simple duplicate detection based on similar claims
-    const duplicates = [];
-    const claimsGrouped = claimsData.reduce((groups, claim) => {
+    const duplicates: any[] = [];
+    const claimsGrouped = claimsData.reduce((groups: any, claim: any) => {
       const key = `${claim.memberId}-${claim.benefitId}-${claim.diagnosisCode}`;
       if (!groups[key]) groups[key] = [];
       groups[key].push(claim);
       return groups;
     }, {});
 
-    Object.values(claimsGrouped).forEach(group => {
+    Object.values(claimsGrouped).forEach((group: any) => {
       if (group.length > 1) {
         duplicates.push({
           memberId: group[0].memberId,
@@ -533,9 +533,9 @@ export class AnalyticsEngine {
   }
 
   private static analyzeProviderCosts(claimsData: any[]) {
-    const providerCosts = {};
+    const providerCosts: Record<string, any> = {};
 
-    claimsData.forEach(claim => {
+    claimsData.forEach((claim: any) => {
       const providerKey = `${claim.institutionId}-${claim.personnelId}`;
       if (!providerCosts[providerKey]) {
         providerCosts[providerKey] = {
@@ -553,7 +553,7 @@ export class AnalyticsEngine {
     });
 
     // Add provider names (would need to join with institutions/personnel tables)
-    return Object.values(providerCosts).map(provider => ({
+    return Object.values(providerCosts).map((provider: any) => ({
       ...provider,
       name: `Provider ${provider.personnelId}`, // Placeholder
       claimCount: provider.claims.length
@@ -602,7 +602,7 @@ export class AnalyticsEngine {
         memberId: member.id,
         utilizationRate: utilizationScore,
         lastClaimDate: memberClaims.length > 0 ?
-          new Date(Math.max(...memberClaims.map(c => new Date(c.claimDate)))).toLocaleDateString() :
+          new Date(Math.max(...memberClaims.map((c: any) => new Date(c.claimDate).getTime()))).toLocaleDateString() :
           null
       };
     });
@@ -672,7 +672,7 @@ export class AnalyticsEngine {
       }
 
       // Get member's claims history
-      const claimsHistory = await storage.db
+      const claimsHistory = await db
         .select()
         .from(claims)
         .where(eq(claims.memberId, memberId))
@@ -680,7 +680,7 @@ export class AnalyticsEngine {
         .limit(50);
 
       // Get member's wellness activities
-      const wellnessData = await storage.db
+      const wellnessData = await db
         .select()
         .from(wellnessActivities)
         .where(eq(wellnessActivities.memberId, memberId))
@@ -688,7 +688,7 @@ export class AnalyticsEngine {
         .limit(100);
 
       // Get member's risk assessments
-      const riskData = await storage.db
+      const riskData = await db
         .select()
         .from(riskAssessments)
         .where(eq(riskAssessments.memberId, memberId))
@@ -698,12 +698,12 @@ export class AnalyticsEngine {
       // Calculate predictive factors
       const age = new Date().getFullYear() - new Date(member[0].dateOfBirth).getFullYear();
       const averageClaimAmount = claimsHistory.length > 0 ?
-        claimsHistory.reduce((sum, claim) => sum + (claim.totalAmount || 0), 0) / claimsHistory.length : 0;
+        claimsHistory.reduce((sum: number, claim: any) => sum + (claim.totalAmount || 0), 0) / claimsHistory.length : 0;
       const claimFrequency = claimsHistory.length;
       const recentRiskScore = riskData.length > 0 ? riskData[0].riskScore : 50;
 
       // Calculate wellness score
-      const wellnessScore = wellnessData.reduce((score, activity) => {
+      const wellnessScore = wellnessData.reduce((score: number, activity: any) => {
         let activityScore = 0;
         switch (activity.activityType) {
           case 'exercise': activityScore = 3; break;
@@ -801,7 +801,7 @@ export class AnalyticsEngine {
   static async predictProviderNetworkPerformance(region?: string, timeframe: '3months' | '6months' | '12months' = '6months') {
     try {
       // Get provider performance data
-      const providers = await storage.db
+      const providersData = await db
         .select()
         .from(providers)
         .where(region ? providers.specialization.includes(region) : undefined);
@@ -810,7 +810,7 @@ export class AnalyticsEngine {
       const ninetyDaysAgo = new Date();
       ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-      const recentClaims = await storage.db
+      const recentClaims = await db
         .select()
         .from(claims)
         .where(gte(claims.createdAt, ninetyDaysAgo))
@@ -818,10 +818,10 @@ export class AnalyticsEngine {
         .limit(1000);
 
       // Analyze current provider performance
-      const providerPerformance = providers.map(provider => {
-        const providerClaims = recentClaims.filter(claim => claim.providerId === provider.id);
+      const providerPerformance = providersData.map((provider: any) => {
+        const providerClaims = recentClaims.filter((claim: any) => claim.providerId === provider.id);
         const avgProcessingTime = providerClaims.length > 0
-          ? providerClaims.reduce((sum, claim) => {
+          ? providerClaims.reduce((sum: number, claim: any) => {
               return sum + (claim.processedAt ?
                 Math.ceil((new Date(claim.processedAt).getTime() - new Date(claim.createdAt).getTime()) / (1000 * 60 * 60 * 24))
                 : 0);
@@ -829,7 +829,7 @@ export class AnalyticsEngine {
           : 0;
 
         const approvalRate = providerClaims.length > 0
-          ? (providerClaims.filter(claim => claim.status === 'approved').length / providerClaims.length) * 100
+          ? (providerClaims.filter((claim: any) => claim.status === 'approved').length / providerClaims.length) * 100
           : 0;
 
         return {
@@ -848,7 +848,7 @@ export class AnalyticsEngine {
       });
 
       // AI-powered performance prediction
-      const predictions = providerPerformance.map(perf => {
+      const predictions = providerPerformance.map((perf: any) => {
         let performanceTrend = 'stable';
         let predictedScore = (perf.currentMetrics.qualityScore + perf.currentMetrics.satisfactionScore) / 2;
         let confidence = 0.75;
@@ -896,13 +896,13 @@ export class AnalyticsEngine {
 
       // Overall network predictions
       const networkPerformance = {
-        overallScore: predictions.reduce((sum, p) => sum + p.prediction.performanceScore, 0) / predictions.length,
-        providersAtRisk: predictions.filter(p => p.prediction.trend === 'declining').length,
-        topPerformers: predictions.filter(p => p.prediction.performanceScore > 90),
+        overallScore: predictions.reduce((sum: number, p: any) => sum + p.prediction.performanceScore, 0) / predictions.length,
+        providersAtRisk: predictions.filter((p: any) => p.prediction.trend === 'declining').length,
+        topPerformers: predictions.filter((p: any) => p.prediction.performanceScore > 90),
         improvementOpportunities: [
-          predictions.filter(p => p.currentMetrics.avgProcessingTime > 5).length > 0 ?
+          predictions.filter((p: any) => p.currentMetrics.avgProcessingTime > 5).length > 0 ?
             'Optimize claim processing workflows for slow providers' : null,
-          predictions.filter(p => p.currentMetrics.approvalRate < 90).length > 0 ?
+          predictions.filter((p: any) => p.currentMetrics.approvalRate < 90).length > 0 ?
             'Implement quality improvement programs for low approval rates' : null
         ].filter(Boolean)
       };
@@ -912,7 +912,7 @@ export class AnalyticsEngine {
         region: region || 'all',
         totalProviders: providers.length,
         networkPerformance,
-        providerPredictions: predictions.sort((a, b) => b.prediction.performanceScore - a.prediction.performanceScore),
+        providerPredictions: predictions.sort((a: any, b: any) => b.prediction.performanceScore - a.prediction.performanceScore),
         insights: {
           keyTrends: [
             networkPerformance.providersAtRisk > predictions.length * 0.2 ? 'Significant number of providers showing declining performance' : null,
@@ -935,21 +935,21 @@ export class AnalyticsEngine {
   static async forecastWellnessROI(programId?: string, timeframe: '6months' | '12months' | '24months' = '12months') {
     try {
       // Get wellness data
-      const wellnessActivities = await storage.db
+      const wellnessData = await db
         .select()
         .from(wellnessActivities)
         .orderBy(desc(wellnessActivities.createdAt))
         .limit(1000);
 
       // Get member data with wellness participation
-      const membersWithWellness = wellnessActivities.reduce((acc, activity) => {
+      const membersWithWellness = wellnessData.reduce((acc: Set<number>, activity: any) => {
         acc.add(activity.memberId);
         return acc;
-      }, new Set());
+      }, new Set<number>());
 
       // Get claims data for cost analysis
       const memberIds = Array.from(membersWithWellness);
-      const claimsData = await storage.db
+      const claimsData = await db
         .select()
         .from(claims)
         .where(inArray(claims.memberId, memberIds.length > 0 ? memberIds : [0]))
@@ -959,9 +959,9 @@ export class AnalyticsEngine {
       // Calculate current wellness metrics
       const wellnessMetrics = {
         totalParticipants: membersWithWellness.size,
-        averageActivitiesPerMember: wellnessActivities.length / membersWithWellness.size,
-        averageWellnessScore: wellnessActivities.reduce((sum, activity) => sum + (activity.wellnessScore || 0), 0) / wellnessActivities.length,
-        participationByType: wellnessActivities.reduce((acc, activity) => {
+        averageActivitiesPerMember: wellnessData.length / membersWithWellness.size,
+        averageWellnessScore: wellnessData.reduce((sum: number, activity: any) => sum + (activity.wellnessScore || 0), 0) / wellnessData.length,
+        participationByType: wellnessData.reduce((acc: any, activity: any) => {
           acc[activity.activityType] = (acc[activity.activityType] || 0) + 1;
           return acc;
         }, {} as Record<string, number>)
@@ -969,7 +969,7 @@ export class AnalyticsEngine {
 
       // Calculate cost savings from wellness
       const averageClaimCost = claimsData.length > 0 ?
-        claimsData.reduce((sum, claim) => sum + (claim.totalAmount || 0), 0) / claimsData.length : 0;
+        claimsData.reduce((sum: number, claim: any) => sum + (claim.totalAmount || 0), 0) / claimsData.length : 0;
 
       // AI-powered ROI prediction
       const predictedSavings = {
@@ -1046,36 +1046,36 @@ export class AnalyticsEngine {
   static async optimizePremiumPricing(schemeId?: number, targetROI?: number) {
     try {
       // Get premium and claims data
-      const premiums = await storage.db
+      const premiumsData = await db
         .select()
         .from(premiums)
         .where(schemeId ? eq(premiums.schemeId, schemeId) : undefined)
         .orderBy(desc(premiums.createdAt))
         .limit(1000);
 
-      const claims = await storage.db
+      const claimsData = await db
         .select()
         .from(claims)
         .orderBy(desc(claims.createdAt))
         .limit(2000);
 
       // Get member data for segmentation
-      const memberIds = [...new Set(premiums.map(p => p.memberId))];
-      const members = await storage.db
+      const memberIds = [...new Set(premiumsData.map((p: any) => p.memberId))];
+      const membersData = await db
         .select()
         .from(members)
         .where(inArray(members.id, memberIds.length > 0 ? memberIds : [0]));
 
       // Calculate current performance metrics
-      const totalPremiums = premiums.reduce((sum, p) => sum + (p.amount || 0), 0);
-      const totalClaims = claims.reduce((sum, c) => sum + (c.totalAmount || 0), 0);
+      const totalPremiums = premiumsData.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+      const totalClaims = claimsData.reduce((sum: number, c: any) => sum + (c.totalAmount || 0), 0);
       const currentROI = totalPremiums > 0 ? ((totalPremiums - totalClaims) / totalPremiums) * 100 : 0;
 
       // Segment members by risk profile
-      const memberSegmentation = members.map(member => {
+      const memberSegmentation = membersData.map((member: any) => {
         const age = new Date().getFullYear() - new Date(member.dateOfBirth).getFullYear();
-        const memberPremiums = premiums.filter(p => p.memberId === member.id);
-        const memberClaims = claims.filter(c => c.memberId === member.id);
+        const memberPremiums = premiumsData.filter((p: any) => p.memberId === member.id);
+        const memberClaims = claimsData.filter((c: any) => c.memberId === member.id);
 
         const riskLevel = age > 60 ? 'high' : age > 45 ? 'medium' : 'low';
         const utilizationRate = memberPremiums.length > 0 ?
@@ -1086,8 +1086,8 @@ export class AnalyticsEngine {
           age,
           riskLevel,
           utilizationRate,
-          currentPremium: memberPremiums.reduce((sum, p) => sum + (p.amount || 0), 0),
-          claimCost: memberClaims.reduce((sum, c) => sum + (c.totalAmount || 0), 0)
+          currentPremium: memberPremiums.reduce((sum: number, p: any) => sum + (p.amount || 0), 0),
+          claimCost: memberClaims.reduce((sum: number, c: any) => sum + (c.totalAmount || 0), 0)
         };
       });
 
@@ -1102,27 +1102,27 @@ export class AnalyticsEngine {
         riskBasedAdjustments: [
           {
             segment: 'high_risk',
-            currentPremium: memberSegmentation.filter(m => m.riskLevel === 'high').reduce((sum, m) => sum + m.currentPremium, 0),
-            recommendedPremium: memberSegmentation.filter(m => m.riskLevel === 'high').reduce((sum, m) => sum + m.currentPremium, 0) * 1.3,
+            currentPremium: memberSegmentation.filter((m: any) => m.riskLevel === 'high').reduce((sum: number, m: any) => sum + m.currentPremium, 0),
+            recommendedPremium: memberSegmentation.filter((m: any) => m.riskLevel === 'high').reduce((sum: number, m: any) => sum + m.currentPremium, 0) * 1.3,
             adjustment: '+30%',
             reasoning: 'Higher risk profile justifies premium increase'
           },
           {
             segment: 'medium_risk',
-            currentPremium: memberSegmentation.filter(m => m.riskLevel === 'medium').reduce((sum, m) => sum + m.currentPremium, 0),
-            recommendedPremium: memberSegmentation.filter(m => m.riskLevel === 'medium').reduce((sum, m) => sum + m.currentPremium, 0) * 1.1,
+            currentPremium: memberSegmentation.filter((m: any) => m.riskLevel === 'medium').reduce((sum: number, m: any) => sum + m.currentPremium, 0),
+            recommendedPremium: memberSegmentation.filter((m: any) => m.riskLevel === 'medium').reduce((sum: number, m: any) => sum + m.currentPremium, 0) * 1.1,
             adjustment: '+10%',
             reasoning: 'Moderate risk profile justifies slight premium increase'
           },
           {
             segment: 'low_risk',
-            currentPremium: memberSegmentation.filter(m => m.riskLevel === 'low').reduce((sum, m) => sum + m.currentPremium, 0),
-            recommendedPremium: memberSegmentation.filter(m => m.riskLevel === 'low').reduce((sum, m) => sum + m.currentPremium, 0) * 0.95,
+            currentPremium: memberSegmentation.filter((m: any) => m.riskLevel === 'low').reduce((sum: number, m: any) => sum + m.currentPremium, 0),
+            recommendedPremium: memberSegmentation.filter((m: any) => m.riskLevel === 'low').reduce((sum: number, m: any) => sum + m.currentPremium, 0) * 0.95,
             adjustment: '-5%',
             reasoning: 'Low risk profile enables premium reduction for competitive advantage'
           }
         ],
-        utilizationBasedAdjustments: memberSegmentation.reduce((acc, member) => {
+        utilizationBasedAdjustments: memberSegmentation.reduce((acc: any, member: any) => {
           if (member.utilizationRate < 20) {
             acc.low_utilization.push(member);
           } else if (member.utilizationRate > 80) {
@@ -1174,7 +1174,7 @@ export class AnalyticsEngine {
         insights: {
           keyOpportunities: [
             optimizationStrategies.projectedROI.optimized > currentROI ? 'Significant ROI improvement possible' : null,
-            memberSegmentation.filter(m => m.utilizationRate < 20).length > members.length * 0.3 ? 'Low utilization segments offer pricing flexibility' : null
+            memberSegmentation.filter((m: any) => m.utilizationRate < 20).length > members.length * 0.3 ? 'Low utilization segments offer pricing flexibility' : null
           ].filter(Boolean),
           implementation: {
             quickWins: ['Implement wellness-based discounts', 'Adjust high-risk segment pricing'],
@@ -1196,10 +1196,10 @@ export class AnalyticsEngine {
 
       // Get recent system activities
       const [recentClaims, recentPremiums, recentWellness, recentCommunications] = await Promise.all([
-        storage.db.select().from(claims).where(gte(claims.createdAt, fiveMinutesAgo)),
-        storage.db.select().from(premiums).where(gte(premiums.createdAt, fiveMinutesAgo)),
-        storage.db.select().from(wellnessActivities).where(gte(wellnessActivities.createdAt, fiveMinutesAgo)),
-        storage.db.select().from(communicationLogs).where(gte(communicationLogs.createdAt, fiveMinutesAgo))
+        db.select().from(claims).where(gte(claims.createdAt, fiveMinutesAgo)),
+        db.select().from(premiums).where(gte(premiums.createdAt, fiveMinutesAgo)),
+        db.select().from(wellnessActivities).where(gte(wellnessActivities.createdAt, fiveMinutesAgo)),
+        db.select().from(communicationLogs).where(gte(communicationLogs.createdAt, fiveMinutesAgo))
       ]);
 
       // Calculate system metrics
@@ -1287,9 +1287,9 @@ export class AnalyticsEngine {
 
       // Get recent data for anomaly detection
       const [recentClaims, recentPremiums, recentWellness] = await Promise.all([
-        storage.db.select().from(claims).where(gte(claims.createdAt, startTime)),
-        storage.db.select().from(premiums).where(gte(premiums.createdAt, startTime)),
-        storage.db.select().from(wellnessActivities).where(gte(wellnessActivities.createdAt, startTime))
+        db.select().from(claims).where(gte(claims.createdAt, startTime)),
+        db.select().from(premiums).where(gte(premiums.createdAt, startTime)),
+        db.select().from(wellnessActivities).where(gte(wellnessActivities.createdAt, startTime))
       ]);
 
       // Anomaly detection algorithms
@@ -1340,7 +1340,7 @@ export class AnalyticsEngine {
         const slotStart = new Date(startTime.getTime() + (i * (now.getTime() - startTime.getTime()) / 5));
         const slotEnd = new Date(startTime.getTime() + ((i + 1) * (now.getTime() - startTime.getTime()) / 5));
 
-        const slotClaims = recentClaims.filter(claim => {
+        const slotClaims = recentClaims.filter((claim: any) => {
           const claimTime = new Date(claim.createdAt);
           return claimTime >= slotStart && claimTime < slotEnd;
         }).length;
@@ -1366,24 +1366,24 @@ export class AnalyticsEngine {
 
       return {
         timeframe,
-        anomalies: anomalies.sort((a, b) => {
-          const severityOrder = { high: 3, medium: 2, low: 1 };
+        anomalies: anomalies.sort((a: any, b: any) => {
+          const severityOrder: Record<string, number> = { high: 3, medium: 2, low: 1 };
           return severityOrder[b.severity] - severityOrder[a.severity];
         }),
         summary: {
           totalAnomalies: anomalies.length,
           severityBreakdown: {
-            high: anomalies.filter(a => a.severity === 'high').length,
-            medium: anomalies.filter(a => a.severity === 'medium').length,
-            low: anomalies.filter(a => a.severity === 'low').length
+            high: anomalies.filter((a: any) => a.severity === 'high').length,
+            medium: anomalies.filter((a: any) => a.severity === 'medium').length,
+            low: anomalies.filter((a: any) => a.severity === 'low').length
           },
-          modulesAffected: [...new Set(anomalies.map(a => a.module))],
-          systemHealth: anomalies.filter(a => a.severity === 'high').length > 0 ? 'attention_required' : 'normal'
+          modulesAffected: [...new Set(anomalies.map((a: any) => a.module))],
+          systemHealth: anomalies.filter((a: any) => a.severity === 'high').length > 0 ? 'attention_required' : 'normal'
         },
         insights: {
           trends: [
             anomalies.length > 3 ? 'Multiple anomalies detected - investigate system-wide issues' : null,
-            anomalies.every(a => a.severity === 'low') ? 'Minor anomalies only - system performing normally' : null
+            anomalies.every((a: any) => a.severity === 'low') ? 'Minor anomalies only - system performing normally' : null
           ].filter(Boolean)
         }
       };
@@ -1400,7 +1400,7 @@ export class AnalyticsEngine {
       const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
 
       // Get recent integration activities
-      const recentIntegrations = await storage.db
+      const recentIntegrations = await db
         .select()
         .from(auditLogs)
         .where(and(
@@ -1420,31 +1420,31 @@ export class AnalyticsEngine {
           responseTime: 145, // ms (simulated)
           successRate: 98.5, // % (simulated)
           throughput: 45, // requests per minute (simulated)
-          lastHourActivity: recentIntegrations.filter(i => i.description.includes('member_claims')).length
+          lastHourActivity: recentIntegrations.filter((i: any) => i.description.includes('member_claims')).length
         },
         'wellness_risk': {
           responseTime: 120,
           successRate: 99.2,
           throughput: 25,
-          lastHourActivity: recentIntegrations.filter(i => i.description.includes('wellness_risk')).length
+          lastHourActivity: recentIntegrations.filter((i: any) => i.description.includes('wellness_risk')).length
         },
         'provider_claims': {
           responseTime: 165,
           successRate: 97.8,
           throughput: 30,
-          lastHourActivity: recentIntegrations.filter(i => i.description.includes('provider_claims')).length
+          lastHourActivity: recentIntegrations.filter((i: any) => i.description.includes('provider_claims')).length
         },
         'member_premium': {
           responseTime: 110,
           successRate: 99.5,
           throughput: 20,
-          lastHourActivity: recentIntegrations.filter(i => i.description.includes('member_premium')).length
+          lastHourActivity: recentIntegrations.filter((i: any) => i.description.includes('member_premium')).length
         },
         'cross_module_notifications': {
           responseTime: 95,
           successRate: 99.8,
           throughput: 15,
-          lastHourActivity: recentIntegrations.filter(i => i.description.includes('notification')).length
+          lastHourActivity: recentIntegrations.filter((i: any) => i.description.includes('notification')).length
         }
       };
 
@@ -1456,7 +1456,7 @@ export class AnalyticsEngine {
         averageSuccessRate: Object.values(endpointPerformance).reduce((sum, ep) => sum + ep.successRate, 0) / Object.keys(endpointPerformance).length,
         totalThroughput: Object.values(endpointPerformance).reduce((sum, ep) => sum + ep.throughput, 0),
         activeEndpoints: Object.keys(endpointPerformance).length,
-        recentErrors: recentIntegrations.filter(i => i.description.includes('error')).length
+        recentErrors: recentIntegrations.filter((i: any) => i.description.includes('error')).length
       };
 
       // Identify performance issues
@@ -1501,34 +1501,35 @@ export class AnalyticsEngine {
   // Business Intelligence: Member Lifetime Value
   static async calculateMemberLifetimeValue(memberId?: number, timeframe: '1year' | '3years' | '5years' = '3years') {
     try {
+      const now = new Date();
       let memberIds: number[];
 
       if (memberId) {
         memberIds = [memberId];
       } else {
         // Get all members for cohort analysis
-        const allMembers = await storage.db.select().from(members).limit(1000);
-        memberIds = allMembers.map(m => m.id);
+        const allMembers = await db.select().from(members).limit(1000);
+        memberIds = allMembers.map((m: any) => m.id);
       }
 
       // Get comprehensive member data
       const [membersData, claimsData, premiumsData, wellnessData, communicationData] = await Promise.all([
-        storage.db.select().from(members).where(inArray(members.id, memberIds)),
-        storage.db.select().from(claims).where(inArray(claims.memberId, memberIds)),
-        storage.db.select().from(premiums).where(inArray(premiums.memberId, memberIds)),
-        storage.db.select().from(wellnessActivities).where(inArray(wellnessActivities.memberId, memberIds)),
-        storage.db.select().from(communicationLogs).where(inArray(communicationLogs.memberId, memberIds))
+        db.select().from(members).where(inArray(members.id, memberIds)),
+        db.select().from(claims).where(inArray(claims.memberId, memberIds)),
+        db.select().from(premiums).where(inArray(premiums.memberId, memberIds)),
+        db.select().from(wellnessActivities).where(inArray(wellnessActivities.memberId, memberIds)),
+        db.select().from(communicationLogs).where(inArray(communicationLogs.memberId, memberIds))
       ]);
 
       // Calculate LTV for each member
-      const memberLTVData = membersData.map(member => {
-        const memberClaims = claimsData.filter(c => c.memberId === member.id);
-        const memberPremiums = premiumsData.filter(p => p.memberId === member.id);
-        const memberWellness = wellnessData.filter(w => w.memberId === member.id);
-        const memberCommunications = communicationData.filter(c => c.memberId === member.id);
+      const memberLTVData = membersData.map((member: any) => {
+        const memberClaims = claimsData.filter((c: any) => c.memberId === member.id);
+        const memberPremiums = premiumsData.filter((p: any) => p.memberId === member.id);
+        const memberWellness = wellnessData.filter((w: any) => w.memberId === member.id);
+        const memberCommunications = communicationData.filter((c: any) => c.memberId === member.id);
 
-        const totalRevenue = memberPremiums.reduce((sum, p) => sum + (p.amount || 0), 0);
-        const totalClaimsCost = memberClaims.reduce((sum, c) => sum + (c.totalAmount || 0), 0);
+        const totalRevenue = memberPremiums.reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+        const totalClaimsCost = memberClaims.reduce((sum: number, c: any) => sum + (c.totalAmount || 0), 0);
         const netRevenue = totalRevenue - totalClaimsCost;
 
         const memberAge = new Date().getFullYear() - new Date(member.dateOfBirth).getFullYear();
@@ -1538,7 +1539,7 @@ export class AnalyticsEngine {
         // Calculate engagement score
         const engagementScore = (
           (memberWellness.length * 2) +
-          (memberCommunications.filter(c => c.status === 'sent').length * 1) +
+          (memberCommunications.filter((c: any) => c.status === 'sent').length * 1) +
           (memberClaims.length * 0.5)
         ) / Math.max(1, memberTenure * 12);
 
@@ -1611,30 +1612,30 @@ export class AnalyticsEngine {
       // Calculate cohort analytics
       const cohortAnalytics = {
         totalMembers: memberLTVData.length,
-        averageLTV: Math.round(memberLTVData.reduce((sum, m) => sum + m.ltv.predicted, 0) / memberLTVData.length),
-        totalPredictedRevenue: memberLTVData.reduce((sum, m) => sum + m.ltv.predicted, 0),
+        averageLTV: Math.round(memberLTVData.reduce((sum: number, m: any) => sum + m.ltv.predicted, 0) / memberLTVData.length),
+        totalPredictedRevenue: memberLTVData.reduce((sum: number, m: any) => sum + m.ltv.predicted, 0),
         distribution: {
-          ageGroups: memberLTVData.reduce((acc, m) => {
+          ageGroups: memberLTVData.reduce((acc: any, m: any) => {
             acc[m.segmentation.ageGroup] = (acc[m.segmentation.ageGroup] || 0) + 1;
             return acc;
           }, {} as Record<string, number>),
-          valueTiers: memberLTVData.reduce((acc, m) => {
+          valueTiers: memberLTVData.reduce((acc: any, m: any) => {
             acc[m.segmentation.valueTier] = (acc[m.segmentation.valueTier] || 0) + 1;
             return acc;
           }, {} as Record<string, number>),
-          engagementLevels: memberLTVData.reduce((acc, m) => {
+          engagementLevels: memberLTVData.reduce((acc: any, m: any) => {
             acc[m.segmentation.engagement] = (acc[m.segmentation.engagement] || 0) + 1;
             return acc;
           }, {} as Record<string, number>)
         },
         insights: {
-          highValueMembers: memberLTVData.filter(m => m.segmentation.valueTier === 'high_value').length,
-          atRiskMembers: memberLTVData.filter(m => m.ltv.netRevenue < 0).length,
-          engagementOpportunities: memberLTVData.filter(m => m.segmentation.engagement === 'low_engagement').length,
+          highValueMembers: memberLTVData.filter((m: any) => m.segmentation.valueTier === 'high_value').length,
+          atRiskMembers: memberLTVData.filter((m: any) => m.ltv.netRevenue < 0).length,
+          engagementOpportunities: memberLTVData.filter((m: any) => m.segmentation.engagement === 'low_engagement').length,
           recommendations: [
-            memberLTVData.filter(m => m.ltv.netRevenue < 0).length > memberLTVData.length * 0.2 ?
+            memberLTVData.filter((m: any) => m.ltv.netRevenue < 0).length > memberLTVData.length * 0.2 ?
               'Investigate high-cost members for intervention programs' : null,
-            memberLTVData.filter(m => m.segmentation.engagement === 'low_engagement').length > memberLTVData.length * 0.4 ?
+            memberLTVData.filter((m: any) => m.segmentation.engagement === 'low_engagement').length > memberLTVData.length * 0.4 ?
               'Implement engagement improvement programs for low-engagement members' : null
           ].filter(Boolean)
         }
@@ -1644,8 +1645,8 @@ export class AnalyticsEngine {
         memberId: memberId || 'cohort_analysis',
         timeframe,
         memberLTVData: memberId ?
-          memberLTVData.find(m => m.memberId === memberId) :
-          memberLTVData.sort((a, b) => b.ltv.predicted - a.ltv.predicted).slice(0, 50),
+          memberLTVData.find((m: any) => m.memberId === memberId) :
+          memberLTVData.sort((a: any, b: any) => b.ltv.predicted - a.ltv.predicted).slice(0, 50),
         cohortAnalytics: memberId ? null : cohortAnalytics
       };
     } catch (error) {
@@ -1658,26 +1659,26 @@ export class AnalyticsEngine {
   static async optimizeProviderNetwork(optimizationType: 'coverage' | 'cost' | 'quality' = 'coverage') {
     try {
       // Get provider and claims data
-      const [providers, claims] = await Promise.all([
-        storage.db.select().from(providers),
-        storage.db.select().from(claims).orderBy(desc(claims.createdAt)).limit(2000)
+      const [providersData, claimsData] = await Promise.all([
+        db.select().from(providers),
+        db.select().from(claims).orderBy(desc(claims.createdAt)).limit(2000)
       ]);
 
       // Analyze provider performance metrics
-      const providerAnalysis = providers.map(provider => {
-        const providerClaims = claims.filter(c => c.providerId === provider.id);
+      const providerAnalysis = providersData.map((provider: any) => {
+        const providerClaims = claimsData.filter((c: any) => c.providerId === provider.id);
         const avgProcessingTime = providerClaims.length > 0 ?
-          providerClaims.reduce((sum, claim) => {
+          providerClaims.reduce((sum: number, claim: any) => {
             return sum + (claim.processedAt ?
               Math.ceil((new Date(claim.processedAt).getTime() - new Date(claim.createdAt).getTime()) / (1000 * 60 * 60 * 24))
               : 0);
           }, 0) / providerClaims.length : 0;
 
         const approvalRate = providerClaims.length > 0 ?
-          (providerClaims.filter(c => c.status === 'approved').length / providerClaims.length) * 100 : 0;
+          (providerClaims.filter((c: any) => c.status === 'approved').length / providerClaims.length) * 100 : 0;
 
         const avgClaimAmount = providerClaims.length > 0 ?
-          providerClaims.reduce((sum, c) => sum + (c.totalAmount || 0), 0) / providerClaims.length : 0;
+          providerClaims.reduce((sum: number, c: any) => sum + (c.totalAmount || 0), 0) / providerClaims.length : 0;
 
         const totalClaimVolume = providerClaims.length;
 
@@ -1700,7 +1701,7 @@ export class AnalyticsEngine {
       });
 
       // Network optimization analysis
-      let optimizationResults = {};
+      let optimizationResults: any = {};
 
       switch (optimizationType) {
         case 'coverage':
@@ -1716,10 +1717,10 @@ export class AnalyticsEngine {
 
       // Overall network health metrics
       const networkHealth = {
-        totalProviders: providers.length,
-        activeProviders: providers.filter(p => p.networkStatus === 'active').length,
-        averagePerformance: providerAnalysis.reduce((sum, p) => sum + p.metrics.qualityScore, 0) / providerAnalysis.length,
-        tierDistribution: providers.reduce((acc, p) => {
+        totalProviders: providersData.length,
+        activeProviders: providersData.filter((p: any) => p.networkStatus === 'active').length,
+        averagePerformance: providerAnalysis.reduce((sum: number, p: any) => sum + p.metrics.qualityScore, 0) / providerAnalysis.length,
+        tierDistribution: providersData.reduce((acc: any, p: any) => {
           acc[p.networkTier] = (acc[p.networkTier] || 0) + 1;
           return acc;
         }, {} as Record<string, number>)
@@ -1732,9 +1733,9 @@ export class AnalyticsEngine {
         timestamp: new Date().toISOString(),
         actionableInsights: [
           networkHealth.averagePerformance < 3.5 ? 'Overall network quality requires improvement' : null,
-          providerAnalysis.filter(p => p.metrics.avgProcessingTime > 7).length > providerAnalysis.length * 0.3 ?
+          providerAnalysis.filter((p: any) => p.metrics.avgProcessingTime > 7).length > providerAnalysis.length * 0.3 ?
             'Significant number of providers with slow processing times' : null,
-          optimizationResults.recommendations ? optimizationResults.recommendations.slice(0, 3) : null
+          (optimizationResults as any).recommendations ? (optimizationResults as any).recommendations.slice(0, 3) : null
         ].filter(Boolean)
       };
     } catch (error) {
@@ -1745,10 +1746,10 @@ export class AnalyticsEngine {
 
   // Helper methods for network optimization
   private static analyzeCoverageOptimization(providerAnalysis: any[]) {
-    const specializations = [...new Set(providerAnalysis.map(p => p.specialization))];
+    const specializations = [...new Set(providerAnalysis.map((p: any) => p.specialization))];
 
-    const coverageGaps = specializations.map(specialty => {
-      const providers = providerAnalysis.filter(p => p.specialization.includes(specialty) && p.networkStatus === 'active');
+    const coverageGaps = specializations.map((specialty: string) => {
+      const providers = providerAnalysis.filter((p: any) => p.specialization.includes(specialty) && p.networkStatus === 'active');
       return {
         specialty,
         currentProviders: providers.length,
@@ -1760,9 +1761,9 @@ export class AnalyticsEngine {
 
     return {
       type: 'coverage',
-      coverageGaps: coverageGaps.sort((a, b) => b.gap - a.gap),
+      coverageGaps: coverageGaps.sort((a: any, b: any) => b.gap - a.gap),
       recommendations: [
-        `Recruit ${coverageGaps.filter(g => g.priority === 'high').reduce((sum, g) => sum + g.gap, 0)} providers for high-priority specialties`,
+        `Recruit ${coverageGaps.filter((g: any) => g.priority === 'high').reduce((sum: number, g: any) => sum + g.gap, 0)} providers for high-priority specialties`,
         'Focus on underserved geographic areas',
         'Implement tiered recruitment strategy based on demand'
       ],
@@ -1880,10 +1881,10 @@ export class AnalyticsEngine {
         .limit(200);
 
       // Calculate analytics metrics
-      const totalClaims = claimsData.reduce((sum, claim) => sum + (claim.totalAmount || 0), 0);
-      const totalPremiums = premiumsData.reduce((sum, premium) => sum + (premium.amount || 0), 0);
-      const approvedClaims = claimsData.filter(claim => claim.status === 'approved').length;
-      const deniedClaims = claimsData.filter(claim => claim.status === 'denied').length;
+      const totalClaims = claimsData.reduce((sum: number, claim: any) => sum + (claim.totalAmount || 0), 0);
+      const totalPremiums = premiumsData.reduce((sum: number, premium: any) => sum + (premium.amount || 0), 0);
+      const approvedClaims = claimsData.filter((claim: any) => claim.status === 'approved').length;
+      const deniedClaims = claimsData.filter((claim: any) => claim.status === 'denied').length;
 
       return {
         memberId,
@@ -1899,7 +1900,7 @@ export class AnalyticsEngine {
         premiums: {
           total: totalPremiums,
           averagePremium: premiumsData.length > 0 ? totalPremiums / premiumsData.length : 0,
-          paymentHistory: premiumsData.map(p => ({
+          paymentHistory: premiumsData.map((p: any) => ({
             date: p.effectiveStartDate,
             amount: p.amount,
             status: p.status
@@ -1908,8 +1909,8 @@ export class AnalyticsEngine {
         wellness: {
           totalActivities: wellnessData.length,
           averageScore: wellnessData.length > 0 ?
-            wellnessData.reduce((sum, w) => sum + (w.wellnessScore || 0), 0) / wellnessData.length : 0,
-          activitiesByType: wellnessData.reduce((acc, activity) => {
+            wellnessData.reduce((sum: number, w: any) => sum + (w.wellnessScore || 0), 0) / wellnessData.length : 0,
+          activitiesByType: wellnessData.reduce((acc: any, activity: any) => {
             acc[activity.activityType] = (acc[activity.activityType] || 0) + 1;
             return acc;
           }, {} as Record<string, number>)
@@ -1936,9 +1937,9 @@ export class AnalyticsEngine {
         db.select().from(providers).where(eq(providers.networkStatus, 'active')).limit(1000)
       ]);
 
-      const totalClaimsAmount = totalClaims.reduce((sum, claim) => sum + (claim.totalAmount || 0), 0);
-      const totalPremiumsAmount = totalPremiums.reduce((sum, premium) => sum + (premium.amount || 0), 0);
-      const approvedClaimsCount = totalClaims.filter(claim => claim.status === 'approved').length;
+      const totalClaimsAmount = totalClaims.reduce((sum: number, claim: any) => sum + (claim.totalAmount || 0), 0);
+      const totalPremiumsAmount = totalPremiums.reduce((sum: number, premium: any) => sum + (premium.amount || 0), 0);
+      const approvedClaimsCount = totalClaims.filter((claim: any) => claim.status === 'approved').length;
 
       return {
         overview: {
@@ -1970,12 +1971,12 @@ export class AnalyticsEngine {
   static async getClaimsTrends(period: string = '12months', includeFraudDetection: boolean = true) {
     try {
       // Get claims data for trend analysis
-      const claims = await db.select().from(claims)
+      const claimsData = await db.select().from(claims)
         .orderBy(desc(claims.createdAt))
         .limit(2000);
 
       // Group claims by month for trend analysis
-      const monthlyTrends = this.groupByMonth(claims,
+      const monthlyTrends = this.groupByMonth(claimsData,
         new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
         new Date()
       );
@@ -1984,9 +1985,9 @@ export class AnalyticsEngine {
       let fraudDetection = null;
       if (includeFraudDetection) {
         fraudDetection = {
-          suspiciousPatterns: this.detectFraudPatterns(claims),
-          riskFactors: this.identifyRiskFactors(claims),
-          recommendations: this.generateFraudRecommendations(claims)
+          suspiciousPatterns: this.detectFraudPatterns(claimsData),
+          riskFactors: this.identifyRiskFactors(claimsData),
+          recommendations: this.generateFraudRecommendations(claimsData)
         };
       }
 
@@ -1994,12 +1995,12 @@ export class AnalyticsEngine {
         period,
         monthlyTrends,
         summary: {
-          totalClaims: claims.length,
+          totalClaims: claimsData.length,
           averageMonthlyClaims: monthlyTrends.length > 0 ?
             monthlyTrends.reduce((sum, month) => sum + month.count, 0) / monthlyTrends.length : 0,
-          totalAmount: claims.reduce((sum, claim) => sum + (claim.totalAmount || 0), 0),
-          averageClaimAmount: claims.length > 0 ?
-            claims.reduce((sum, claim) => sum + (claim.totalAmount || 0), 0) / claims.length : 0
+          totalAmount: claimsData.reduce((sum: number, claim: any) => sum + (claim.totalAmount || 0), 0),
+          averageClaimAmount: claimsData.length > 0 ?
+            claimsData.reduce((sum: number, claim: any) => sum + (claim.totalAmount || 0), 0) / claimsData.length : 0
         },
         fraudDetection
       };
@@ -2012,15 +2013,15 @@ export class AnalyticsEngine {
   static async getProviderCostOptimization() {
     try {
       // Get provider and claims data for cost analysis
-      const [providers, claims] = await Promise.all([
+      const [providersData, claimsData] = await Promise.all([
         db.select().from(providers),
         db.select().from(claims).orderBy(desc(claims.createdAt)).limit(2000)
       ]);
 
       // Analyze provider costs
-      const providerCosts = providers.map(provider => {
-        const providerClaims = claims.filter(claim => claim.providerId === provider.id);
-        const totalCost = providerClaims.reduce((sum, claim) => sum + (claim.totalAmount || 0), 0);
+      const providerCosts = providersData.map((provider: any) => {
+        const providerClaims = claimsData.filter((claim: any) => claim.providerId === provider.id);
+        const totalCost = providerClaims.reduce((sum: number, claim: any) => sum + (claim.totalAmount || 0), 0);
         const averageCost = providerClaims.length > 0 ? totalCost / providerClaims.length : 0;
 
         return {
@@ -2036,21 +2037,21 @@ export class AnalyticsEngine {
       });
 
       // Identify optimization opportunities
-      const expensiveProviders = providerCosts.filter(p => p.averageCost > 5000);
-      const highVolumeProviders = providerCosts.filter(p => p.totalClaims > 50);
+      const expensiveProviders = providerCosts.filter((p: any) => p.averageCost > 5000);
+      const highVolumeProviders = providerCosts.filter((p: any) => p.totalClaims > 50);
 
       return {
         overview: {
-          totalProviders: providers.length,
-          averageCostPerProvider: providerCosts.reduce((sum, p) => sum + p.averageCost, 0) / providerCosts.length
+          totalProviders: providersData.length,
+          averageCostPerProvider: providerCosts.reduce((sum: number, p: any) => sum + p.averageCost, 0) / providerCosts.length
         },
         optimizationOpportunities: {
-          expensiveProviders: expensiveProviders.map(p => ({
+          expensiveProviders: expensiveProviders.map((p: any) => ({
             ...p,
             potentialSavings: (p.averageCost - 3000) * p.totalClaims,
             recommendation: 'Negotiate rates or consider alternative providers'
           })),
-          highVolumeProviders: highVolumeProviders.map(p => ({
+          highVolumeProviders: highVolumeProviders.map((p: any) => ({
             ...p,
             volumeDiscountPotential: p.totalCost * 0.05,
             recommendation: 'Leverage volume for better rates'
