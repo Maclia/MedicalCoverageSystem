@@ -942,6 +942,9 @@ export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  username: text("username").unique(),
+  fullName: text("full_name"),
+  role: text("role"),
   userType: userTypeEnum("user_type").notNull(),
   entityId: integer("entity_id").notNull(), // References company, institution, or personnel ID
   isActive: boolean("is_active").default(true),
@@ -971,6 +974,27 @@ export const auditLogs = pgTable("audit_logs", {
   ipAddress: text("ip_address"),
   userAgent: text("user_agent"),
   timestamp: timestamp("timestamp").defaultNow().notNull(),
+});
+
+// System logs for application-level logging
+export const systemLogs = pgTable("system_logs", {
+  id: serial("id").primaryKey(),
+  level: text("level").notNull(),
+  message: text("message").notNull(),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// System settings for application configuration
+export const systemSettings = pgTable("system_settings", {
+  id: serial("id").primaryKey(),
+  key: text("key").notNull().unique(),
+  value: text("value").notNull(),
+  description: text("description"),
+  category: text("category"),
+  isPublic: boolean("is_public").default(false),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 // Premium Payments table
