@@ -4,6 +4,7 @@ declare module 'express' {
   export type Request = http.IncomingMessage & { body?: any; params?: any; query?: any };
   export type Response = http.ServerResponse & { json?: (body: any) => void; status?: (code: number) => Response };
   export type NextFunction = (err?: any) => void;
+  export type Express = any;
   const express: any;
   export default express;
 }
