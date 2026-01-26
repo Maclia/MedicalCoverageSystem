@@ -12,7 +12,6 @@
     "noEmit": true,
     "jsx": "preserve",
     "lib": ["ES2022", "DOM"],
-    "types": ["node"],
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
