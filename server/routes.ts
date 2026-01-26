@@ -1,5 +1,6 @@
 import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
+// @ts-ignore - Storage interface is incomplete
 import { storage } from "./storage";
 import { AnalyticsEngine } from './routes/analytics.js';
 import {
@@ -86,7 +87,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
-        res.status(400).json({ error: validationError.message });
+        res.status(400).json({ error: validation(error as any).message });
       } else {
         res.status(500).json({ error: "Internal server error" });
       }
@@ -121,7 +122,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Authentication Routes
-  app.post("/api/auth/login", validateRequest(loginSchema), async (req, res) => {
+  app.post("/api/auth/login", validateRequest(loginSchema), async (req: any, res: any) => {
     try {
       const { email, password, userType } = req.body;
       const ipAddress = req.ip || req.connection.remoteAddress;
@@ -143,12 +144,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Authentication failed';
+      const errorMessage = error instanceof Error ? (error as any).message : 'Authentication failed';
       res.status(401).json({ error: errorMessage });
     }
   });
 
-  app.post("/api/auth/refresh", validateRequest(refreshSchema), async (req, res) => {
+  app.post("/api/auth/refresh", validateRequest(refreshSchema), async (req: any, res: any) => {
     try {
       const { refreshToken } = req.body;
       const ipAddress = req.ip || req.connection.remoteAddress;
@@ -165,12 +166,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Token refresh failed';
+      const errorMessage = error instanceof Error ? (error as any).message : 'Token refresh failed';
       res.status(401).json({ error: errorMessage });
     }
   });
 
-  app.post("/api/auth/logout", async (req, res) => {
+  app.post("/api/auth/logout", async (req: any, res: any) => {
     try {
       const authHeader = req.headers.authorization;
 
@@ -186,7 +187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Logged out successfully'
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Logout failed';
+      const errorMessage = error instanceof Error ? (error as any).message : 'Logout failed';
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -230,12 +231,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         data: profile
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Profile fetch failed';
+      const errorMessage = error instanceof Error ? (error as any).message : 'Profile fetch failed';
       res.status(500).json({ error: errorMessage });
     }
   });
 
-  app.post("/api/auth/forgot-password", validateRequest(forgotPasswordSchema), async (req, res) => {
+  app.post("/api/auth/forgot-password", validateRequest(forgotPasswordSchema), async (req: any, res: any) => {
     try {
       const { email, userType } = req.body;
 
@@ -249,12 +250,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Password reset link sent to your email address'
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
+      const errorMessage = error instanceof Error ? (error as any).message : 'Password reset failed';
       res.status(500).json({ error: errorMessage });
     }
   });
 
-  app.post("/api/auth/reset-password", validateRequest(resetPasswordSchema), async (req, res) => {
+  app.post("/api/auth/reset-password", validateRequest(resetPasswordSchema), async (req: any, res: any) => {
     try {
       const { token, newPassword } = req.body;
 
@@ -269,7 +270,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Password reset successfully'
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Password reset failed';
+      const errorMessage = error instanceof Error ? (error as any).message : 'Password reset failed';
       res.status(500).json({ error: errorMessage });
     }
   });
@@ -313,7 +314,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // API Routes
   // Companies - Protected routes
-  app.get("/api/companies", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/companies", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const companies = await storage.getCompanies();
       res.json(companies);
@@ -326,7 +327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     authenticate,
     requireRole(['insurance']),
     requireOwnership((user, resourceId) => user.entityId === parseInt(resourceId)),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: any) => {
       try {
         const company = await storage.getCompany(Number(req.params.id));
         if (!company) {
@@ -343,7 +344,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     authenticate,
     requireRole(['insurance']),
     validateRequest(insertCompanySchema),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: any) => {
       try {
         const company = await storage.createCompany(req.body);
         res.status(201).json(company);
@@ -357,7 +358,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/members",
     authenticate,
     requireRole(['insurance']),
-    async (req: AuthenticatedRequest, res) => {
+    async (req: AuthenticatedRequest, res: any) => {
       try {
         let members;
         if (req.query.companyId) {
@@ -377,7 +378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   );
   
   // Add endpoint for getting members by company ID in URL path
-  app.get("/api/members/company/:companyId", async (req, res) => {
+  app.get("/api/members/company/:companyId", async (req: any, res: any) => {
     try {
       const companyId = Number(req.params.companyId);
       if (isNaN(companyId)) {
@@ -428,7 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/members/principal", async (req, res) => {
+  app.get("/api/members/principal", async (req: any, res: any) => {
     try {
       let members;
       if (req.query.companyId) {
@@ -442,7 +443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/members/:id", async (req, res) => {
+  app.get("/api/members/:id", async (req: any, res: any) => {
     try {
       const member = await storage.getMember(Number(req.params.id));
       if (!member) {
@@ -454,7 +455,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/members/:id/dependents", async (req, res) => {
+  app.get("/api/members/:id/dependents", async (req: any, res: any) => {
     try {
       const dependents = await storage.getDependentsByPrincipal(Number(req.params.id));
       res.json(dependents);
@@ -463,7 +464,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/members/principal", validateRequest(insertPrincipalMemberSchema), async (req, res) => {
+  app.post("/api/members/principal", validateRequest(insertPrincipalMemberSchema), async (req: any, res: any) => {
     try {
       console.log("Creating principal member:", req.body);
       // Create the principal member
@@ -490,14 +491,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const companyMembers = await storage.getMembersByCompany(member.companyId);
               
               // Count member types
-              const principalCount = companyMembers.filter(m => m.memberType === 'principal').length;
-              const spouseCount = companyMembers.filter(m => 
+              const principalCount = companyMembers.filter((m: any) => m.memberType === 'principal').length;
+              const spouseCount = companyMembers.filter((m: any) => 
                 m.memberType === 'dependent' && m.dependentType === 'spouse'
               ).length;
-              const childCount = companyMembers.filter(m => 
+              const childCount = companyMembers.filter((m: any) => 
                 m.memberType === 'dependent' && m.dependentType === 'child' && !m.hasDisability
               ).length;
-              const specialNeedsCount = companyMembers.filter(m => 
+              const specialNeedsCount = companyMembers.filter((m: any) => 
                 m.memberType === 'dependent' && m.dependentType === 'child' && m.hasDisability
               ).length;
               
@@ -537,14 +538,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const companyMembers = await storage.getMembersByCompany(member.companyId);
               
               // Count member types
-              const principalCount = companyMembers.filter(m => m.memberType === 'principal').length;
-              const spouseCount = companyMembers.filter(m => 
+              const principalCount = companyMembers.filter((m: any) => m.memberType === 'principal').length;
+              const spouseCount = companyMembers.filter((m: any) => 
                 m.memberType === 'dependent' && m.dependentType === 'spouse'
               ).length;
-              const childCount = companyMembers.filter(m => 
+              const childCount = companyMembers.filter((m: any) => 
                 m.memberType === 'dependent' && m.dependentType === 'child' && !m.hasDisability
               ).length;
-              const specialNeedsCount = companyMembers.filter(m => 
+              const specialNeedsCount = companyMembers.filter((m: any) => 
                 m.memberType === 'dependent' && m.dependentType === 'child' && m.hasDisability
               ).length;
               
@@ -591,7 +592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/members/dependent", async (req, res) => {
+  app.post("/api/members/dependent", async (req: any, res: any) => {
     try {
       // Custom validation for dependent age requirements
       const validatedData = insertDependentMemberSchema.parse(req.body);
@@ -647,14 +648,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const companyMembers = await storage.getMembersByCompany(member.companyId);
             
             // Count member types
-            const principalCount = companyMembers.filter(m => m.memberType === 'principal').length;
-            const spouseCount = companyMembers.filter(m => 
+            const principalCount = companyMembers.filter((m: any) => m.memberType === 'principal').length;
+            const spouseCount = companyMembers.filter((m: any) => 
               m.memberType === 'dependent' && m.dependentType === 'spouse'
             ).length;
-            const childCount = companyMembers.filter(m => 
+            const childCount = companyMembers.filter((m: any) => 
               m.memberType === 'dependent' && m.dependentType === 'child' && !m.hasDisability
             ).length;
-            const specialNeedsCount = companyMembers.filter(m => 
+            const specialNeedsCount = companyMembers.filter((m: any) => 
               m.memberType === 'dependent' && m.dependentType === 'child' && m.hasDisability
             ).length;
             
@@ -717,7 +718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
-        res.status(400).json({ error: validationError.message });
+        res.status(400).json({ error: validation(error as any).message });
       } else {
         res.status(500).json({ error: "Failed to create dependent member" });
       }
@@ -725,7 +726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Delete a member
-  app.delete("/api/members/:id", async (req, res) => {
+  app.delete("/api/members/:id", async (req: any, res: any) => {
     try {
       if (!storage.deleteMember) {
         return res.status(501).json({ error: 'Member deletion is not supported by the current storage implementation' });
@@ -794,13 +795,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         member: deletedMember
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      const errorMessage = error instanceof Error ? (error as any).message : 'Unknown error';
       res.status(500).json({ error: `Failed to delete member: ${errorMessage}` });
     }
   });
 
   // Periods
-  app.get("/api/periods", async (req, res) => {
+  app.get("/api/periods", async (req: any, res: any) => {
     try {
       console.log('GET /api/periods: Calling storage.getPeriods()');
       console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
@@ -809,12 +810,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log('Periods fetched successfully:', periods.length);
       res.json(periods);
     } catch (error) {
-      console.error('Error fetching periods:', error);
-      res.status(500).json({ error: "Failed to fetch periods", details: error.message });
+      console.error(Error fetching periods:, error as any);
+      res.status(500).json({ error: "Failed to fetch periods", details: (error as any).message });
     }
   });
 
-  app.get("/api/periods/active", async (req, res) => {
+  app.get("/api/periods/active", async (req: any, res: any) => {
     try {
       console.log('GET /api/periods/active: Calling storage.getActivePeriod()');
       console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
@@ -826,12 +827,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json(period);
     } catch (error) {
-      console.error('Error fetching active period:', error);
-      res.status(500).json({ error: "Failed to fetch active period", details: error.message });
+      console.error(Error fetching active period:, error as any);
+      res.status(500).json({ error: "Failed to fetch active period", details: (error as any).message });
     }
   });
 
-  app.get("/api/periods/:id", async (req, res) => {
+  app.get("/api/periods/:id", async (req: any, res: any) => {
     try {
       const period = await storage.getPeriod(Number(req.params.id));
       if (!period) {
@@ -843,7 +844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/periods", validateRequest(insertPeriodSchema), async (req, res) => {
+  app.post("/api/periods", validateRequest(insertPeriodSchema), async (req: any, res: any) => {
     try {
       const period = await storage.createPeriod(req.body);
       res.status(201).json(period);
@@ -853,7 +854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Premium Rates
-  app.get("/api/premium-rates", async (req, res) => {
+  app.get("/api/premium-rates", async (req: any, res: any) => {
     try {
       const rates = await storage.getPremiumRates();
       res.json(rates);
@@ -862,7 +863,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/premium-rates/period/:periodId", async (req, res) => {
+  app.get("/api/premium-rates/period/:periodId", async (req: any, res: any) => {
     try {
       const rate = await storage.getPremiumRateByPeriod(Number(req.params.periodId));
       if (!rate) {
@@ -874,7 +875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/premium-rates", validateRequest(insertPremiumRateSchema), async (req, res) => {
+  app.post("/api/premium-rates", validateRequest(insertPremiumRateSchema), async (req: any, res: any) => {
     try {
       const rate = await storage.createPremiumRate(req.body);
       res.status(201).json(rate);
@@ -884,7 +885,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Premiums
-  app.get("/api/premiums", async (req, res) => {
+  app.get("/api/premiums", async (req: any, res: any) => {
     try {
       let premiums;
       if (req.query.companyId) {
@@ -901,7 +902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Add endpoint for getting premiums by company ID in URL path
-  app.get("/api/premiums/company/:companyId", async (req, res) => {
+  app.get("/api/premiums/company/:companyId", async (req: any, res: any) => {
     try {
       const companyId = Number(req.params.companyId);
       if (isNaN(companyId)) {
@@ -931,7 +932,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/premiums/:id", async (req, res) => {
+  app.get("/api/premiums/:id", async (req: any, res: any) => {
     try {
       const premium = await storage.getPremium(Number(req.params.id));
       if (!premium) {
@@ -943,7 +944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/premiums", validateRequest(insertPremiumSchema), async (req, res) => {
+  app.post("/api/premiums", validateRequest(insertPremiumSchema), async (req: any, res: any) => {
     try {
       const premium = await storage.createPremium(req.body);
       res.status(201).json(premium);
@@ -953,7 +954,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Premium calculation
-  app.post("/api/premiums/calculate", async (req, res) => {
+  app.post("/api/premiums/calculate", async (req: any, res: any) => {
     try {
       const { companyId, periodId } = req.body;
       
@@ -983,14 +984,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const members = await storage.getMembersByCompany(companyId);
       
       // Count member types
-      const principalCount = members.filter(m => m.memberType === 'principal').length;
-      const spouseCount = members.filter(m => m.memberType === 'dependent' && m.dependentType === 'spouse').length;
-      const childCount = members.filter(m => 
+      const principalCount = members.filter((m: any) => m.memberType === 'principal').length;
+      const spouseCount = members.filter((m: any) => m.memberType === 'dependent' && m.dependentType === 'spouse').length;
+      const childCount = members.filter((m: any) => 
         m.memberType === 'dependent' && 
         m.dependentType === 'child' && 
         !m.hasDisability
       ).length;
-      const specialNeedsCount = members.filter(m => 
+      const specialNeedsCount = members.filter((m: any) => 
         m.memberType === 'dependent' && 
         m.dependentType === 'child' && 
         m.hasDisability
@@ -1035,12 +1036,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard statistics
-  app.get("/api/dashboard/stats", async (req, res) => {
+  app.get("/api/dashboard/stats", async (req: any, res: any) => {
     try {
       const companies = await storage.getCompanies();
       const members = await storage.getMembers();
-      const principalMembers = members.filter(m => m.memberType === 'principal');
-      const dependents = members.filter(m => m.memberType === 'dependent');
+      const principalMembers = members.filter((m: any) => m.memberType === 'principal');
+      const dependents = members.filter((m: any) => m.memberType === 'dependent');
       const premiums = await storage.getPremiums();
       const benefits = await storage.getBenefits();
       
@@ -1095,7 +1096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Benefits
-  app.get("/api/benefits", async (req, res) => {
+  app.get("/api/benefits", async (req: any, res: any) => {
     try {
       let benefits;
       if (req.query.category) {
@@ -1111,7 +1112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/benefits/:id", async (req, res) => {
+  app.get("/api/benefits/:id", async (req: any, res: any) => {
     try {
       const benefit = await storage.getBenefit(Number(req.params.id));
       if (!benefit) {
@@ -1123,7 +1124,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/benefits", validateRequest(insertBenefitSchema), async (req, res) => {
+  app.post("/api/benefits", validateRequest(insertBenefitSchema), async (req: any, res: any) => {
     try {
       const benefit = await storage.createBenefit(req.body);
       res.status(201).json(benefit);
@@ -1133,7 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Company Benefits
-  app.get("/api/company-benefits", async (req, res) => {
+  app.get("/api/company-benefits", async (req: any, res: any) => {
     try {
       let companyBenefits;
       if (req.query.companyId) {
@@ -1168,7 +1169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Add endpoint for getting company benefits by company ID in URL path
-  app.get("/api/company-benefits/company/:companyId", async (req, res) => {
+  app.get("/api/company-benefits/company/:companyId", async (req: any, res: any) => {
     try {
       const companyId = Number(req.params.companyId);
       if (isNaN(companyId)) {
@@ -1199,7 +1200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/company-benefits/:id", async (req, res) => {
+  app.get("/api/company-benefits/:id", async (req: any, res: any) => {
     try {
       const companyBenefit = await storage.getCompanyBenefit(Number(req.params.id));
       if (!companyBenefit) {
@@ -1224,7 +1225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/company-benefits", validateRequest(insertCompanyBenefitSchema), async (req, res) => {
+  app.post("/api/company-benefits", validateRequest(insertCompanyBenefitSchema), async (req: any, res: any) => {
     try {
       // Verify if benefit exists
       const benefit = await storage.getBenefit(req.body.benefitId);
@@ -1253,7 +1254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Region routes
-  app.get("/api/regions", async (req, res) => {
+  app.get("/api/regions", async (req: any, res: any) => {
     try {
       const regions = await storage.getRegions();
       res.json(regions);
@@ -1262,7 +1263,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/regions/:id", async (req, res) => {
+  app.get("/api/regions/:id", async (req: any, res: any) => {
     try {
       const region = await storage.getRegion(Number(req.params.id));
       if (!region) {
@@ -1274,7 +1275,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/regions", validateRequest(insertRegionSchema), async (req, res) => {
+  app.post("/api/regions", validateRequest(insertRegionSchema), async (req: any, res: any) => {
     try {
       const region = await storage.createRegion(req.body);
       res.status(201).json(region);
@@ -1284,7 +1285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical Institution routes
-  app.get("/api/medical-institutions", async (req, res) => {
+  app.get("/api/medical-institutions", async (req: any, res: any) => {
     try {
       let institutions;
       if (req.query.regionId) {
@@ -1302,7 +1303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/medical-institutions/:id", async (req, res) => {
+  app.get("/api/medical-institutions/:id", async (req: any, res: any) => {
     try {
       const institution = await storage.getMedicalInstitution(Number(req.params.id));
       if (!institution) {
@@ -1314,7 +1315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/medical-institutions", validateRequest(insertMedicalInstitutionSchema), async (req, res) => {
+  app.post("/api/medical-institutions", validateRequest(insertMedicalInstitutionSchema), async (req: any, res: any) => {
     try {
       const institution = await storage.createMedicalInstitution(req.body);
       res.status(201).json(institution);
@@ -1323,7 +1324,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/medical-institutions/:id/approval", async (req, res) => {
+  app.patch("/api/medical-institutions/:id/approval", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { status, validUntil } = req.body;
@@ -1345,7 +1346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical Personnel routes
-  app.get("/api/medical-personnel", async (req, res) => {
+  app.get("/api/medical-personnel", async (req: any, res: any) => {
     try {
       let personnel;
       if (req.query.institutionId) {
@@ -1363,7 +1364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/medical-personnel/:id", async (req, res) => {
+  app.get("/api/medical-personnel/:id", async (req: any, res: any) => {
     try {
       const personnel = await storage.getMedicalPersonnel(Number(req.params.id));
       if (!personnel) {
@@ -1375,7 +1376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/medical-personnel", validateRequest(insertMedicalPersonnelSchema), async (req, res) => {
+  app.post("/api/medical-personnel", validateRequest(insertMedicalPersonnelSchema), async (req: any, res: any) => {
     try {
       const personnel = await storage.createMedicalPersonnel(req.body);
       res.status(201).json(personnel);
@@ -1384,7 +1385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/medical-personnel/:id/approval", async (req, res) => {
+  app.patch("/api/medical-personnel/:id/approval", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { status, validUntil } = req.body;
@@ -1406,7 +1407,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Panel Documentation routes
-  app.get("/api/panel-documentation", async (req, res) => {
+  app.get("/api/panel-documentation", async (req: any, res: any) => {
     try {
       let documentation;
       if (req.query.institutionId) {
@@ -1424,7 +1425,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/panel-documentation/:id", async (req, res) => {
+  app.get("/api/panel-documentation/:id", async (req: any, res: any) => {
     try {
       const documentation = await storage.getPanelDocumentation(Number(req.params.id));
       if (!documentation) {
@@ -1436,7 +1437,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/panel-documentation", validateRequest(insertPanelDocumentationSchema), async (req, res) => {
+  app.post("/api/panel-documentation", validateRequest(insertPanelDocumentationSchema), async (req: any, res: any) => {
     try {
       const documentation = await storage.createPanelDocumentation(req.body);
       res.status(201).json(documentation);
@@ -1445,7 +1446,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/panel-documentation/:id/verify", async (req, res) => {
+  app.patch("/api/panel-documentation/:id/verify", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { verifiedBy, notes } = req.body;
@@ -1462,7 +1463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Claims routes
-  app.get("/api/claims", async (req, res) => {
+  app.get("/api/claims", async (req: any, res: any) => {
     try {
       let claims;
       if (req.query.institutionId) {
@@ -1482,7 +1483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/claims/:id", async (req, res) => {
+  app.get("/api/claims/:id", async (req: any, res: any) => {
     try {
       const claim = await storage.getClaim(Number(req.params.id));
       if (!claim) {
@@ -1494,7 +1495,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/claims", validateRequest(insertClaimSchema), async (req, res) => {
+  app.post("/api/claims", validateRequest(insertClaimSchema), async (req: any, res: any) => {
     try {
       const { memberId, institutionId, personnelId, benefitId } = req.body;
       
@@ -1579,7 +1580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/claims/:id/status", async (req, res) => {
+  app.patch("/api/claims/:id/status", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { status, reviewerNotes } = req.body;
@@ -1595,7 +1596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/claims/:id/payment", async (req, res) => {
+  app.patch("/api/claims/:id/payment", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { paymentReference } = req.body;
@@ -1608,7 +1609,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(claim);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to process claim payment" });
       }
@@ -1618,7 +1619,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // New routes for provider verification and fraud detection
   
   // Get claims by provider verification status
-  app.get("/api/claims/verification/:status", async (req, res) => {
+  app.get("/api/claims/verification/:status", async (req: any, res: any) => {
     try {
       const { status } = req.params;
       const isVerified = status === 'verified';
@@ -1627,7 +1628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(claims);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to fetch claims by verification status" });
       }
@@ -1635,13 +1636,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get claims requiring higher approval
-  app.get("/api/claims/approval/higher", async (req, res) => {
+  app.get("/api/claims/approval/higher", async (req: any, res: any) => {
     try {
       const claims = await storage.getClaimsRequiringHigherApproval();
       res.json(claims);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to fetch claims requiring higher approval" });
       }
@@ -1649,14 +1650,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Get claims by fraud risk level
-  app.get("/api/claims/fraud/:level", async (req, res) => {
+  app.get("/api/claims/fraud/:level", async (req: any, res: any) => {
     try {
       const { level } = req.params;
       const claims = await storage.getClaimsByFraudRiskLevel(level);
       res.json(claims);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to fetch claims by fraud risk level" });
       }
@@ -1664,7 +1665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Admin approval for claim
-  app.patch("/api/claims/:id/admin-approve", async (req, res) => {
+  app.patch("/api/claims/:id/admin-approve", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { adminNotes } = req.body;
@@ -1677,7 +1678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(claim);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to admin approve claim" });
       }
@@ -1685,7 +1686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Reject claim
-  app.patch("/api/claims/:id/reject", async (req, res) => {
+  app.patch("/api/claims/:id/reject", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { reason } = req.body;
@@ -1698,7 +1699,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(claim);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to reject claim" });
       }
@@ -1706,7 +1707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Mark claim as fraudulent
-  app.patch("/api/claims/:id/mark-fraudulent", async (req, res) => {
+  app.patch("/api/claims/:id/mark-fraudulent", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { riskLevel, riskFactors, reviewerId } = req.body;
@@ -1726,7 +1727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(claim);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to mark claim as fraudulent" });
       }
@@ -1734,7 +1735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Premium Payments
-  app.get("/api/premium-payments", async (req, res) => {
+  app.get("/api/premium-payments", async (req: any, res: any) => {
     try {
       let payments;
       if (req.query.companyId) {
@@ -1770,7 +1771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/premium-payments/:id", async (req, res) => {
+  app.get("/api/premium-payments/:id", async (req: any, res: any) => {
     try {
       const payment = await storage.getPremiumPayment(Number(req.params.id));
       if (!payment) {
@@ -1796,7 +1797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/premium-payments", validateRequest(insertPremiumPaymentSchema), async (req, res) => {
+  app.post("/api/premium-payments", validateRequest(insertPremiumPaymentSchema), async (req: any, res: any) => {
     try {
       // Validate if premium exists
       const premium = await storage.getPremium(req.body.premiumId);
@@ -1823,14 +1824,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(payment);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to create premium payment" });
       }
     }
   });
 
-  app.patch("/api/premium-payments/:id/status", async (req, res) => {
+  app.patch("/api/premium-payments/:id/status", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -1843,7 +1844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(payment);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to update premium payment status" });
       }
@@ -1851,7 +1852,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Claim Payments
-  app.get("/api/claim-payments", async (req, res) => {
+  app.get("/api/claim-payments", async (req: any, res: any) => {
     try {
       let payments;
       if (req.query.claimId) {
@@ -1888,7 +1889,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/claim-payments/:id", async (req, res) => {
+  app.get("/api/claim-payments/:id", async (req: any, res: any) => {
     try {
       const payment = await storage.getClaimPayment(Number(req.params.id));
       if (!payment) {
@@ -1913,7 +1914,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/claim-payments", validateRequest(insertClaimPaymentSchema), async (req, res) => {
+  app.post("/api/claim-payments", validateRequest(insertClaimPaymentSchema), async (req: any, res: any) => {
     try {
       // Validate if claim exists
       const claim = await storage.getClaim(req.body.claimId);
@@ -1949,14 +1950,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(payment);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to create claim payment" });
       }
     }
   });
 
-  app.patch("/api/claim-payments/:id/status", async (req, res) => {
+  app.patch("/api/claim-payments/:id/status", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -1981,7 +1982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(payment);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to update claim payment status" });
       }
@@ -1989,7 +1990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Provider Disbursements
-  app.get("/api/provider-disbursements", async (req, res) => {
+  app.get("/api/provider-disbursements", async (req: any, res: any) => {
     try {
       let disbursements;
       if (req.query.institutionId) {
@@ -2023,7 +2024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/provider-disbursements/:id", async (req, res) => {
+  app.get("/api/provider-disbursements/:id", async (req: any, res: any) => {
     try {
       const disbursement = await storage.getProviderDisbursement(Number(req.params.id));
       if (!disbursement) {
@@ -2069,7 +2070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/provider-disbursements", validateRequest(insertProviderDisbursementSchema), async (req, res) => {
+  app.post("/api/provider-disbursements", validateRequest(insertProviderDisbursementSchema), async (req: any, res: any) => {
     try {
       // Validate if institution exists
       const institution = await storage.getMedicalInstitution(req.body.institutionId);
@@ -2083,14 +2084,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(disbursement);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to create provider disbursement" });
       }
     }
   });
 
-  app.post("/api/disbursement-items", validateRequest(insertDisbursementItemSchema), async (req, res) => {
+  app.post("/api/disbursement-items", validateRequest(insertDisbursementItemSchema), async (req: any, res: any) => {
     try {
       // Validate if disbursement exists
       const disbursement = await storage.getProviderDisbursement(req.body.disbursementId);
@@ -2110,14 +2111,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(item);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to create disbursement item" });
       }
     }
   });
 
-  app.patch("/api/provider-disbursements/:id/status", async (req, res) => {
+  app.patch("/api/provider-disbursements/:id/status", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -2141,7 +2142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(disbursement);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to update provider disbursement status" });
       }
@@ -2149,7 +2150,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Insurance Balances
-  app.get("/api/insurance-balances", async (req, res) => {
+  app.get("/api/insurance-balances", async (req: any, res: any) => {
     try {
       let balances;
       if (req.query.periodId) {
@@ -2179,7 +2180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/insurance-balances/:id", async (req, res) => {
+  app.get("/api/insurance-balances/:id", async (req: any, res: any) => {
     try {
       const balance = await storage.getInsuranceBalance(Number(req.params.id));
       if (!balance) {
@@ -2202,7 +2203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/insurance-balances", validateRequest(insertInsuranceBalanceSchema), async (req, res) => {
+  app.post("/api/insurance-balances", validateRequest(insertInsuranceBalanceSchema), async (req: any, res: any) => {
     try {
       // Validate if period exists
       const period = await storage.getPeriod(req.body.periodId);
@@ -2222,14 +2223,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(balance);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to create insurance balance" });
       }
     }
   });
 
-  app.patch("/api/insurance-balances/:id", async (req, res) => {
+  app.patch("/api/insurance-balances/:id", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { totalPremiums, totalClaims, pendingClaims, activeBalance } = req.body;
@@ -2252,7 +2253,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(balance);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to update insurance balance" });
       }
@@ -2260,7 +2261,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Company Periods
-  app.get("/api/company-periods", async (req, res) => {
+  app.get("/api/company-periods", async (req: any, res: any) => {
     try {
       let companyPeriods;
       if (req.query.companyId) {
@@ -2296,7 +2297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Add endpoint for getting company periods by company ID in URL path
-  app.get("/api/company-periods/company/:companyId", async (req, res) => {
+  app.get("/api/company-periods/company/:companyId", async (req: any, res: any) => {
     try {
       const companyId = Number(req.params.companyId);
       if (isNaN(companyId)) {
@@ -2329,7 +2330,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/company-periods/:id", async (req, res) => {
+  app.get("/api/company-periods/:id", async (req: any, res: any) => {
     try {
       const companyPeriod = await storage.getCompanyPeriod(Number(req.params.id));
       if (!companyPeriod) {
@@ -2352,7 +2353,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/company-periods", validateRequest(insertCompanyPeriodSchema), async (req, res) => {
+  app.post("/api/company-periods", validateRequest(insertCompanyPeriodSchema), async (req: any, res: any) => {
     try {
       // Verify if company exists
       const company = await storage.getCompany(req.body.companyId);
@@ -2375,7 +2376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Medical Procedures routes
-  app.get("/api/medical-procedures", async (req, res) => {
+  app.get("/api/medical-procedures", async (req: any, res: any) => {
     try {
       let procedures;
       if (req.query.category) {
@@ -2391,7 +2392,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/medical-procedures/:id", async (req, res) => {
+  app.get("/api/medical-procedures/:id", async (req: any, res: any) => {
     try {
       const procedure = await storage.getMedicalProcedure(Number(req.params.id));
       if (!procedure) {
@@ -2403,7 +2404,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/medical-procedures", validateRequest(insertMedicalProcedureSchema), async (req, res) => {
+  app.post("/api/medical-procedures", validateRequest(insertMedicalProcedureSchema), async (req: any, res: any) => {
     try {
       const procedure = await storage.createMedicalProcedure(req.body);
       res.status(201).json(procedure);
@@ -2412,7 +2413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/medical-procedures/:id/status", async (req, res) => {
+  app.patch("/api/medical-procedures/:id/status", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { active } = req.body;
@@ -2425,7 +2426,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(procedure);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to update medical procedure status" });
       }
@@ -2433,7 +2434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Provider Procedure Rates routes
-  app.get("/api/provider-procedure-rates", async (req, res) => {
+  app.get("/api/provider-procedure-rates", async (req: any, res: any) => {
     try {
       let rates;
       if (req.query.institutionId) {
@@ -2469,7 +2470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/provider-procedure-rates/:id", async (req, res) => {
+  app.get("/api/provider-procedure-rates/:id", async (req: any, res: any) => {
     try {
       const rate = await storage.getProviderProcedureRate(Number(req.params.id));
       if (!rate) {
@@ -2495,7 +2496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/provider-procedure-rates", validateRequest(insertProviderProcedureRateSchema), async (req, res) => {
+  app.post("/api/provider-procedure-rates", validateRequest(insertProviderProcedureRateSchema), async (req: any, res: any) => {
     try {
       // Verify institution exists
       const institution = await storage.getMedicalInstitution(req.body.institutionId);
@@ -2516,7 +2517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/provider-procedure-rates/:id/status", async (req, res) => {
+  app.patch("/api/provider-procedure-rates/:id/status", async (req: any, res: any) => {
     try {
       const { id } = req.params;
       const { active } = req.body;
@@ -2529,7 +2530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(rate);
     } catch (error) {
       if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to update provider procedure rate status" });
       }
@@ -2537,7 +2538,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Claim Procedure Items routes
-  app.get("/api/claim-procedure-items", async (req, res) => {
+  app.get("/api/claim-procedure-items", async (req: any, res: any) => {
     try {
       let items;
       if (req.query.claimId) {
@@ -2570,7 +2571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/claim-procedure-items/:id", async (req, res) => {
+  app.get("/api/claim-procedure-items/:id", async (req: any, res: any) => {
     try {
       const item = await storage.getClaimProcedureItem(Number(req.params.id));
       if (!item) {
@@ -2594,7 +2595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Enhanced claim submission endpoint to include procedure items
-  app.post("/api/claims-with-procedures", async (req, res) => {
+  app.post("/api/claims-with-procedures", async (req: any, res: any) => {
     try {
       const { claim, procedureItems } = req.body;
       
@@ -2742,9 +2743,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
-        res.status(400).json({ error: validationError.message });
+        res.status(400).json({ error: validation(error as any).message });
       } else if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
+        res.status(400).json({ error: (error as any).message });
       } else {
         res.status(500).json({ error: "Failed to create claim with procedures" });
       }
@@ -2753,18 +2754,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Diagnosis Code Routes
   // GET all diagnosis codes
-  app.get('/api/diagnosis-codes', async (req, res) => {
+  app.get('/api/diagnosis-codes', async (req: any, res: any) => {
     try {
       const diagnosisCodes = await storage.getDiagnosisCodes();
       res.json(diagnosisCodes);
     } catch (error) {
-      console.error('Error fetching diagnosis codes:', error);
+      console.error(Error fetching diagnosis codes:, error as any);
       res.status(500).json({ error: 'Failed to fetch diagnosis codes' });
     }
   });
 
   // GET diagnosis codes by search
-  app.get('/api/diagnosis-codes/search', async (req, res) => {
+  app.get('/api/diagnosis-codes/search', async (req: any, res: any) => {
     try {
       const searchTerm = req.query.term as string;
       
@@ -2775,13 +2776,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const diagnosisCodes = await storage.getDiagnosisCodesBySearch(searchTerm);
       res.json(diagnosisCodes);
     } catch (error) {
-      console.error('Error searching diagnosis codes:', error);
+      console.error(Error searching diagnosis codes:, error as any);
       res.status(500).json({ error: 'Failed to search diagnosis codes' });
     }
   });
 
   // GET diagnosis code by code
-  app.get('/api/diagnosis-codes/code/:code', async (req, res) => {
+  app.get('/api/diagnosis-codes/code/:code', async (req: any, res: any) => {
     try {
       const code = req.params.code;
       
@@ -2792,26 +2793,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(diagnosisCode);
     } catch (error) {
-      console.error('Error fetching diagnosis code by code:', error);
+      console.error(Error fetching diagnosis code by code:, error as any);
       res.status(500).json({ error: 'Failed to fetch diagnosis code' });
     }
   });
 
   // GET diagnosis codes by type
-  app.get('/api/diagnosis-codes/type/:type', async (req, res) => {
+  app.get('/api/diagnosis-codes/type/:type', async (req: any, res: any) => {
     try {
       const codeType = req.params.type;
       
       const diagnosisCodes = await storage.getDiagnosisCodesByType(codeType);
       res.json(diagnosisCodes);
     } catch (error) {
-      console.error('Error fetching diagnosis codes by type:', error);
+      console.error(Error fetching diagnosis codes by type:, error as any);
       res.status(500).json({ error: 'Failed to fetch diagnosis codes' });
     }
   });
 
   // GET diagnosis code by ID - must be last since it uses a path parameter
-  app.get('/api/diagnosis-codes/:id', async (req, res) => {
+  app.get('/api/diagnosis-codes/:id', async (req: any, res: any) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2825,13 +2826,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.json(diagnosisCode);
     } catch (error) {
-      console.error('Error fetching diagnosis code:', error);
+      console.error(Error fetching diagnosis code:, error as any);
       res.status(500).json({ error: 'Failed to fetch diagnosis code' });
     }
   });
 
   // POST create new diagnosis code
-  app.post('/api/diagnosis-codes', async (req, res) => {
+  app.post('/api/diagnosis-codes', async (req: any, res: any) => {
     try {
       // Validate the request body
       const validatedData = insertDiagnosisCodeSchema.parse(req.body);
@@ -2842,16 +2843,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       if (error instanceof ZodError) {
         const validationError = fromZodError(error);
-        res.status(400).json({ error: validationError.message });
+        res.status(400).json({ error: validation(error as any).message });
       } else {
-        console.error('Error creating diagnosis code:', error);
+        console.error(Error creating diagnosis code:, error as any);
         res.status(500).json({ error: 'Failed to create diagnosis code' });
       }
     }
   });
 
   // PATCH update diagnosis code status
-  app.patch('/api/diagnosis-codes/:id/status', async (req, res) => {
+  app.patch('/api/diagnosis-codes/:id/status', async (req: any, res: any) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
@@ -2868,11 +2869,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(diagnosisCode);
     } catch (error) {
       if (error instanceof Error) {
-        if (error.message.includes('not found')) {
-          return res.status(404).json({ error: error.message });
+        if ((error as any).message.includes('not found')) {
+          return res.status(404).json({ error: (error as any).message });
         }
       }
-      console.error('Error updating diagnosis code status:', error);
+      console.error(Error updating diagnosis code status:, error as any);
       res.status(500).json({ error: 'Failed to update diagnosis code status' });
     }
   });
@@ -2880,7 +2881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Member Engagement Hub - Onboarding System
 
   // Member Activation Endpoints
-  app.post("/api/members/:id/activate", async (req, res) => {
+  app.post("/api/members/:id/activate", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
       const { password, securityQuestions, communicationPreferences } = req.body;
@@ -2955,12 +2956,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Failed to send activation email:', emailError);
       }
     } catch (error) {
-      console.error('Activation error:', error);
+      console.error(Activation error:, error as any);
       res.status(500).json({ error: "Failed to activate member" });
     }
   });
 
-  app.post("/api/members/activate-with-token", async (req, res) => {
+  app.post("/api/members/activate-with-token", async (req: any, res: any) => {
     try {
       const { token, password, communicationPreferences } = req.body;
 
@@ -3029,13 +3030,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error('Failed to send welcome email:', emailError);
       }
     } catch (error) {
-      console.error('Token activation error:', error);
+      console.error(Token activation error:, error as any);
       res.status(500).json({ error: "Failed to activate member" });
     }
   });
 
   // Onboarding Progress Endpoints
-  app.get("/api/onboarding/:memberId/status", async (req, res) => {
+  app.get("/api/onboarding/:memberId/status", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
 
@@ -3048,7 +3049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const documents = await storage.getMemberDocuments(memberId);
 
       // Calculate progress
-      const completedTasks = tasks.filter(task => task.completionStatus);
+      const completedTasks = tasks.filter((task: any) => task.completionStatus);
       const progressPercentage = tasks.length > 0 ? (completedTasks.length / tasks.length) * 100 : 0;
 
       res.json({
@@ -3066,7 +3067,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/onboarding/:memberId/next-day", async (req, res) => {
+  app.get("/api/onboarding/:memberId/next-day", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
 
@@ -3081,12 +3082,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Check if current day tasks are completed
       const currentTasks = await storage.getOnboardingTasksBySessionAndDay(session.id, session.currentDay);
-      const incompleteTasks = currentTasks.filter(task => !task.completionStatus);
+      const incompleteTasks = currentTasks.filter((task: any) => !task.completionStatus);
 
       if (incompleteTasks.length > 0 && session.currentDay > 1) {
         return res.status(400).json({
           error: "Complete current day tasks before advancing",
-          incompleteTasks: incompleteTasks.map(task => ({ id: task.id, title: task.title }))
+          incompleteTasks: incompleteTasks.map((task: any) => ({ id: task.id, title: task.title }))
         });
       }
 
@@ -3155,7 +3156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/onboarding/:memberId/skip-day", async (req, res) => {
+  app.post("/api/onboarding/:memberId/skip-day", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
       const { reason } = req.body;
@@ -3184,7 +3185,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Task Management Endpoints
-  app.put("/api/onboarding/tasks/:taskId", async (req, res) => {
+  app.put("/api/onboarding/tasks/:taskId", async (req: any, res: any) => {
     try {
       const taskId = Number(req.params.id);
       const { completionStatus, taskData } = req.body;
@@ -3226,7 +3227,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Document Upload Endpoints
-  app.post("/api/onboarding/:memberId/documents", async (req, res) => {
+  app.post("/api/onboarding/:memberId/documents", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
       const { documentType, fileName, fileData, mimeType } = req.body;
@@ -3246,7 +3247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Validate file size (10MB max)
-      const fileSize = Buffer.byteLength(fileData, 'base64');
+      const fileSize = (Buffer as any).byteLength(fileData, 'base64');
       if (fileSize > 10 * 1024 * 1024) {
         return res.status(400).json({
           error: "File size must be less than 10MB"
@@ -3285,12 +3286,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
-      console.error('Document upload error:', error);
+      console.error(Document upload error:, error as any);
       res.status(500).json({ error: "Failed to upload document" });
     }
   });
 
-  app.get("/api/onboarding/:memberId/documents", async (req, res) => {
+  app.get("/api/onboarding/:memberId/documents", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
       const { status } = req.query;
@@ -3309,7 +3310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Personalization Engine Endpoints
-  app.get("/api/members/:id/personalized-dashboard", async (req, res) => {
+  app.get("/api/members/:id/personalized-dashboard", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
 
@@ -3345,7 +3346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/members/:id/preferences", async (req, res) => {
+  app.post("/api/members/:id/preferences", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
       const preferenceData = req.body;
@@ -3374,7 +3375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/members/:id/recommendations", async (req, res) => {
+  app.get("/api/members/:id/recommendations", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
       const { type, limit = 10 } = req.query;
@@ -3392,7 +3393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/members/:id/recommendations/:recommendationId/feedback", async (req, res) => {
+  app.post("/api/members/:id/recommendations/:recommendationId/feedback", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
       const recommendationId = Number(req.params.recommendationId);
@@ -3417,7 +3418,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Behavior Analytics Endpoints
-  app.post("/api/members/:id/analytics", async (req, res) => {
+  app.post("/api/members/:id/analytics", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
       const { eventType, resourceName, resourceData, sessionId, timeOnPage, scrollDepth } = req.body;
@@ -3447,7 +3448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/members/:id/analytics", async (req, res) => {
+  app.get("/api/members/:id/analytics", async (req: any, res: any) => {
     try {
       const memberId = Number(req.params.id);
       const { eventType, limit = 50, sessionId } = req.query;
@@ -3468,7 +3469,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin Onboarding Management Endpoints
-  app.get("/api/admin/onboarding/overview", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/admin/onboarding/overview", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const { companyId, day, status } = req.query;
 
@@ -3482,11 +3483,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Apply additional filters
       if (day) {
-        sessions = sessions.filter(session => session.currentDay === Number(day));
+        sessions = sessions.filter((session: any) => session.currentDay === Number(day));
       }
 
       if (status) {
-        sessions = sessions.filter(session => session.status === status);
+        sessions = sessions.filter((session: any) => session.status === status);
       }
 
       // Enhance with member data
@@ -3495,7 +3496,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const member = await storage.getMember(session.memberId);
           const company = member ? await storage.getCompany(member.companyId) : null;
           const tasks = await storage.getOnboardingTasksBySession(session.id);
-          const completedTasks = tasks.filter(task => task.completionStatus);
+          const completedTasks = tasks.filter((task: any) => task.completionStatus);
 
           return {
             ...session,
@@ -3512,17 +3513,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Calculate summary statistics
       const stats = {
         totalSessions: enhancedSessions.length,
-        activeSessions: enhancedSessions.filter(s => s.status === 'active').length,
-        completedSessions: enhancedSessions.filter(s => s.status === 'completed').length,
+        activeSessions: enhancedSessions.filter((s: any) => s.status === 'active').length,
+        completedSessions: enhancedSessions.filter((s: any) => s.status === 'completed').length,
         averageProgress: enhancedSessions.reduce((sum, s) => sum + s.progressPercentage, 0) / enhancedSessions.length || 0,
         currentDayDistribution: {
-          1: enhancedSessions.filter(s => s.currentDay === 1).length,
-          2: enhancedSessions.filter(s => s.currentDay === 2).length,
-          3: enhancedSessions.filter(s => s.currentDay === 3).length,
-          4: enhancedSessions.filter(s => s.currentDay === 4).length,
-          5: enhancedSessions.filter(s => s.currentDay === 5).length,
-          6: enhancedSessions.filter(s => s.currentDay === 6).length,
-          7: enhancedSessions.filter(s => s.currentDay === 7).length
+          1: enhancedSessions.filter((s: any) => s.currentDay === 1).length,
+          2: enhancedSessions.filter((s: any) => s.currentDay === 2).length,
+          3: enhancedSessions.filter((s: any) => s.currentDay === 3).length,
+          4: enhancedSessions.filter((s: any) => s.currentDay === 4).length,
+          5: enhancedSessions.filter((s: any) => s.currentDay === 5).length,
+          6: enhancedSessions.filter((s: any) => s.currentDay === 6).length,
+          7: enhancedSessions.filter((s: any) => s.currentDay === 7).length
         }
       };
 
@@ -3535,7 +3536,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/documents/review-queue", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/admin/documents/review-queue", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const { status = 'pending' } = req.query;
 
@@ -3567,7 +3568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/admin/documents/:documentId/verify", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.patch("/api/admin/documents/:documentId/verify", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const documentId = Number(req.params.id);
       const { verificationStatus, rejectionReason, verifiedBy } = req.body;
@@ -3593,7 +3594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/onboarding/:sessionId/advance-day", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/admin/onboarding/:sessionId/advance-day", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const sessionId = Number(req.params.id);
       const { reason } = req.body;
@@ -3622,7 +3623,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Email Administration Endpoints
-  app.get("/api/admin/email/templates", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/admin/email/templates", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const { emailTemplateSystem } = await import('./emailService');
       const templates = emailTemplateSystem.getAllTemplates();
@@ -3636,7 +3637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/email/send", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/admin/email/send", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const { templateId, memberId, additionalData, testEmail } = req.body;
 
@@ -3694,7 +3695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/admin/email/stats", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/admin/email/stats", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const { emailService } = await import('./emailService');
       const stats = emailService.getDeliveryStats();
@@ -3705,7 +3706,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/admin/email/trigger", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/admin/email/trigger", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const { memberId, trigger, additionalData } = req.body;
 
@@ -3726,7 +3727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Manual email sending endpoint for testing
-  app.post("/api/admin/email/manual-send", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/admin/email/manual-send", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const { to, subject, html, text } = req.body;
 
@@ -3752,17 +3753,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Document Review Queue Statistics
-  app.get("/api/admin/documents/stats", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/admin/documents/stats", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const allDocuments = await storage.getAllMemberDocuments();
 
-      const pending = allDocuments.filter(d => d.verificationStatus === 'pending').length;
-      const approved = allDocuments.filter(d => d.verificationStatus === 'approved').length;
-      const rejected = allDocuments.filter(d => d.verificationStatus === 'rejected').length;
-      const needsMoreInfo = allDocuments.filter(d => d.verificationStatus === 'needs_info').length;
+      const pending = allDocuments.filter((d: any) => d.verificationStatus === 'pending').length;
+      const approved = allDocuments.filter((d: any) => d.verificationStatus === 'approved').length;
+      const rejected = allDocuments.filter((d: any) => d.verificationStatus === 'rejected').length;
+      const needsMoreInfo = allDocuments.filter((d: any) => d.verificationStatus === 'needs_info').length;
 
       // Calculate average review time (in hours)
-      const reviewedDocs = allDocuments.filter(d => d.verificationDate);
+      const reviewedDocs = allDocuments.filter((d: any) => d.verificationDate);
       const avgReviewTime = reviewedDocs.length > 0
         ? reviewedDocs.reduce((acc, doc) => {
             if (doc.verificationDate && doc.uploadDate) {
@@ -3774,7 +3775,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : 0;
 
       // Documents processed today
-      const todayProcessed = allDocuments.filter(d =>
+      const todayProcessed = allDocuments.filter((d: any) =>
         d.verificationDate &&
         d.verificationDate.toDateString() === new Date().toDateString()
       ).length;
@@ -3786,7 +3787,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }, {} as Record<string, number>);
 
       // Priority breakdown
-      const urgentDocuments = allDocuments.filter(d =>
+      const urgentDocuments = allDocuments.filter((d: any) =>
         d.verificationStatus === 'pending' &&
         d.isRequired === true
       ).length;
@@ -3805,13 +3806,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(stats);
     } catch (error) {
-      console.error('Error fetching document stats:', error);
+      console.error(Error fetching document stats:, error as any);
       res.status(500).json({ error: "Failed to fetch document statistics" });
     }
   });
 
   // Enhanced Document Review Queue with filtering
-  app.get("/api/admin/documents/review-queue-enhanced", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/admin/documents/review-queue-enhanced", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const {
         status = 'pending',
@@ -3881,16 +3882,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filteredDocuments = enhancedDocuments;
 
       if (documentType && documentType !== 'all') {
-        filteredDocuments = filteredDocuments.filter(doc => doc.documentType === documentType);
+        filteredDocuments = filteredDocuments.filter((doc: any) => doc.documentType === documentType);
       }
 
       if (priority && priority !== 'all') {
-        filteredDocuments = filteredDocuments.filter(doc => doc.priority === priority);
+        filteredDocuments = filteredDocuments.filter((doc: any) => doc.priority === priority);
       }
 
       if (search) {
         const searchLower = (search as string).toLowerCase();
-        filteredDocuments = filteredDocuments.filter(doc =>
+        filteredDocuments = filteredDocuments.filter((doc: any) =>
           doc.memberName.toLowerCase().includes(searchLower) ||
           doc.documentType.toLowerCase().includes(searchLower) ||
           doc.fileName.toLowerCase().includes(searchLower) ||
@@ -3917,7 +3918,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const paginatedDocuments = filteredDocuments.slice(offset, offset + Number(limit));
 
       // Get unique document types for filters
-      const documentTypes = [...new Set(enhancedDocuments.map(doc => doc.documentType))];
+      const documentTypes = [...new Set(enhancedDocuments.map((doc: any) => doc.documentType))];
 
       res.json({
         documents: paginatedDocuments,
@@ -3928,13 +3929,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         documentTypes
       });
     } catch (error) {
-      console.error('Error fetching enhanced document review queue:', error);
+      console.error(Error fetching enhanced document review queue:, error as any);
       res.status(500).json({ error: "Failed to fetch document review queue" });
     }
   });
 
   // Bulk Document Actions
-  app.post("/api/admin/documents/bulk-action", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.post("/api/admin/documents/bulk-action", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const { documentIds, action, notes } = req.body;
 
@@ -3969,12 +3970,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           results.push({
             documentId,
             success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
+            error: error instanceof Error ? (error as any).message : 'Unknown error'
           });
         }
       }
 
-      const successCount = results.filter(r => r.success).length;
+      const successCount = results.filter((r: any) => r.success).length;
       const failureCount = results.length - successCount;
 
       res.json({
@@ -3987,13 +3988,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
     } catch (error) {
-      console.error('Error performing bulk document action:', error);
+      console.error(Error performing bulk document action:, error as any);
       res.status(500).json({ error: "Failed to perform bulk document action" });
     }
   });
 
   // Get Document Details for Review
-  app.get("/api/admin/documents/:documentId/details", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res) => {
+  app.get("/api/admin/documents/:documentId/details", authenticate, requireRole(['insurance']), async (req: AuthenticatedRequest, res: any) => {
     try {
       const documentId = Number(req.params.id);
       const document = await storage.getMemberDocument(documentId);
@@ -4021,14 +4022,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           activationDate: session.activationDate,
           status: session.status
         } : null,
-        relatedDocuments: memberDocuments.filter(doc => doc.id !== documentId),
+        relatedDocuments: memberDocuments.filter((doc: any) => doc.id !== documentId),
         totalMemberDocuments: memberDocuments.length,
-        reviewedDocumentCount: memberDocuments.filter(doc => doc.verificationStatus).length
+        reviewedDocumentCount: memberDocuments.filter((doc: any) => doc.verificationStatus).length
       };
 
       res.json(enhancedDocument);
     } catch (error) {
-      console.error('Error fetching document details:', error);
+      console.error(Error fetching document details:, error as any);
       res.status(500).json({ error: "Failed to fetch document details" });
     }
   });
@@ -4107,3 +4108,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+
+
+
+
+
+

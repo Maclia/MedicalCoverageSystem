@@ -4,6 +4,9 @@ import { validateAccessToken, JWTPayload } from '../auth';
 // Extended Request interface to include user information
 export interface AuthenticatedRequest extends Request {
   user?: JWTPayload;
+  body?: any;
+  params?: any;
+  query?: any;
 }
 
 // Authentication middleware

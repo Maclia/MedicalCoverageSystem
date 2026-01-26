@@ -1,4 +1,11 @@
 // Minimal declaration shims for dependencies not installed in this environment
+declare module 'http' {
+  export function createServer(handler?: (req: any, res: any) => void): any;
+  export type Server = any;
+  export type IncomingMessage = any;
+  export type ServerResponse = any;
+}
+
 declare module 'express' {
   import type * as http from 'http';
   export type Request = http.IncomingMessage & { body?: any; params?: any; query?: any };
@@ -22,6 +29,16 @@ declare module 'swagger-ui-express' {
   export default swaggerUi;
 }
 
+declare module 'zod-validation-error' {
+  export function fromZodError(error: any): any;
+}
+
+declare module 'date-fns' {
+  export function addDays(date: Date, amount: number): Date;
+  export function differenceInYears(dateLeft: Date | number, dateRight: Date | number): number;
+  export function parseISO(argument: string): Date;
+}
+
 // Provide setImmediate and process when Node types are not installed
 declare var setImmediate: (callback: (...args: any[]) => void, ...args: any[]) => any;
 
@@ -29,6 +46,8 @@ declare var process: {
   env: Record<string, string | undefined>;
   exit: (code: number) => never;
   on: (event: string, handler: (...args: any[]) => void) => void;
+  uptime: () => number;
+  memoryUsage: () => { rss: number; heapTotal: number; heapUsed: number; external: number; arrayBuffers: number };
 };
 
 declare class Buffer {
@@ -39,20 +58,22 @@ declare class Buffer {
 declare function require(module: string): any;
 
 declare module 'zod' {
-  export namespace z {
-    interface ZodError {
-      errors: Array<{ path: string[]; message: string }>;
-    }
-    interface ZodSchema {
-      parse(data: any): any;
-    }
-    class ZodError {
-      errors: Array<{ path: string[]; message: string }>;
-    }
+  export class ZodError {
+    errors: Array<{ path: string[]; message: string }>;
+  }
+  export interface ZodSchema {
+    parse(data: any): any;
   }
   export const z: {
-    ZodError: typeof z.ZodError;
-    ZodSchema: typeof z.ZodSchema;
+    ZodError: typeof ZodError;
+    object: (shape: any) => any;
+    string: () => any;
+    number: () => any;
+    boolean: () => any;
+    date: () => any;
+    enum: (values: any[]) => any;
+    array: (schema: any) => any;
+    optional: (schema: any) => any;
   } & any;
 }
 
