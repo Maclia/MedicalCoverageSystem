@@ -36,6 +36,12 @@ declare class Buffer {
   toString(encoding?: string): string;
 }
 
+declare function require(module: string): any;
+
+declare module 'zod' {
+  export const z: any;
+}
+
 declare namespace NodeJS {
   type Timeout = any;
 }
@@ -57,4 +63,10 @@ declare module 'drizzle-orm' {
   export function isNotNull(column: any): any;
   export function or(...args: any[]): any;
   export function sql(strings: any, ...values: any[]): any;
+  export function like(column: any, pattern: any): any;
+  export function inArray(column: any, values: any[]): any;
+  export function between(column: any, min: any, max: any): any;
+  export function count(column?: any): any;
+  export function sum(column: any): any;
+  export function avg(column: any): any;
 }
