@@ -23,7 +23,7 @@ import {
   ProviderProcedureRate, InsertProviderProcedureRate,
   ClaimProcedureItem, InsertClaimProcedureItem,
   DiagnosisCode, InsertDiagnosisCode,
-  User,
+  User, InsertUser,
   OnboardingSession, InsertOnboardingSession,
   OnboardingTask, InsertOnboardingTask,
   MemberDocument, InsertMemberDocument,
@@ -134,9 +134,7 @@ export interface IStorage {
   updateMedicalInstitutionApproval(id: number, status: string, validUntil?: Date): Promise<MedicalInstitution>;
   
   // Medical Personnel methods
-  getMedicalPersonnel(): Promise<MedicalPersonnel[]>;
-  getMedicalPersonnelById?(id: number): Promise<MedicalPersonnel | undefined>; // Used by DatabaseStorage
-  getMedicalPersonnel?(id: number): Promise<MedicalPersonnel | undefined>; // Used by MemStorage - deprecate later
+  getMedicalPersonnel(id?: number): Promise<MedicalPersonnel[] | MedicalPersonnel | undefined>;
   getMedicalPersonnelByInstitution(institutionId: number): Promise<MedicalPersonnel[]>;
   getMedicalPersonnelByType(type: string): Promise<MedicalPersonnel[]>;
   getMedicalPersonnelByApprovalStatus(status: string): Promise<MedicalPersonnel[]>;
@@ -441,10 +439,10 @@ export class MemStorage implements IStorage {
   private benefitUtilization: Map<number, BenefitUtilization>;
 
   // Card Management Storage
-  private memberCards: Map<number, MemberCard>;
-  private cardTemplates: Map<number, CardTemplate>;
-  private cardVerificationEvents: Map<number, CardVerificationEvent>;
-  private cardProductionBatches: Map<number, CardProductionBatch>;
+  private memberCards: Map<number, MemberCard> = new Map();
+  private cardTemplates: Map<number, CardTemplate> = new Map();
+  private cardVerificationEvents: Map<number, CardVerificationEvent> = new Map();
+  private cardProductionBatches: Map<number, CardProductionBatch> = new Map();
 
   // Member Engagement Hub IDs
   private onboardingSessionId: number;
@@ -1301,12 +1299,12 @@ export class MemStorage implements IStorage {
     
     // Check provider verification status
     const institution = await this.getMedicalInstitution(claim.institutionId);
-    const personnel = claim.personnelId ? await this.getMedicalPersonnel(claim.personnelId) : null;
+    const personnel = claim.personnelId ? await (this as any).getMedicalPersonnel(claim.personnelId) : null;
     
     // Determine provider verification status
     const isInstitutionVerified = institution && institution.approvalStatus === 'approved';
     const isPersonnelVerified = !claim.personnelId || 
-      (personnel && personnel.approvalStatus === 'approved');
+      (personnel && (personnel as any).approvalStatus === 'approved');
 
     // Set provider verified status 
     const providerVerified = isInstitutionVerified && isPersonnelVerified;
@@ -2266,14 +2264,14 @@ export class MemStorage implements IStorage {
   }
 
   // Activation Tokens
-  async getActivationToken(id: number): Promise<ActivationToken | undefined> {
-    return this.activationTokens.get(id);
-  }
-
-  async getActivationToken(tokenHash: string): Promise<ActivationToken | undefined> {
-    return Array.from(this.activationTokens.values()).find(
-      token => token.tokenHash === tokenHash
-    );
+  async getActivationToken(idOrHash: number | string): Promise<ActivationToken | undefined> {
+    if (typeof idOrHash === 'number') {
+      return this.activationTokens.get(idOrHash);
+    } else {
+      return Array.from(this.activationTokens.values()).find(
+        token => token.tokenHash === idOrHash
+      );
+    }
   }
 
   async createActivationToken(token: InsertActivationToken): Promise<ActivationToken> {
@@ -2653,11 +2651,10 @@ export class MemStorage implements IStorage {
   }
 
   // Explanation of Benefits
-  async getExplanationOfBenefits(): Promise<ExplanationOfBenefits[]> {
-    return Array.from(this.explanationOfBenefits.values());
-  }
-
-  async getExplanationOfBenefits(id: number): Promise<ExplanationOfBenefits | undefined> {
+  async getExplanationOfBenefits(id?: number): Promise<ExplanationOfBenefits[] | ExplanationOfBenefits | undefined> {
+    if (id === undefined) {
+      return Array.from(this.explanationOfBenefits.values());
+    }
     return this.explanationOfBenefits.get(id);
   }
 
