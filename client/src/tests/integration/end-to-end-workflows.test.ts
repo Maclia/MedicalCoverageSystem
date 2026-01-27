@@ -1,8 +1,8 @@
 // End-to-End Workflow Validation Tests
 // Tests complete user journeys across all integrated modules
 
-import { systemIntegrationAPI } from "@/api/system-integration";
-import { membersAPI } from "@/api/members";
+import { systemIntegrationAPI } from "../../api/system-integration";
+import { membersAPI } from "../../api/members";
 import { TestDataFactory, Assert, TestRunner } from "./test-framework";
 
 // Mock fetch for testing
