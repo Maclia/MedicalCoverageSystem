@@ -15,10 +15,9 @@ RUN apk add --no-cache \
 
 # Copy package files
 COPY package.json package-lock.json* ./
-COPY shared/package.json shared/package-lock.json* ./shared/
 
 # Install all dependencies
-RUN npm ci --include=dev
+RUN npm install
 
 # Development stage
 FROM base AS development
@@ -27,15 +26,13 @@ WORKDIR /app
 # Install system dependencies for development
 RUN apk add --no-cache \
     curl \
-    postgresql-client \
-    drizzle-kit
+    postgresql-client
 
 # Copy package files
 COPY package.json package-lock.json* ./
-COPY shared/package.json shared/package-lock.json* ./shared/
 
 # Install dependencies
-RUN npm ci --include=dev
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -65,10 +62,9 @@ RUN apk add --no-cache \
 
 # Copy package files
 COPY package.json package-lock.json* ./
-COPY shared/package.json shared/package-lock.json* ./shared/
 
 # Install dependencies
-RUN npm ci --include=dev
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -94,11 +90,10 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY package.json package-lock.json* ./
 
 # Install only production dependencies
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --omit=dev && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/shared ./shared
 
 # Create necessary directories
 RUN mkdir -p /app/uploads/contracts && \
@@ -129,10 +124,9 @@ RUN apk add --no-cache \
 
 # Copy package files
 COPY package.json package-lock.json* ./
-COPY shared/package.json shared/package-lock.json* ./shared/
 
 # Install all dependencies
-RUN npm ci --include=dev
+RUN npm install
 
 # Copy source code
 COPY . .

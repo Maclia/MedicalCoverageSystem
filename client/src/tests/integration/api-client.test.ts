@@ -130,7 +130,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
           json: () => Promise.resolve({ success: true, data: mockResponse })
         });
 
-        const result = await membersAPI.updateMember(updateData);
+        const result = await membersAPI.updateMember(updateData as any);
 
         // Verify API was called correctly
         expect(global.fetch).toHaveBeenCalledWith("/api/members/1", {
@@ -315,9 +315,9 @@ describe("Enhanced Members API Client Integration Tests", () => {
         const bulkConsentRequest = {
           memberIds: [1, 2, 3],
           consentType: "marketing_communications",
-          action: "grant",
+          action: "grant" as const,
           message: "Marketing consent granted for compliance update"
-        } as any;
+        };
 
         const mockResponse = { success: true, processed: 3, failed: 0, errors: [] };
 

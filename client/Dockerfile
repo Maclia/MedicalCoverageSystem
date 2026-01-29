@@ -13,7 +13,7 @@ RUN apk add --no-cache \
 COPY package.json package-lock.json* ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Development stage
 FROM base AS development
@@ -27,7 +27,7 @@ RUN apk add --no-cache \
 COPY package.json package-lock.json* ./
 
 # Install all dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -54,7 +54,7 @@ RUN apk add --no-cache \
 COPY package.json package-lock.json* ./
 
 # Install dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
@@ -113,7 +113,7 @@ RUN apk add --no-cache \
 COPY package.json package-lock.json* ./
 
 # Install all dependencies
-RUN npm ci
+RUN npm install
 
 # Copy source code
 COPY . .
