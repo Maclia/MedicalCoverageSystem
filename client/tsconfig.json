@@ -22,7 +22,7 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
+      "@/*": ["./src/*"],
       "@shared/*": ["../shared/*"],
       "@components/*": ["./src/components/*"],
       "@pages/*": ["./src/pages/*"],
