@@ -1,4 +1,9 @@
-import { FraudDetectionModule } from './config/module.config';
+import router from './fraudDetectionRoutes';
+import { fraudDetectionService } from './fraudDetectionService';
 
-export { FraudDetectionModule };
+export const FraudDetectionModule = {
+  router,
+  service: fraudDetectionService
+};
+
 export default FraudDetectionModule;

@@ -1,10 +1,9 @@
-import { Response } from "express";
+import express, { Response, Router } from "express";
 import { authenticate, requireRole, AuthenticatedRequest } from "../../middleware/auth";
 import { fraudDetectionService } from "./fraudDetectionService";
 import { z } from "zod";
-const express = require('express');
 
-const router = express.Router();
+const router = Router();
 
 // Validation schemas
 const analyzeClaimSchema = z.object({
