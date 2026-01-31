@@ -12,7 +12,7 @@ const JWT_REFRESH_EXPIRES_IN = '7d';
 
 export interface JWTPayload {
   userId: number;
-  userType: 'insurance' | 'institution' | 'provider';
+  userType: 'insurance' | 'institution' | 'provider' | 'admin' | 'staff';
   entityId: number;
   email: string;
 }
@@ -26,7 +26,7 @@ export interface AuthTokens {
 export interface UserProfile {
   id: number;
   email: string;
-  userType: 'insurance' | 'institution' | 'provider';
+  userType: 'insurance' | 'institution' | 'provider' | 'admin' | 'staff';
   entityId: number;
   isActive: boolean;
   lastLogin?: Date;
@@ -76,6 +76,11 @@ export const generateTokens = async (userId: number): Promise<AuthTokens> => {
     case 'provider':
       const personnelData = await db.select().from(medicalPersonnel).where(eq(medicalPersonnel.id, user.entityId)).limit(1);
       entityData = personnelData[0] || null;
+      break;
+    case 'admin':
+    case 'staff':
+      // Admin and staff users don't have associated entities
+      entityData = null;
       break;
   }
 

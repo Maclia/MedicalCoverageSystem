@@ -1,9 +1,10 @@
-﻿import { Router } from "express";
-import { authenticate, requireRole } from "../../middleware/auth";
+import { Response } from "express";
+import { authenticate, requireRole, AuthenticatedRequest } from "../../middleware/auth";
 import { fraudDetectionService } from "./fraudDetectionService";
 import { z } from "zod";
+const express = require('express');
 
-const router = Router();
+const router = express.Router();
 
 // Validation schemas
 const analyzeClaimSchema = z.object({
@@ -44,7 +45,7 @@ const createInvestigationSchema = z.object({
  * POST /api/fraud/analyze-claim
  * Analyze a claim for fraud in real-time
  */
-router.post("/analyze-claim", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.post("/analyze-claim", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const claimData = analyzeClaimSchema.parse(req.body);
     const result = await fraudDetectionService.analyzeClaimForFraud(claimData);
@@ -66,7 +67,7 @@ router.post("/analyze-claim", authenticate, requireRole(['insurance', 'admin']),
  * POST /api/fraud/monitor-patterns
  * Monitor transaction patterns for a member
  */
-router.post("/monitor-patterns", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.post("/monitor-patterns", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId, timeWindow = 24 } = req.body;
 
@@ -98,7 +99,7 @@ router.post("/monitor-patterns", authenticate, requireRole(['insurance', 'admin'
  * GET /api/fraud/alerts
  * Get fraud alerts with filtering
  */
-router.get("/alerts", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.get("/alerts", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const {
       status,
@@ -143,7 +144,7 @@ router.get("/alerts", authenticate, requireRole(['insurance', 'admin']), async (
  * PUT /api/fraud/alerts/:id/status
  * Update alert status
  */
-router.put("/alerts/:id/status", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.put("/alerts/:id/status", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
     const { status, assignedTo } = req.body;
@@ -169,7 +170,7 @@ router.put("/alerts/:id/status", authenticate, requireRole(['insurance', 'admin'
  * GET /api/fraud/rules
  * Get fraud detection rules
  */
-router.get("/rules", authenticate, requireRole(['admin']), async (req, res) => {
+router.get("/rules", authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Fetch rules logic would go here
     const rules = [
@@ -200,12 +201,12 @@ router.get("/rules", authenticate, requireRole(['admin']), async (req, res) => {
  * POST /api/fraud/rules
  * Create a new fraud detection rule
  */
-router.post("/rules", authenticate, requireRole(['admin']), async (req, res) => {
+router.post("/rules", authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const ruleData = createRuleSchema.parse(req.body);
     const rule = await fraudDetectionService.createFraudRule({
       ...ruleData,
-      createdBy: (req as any).user.id
+      createdBy: req.user!.userId
     });
 
     res.status(201).json({
@@ -227,7 +228,7 @@ router.post("/rules", authenticate, requireRole(['admin']), async (req, res) => 
  * GET /api/fraud/investigations
  * Get fraud investigations
  */
-router.get("/investigations", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.get("/investigations", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Fetch investigations logic would go here
     const investigations = [
@@ -258,7 +259,7 @@ router.get("/investigations", authenticate, requireRole(['insurance', 'admin']),
  * POST /api/fraud/investigations
  * Create a new investigation
  */
-router.post("/investigations", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.post("/investigations", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const investigationData = createInvestigationSchema.parse(req.body);
 
@@ -289,7 +290,7 @@ router.post("/investigations", authenticate, requireRole(['insurance', 'admin'])
  * GET /api/fraud/analytics
  * Get fraud analytics and metrics
  */
-router.get("/analytics", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.get("/analytics", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { timePeriod = 'monthly' } = req.query;
     const analytics = await fraudDetectionService.generateFraudAnalytics(timePeriod as string);
@@ -311,7 +312,7 @@ router.get("/analytics", authenticate, requireRole(['insurance', 'admin']), asyn
  * POST /api/fraud/analytics/update
  * Update analytics metrics (admin only)
  */
-router.post("/analytics/update", authenticate, requireRole(['admin']), async (req, res) => {
+router.post("/analytics/update", authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     await fraudDetectionService.updateAnalyticsMetrics();
 
@@ -334,7 +335,7 @@ router.post("/analytics/update", authenticate, requireRole(['admin']), async (re
  * GET /api/fraud/models
  * Get available ML models
  */
-router.get("/models", authenticate, requireRole(['admin']), async (req, res) => {
+router.get("/models", authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Fetch ML models logic would go here
     const models = [
@@ -365,7 +366,7 @@ router.get("/models", authenticate, requireRole(['admin']), async (req, res) => 
  * POST /api/fraud/models/train
  * Train a new ML model
  */
-router.post("/models/train", authenticate, requireRole(['admin']), async (req, res) => {
+router.post("/models/train", authenticate, requireRole(['admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { modelConfig, trainingData } = req.body;
 
@@ -398,7 +399,7 @@ router.post("/models/train", authenticate, requireRole(['admin']), async (req, r
  * GET /api/fraud/networks
  * Get network analysis results
  */
-router.get("/networks", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.get("/networks", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     // Fetch network analysis results
     const networks = [
@@ -429,7 +430,7 @@ router.get("/networks", authenticate, requireRole(['insurance', 'admin']), async
  * POST /api/fraud/networks/analyze
  * Analyze network connections
  */
-router.post("/networks/analyze", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.post("/networks/analyze", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { claimData } = req.body;
 
@@ -461,7 +462,7 @@ router.post("/networks/analyze", authenticate, requireRole(['insurance', 'admin'
  * GET /api/fraud/behavioral-profiles
  * Get behavioral profiles
  */
-router.get("/behavioral-profiles", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.get("/behavioral-profiles", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { entityType, entityId } = req.query;
 
@@ -496,7 +497,7 @@ router.get("/behavioral-profiles", authenticate, requireRole(['insurance', 'admi
  * POST /api/fraud/behavioral-profiles/analyze
  * Analyze behavioral patterns
  */
-router.post("/behavioral-profiles/analyze", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.post("/behavioral-profiles/analyze", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { claimData } = req.body;
 
@@ -528,7 +529,7 @@ router.post("/behavioral-profiles/analyze", authenticate, requireRole(['insuranc
  * GET /api/fraud/risk-scores
  * Get risk scores for entities
  */
-router.get("/risk-scores", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.get("/risk-scores", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { entityType, entityId } = req.query;
 
@@ -561,7 +562,7 @@ router.get("/risk-scores", authenticate, requireRole(['insurance', 'admin']), as
  * POST /api/fraud/risk-scores/calculate
  * Calculate risk score for an entity
  */
-router.post("/risk-scores/calculate", authenticate, requireRole(['insurance', 'admin']), async (req, res) => {
+router.post("/risk-scores/calculate", authenticate, requireRole(['insurance', 'admin']), async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { entityType, entityId, entityData } = req.body;
 
