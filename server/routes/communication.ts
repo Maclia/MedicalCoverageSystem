@@ -71,8 +71,8 @@ const router = Router();
 // Communications
 router.get('/communications', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
-    const memberRole = req.user.role;
+    const userId = req.user!.userId;
+    const memberRole = req.user!.userType;
     const {
       memberId,
       type,
@@ -135,7 +135,7 @@ router.get('/communications/:id', authenticate, async (req: AuthenticatedRequest
 
 router.post('/communications', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const communicationData = {
       ...req.body,
       senderId: userId
@@ -199,11 +199,11 @@ router.post('/communications/:id/schedule', authenticate, async (req: Authentica
 // Message Threads
 router.get('/threads', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const { memberId, status, priority, category, limit = 50, offset = 0 } = req.query;
 
     let targetMemberId = memberId as string;
-    if (!targetMemberId && req.user.role !== 'admin' && req.user.role !== 'staff') {
+    if (!targetMemberId && req.user!.userType !== 'admin' && req.user!.userType !== 'staff') {
       targetMemberId = userId;
     }
 
@@ -237,7 +237,7 @@ router.get('/threads/:threadId/messages', authenticate, async (req: Authenticate
 
 router.post('/threads', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const threadData = {
       ...req.body,
       createdBy: userId
@@ -254,7 +254,7 @@ router.post('/threads', authenticate, async (req: AuthenticatedRequest, res: Res
 router.post('/threads/:threadId/messages', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { threadId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const messageData = {
       ...req.body,
       senderId: userId
@@ -272,7 +272,7 @@ router.put('/threads/:threadId/read', authenticate, async (req: AuthenticatedReq
   try {
     const { threadId } = req.params;
     const { messageId, read = true } = req.body;
-    const userId = req.user.id;
+    const userId = req.user!.userId;
 
     await updateMessageReadStatus(threadId, messageId, read, userId);
     res.json({ success: true, message: 'Message read status updated' });
@@ -284,11 +284,11 @@ router.put('/threads/:threadId/read', authenticate, async (req: AuthenticatedReq
 
 router.get('/unread/count', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const { memberId } = req.query;
 
     let targetMemberId = memberId as string;
-    if (!targetMemberId && req.user.role !== 'admin' && req.user.role !== 'staff') {
+    if (!targetMemberId && req.user!.userType !== 'admin' && req.user!.userType !== 'staff') {
       targetMemberId = userId;
     }
 
@@ -303,7 +303,7 @@ router.get('/unread/count', authenticate, async (req: AuthenticatedRequest, res:
 router.post('/threads/:threadId/mark-read', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { threadId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     await markAsRead(threadId, userId);
     res.json({ success: true, message: 'Thread marked as read' });
   } catch (error) {
@@ -315,7 +315,7 @@ router.post('/threads/:threadId/mark-read', authenticate, async (req: Authentica
 router.post('/threads/:threadId/mark-unread', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { threadId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     await markAsUnread(threadId, userId);
     res.json({ success: true, message: 'Thread marked as unread' });
   } catch (error) {
@@ -391,7 +391,7 @@ router.get('/templates/:id', authenticate, async (req: AuthenticatedRequest, res
 
 router.post('/templates', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const templateData = {
       ...req.body,
       createdBy: userId
@@ -470,7 +470,7 @@ router.get('/campaigns/:id', authenticate, requireRole(['admin', 'staff']), asyn
 
 router.post('/campaigns', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const campaignData = {
       ...req.body,
       createdBy: userId
@@ -557,8 +557,8 @@ router.get('/chat/sessions', authenticate, async (req: AuthenticatedRequest, res
     const { memberId, type, status, priority, department, limit = 50, offset = 0 } = req.query;
 
     let targetMemberId = memberId as string;
-    if (!targetMemberId && req.user.role !== 'admin' && req.user.role !== 'staff') {
-      targetMemberId = req.user.id;
+    if (!targetMemberId && req.user!.userType !== 'admin' && req.user!.userType !== 'staff') {
+      targetMemberId = req.user!.userId;
     }
 
     const sessions = await getChatSessions({
@@ -591,7 +591,7 @@ router.get('/chat/sessions/:sessionId', authenticate, async (req: AuthenticatedR
 
 router.post('/chat/sessions', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const sessionData = {
       ...req.body,
       memberId: req.body.memberId || userId
@@ -608,7 +608,7 @@ router.post('/chat/sessions', authenticate, async (req: AuthenticatedRequest, re
 router.post('/chat/sessions/:sessionId/messages', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { sessionId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const messageData = {
       ...req.body,
       senderId: userId
@@ -689,11 +689,11 @@ router.get('/announcements/:id', authenticate, async (req: AuthenticatedRequest,
 
 router.post('/announcements', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const announcementData = {
       ...req.body,
       author: userId,
-      authorName: req.user.name || 'System'
+      authorName: req.user!.email || 'System'
     };
 
     const announcement = await createAnnouncement(announcementData);
@@ -768,7 +768,7 @@ router.get('/surveys/:id', authenticate, async (req: AuthenticatedRequest, res: 
 
 router.post('/surveys', authenticate, requireRole(['admin', 'staff']), async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const surveyData = {
       ...req.body,
       createdBy: userId
@@ -831,7 +831,7 @@ router.get('/surveys/:id/responses', authenticate, async (req: AuthenticatedRequ
 router.post('/surveys/:id/responses', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const userId = req.user.id;
+    const userId = req.user!.userId;
     const responseData = {
       ...req.body,
       memberId: userId
@@ -849,10 +849,10 @@ router.post('/surveys/:id/responses', authenticate, async (req: AuthenticatedReq
 router.get('/dashboard/:memberId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { memberId } = req.params;
-    const userId = req.user.id;
+    const userId = req.user!.userId;
 
     let targetMemberId = memberId;
-    if (targetMemberId !== userId && req.user.role !== 'admin' && req.user.role !== 'staff') {
+    if (targetMemberId !== userId && req.user!.userType !== 'admin' && req.user!.userType !== 'staff') {
       return res.status(403).json({ success: false, error: 'Access denied' });
     }
 
@@ -927,7 +927,7 @@ router.post('/attachments/upload', authenticate, async (req: AuthenticatedReques
       size: 1024000,
       url: '/uploads/example.pdf',
       uploadedAt: new Date(),
-      uploadedBy: req.user.id
+      uploadedBy: req.user!.userId
     };
     res.json({ success: true, data: mockAttachment });
   } catch (error) {

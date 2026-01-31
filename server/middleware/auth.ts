@@ -4,9 +4,6 @@ import { validateAccessToken, JWTPayload } from '../auth';
 // Extended Request interface to include user information
 export interface AuthenticatedRequest extends Request {
   user?: JWTPayload;
-  body?: any;
-  params?: any;
-  query?: any;
 }
 
 // Authentication middleware
@@ -36,7 +33,7 @@ export const authenticate = async (req: AuthenticatedRequest, res: Response, nex
 };
 
 // Role-based authorization middleware
-export const requireRole = (allowedRoles: ('insurance' | 'institution' | 'provider')[]) => {
+export const requireRole = (allowedRoles: ('insurance' | 'institution' | 'provider' | 'admin' | 'staff')[]) => {
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({ error: 'Authentication required' });
