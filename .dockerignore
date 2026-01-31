@@ -2,7 +2,7 @@
 node_modules
 npm-debug.log
 yarn-error.log
-package-lock.json
+# package-lock.json removed - needed for npm ci (faster, deterministic builds)
 yarn.lock
 
 # Build outputs
