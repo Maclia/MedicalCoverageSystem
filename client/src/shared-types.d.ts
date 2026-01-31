@@ -20,6 +20,7 @@ declare module '@shared/schema' {
     id: number;
     firstName: string;
     lastName: string;
+    secondName?: string;
     email: string;
     // Add other member fields as needed
   }

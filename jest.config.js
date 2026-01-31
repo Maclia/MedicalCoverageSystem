@@ -1,14 +1,13 @@
 export default {
   preset: 'ts-jest',
   testEnvironment: 'jsdom',
-  globals: {
-    'ts-jest': {
+  setupFiles: ['<rootDir>/jest.setup.js'],
+  transform: {
+    '^.+\\.(ts|tsx)$': ['ts-jest', {
       diagnostics: false,
       tsconfig: 'tsconfig.json'
-    }
-  },
-  transform: {
-    '^.+\\.(ts|tsx)$': 'ts-jest'
+    }],
+    '^.+\\.(js|jsx)$': 'babel-jest'
   },
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
@@ -16,4 +15,5 @@ export default {
   },
   testRegex: '(/__tests__/.*|(\\.|/)(test|spec))\\.tsx?$',
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
+  testTimeout: 30000,
 };

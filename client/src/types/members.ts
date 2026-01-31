@@ -7,6 +7,7 @@ export interface Member {
   memberType: 'principal' | 'dependent';
   firstName: string;
   lastName: string;
+  secondName?: string;
   email: string;
   phone: string;
   dateOfBirth: string;
@@ -229,6 +230,7 @@ export interface CreateMemberRequest {
   memberType: 'principal' | 'dependent';
   firstName: string;
   lastName: string;
+  secondName?: string;
   email: string;
   phone: string;
   dateOfBirth: string;
