@@ -13,7 +13,6 @@ import BillingOverview from './billing/BillingOverview';
 import PaymentsOverview from './payments/PaymentsOverview';
 import CommissionsOverview from './commissions/CommissionsOverview';
 import ClaimsFinancialOverview from './claimsFinancial/ClaimsFinancialOverview';
-import TokenRevenueCard from './TokenRevenueCard';
 
 export default function FinanceDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -210,7 +209,7 @@ export default function FinanceDashboard() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Aging Report */}
             {analytics && (
               <Card>
@@ -277,9 +276,6 @@ export default function FinanceDashboard() {
                 </CardContent>
               </Card>
             )}
-
-            {/* Token Revenue Card */}
-            <TokenRevenueCard />
           </div>
         </TabsContent>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'wouter';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +99,7 @@ interface ProviderDetail {
 
 const ProviderProfile: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [provider, setProvider] = useState<ProviderDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -216,7 +217,7 @@ const ProviderProfile: React.FC = () => {
           <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Provider</h3>
           <p className="text-gray-600 text-center mb-4">{error}</p>
-          <Button onClick={() => window.location.href = '/providers'}>
+          <Button onClick={() => navigate('/providers')}>
             Back to Provider Directory
           </Button>
         </CardContent>

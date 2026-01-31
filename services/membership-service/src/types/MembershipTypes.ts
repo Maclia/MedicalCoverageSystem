@@ -5,6 +5,7 @@ export const createMemberSchema = z.object({
   companyId: z.number().positive(),
   firstName: z.string().min(2).max(50),
   lastName: z.string().min(2).max(50),
+  secondName: z.string().max(50).optional(),
   email: z.string().email(),
   phone: z.string().regex(/^254[7]\d{8}$/),
   dateOfBirth: z.string().datetime(),
@@ -85,6 +86,7 @@ export interface CreateMemberRequest {
   companyId: number;
   firstName: string;
   lastName: string;
+  secondName?: string;
   email: string;
   phone: string;
   dateOfBirth: Date;
@@ -116,6 +118,7 @@ export interface CreateMemberRequest {
 export interface UpdateMemberRequest {
   firstName?: string;
   lastName?: string;
+  secondName?: string;
   phone?: string;
   address?: string;
   city?: string;

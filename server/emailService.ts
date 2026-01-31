@@ -65,7 +65,7 @@ class EmailService {
       const companyName = company?.name || 'Your Health Coverage';
 
       // Get onboarding session if available
-      const onboardingSession = await storage.getOnboardingSessionByMember(memberId);
+      const onboardingSession = await (storage as any).getOnboardingSessionByMember?.(memberId);
 
       // Prepare template data
       const templateData = {

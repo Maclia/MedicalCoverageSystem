@@ -38,17 +38,6 @@ import ProviderSchemesManagement from "@/pages/ProviderSchemesManagement";
 import Finance from "@/pages/Finance";
 import NotFound from "@/pages/not-found";
 
-// Token System Pages
-import TokenPurchasePage from "@/pages/tokens/TokenPurchasePage";
-import PurchaseHistoryPage from "@/pages/tokens/PurchaseHistoryPage";
-import BalanceHistoryPage from "@/pages/tokens/BalanceHistoryPage";
-import SubscriptionManagementPage from "@/pages/tokens/SubscriptionManagementPage";
-import TokenSettingsPage from "@/pages/tokens/TokenSettingsPage";
-
-// CRM Pages
-import LeadManagement from "@/pages/crm/LeadManagement";
-import AgentPortal from "@/pages/crm/AgentPortal";
-
 function Router() {
   return (
     <Switch>
@@ -127,45 +116,6 @@ function Router() {
                   <FinanceProvider>
                     <Finance />
                   </FinanceProvider>
-                </ProtectedRoute>
-              )} />
-
-              {/* Token System Routes */}
-              <Route path="/tokens/purchase" component={() => (
-                <ProtectedRoute allowedRoles={['insurance']}>
-                  <TokenPurchasePage />
-                </ProtectedRoute>
-              )} />
-              <Route path="/tokens/history" component={() => (
-                <ProtectedRoute allowedRoles={['insurance']}>
-                  <PurchaseHistoryPage />
-                </ProtectedRoute>
-              )} />
-              <Route path="/tokens/balance-history" component={() => (
-                <ProtectedRoute allowedRoles={['insurance']}>
-                  <BalanceHistoryPage />
-                </ProtectedRoute>
-              )} />
-              <Route path="/tokens/subscription" component={() => (
-                <ProtectedRoute allowedRoles={['insurance']}>
-                  <SubscriptionManagementPage />
-                </ProtectedRoute>
-              )} />
-              <Route path="/tokens/settings" component={() => (
-                <ProtectedRoute allowedRoles={['insurance']}>
-                  <TokenSettingsPage />
-                </ProtectedRoute>
-              )} />
-
-              {/* CRM Routes */}
-              <Route path="/crm/leads" component={() => (
-                <ProtectedRoute allowedRoles={['insurance']}>
-                  <LeadManagement />
-                </ProtectedRoute>
-              )} />
-              <Route path="/crm/agent-portal" component={() => (
-                <ProtectedRoute allowedRoles={['insurance']}>
-                  <AgentPortal />
                 </ProtectedRoute>
               )} />
 

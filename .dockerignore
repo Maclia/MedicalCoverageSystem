@@ -1,70 +1,130 @@
 # Dependencies
 node_modules
-npm-debug.log
-yarn-error.log
-package-lock.json
-yarn.lock
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Build outputs
-dist
-build
-.next
-out
+# Production builds (keep for production stage)
+# client/dist
+# server/dist
 
-# Environment files
+# Environment variables (keep templates)
 .env
 .env.local
-.env.*.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.development
+.env.test
+.env.staging
 
-# Testing
-coverage
-.nyc_output
-.cypress
-test-results
-
-# Development
-.git
-.gitignore
-.gitattributes
-
-# IDE
-.vscode
-.idea
-*.swp
-*.swo
-.DS_Store
-*.sublime-project
-*.sublime-workspace
-
-# Documentation
-*.md
-docs
-README.md
-CHANGELOG.md
-LICENSE
-
-# Docker
-Dockerfile
-docker-compose.yml
-.dockerignore
-docker-compose.*.yml
-
-# Scripts (not needed in container)
-scripts
-*.sh
-
-# CI/CD
-.github
-.gitlab-ci.yml
-.travis.yml
-.circleci
-
-# Misc
-*.log
+# Logs
 logs
+*.log
+*.log.*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# Temporary files
 *.tmp
 *.temp
-.cache
+temp/
+tmp/
+.cache/
+
+# Development cache
+.parcel-cache/
+.nuxt/
+.next/
+.rpt2_cache/
+.rts2_cache_*/
+
+# Database files (development)
+*.db
+*.sqlite
+*.sqlite3
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Development tools
+.eslintcache
+.stylelintcache
+
+# Testing
+__tests__/
+cypress/
+test-reports/
+
+# Documentation (keep README)
+*.md
+!README.md
+!DOCKER_README.md
+
+# Scripts and tools (keep deployment scripts)
+scripts/
+deployment/scripts/
+!deployment/scripts/deploy.sh
+!deployment/scripts/health-check.sh
+
+# Backup and maintenance files
+backups/
+*.backup
+cleanup_report_*
+duplicates_report_*
+unused_files_report_*
+
+# Generated files
+generated-icon.png
+*.tgz
+
+# Yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Replit specific
+.replit
+replit.nix
+
+# Local configuration
+.local
+.localsettings
+
+# Keep essential files for deployment
+!deployment/
+!shared/
+!server/
+!client/
+!config/
+!package.json
+!package-lock.json
+!tsconfig.json
+!vite.config.ts
+!tailwind.config.js
+!jest.config.js
+!drizzle.config.ts

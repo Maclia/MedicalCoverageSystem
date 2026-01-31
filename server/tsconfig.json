@@ -2,12 +2,14 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "allowImportingTsExtensions": false,
     "resolveJsonModule": true,
-    "isolatedModules": false,
-    "noEmit": false,
+    "isolatedModules": true,
+    "noEmit": true,
     "jsx": "preserve",
     "lib": ["ES2022", "DOM"],
     "skipLibCheck": true,
@@ -20,14 +22,18 @@
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true,
     "outDir": "../dist",
-    "rootDir": ".",
+    "rootDir": "..",
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../shared/*"],
       "@server/*": ["./*"]
     }
   },
-  "include": ["**/*.ts"],
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.d.ts"
+  ],
   "exclude": [
     "node_modules",
     "dist",
@@ -35,5 +41,8 @@
     "**/*.test.tsx",
     "**/*.spec.ts",
     "**/*.spec.tsx"
-  ]
+  ],
+  "ts-node": {
+    "esm": true
+  }
 }

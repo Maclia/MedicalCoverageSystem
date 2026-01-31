@@ -237,6 +237,12 @@ export class Assert {
       throw new Error(`Assertion failed: ${message}. Expected instance of ${constructor.name}`);
     }
   }
+
+  static isNotUndefined(value: any, message: string): void {
+    if (value === undefined) {
+      throw new Error(`Assertion failed: ${message}. Value is undefined`);
+    }
+  }
 }
 
 // Test Runner

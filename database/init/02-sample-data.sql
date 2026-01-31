@@ -76,9 +76,9 @@ INSERT INTO tariff_items (catalog_id, procedure_code, agreed_rate, currency, eff
 ON CONFLICT DO NOTHING;
 
 -- Create sample users for testing
-INSERT INTO users (username, password_hash, email, full_name, role, is_active, created_at) VALUES
-('admin', '$2b$12$rQgV9yJzK.Ks9XHO6YA.G.QW5hjyZhmFvwLmwDxT7JThW8RqJqO7e', 'admin@medicalcoverage.com', 'System Administrator', 'admin', true, NOW()),
-('provider1', '$2b$12$rQgV9yJzK.Ks9XHO6YA.G.QW5hjyZhmFvwLmwDxT7JThW8RqJqO7e', 'provider1@medicalcoverage.com', 'Dr. Sarah Johnson', 'provider', true, NOW())
+INSERT INTO users (username, password_hash, email, full_name, role, user_type, entity_id, is_active, created_at) VALUES
+('admin', '$2b$12$rQgV9yJzK.Ks9XHO6YA.G.QW5hjyZhmFvwLmwDxT7JThW8RqJqO7e', 'admin@medicalcoverage.com', 'System Administrator', 'admin', 'insurance', 1, true, NOW()),
+('provider1', '$2b$12$rQgV9yJzK.Ks9XHO6YA.G.QW5hjyZhmFvwLmwDxT7JThW8RqJqO7e', 'provider1@medicalcoverage.com', 'Dr. Sarah Johnson', 'provider', 'provider', 1, true, NOW())
 ON CONFLICT DO NOTHING;
 
 -- Create system configuration

@@ -36,3 +36,13 @@ SELECT 'CREATE DATABASE crm' WHERE NOT EXISTS (
 SELECT 'CREATE DATABASE wellness' WHERE NOT EXISTS (
   SELECT FROM pg_database WHERE datname = 'wellness'
 )\gexec
+
+-- api_gateway
+SELECT 'CREATE DATABASE api_gateway' WHERE NOT EXISTS (
+  SELECT FROM pg_database WHERE datname = 'api_gateway'
+)\gexec
+
+-- core
+SELECT 'CREATE DATABASE core' WHERE NOT EXISTS (
+  SELECT FROM pg_database WHERE datname = 'core'
+)\gexec

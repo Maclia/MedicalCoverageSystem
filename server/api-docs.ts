@@ -417,7 +417,7 @@ export function setupApiDocs(app: Express) {
   }));
 
   // JSON specification
-  app.get('/api-docs.json', (req, res) => {
+  app.get('/api-docs.json', (req: any, res: any) => {
     res.setHeader('Content-Type', 'application/json');
     res.send(specs);
   });

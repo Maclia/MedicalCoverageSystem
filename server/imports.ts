@@ -34,12 +34,15 @@ export const importServices = () => ({
 });
 
 // Export core types and interfaces
-export {
+export type {
   Request,
   Response,
   NextFunction,
-  IStorage,
+  IStorage
+};
+export {
   db,
+  z,
   // Database operators
   eq,
   and,
@@ -51,9 +54,7 @@ export {
   sql,
   count,
   sum,
-  avg,
-  // Validation
-  z
+  avg
 };
 
 // Export schema with more explicit naming
@@ -78,9 +79,7 @@ export type {
   Benefit,
   InsertBenefit,
   Claim,
-  InsertClaim,
-  Card,
-  InsertCard
+  InsertClaim
 } from '../shared/schema.js';
 
 // Express app factory
@@ -96,7 +95,7 @@ export const createExpressApp = () => {
 
 // Error handling utilities
 export const createErrorHandler = () => {
-  return (error: unknown, req: Request, res: Response, next: NextFunction) => {
+  return (error: any, req: Request, res: Response, next: NextFunction) => {
     console.error('Server error:', error);
 
     if (error instanceof Error) {
@@ -146,14 +145,14 @@ export const createResponse = (res: Response) => ({
 });
 
 // Request validation utility
-export const validateRequest = (schema: z.ZodSchema) => {
+export const validateRequest = (schema: any) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
       schema.parse(req.body);
       next();
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errors = error.errors.map(err => `${err.path.join('.')}: ${err.message}`);
+    } catch (error: any) {
+      if (error instanceof (z as any).ZodError) {
+        const errors = error.errors.map((err: any) => `${err.path.join('.')}: ${err.message}`);
         return createResponse(res).validationError(errors);
       }
       return createResponse(res).error('Invalid request format');

@@ -4,16 +4,16 @@
  */
 
 import type { Express } from 'express';
-import BaseModule from '../core/BaseModule';
-import { billingConfig } from './config/module.config';
+import BaseModule from '../core/BaseModule.js';
+import { billingConfig } from './config/module.config.js';
 
 // Import services
-import { BillingService } from './services/BillingService';
-import { AccountsReceivableService } from './services/AccountsReceivableService';
-import { BillingNotificationService } from './services/BillingNotificationService';
+import { BillingService } from './services/BillingService.js';
+import { AccountsReceivableService } from './services/AccountsReceivableService.js';
+import { BillingNotificationService } from './services/BillingNotificationService.js';
 
 // Import routes
-import { billingRoutes } from './routes/index';
+import { billingRoutes } from './routes/index.js';
 
 export class BillingModule extends BaseModule {
   // Service instances

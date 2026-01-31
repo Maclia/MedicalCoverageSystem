@@ -1,7 +1,7 @@
 // Simple integration test to verify frontend-backend connectivity
 const fetch = require('node-fetch');
 
-const API_BASE_URL = process.env.API_URL || 'http://localhost:5000';
+const API_BASE_URL = process.env.API_URL || 'http://localhost:3001';
 
 async function testApiEndpoints() {
   console.log('🧪 Testing API Endpoints Integration...\n');

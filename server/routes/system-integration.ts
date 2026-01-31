@@ -1,27 +1,24 @@
 // Comprehensive System Integration Routes
 // Connects all modules with cross-module data flows and workflows
 
-import { Request, Response, Router } from "express";
+import { Request, Response } from "express";
+import { storage } from "../storage";
 import { z } from "zod";
-import { and, eq, gte, inArray, desc, or, isNotNull } from 'drizzle-orm';
-import { differenceInYears, differenceInDays } from 'date-fns';
-import { storage } from '../storage';
 import {
   members,
-  premiums,
+  companies,
   claims,
-  wellnessActivities,
-  riskAssessments,
+  schemes,
+  providers,
+  premiums,
+  documents,
   communicationLogs,
   auditLogs,
-  companies,
-  benefits,
-  medicalInstitutions as providers
-} from '../../shared/schema';
-import { getConfig } from "../config/system-config";
-
-// Get system configuration
-const config = getConfig();
+  wellnessActivities,
+  riskAssessments,
+  benefits
+} from "../../shared/schema.js";
+import { eq, and, desc, asc, inArray, or, isNotNull } from "drizzle-orm";
 
 // Cross-module integration schemas
 const memberClaimsIntegrationSchema = z.object({
@@ -75,48 +72,41 @@ const crossModuleNotificationSchema = z.object({
   }))
 });
 
-export function setupSystemIntegrationRoutes(app: Router) {
-  // Helper function to extract authenticated user ID from request
-  const getAuthenticatedUserId = (req: Request): number => {
-    // Try to get user ID from various authentication sources
-    if (req.user?.id) return req.user.id;
-    if ((req.session as any)?.userId) return (req.session as any).userId;
-    if (req.headers['x-user-id']) return parseInt(req.headers['x-user-id'] as string);
-    if (req.query?.userId) return parseInt(req.query.userId as string);
-    // Default to system user (1) for system-generated requests
-    return 1;
-  };
-
+export function setupSystemIntegrationRoutes(app: any) {
   app.post("/api/integration/member-claims", async (req: Request, res: Response) => {
-    const authenticatedUserId = getAuthenticatedUserId(req);
     try {
       const { memberId, eligibilityCheck, coverageValidation, providerValidation, preAuthCheck } = memberClaimsIntegrationSchema.parse(req.body);
 
       // Get member details
-      const member = await (storage as any).db.select().from(members).where(eq(members.id, memberId)).limit(1);
+      const member = await storage.db.select().from(members).where(eq(members.id, memberId)).limit(1);
       if (!member.length) {
         return res.status(404).json({ error: "Member not found" });
       }
 
-      // Get member's company
-      const memberCompany = await (storage as any).db
-        .select()
-        .from(companies)
-        .where(eq(companies.id, member[0].companyId))
+      // Get member's current scheme and benefits
+      const memberScheme = await storage.db
+        .select({
+          scheme: schemes,
+          company: companies
+        })
+        .from(members)
+        .leftJoin(schemes, eq(members.schemeId, schemes.id))
+        .leftJoin(companies, eq(members.companyId, companies.id))
+        .where(eq(members.id, memberId))
         .limit(1);
 
       // Get member's active premiums
-      const activePremiums = await (storage as any).db
+      const activePremiums = await storage.db
         .select()
         .from(premiums)
         .where(and(
-          eq(premiums.companyId, member[0].companyId),
+          eq(premiums.memberId, memberId),
           eq(premiums.status, "active")
         ))
         .orderBy(desc(premiums.createdAt));
 
       // Get member's recent claims
-      const recentClaims = await (storage as any).db
+      const recentClaims = await storage.db
         .select()
         .from(claims)
         .where(eq(claims.memberId, memberId))
@@ -125,33 +115,37 @@ export function setupSystemIntegrationRoutes(app: Router) {
 
       // Calculate member eligibility status
       let eligibilityStatus = {
-        active: member[0].membershipStatus === 'active',
-        premiumsPaid: activePremiums.length > 0,
-        companyActive: memberCompany[0]?.isActive === true,
-        documentsVerified: true,
+        active: member[0].status === 'active',
+        premiumsPaid: activePremiums.some(p => p.paymentStatus === 'paid'),
+        schemeActive: memberScheme[0]?.scheme?.status === 'active',
+        documentsVerified: true, // TODO: Check actual document verification status
         recentClaimsImpact: recentClaims.length > 0 ? recentClaims.length : 0
       };
 
-      // Get available benefits
-      const availableBenefits = await (storage as any).db
+      // Get available benefits from member's scheme
+      const availableBenefits = memberScheme[0]?.scheme ? await storage.db
         .select()
         .from(benefits)
-        .where(eq(benefits.isStandard, true));
+        .where(and(
+          eq(benefits.schemeId, memberScheme[0].scheme.id),
+          eq(benefits.status, "active")
+        )) : [];
 
       // Integration response
       const integrationData = {
         member: member[0],
         eligibility: eligibilityCheck ? eligibilityStatus : null,
         coverage: coverageValidation ? {
-          company: memberCompany[0],
+          scheme: memberScheme[0]?.scheme,
           benefits: availableBenefits,
-          limits: availableBenefits.map((benefit: any) => ({
+          limits: availableBenefits.map(benefit => ({
             benefitId: benefit.id,
-            annualLimit: benefit.limitAmount,
-            coveragePercentage: 100
+            annualLimit: benefit.annualLimit,
+            remainingLimit: benefit.annualLimit - (benefit.usedAmount || 0),
+            coveragePercentage: benefit.coveragePercentage
           }))
         } : null,
-        recentClaims: recentClaims.map((claim: any) => ({
+        recentClaims: recentClaims.map(claim => ({
           id: claim.id,
           claimNumber: claim.claimNumber,
           status: claim.status,
@@ -164,18 +158,18 @@ export function setupSystemIntegrationRoutes(app: Router) {
           eligibilityValidated: eligibilityCheck,
           coverageValidated: coverageValidation,
           providerNetworkActive: providerValidation,
-          preAuthRequired: preAuthCheck && availableBenefits.some((b: any) => b.hasWaitingPeriod)
+          preAuthRequired: preAuthCheck && availableBenefits.some(b => b.preAuthRequired)
         }
       };
 
       // Log integration activity
-      await (storage as any).db.insert(auditLogs).values({
+      await storage.db.insert(auditLogs).values({
         entityType: 'member',
         entityId: memberId,
         action: 'integration_check',
         oldValues: null,
         newValues: JSON.stringify({ type: 'member_claims_integration', timestamp: new Date().toISOString() }),
-        performedBy: authenticatedUserId,
+        performedBy: 1, // TODO: Get actual user ID
         ipAddress: req.ip,
         userAgent: req.get('User-Agent') || 'System',
         description: `Member-Claims integration check for member ID: ${memberId}`
@@ -246,14 +240,8 @@ export function setupSystemIntegrationRoutes(app: Router) {
       let riskScore = 50; // Base risk score
       const memberProfile = member[0];
 
-      // Age-based risk with proper date validation
-      let age = 30; // Default age
-      if (memberProfile.dateOfBirth && typeof memberProfile.dateOfBirth === 'string') {
-        const birthDate = new Date(memberProfile.dateOfBirth);
-        if (!isNaN(birthDate.getTime()) && birthDate.getTime() > 0) {
-          age = differenceInYears(new Date(), birthDate);
-        }
-      }
+      // Age-based risk
+      const age = new Date().getFullYear() - new Date(memberProfile.dateOfBirth).getFullYear();
       if (age < 25) riskScore -= 10;
       else if (age > 60) riskScore += 15;
 
@@ -398,32 +386,23 @@ export function setupSystemIntegrationRoutes(app: Router) {
         negotiatedRates: true
       } : null;
 
-      // Get recent claims for this provider (fetch before metrics calculation)
+      // Get provider performance metrics
+      const performanceMetrics = performanceUpdate ? {
+        totalClaims: 0, // TODO: Calculate from claims table
+        averageProcessingTime: 0, // TODO: Calculate from claims table
+        denialRate: 0, // TODO: Calculate from claims table
+        patientSatisfaction: provider[0].satisfactionScore || 0,
+        qualityScore: provider[0].qualityScore || 0,
+        complianceScore: provider[0].complianceScore || 0
+      } : null;
+
+      // Get recent claims for this provider
       const recentProviderClaims = await storage.db
         .select()
         .from(claims)
         .where(eq(claims.providerId, providerId))
         .orderBy(desc(claims.createdAt))
         .limit(10);
-
-      // Get provider performance metrics
-      const performanceMetrics = performanceUpdate ? {
-        totalClaims: recentProviderClaims.length,
-        averageProcessingTime: recentProviderClaims.length > 0
-          ? Math.round(recentProviderClaims.reduce((sum, claim) => {
-              if (claim.processedAt && claim.createdAt) {
-                return sum + Math.ceil((new Date(claim.processedAt).getTime() - new Date(claim.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-              }
-              return sum;
-            }, 0) / recentProviderClaims.length)
-          : 0,
-        denialRate: recentProviderClaims.length > 0
-          ? Math.round((recentProviderClaims.filter(claim => claim.status === 'denied').length / recentProviderClaims.length) * 100)
-          : 0,
-        patientSatisfaction: provider[0].satisfactionScore || 0,
-        qualityScore: provider[0].qualityScore || 0,
-        complianceScore: provider[0].complianceScore || 0
-      } : null;
 
       // Calculate analytics data
       const analyticsData = analyticsUpdate ? {
@@ -615,7 +594,6 @@ export function setupSystemIntegrationRoutes(app: Router) {
   // Cross-module event notification system
   app.post("/api/integration/cross-module-notification", async (req: Request, res: Response) => {
     try {
-      const authenticatedUserId = getAuthenticatedUserId(req);
       const { modules, memberId, providerId, companyId, eventType, eventTitle, eventDescription, eventSeverity, requiresAction, actionDeadline, recipients } = crossModuleNotificationSchema.parse(req.body);
 
       // Create central notification
@@ -633,88 +611,49 @@ export function setupSystemIntegrationRoutes(app: Router) {
           requiresAction,
           actionDeadline
         }),
-        performedBy: authenticatedUserId,
+        performedBy: 1, // TODO: Get actual user ID
         ipAddress: req.ip,
         userAgent: req.get('User-Agent') || 'System',
         description: eventTitle
       }).returning();
 
-      // Trigger cross-module notifications with proper error handling
+      // Trigger cross-module notifications
       const notificationResults = await Promise.all(
         recipients.map(async (recipient) => {
-          const maxRetries = config.integration.maxConcurrentRequests > 0 ? 3 : 1;
-          let lastError: any = null;
+          try {
+            const response = await fetch(`${process.env.API_BASE_URL || 'http://localhost:5000'}${recipient.endpoint}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-System-Event': 'true'
+              },
+              body: JSON.stringify({
+                eventType,
+                eventTitle,
+                eventDescription,
+                eventSeverity,
+                requiresAction,
+                actionDeadline,
+                sourceModule: 'system_integration',
+                timestamp: new Date().toISOString(),
+                ...recipient.payload
+              })
+            });
 
-          for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), config.integration.timeout);
-
-              const response = await fetch(`${config.api.baseUrl}${recipient.endpoint}`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'X-System-Event': 'true',
-                  'X-Retry-Attempt': attempt.toString(),
-                  'X-Request-ID': `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
-                },
-                body: JSON.stringify({
-                  eventType,
-                  eventTitle,
-                  eventDescription,
-                  eventSeverity,
-                  requiresAction,
-                  actionDeadline,
-                  sourceModule: 'system_integration',
-                  timestamp: new Date().toISOString(),
-                  ...recipient.payload
-                }),
-                signal: controller.signal
-              });
-
-              clearTimeout(timeoutId);
-
-              // Log successful notification
-              if (config.integration.logging.enabled) {
-                console.log(`Integration notification sent successfully to ${recipient.module} (${recipient.endpoint})`);
-              }
-
-              return {
-                module: recipient.module,
-                endpoint: recipient.endpoint,
-                success: response.ok,
-                status: response.status,
-                attempt,
-                responseTime: Date.now()
-              };
-            } catch (error) {
-              lastError = error;
-
-              // Log failed attempt
-              if (config.integration.logging.enabled) {
-                console.warn(`Integration notification attempt ${attempt} failed for ${recipient.module}:`, error);
-              }
-
-              // Don't retry on client errors (4xx) or if this is the last attempt
-              if (error instanceof Error && error.message.includes('4') || attempt === maxRetries) {
-                break;
-              }
-
-              // Exponential backoff
-              if (attempt < maxRetries) {
-                await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000));
-              }
-            }
+            return {
+              module: recipient.module,
+              endpoint: recipient.endpoint,
+              success: response.ok,
+              status: response.status
+            };
+          } catch (error) {
+            return {
+              module: recipient.module,
+              endpoint: recipient.endpoint,
+              success: false,
+              error: error instanceof Error ? error.message : 'Unknown error'
+            };
           }
-
-          return {
-            module: recipient.module,
-            endpoint: recipient.endpoint,
-            success: false,
-            error: lastError instanceof Error ? lastError.message : 'Unknown error',
-            attempts: maxRetries,
-            lastError
-          };
         })
       );
 
@@ -899,16 +838,6 @@ export function setupSystemIntegrationRoutes(app: Router) {
         return score + activityScore;
       }, 0);
 
-      // Get member's active premiums for eligibility check
-      const activePremiums = await storage.db
-        .select()
-        .from(premiums)
-        .where(and(
-          eq(premiums.memberId, memberId),
-          eq(premiums.status, "active")
-        ))
-        .orderBy(desc(premiums.createdAt));
-
       // Enhanced eligibility benefits based on wellness
       const enhancedBenefits = memberScheme[0]?.scheme ? {
         baseBenefits: await storage.db
@@ -930,7 +859,7 @@ export function setupSystemIntegrationRoutes(app: Router) {
         member: member[0],
         baseEligibility: {
           active: member[0].status === 'active',
-          premiumsCurrent: activePremiums.length > 0 && activePremiums.some(p => p.paymentStatus === 'paid'),
+          premiumsCurrent: true, // TODO: Check actual premium status
           schemeActive: memberScheme[0]?.scheme?.status === 'active'
         },
         wellnessEnhancement: {
@@ -972,26 +901,17 @@ export function setupSystemIntegrationRoutes(app: Router) {
         return res.status(404).json({ error: "Member not found" });
       }
 
-      // Check if reward already processed for this trigger and get reward statistics
-      const [existingReward, rewardStats] = await Promise.all([
-        storage.db
-          .select()
-          .from(communicationLogs)
-          .where(and(
-            eq(communicationLogs.memberId, memberId),
-            eq(communicationLogs.communicationType, 'wellness_reward'),
-            eq(communicationLogs.status, 'processed')
-          ))
-          .orderBy(desc(communicationLogs.createdAt))
-          .limit(1),
-        storage.db
-          .select()
-          .from(communicationLogs)
-          .where(and(
-            eq(communicationLogs.memberId, memberId),
-            eq(communicationLogs.communicationType, 'wellness_reward')
-          ))
-      ]);
+      // Check if reward already processed for this trigger
+      const existingReward = await storage.db
+        .select()
+        .from(communicationLogs)
+        .where(and(
+          eq(communicationLogs.memberId, memberId),
+          eq(communicationLogs.communicationType, 'wellness_reward'),
+          eq(communicationLogs.status, 'processed')
+        ))
+        .orderBy(desc(communicationLogs.createdAt))
+        .limit(1);
 
       // Create reward record
       const rewardRecord = await storage.db.insert(communicationLogs).values({
@@ -1023,17 +943,6 @@ export function setupSystemIntegrationRoutes(app: Router) {
         createdAt: new Date()
       });
 
-      // Calculate reward statistics
-      const currentYear = new Date().getFullYear();
-      const currentMonth = new Date().getMonth();
-      const rewardsThisYear = rewardStats.filter(r =>
-        new Date(r.createdAt).getFullYear() === currentYear
-      ).length;
-      const rewardsThisMonth = rewardStats.filter(r =>
-        new Date(r.createdAt).getMonth() === currentMonth &&
-        new Date(r.createdAt).getFullYear() === currentYear
-      ).length;
-
       const rewardData = {
         member: member[0],
         reward: {
@@ -1043,8 +952,8 @@ export function setupSystemIntegrationRoutes(app: Router) {
           processedAt: new Date().toISOString()
         },
         rewardSummary: {
-          totalRewardsThisMonth: rewardsThisMonth,
-          totalRewardsThisYear: rewardsThisYear,
+          totalRewardsThisMonth: 1, // TODO: Calculate from reward logs
+          totalRewardsThisYear: 1, // TODO: Calculate from reward logs
           nextRewardMilestone: 'Complete 50 wellness activities for bonus reward'
         },
         communicationSent: true
@@ -1202,9 +1111,7 @@ export function setupSystemIntegrationRoutes(app: Router) {
           totalProviders: allProviders.length,
           activeProviders: allProviders.filter(p => p.networkStatus === 'active').length,
           averageUtilization: providerClaims.length / allProviders.length,
-          networkEfficiencyScore: Object.keys(providerUtilization).length > 0
-            ? Math.round((Object.values(providerUtilization).reduce((sum, p) => sum + (p.approvals / p.claims), 0) / Object.keys(providerUtilization).length) * 100)
-            : 0
+          networkEfficiencyScore: 85.4 // TODO: Calculate based on multiple factors
         },
         efficiencyMetrics: {
           averageProcessingTime: Object.values(providerUtilization).reduce((sum, p) => sum + (p.processingTime / p.claims), 0) / Object.keys(providerUtilization).length,
@@ -1256,8 +1163,6 @@ export function setupSystemIntegrationRoutes(app: Router) {
     }
   });
 
-
-
   // Intelligent Referral Routing
   app.post("/api/integration/provider-referral-routing", async (req: Request, res: Response) => {
     try {
@@ -1275,7 +1180,7 @@ export function setupSystemIntegrationRoutes(app: Router) {
         .from(providers)
         .where(and(
           eq(providers.networkStatus, 'active'),
-          eq(providers.specialization, specialty)
+          providers.specialization.includes(specialty)
         ));
 
       // Get provider performance data
@@ -1291,11 +1196,10 @@ export function setupSystemIntegrationRoutes(app: Router) {
             .orderBy(desc(claims.createdAt))
             .limit(20);
 
-          const processedClaims = recentClaims.filter(claim => claim.processedAt);
-          const avgProcessingTime = processedClaims.length > 0
-            ? processedClaims.reduce((sum, claim) => {
+          const avgProcessingTime = recentClaims.length > 0
+            ? recentClaims.reduce((sum, claim) => {
                 return sum + Math.ceil((new Date(claim.processedAt!).getTime() - new Date(claim.createdAt).getTime()) / (1000 * 60 * 60 * 24));
-              }, 0) / processedClaims.length
+              }, 0) / recentClaims.length
             : 0;
 
           return {
@@ -1321,7 +1225,7 @@ export function setupSystemIntegrationRoutes(app: Router) {
         score += (performance.satisfactionScore / 5) * 30;
 
         // Processing time (20% weight) - lower is better
-        const processingScore = Math.max(0, 20 - (performance.avgProcessingTime * 2));
+        const processingScore = Math.max(0, 20 - (avgProcessingTime * 2));
         score += processingScore;
 
         // Availability/Utilization (10% weight)
@@ -1350,7 +1254,7 @@ export function setupSystemIntegrationRoutes(app: Router) {
           },
           performance,
           score: Math.round(score * 100) / 100,
-          recommendation: generateProviderRecommendation(score, urgency, performance)
+          recommendation: this.generateProviderRecommendation(score, urgency, performance)
         };
       }).sort((a, b) => b.score - a.score);
 
@@ -1430,13 +1334,7 @@ export function setupSystemIntegrationRoutes(app: Router) {
 
       switch (eventType) {
         case 'age_increase':
-          let age = 30; // Default age
-          if (member[0].dateOfBirth && typeof member[0].dateOfBirth === 'string') {
-            const birthDate = new Date(member[0].dateOfBirth);
-            if (!isNaN(birthDate.getTime()) && birthDate.getTime() > 0) {
-              age = differenceInYears(new Date(), birthDate);
-            }
-          }
+          const age = new Date().getFullYear() - new Date(member[0].dateOfBirth).getFullYear();
           if (age >= 65) riskAdjustment = 15;
           else if (age >= 50) riskAdjustment = 10;
           adjustmentReason = `Age-based risk adjustment for age ${age}`;
@@ -1629,7 +1527,8 @@ export function setupSystemIntegrationRoutes(app: Router) {
             const recipient = memberId || providerId || companyId;
             const entityType = memberId ? 'member' : providerId ? 'provider' : 'company';
 
-            const payload: any = {
+            const notification = await storage.db.insert(communicationLogs).values({
+              [entityType === 'member' ? 'memberId' : entityType === 'provider' ? 'providerId' : 'companyId']: recipient,
               communicationType: 'contextual_notification',
               channel,
               subject: eventTitle,
@@ -1645,13 +1544,7 @@ export function setupSystemIntegrationRoutes(app: Router) {
               }),
               sentAt: new Date(),
               createdAt: new Date()
-            };
-
-            if (entityType === 'member') payload.memberId = recipient;
-            else if (entityType === 'provider') payload.providerId = recipient;
-            else if (entityType === 'company') payload.companyId = recipient;
-
-            const notification = await storage.db.insert(communicationLogs).values(payload).returning();
+            }).returning();
 
             return {
               channel,
@@ -1846,29 +1739,6 @@ export function setupSystemIntegrationRoutes(app: Router) {
   // System health and integration status
   app.get("/api/integration/status", async (req: Request, res: Response) => {
     try {
-      // Calculate actual integration metrics from audit logs
-      const last24Hours = new Date();
-      last24Hours.setHours(last24Hours.getHours() - 24);
-
-      const [totalMembers, activeClaims, activeProviders, recentIntegrations] = await Promise.all([
-        storage.db.select().from(members).then(m => m.length),
-        storage.db.select().from(claims).where(eq(claims.status, 'pending')).then(c => c.length),
-        storage.db.select().from(providers).where(eq(providers.networkStatus, 'active')).then(p => p.length),
-        storage.db
-          .select()
-          .from(auditLogs)
-          .where(and(
-            gte(auditLogs.createdAt, last24Hours),
-            or(
-              eq(auditLogs.action, 'integration_check'),
-              eq(auditLogs.action, 'wellness_claims_impact'),
-              eq(auditLogs.action, 'quality_adjustment'),
-              eq(auditLogs.action, 'intelligent_routing')
-            )
-          ))
-          .then(logs => logs.length)
-      ]);
-
       // Check all module statuses
       const systemStatus = {
         timestamp: new Date().toISOString(),
@@ -1926,10 +1796,10 @@ export function setupSystemIntegrationRoutes(app: Router) {
           cross_module_notifications: 'active'
         },
         metrics: {
-          totalMembers,
-          activeClaims,
-          activeProviders,
-          recentIntegrations
+          totalMembers: await storage.db.select().from(members).then(m => m.length),
+          activeClaims: await storage.db.select().from(claims).where(eq(claims.status, 'pending')).then(c => c.length),
+          activeProviders: await storage.db.select().from(providers).where(eq(providers.networkStatus, 'active')).then(p => p.length),
+          recentIntegrations: 5 // TODO: Calculate from integration logs
         }
       };
 

@@ -1,0 +1,33 @@
+# Development Dockerfile for MedicalCoverageSystem
+FROM node:20-alpine
+
+# Install dependencies for development
+RUN apk add --no-cache \
+    curl \
+    bash \
+    git
+
+WORKDIR /app
+
+# Copy package files first for better layer caching
+COPY package.json package-lock.json* ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Create directories for development
+RUN mkdir -p logs
+
+# Environment variables for development
+ENV NODE_ENV=development
+ENV PORT=5000
+ENV HOSTNAME=0.0.0.0
+
+# Expose development ports
+EXPOSE 5000 5173
+
+# Development command (runs both server and client dev)
+CMD ["npm", "run", "dev"]

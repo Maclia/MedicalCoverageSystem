@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TokenWalletWidget } from "@/components/tokens/TokenWalletWidget";
 
 export default function Dashboard() {
   const [viewMode, setViewMode] = useState<'overview' | 'analytics'>('overview');
@@ -74,7 +73,6 @@ export default function Dashboard() {
 
             <div className="lg:col-span-1 space-y-6">
               <QuickActions />
-              <TokenWalletWidget organizationId={1} compact={true} />
               <PremiumPeriodCard />
             </div>
           </div>
