@@ -3,8 +3,8 @@
  * Finance Module 4: Claims Financial Management
  */
 
-import BaseModule from '../core/BaseModule';
-import { ModuleConfig } from '../core/registry/ModuleRegistry';
+import BaseModule from '../core/BaseModule.js';
+import { ModuleConfig } from '../core/registry/ModuleRegistry.js';
 
 export const claimsFinancialConfig: ModuleConfig = {
   name: 'claims-financial',

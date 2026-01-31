@@ -11,12 +11,10 @@ interface SidebarLink {
 const mainLinks: SidebarLink[] = [
   { path: "/", label: "Dashboard", icon: "dashboard" },
   { path: "/finance", label: "Finance", icon: "account_balance" },
-  { path: "/tokens/purchase", label: "Tokens", icon: "toll" },
   { path: "/schemes-management", label: "Schemes & Benefits", icon: "layers" },
   { path: "/provider-schemes-management", label: "Provider Networks", icon: "network" },
   { path: "/companies", label: "Companies", icon: "business" },
   { path: "/members", label: "Members", icon: "people" },
-  { path: "/crm/leads", label: "CRM - Leads", icon: "contacts" },
   { path: "/premiums", label: "Premiums", icon: "payments" },
   { path: "/benefits", label: "Benefits", icon: "medical_services" },
 ];

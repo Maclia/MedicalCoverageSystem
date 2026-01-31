@@ -23,7 +23,7 @@ import {
   ProviderProcedureRate, InsertProviderProcedureRate,
   ClaimProcedureItem, InsertClaimProcedureItem,
   DiagnosisCode, InsertDiagnosisCode,
-  User,
+  User, InsertUser,
   OnboardingSession, InsertOnboardingSession,
   OnboardingTask, InsertOnboardingTask,
   MemberDocument, InsertMemberDocument,
@@ -46,9 +46,7 @@ import {
   CardProductionBatch, InsertCardProductionBatch
 } from "../shared/schema.js";
 
-import { getConfig } from "./config/system-config";
-
-// Storage interface with enhanced connection management with enhanced connection management
+// Storage interface
 export interface IStorage {
   // User authentication methods
   getUser(id: number): Promise<User | undefined>;
@@ -92,327 +90,305 @@ export interface IStorage {
   getFamilyRatesByPremiumRate(premiumRateId: number): Promise<FamilyRate[]>;
   getFamilyRate(id: number): Promise<FamilyRate | undefined>;
   createFamilyRate(familyRate: InsertFamilyRate): Promise<FamilyRate>;
-}
+  
+  // Premium methods
+  getPremiums(): Promise<Premium[]>;
+  getPremium(id: number): Promise<Premium | undefined>;
+  getPremiumsByCompany(companyId: number): Promise<Premium[]>;
+  getPremiumsByPeriod(periodId: number): Promise<Premium[]>;
+  createPremium(premium: InsertPremium): Promise<Premium>;
 
-// Database connection management and query optimization
-export class DatabaseManager {
-  private static instance: DatabaseManager;
-  private config: any;
-  private connectionPool: any[] = [];
-  private activeConnections = 0;
-  private maxConnections: number;
+  // Benefit methods
+  getBenefits(): Promise<Benefit[]>;
+  getBenefit(id: number): Promise<Benefit | undefined>;
+  getBenefitsByCategory(category: string): Promise<Benefit[]>;
+  getStandardBenefits(): Promise<Benefit[]>;
+  createBenefit(benefit: InsertBenefit): Promise<Benefit>;
+  
+  // Company Benefit methods
+  getCompanyBenefits(): Promise<CompanyBenefit[]>;
+  getCompanyBenefit(id: number): Promise<CompanyBenefit | undefined>;
+  getCompanyBenefitsByCompany(companyId: number): Promise<CompanyBenefit[]>;
+  getCompanyBenefitsByPremium(premiumId: number): Promise<CompanyBenefit[]>;
+  createCompanyBenefit(companyBenefit: InsertCompanyBenefit): Promise<CompanyBenefit>;
+  
+  // Company Period methods
+  getCompanyPeriods(): Promise<CompanyPeriod[]>;
+  getCompanyPeriod(id: number): Promise<CompanyPeriod | undefined>;
+  getCompanyPeriodsByCompany(companyId: number): Promise<CompanyPeriod[]>;
+  getCompanyPeriodsByPeriod(periodId: number): Promise<CompanyPeriod[]>;
+  createCompanyPeriod(companyPeriod: InsertCompanyPeriod): Promise<CompanyPeriod>;
+  
+  // Region methods
+  getRegions(): Promise<Region[]>;
+  getRegion(id: number): Promise<Region | undefined>;
+  createRegion(region: InsertRegion): Promise<Region>;
+  
+  // Medical Institution methods
+  getMedicalInstitutions(): Promise<MedicalInstitution[]>;
+  getMedicalInstitution(id: number): Promise<MedicalInstitution | undefined>;
+  getMedicalInstitutionsByRegion(regionId: number): Promise<MedicalInstitution[]>;
+  getMedicalInstitutionsByType(type: string): Promise<MedicalInstitution[]>;
+  getMedicalInstitutionsByApprovalStatus(status: string): Promise<MedicalInstitution[]>;
+  createMedicalInstitution(institution: InsertMedicalInstitution): Promise<MedicalInstitution>;
+  updateMedicalInstitutionApproval(id: number, status: string, validUntil?: Date): Promise<MedicalInstitution>;
+  
+  // Medical Personnel methods
+  getMedicalPersonnel(id?: number): Promise<MedicalPersonnel[] | MedicalPersonnel | undefined>;
+  getMedicalPersonnelByInstitution(institutionId: number): Promise<MedicalPersonnel[]>;
+  getMedicalPersonnelByType(type: string): Promise<MedicalPersonnel[]>;
+  getMedicalPersonnelByApprovalStatus(status: string): Promise<MedicalPersonnel[]>;
+  createMedicalPersonnel(personnel: InsertMedicalPersonnel): Promise<MedicalPersonnel>;
+  updateMedicalPersonnelApproval(id: number, status: string, validUntil?: Date): Promise<MedicalPersonnel>;
+  
+  // Panel Documentation methods
+  getPanelDocumentations(): Promise<PanelDocumentation[]>;
+  getPanelDocumentation(id: number): Promise<PanelDocumentation | undefined>;
+  getPanelDocumentationsByInstitution(institutionId: number): Promise<PanelDocumentation[]>;
+  getPanelDocumentationsByPersonnel(personnelId: number): Promise<PanelDocumentation[]>;
+  getPanelDocumentationsByVerificationStatus(isVerified: boolean): Promise<PanelDocumentation[]>;
+  createPanelDocumentation(documentation: InsertPanelDocumentation): Promise<PanelDocumentation>;
+  verifyPanelDocumentation(id: number, verifiedBy: string, notes?: string): Promise<PanelDocumentation>;
+  
+  // Claims methods
+  getClaims(): Promise<Claim[]>;
+  getClaim(id: number): Promise<Claim | undefined>;
+  getClaimsByInstitution(institutionId: number): Promise<Claim[]>;
+  getClaimsByPersonnel(personnelId: number): Promise<Claim[]>;
+  getClaimsByMember(memberId: number): Promise<Claim[]>;
+  getClaimsByStatus(status: string): Promise<Claim[]>;
+  // New methods for provider verification and fraud detection
+  getClaimsByProviderVerification(verified: boolean): Promise<Claim[]>;
+  getClaimsByFraudRiskLevel(riskLevel: string): Promise<Claim[]>;
+  getClaimsRequiringHigherApproval(): Promise<Claim[]>;
+  
+  createClaim(claim: InsertClaim): Promise<Claim>;
+  updateClaimStatus(id: number, status: string, reviewerNotes?: string): Promise<Claim>;
+  
+  // Admin approval and fraud detection methods
+  adminApproveClaim(id: number, adminNotes: string): Promise<Claim>;
+  rejectClaim(id: number, reason: string): Promise<Claim>;
+  markClaimAsFraudulent(id: number, riskLevel: string, riskFactors: string, reviewerId: number): Promise<Claim>;
+  processClaimPayment(id: number, paymentReference: string): Promise<Claim>;
+  
+  // Premium Payment methods
+  getPremiumPayments(): Promise<PremiumPayment[]>;
+  getPremiumPayment(id: number): Promise<PremiumPayment | undefined>;
+  getPremiumPaymentsByCompany(companyId: number): Promise<PremiumPayment[]>;
+  getPremiumPaymentsByPremium(premiumId: number): Promise<PremiumPayment[]>;
+  getPremiumPaymentsByStatus(status: string): Promise<PremiumPayment[]>;
+  createPremiumPayment(payment: InsertPremiumPayment): Promise<PremiumPayment>;
+  updatePremiumPaymentStatus(id: number, status: string): Promise<PremiumPayment>;
+  
+  // Claim Payment methods
+  getClaimPayments(): Promise<ClaimPayment[]>;
+  getClaimPayment(id: number): Promise<ClaimPayment | undefined>;
+  getClaimPaymentsByClaim(claimId: number): Promise<ClaimPayment[]>;
+  getClaimPaymentsByMember(memberId: number): Promise<ClaimPayment[]>;
+  getClaimPaymentsByInstitution(institutionId: number): Promise<ClaimPayment[]>;
+  getClaimPaymentsByStatus(status: string): Promise<ClaimPayment[]>;
+  createClaimPayment(payment: InsertClaimPayment): Promise<ClaimPayment>;
+  updateClaimPaymentStatus(id: number, status: string): Promise<ClaimPayment>;
+  
+  // Provider Disbursement methods
+  getProviderDisbursements(): Promise<ProviderDisbursement[]>;
+  getProviderDisbursement(id: number): Promise<ProviderDisbursement | undefined>;
+  getProviderDisbursementsByInstitution(institutionId: number): Promise<ProviderDisbursement[]>;
+  getProviderDisbursementsByStatus(status: string): Promise<ProviderDisbursement[]>;
+  createProviderDisbursement(disbursement: InsertProviderDisbursement): Promise<ProviderDisbursement>;
+  updateProviderDisbursementStatus(id: number, status: string): Promise<ProviderDisbursement>;
+  
+  // Disbursement Item methods
+  getDisbursementItems(): Promise<DisbursementItem[]>;
+  getDisbursementItem(id: number): Promise<DisbursementItem | undefined>;
+  getDisbursementItemsByDisbursement(disbursementId: number): Promise<DisbursementItem[]>;
+  getDisbursementItemsByClaim(claimId: number): Promise<DisbursementItem[]>;
+  createDisbursementItem(item: InsertDisbursementItem): Promise<DisbursementItem>;
+  updateDisbursementItemStatus(id: number, status: string): Promise<DisbursementItem>;
+  
+  // Insurance Balance methods
+  getInsuranceBalances(): Promise<InsuranceBalance[]>;
+  getInsuranceBalance(id: number): Promise<InsuranceBalance | undefined>;
+  getInsuranceBalanceByPeriod(periodId: number): Promise<InsuranceBalance | undefined>;
+  createInsuranceBalance(balance: InsertInsuranceBalance): Promise<InsuranceBalance>;
+  updateInsuranceBalance(id: number, totalPremiums: number, totalClaims: number, pendingClaims: number, activeBalance: number): Promise<InsuranceBalance>;
+  
+  // Medical Procedure methods
+  getMedicalProcedures(): Promise<MedicalProcedure[]>;
+  getMedicalProcedure(id: number): Promise<MedicalProcedure | undefined>;
+  getMedicalProceduresByCategory(category: string): Promise<MedicalProcedure[]>;
+  getActiveMedicalProcedures(): Promise<MedicalProcedure[]>;
+  createMedicalProcedure(procedure: InsertMedicalProcedure): Promise<MedicalProcedure>;
+  updateMedicalProcedureStatus(id: number, active: boolean): Promise<MedicalProcedure>;
+  
+  // Provider Procedure Rate methods
+  getProviderProcedureRates(): Promise<ProviderProcedureRate[]>;
+  getProviderProcedureRate(id: number): Promise<ProviderProcedureRate | undefined>;
+  getProviderProcedureRatesByInstitution(institutionId: number): Promise<ProviderProcedureRate[]>;
+  getProviderProcedureRatesByProcedure(procedureId: number): Promise<ProviderProcedureRate[]>;
+  getActiveProviderProcedureRates(): Promise<ProviderProcedureRate[]>;
+  createProviderProcedureRate(rate: InsertProviderProcedureRate): Promise<ProviderProcedureRate>;
+  updateProviderProcedureRateStatus(id: number, active: boolean): Promise<ProviderProcedureRate>;
+  
+  // Claim Procedure Item methods
+  getClaimProcedureItems(): Promise<ClaimProcedureItem[]>;
+  getClaimProcedureItem(id: number): Promise<ClaimProcedureItem | undefined>;
+  getClaimProcedureItemsByClaim(claimId: number): Promise<ClaimProcedureItem[]>;
+  getClaimProcedureItemsByProcedure(procedureId: number): Promise<ClaimProcedureItem[]>;
+  createClaimProcedureItem(item: InsertClaimProcedureItem): Promise<ClaimProcedureItem>;
+  createClaimWithProcedureItems(claim: InsertClaim, procedureItems: Omit<InsertClaimProcedureItem, 'claimId'>[]): Promise<{ claim: Claim, procedureItems: ClaimProcedureItem[] }>;
+  
+  // Diagnosis Code methods
+  getDiagnosisCodes(): Promise<DiagnosisCode[]>;
+  getDiagnosisCode(id: number): Promise<DiagnosisCode | undefined>;
+  getDiagnosisCodeByCode(code: string): Promise<DiagnosisCode | undefined>;
+  getDiagnosisCodesByType(codeType: string): Promise<DiagnosisCode[]>;
+  getDiagnosisCodesBySearch(searchTerm: string): Promise<DiagnosisCode[]>;
+  createDiagnosisCode(diagnosisCode: InsertDiagnosisCode): Promise<DiagnosisCode>;
+  updateDiagnosisCodeStatus(id: number, isActive: boolean): Promise<DiagnosisCode>;
 
-  private constructor(config: any) {
-    this.config = config;
-    this.maxConnections = config.database?.connectionPoolSize || 20;
-  }
+  // User method
+  createUser(user: InsertUser): Promise<User>;
 
-  static getInstance(config?: any): DatabaseManager {
-    if (!DatabaseManager.instance) {
-      DatabaseManager.instance = new DatabaseManager(config || getConfig());
-    }
-    return DatabaseManager.instance;
-  }
+  // Enhanced Claims Processing Methods
+  // Claim Adjudication Results
+  getClaimAdjudicationResults(): Promise<ClaimAdjudicationResult[]>;
+  getClaimAdjudicationResult(id: number): Promise<ClaimAdjudicationResult | undefined>;
+  getClaimAdjudicationResultsByClaim(claimId: number): Promise<ClaimAdjudicationResult[]>;
+  createClaimAdjudicationResult(result: InsertClaimAdjudicationResult): Promise<ClaimAdjudicationResult>;
 
-  async getConnection(): Promise<any> {
-    if (this.activeConnections < this.maxConnections) {
-      const connection = await this.createConnection();
-      this.connectionPool.push(connection);
-      this.activeConnections++;
-      return connection;
-    }
+  // Medical Necessity Validations
+  getMedicalNecessityValidations(): Promise<MedicalNecessityValidation[]>;
+  getMedicalNecessityValidation(id: number): Promise<MedicalNecessityValidation | undefined>;
+  getMedicalNecessityValidationsByClaim(claimId: number): Promise<MedicalNecessityValidation[]>;
+  createMedicalNecessityResult(validation: InsertMedicalNecessityValidation): Promise<MedicalNecessityValidation>;
 
-    // Reuse existing connection from pool
-    const availableConnection = this.connectionPool.find(conn =>
-      conn !== null && conn !== undefined
-    );
+  // Fraud Detection Results
+  getFraudDetectionResults(): Promise<FraudDetectionResult[]>;
+  getFraudDetectionResult(id: number): Promise<FraudDetectionResult | undefined>;
+  getFraudDetectionResultsByClaim(claimId: number): Promise<FraudDetectionResult[]>;
+  createFraudDetectionResult(result: InsertFraudDetectionResult): Promise<FraudDetectionResult>;
 
-    if (availableConnection) {
-      const index = this.connectionPool.indexOf(availableConnection);
-      this.connectionPool.splice(index, 1);
-      this.activeConnections++;
-      return availableConnection;
-    }
+  // Explanation of Benefits
+  getExplanationOfBenefits(): Promise<ExplanationOfBenefits[]>;
+  getExplanationOfBenefits(id: number): Promise<ExplanationOfBenefits | undefined>;
+  getExplanationOfBenefitsByClaim(claimId: number): Promise<ExplanationOfBenefits[]>;
+  getExplanationOfBenefitsByMember(memberId: number): Promise<ExplanationOfBenefits[]>;
+  createExplanationOfBenefits(eob: InsertExplanationOfBenefits): Promise<ExplanationOfBenefits>;
 
-    // Wait for available connection (with timeout)
-    const timeout = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error('Connection timeout')), 30000);
-    });
+  // Claim Audit Trails
+  getClaimAuditTrails(): Promise<ClaimAuditTrail[]>;
+  getClaimAuditTrail(id: number): Promise<ClaimAuditTrail | undefined>;
+  getClaimAuditTrailsByClaim(claimId: number): Promise<ClaimAuditTrail[]>;
+  createClaimAuditTrail(audit: InsertClaimAuditTrail): Promise<ClaimAuditTrail>;
 
-    return Promise.race([this.waitForConnection(), timeout]);
-  }
+  // Benefit Utilization
+  getBenefitUtilization(): Promise<BenefitUtilization[]>;
+  getBenefitUtilizationById(id: number): Promise<BenefitUtilization | undefined>;
+  getBenefitUtilizationByMember(memberId: number): Promise<BenefitUtilization[]>;
+  getBenefitUtilizationByMemberAndBenefit(memberId: number, benefitId: number): Promise<BenefitUtilization | undefined>;
+  createBenefitUtilization(utilization: InsertBenefitUtilization): Promise<BenefitUtilization>;
+  updateBenefitUtilization(id: number, usedAmount: number): Promise<BenefitUtilization>;
 
-  private async waitForConnection(): Promise<any> {
-    return new Promise((resolve) => {
-      const checkInterval = setInterval(() => {
-        const availableConnection = this.connectionPool.find(conn =>
-          conn !== null && conn !== undefined
-        );
+  // Member Engagement Hub - Onboarding System
+  getOnboardingSession(id: number): Promise<OnboardingSession | undefined>;
+  getOnboardingSessionByMember(memberId: number): Promise<OnboardingSession | undefined>;
+  getAllOnboardingSessions(): Promise<OnboardingSession[]>;
+  getOnboardingSessionsByCompany(companyId: number): Promise<OnboardingSession[]>;
+  createOnboardingSession(session: InsertOnboardingSession): Promise<OnboardingSession>;
+  updateOnboardingSession(id: number, updates: Partial<OnboardingSession>): Promise<OnboardingSession>;
 
-        if (availableConnection) {
-          clearInterval(checkInterval);
-          const index = this.connectionPool.indexOf(availableConnection);
-          this.connectionPool.splice(index, 1);
-          this.activeConnections++;
-          resolve(availableConnection);
-        }
-      }, 100);
-    });
-  }
+  getOnboardingTask(id: number): Promise<OnboardingTask | undefined>;
+  getOnboardingTasksBySession(sessionId: number): Promise<OnboardingTask[]>;
+  getOnboardingTasksBySessionAndDay(sessionId: number, dayNumber: number): Promise<OnboardingTask[]>;
+  createOnboardingTask(task: InsertOnboardingTask): Promise<OnboardingTask>;
+  updateOnboardingTask(id: number, updates: Partial<OnboardingTask>): Promise<OnboardingTask>;
+  createOnboardingTasksForDay(memberId: number, dayNumber: number): Promise<OnboardingTask[]>;
 
-  async releaseConnection(connection: any): Promise<void> {
-    try {
-      if (connection && typeof connection.close === 'function') {
-        await connection.close();
-      } else {
-        // Put connection back in pool
-        this.connectionPool.push(connection);
-        this.activeConnections--;
-      }
-    } catch (error) {
-      console.error('Error releasing connection:', error);
-    }
-  }
+  getMemberDocument(id: number): Promise<MemberDocument | undefined>;
+  getMemberDocuments(memberId: number): Promise<MemberDocument[]>;
+  getMemberDocumentsByStatus(memberId: number, status: string): Promise<MemberDocument[]>;
+  getAllMemberDocuments(): Promise<MemberDocument[]>;
+  getPendingDocuments(): Promise<MemberDocument[]>;
+  createMemberDocument(document: InsertMemberDocument): Promise<MemberDocument>;
+  updateMemberDocument(id: number, updates: Partial<MemberDocument>): Promise<MemberDocument>;
 
-  async createConnection(): Promise<any> {
-    const config = this.config.database || {};
-    const connectionConfig = {
-      host: config.host || 'localhost',
-      port: config.port || 5432,
-      database: config.database || 'medical_coverage',
-      user: config.user || 'postgres',
-      password: config.password || '',
-      max: config.max || 20,
-      idleTimeoutMillis: config.idleTimeout || 30000,
-      connectionTimeoutMillis: config.connectionTimeout || 2000,
-      ssl: config.ssl || false
-    };
+  getOnboardingPreference(id: number): Promise<OnboardingPreference | undefined>;
+  getOnboardingPreferencesByMember(memberId: number): Promise<OnboardingPreference | undefined>;
+  createOnboardingPreference(preference: InsertOnboardingPreference): Promise<OnboardingPreference>;
+  updateOnboardingPreference(id: number, updates: Partial<OnboardingPreference>): Promise<OnboardingPreference>;
 
-    // Enhanced connection with retry logic
-    const maxRetries = config.retryAttempts || 3;
-    let lastError: any;
+  getActivationToken(id: number): Promise<ActivationToken | undefined>;
+  getActivationToken(tokenHash: string): Promise<ActivationToken | undefined>;
+  createActivationToken(token: InsertActivationToken): Promise<ActivationToken>;
+  updateActivationToken(id: number, updates: Partial<ActivationToken>): Promise<ActivationToken>;
 
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        // This would be actual database connection logic
-        // For demonstration, returning mock connection
-        const mockConnection = {
-          id: Math.random().toString(36),
-          created: Date.now(),
-          close: async () => {
-            // Mock close functionality
-          },
-          query: async (sql: string, params: any[] = []) => {
-            // Mock query execution with timing
-            const startTime = Date.now();
+  // Personalization System
+  getMemberPreference(id: number): Promise<MemberPreference | undefined>;
+  getMemberPreferences(memberId: number): Promise<MemberPreference | undefined>;
+  createMemberPreference(preference: InsertMemberPreference): Promise<MemberPreference>;
+  updateMemberPreferences(memberId: number, updates: Partial<MemberPreference>): Promise<MemberPreference>;
 
-            // Simulate network latency and processing time
-            const processingTime = Math.random() * 50 + 10; // 10-60ms
+  getBehaviorAnalytic(id: number): Promise<BehaviorAnalytic | undefined>;
+  getBehaviorAnalyticsByMember(memberId: number): Promise<BehaviorAnalytic[]>;
+  getBehaviorAnalyticsBySession(memberId: number, sessionId: string, limit?: number): Promise<BehaviorAnalytic[]>;
+  getBehaviorAnalyticsByType(memberId: number, eventType: string, limit?: number): Promise<BehaviorAnalytic[]>;
+  getRecentBehaviorAnalytics(memberId: number, limit?: number): Promise<BehaviorAnalytic[]>;
+  createBehaviorAnalytic(analytic: InsertBehaviorAnalytic): Promise<BehaviorAnalytic>;
 
-            await new Promise(resolve => setTimeout(resolve, processingTime));
+  getPersonalizationScore(id: number): Promise<PersonalizationScore | undefined>;
+  getPersonalizationScores(memberId: number): Promise<PersonalizationScore[]>;
+  createPersonalizationScore(score: InsertPersonalizationScore): Promise<PersonalizationScore>;
+  updatePersonalizationScore(id: number, updates: Partial<PersonalizationScore>): Promise<PersonalizationScore>;
 
-            const duration = Date.now() - startTime;
+  getJourneyStage(id: number): Promise<JourneyStage | undefined>;
+  getJourneyStageByMember(memberId: number): Promise<JourneyStage | undefined>;
+  createJourneyStage(stage: InsertJourneyStage): Promise<JourneyStage>;
+  updateJourneyStage(id: number, updates: Partial<JourneyStage>): Promise<JourneyStage>;
 
-            // Log slow queries
-            if (config.queryTimeout && duration > config.queryTimeout) {
-              console.warn(`Slow query detected: ${sql} took ${duration}ms`);
-            }
+  getRecommendationHistory(id: number): Promise<RecommendationHistory | undefined>;
+  getActiveRecommendations(memberId: number, limit?: number): Promise<RecommendationHistory[]>;
+  getRecommendationsByType(memberId: number, type: string, limit?: number): Promise<RecommendationHistory[]>;
+  createRecommendationHistory(recommendation: InsertRecommendationHistory): Promise<RecommendationHistory>;
+  updateRecommendationFeedback(id: number, updates: Partial<RecommendationHistory>): Promise<RecommendationHistory>;
 
-            return {
-              rows: [],
-              rowCount: 0,
-              duration
-            };
-          }
-        };
+  // Card Management System
+  // Member Cards
+  getMemberCards(): Promise<MemberCard[]>;
+  getMemberCard(id: number): Promise<MemberCard | undefined>;
+  getMemberCardsByMember(memberId: number): Promise<MemberCard[]>;
+  getMemberCardsByStatus(status: string): Promise<MemberCard[]>;
+  getActiveMemberCards(memberId: number): Promise<MemberCard[]>;
+  createMemberCard(card: InsertMemberCard): Promise<MemberCard>;
+  updateMemberCard(id: number, updates: Partial<MemberCard>): Promise<MemberCard>;
+  deactivateMemberCard(id: number, reason: string): Promise<MemberCard>;
+  replaceMemberCard(id: number, newCardData: InsertMemberCard): Promise<{ oldCard: MemberCard, newCard: MemberCard }>;
 
-        return mockConnection;
-      } catch (error) {
-        lastError = error;
+  // Card Templates
+  getCardTemplates(): Promise<CardTemplate[]>;
+  getCardTemplate(id: number): Promise<CardTemplate | undefined>;
+  getCardTemplatesByCompany(companyId: number): Promise<CardTemplate[]>;
+  getCardTemplatesByType(templateType: string): Promise<CardTemplate[]>;
+  getActiveCardTemplates(): Promise<CardTemplate[]>;
+  createCardTemplate(template: InsertCardTemplate): Promise<CardTemplate>;
+  updateCardTemplate(id: number, updates: Partial<CardTemplate>): Promise<CardTemplate>;
+  deactivateCardTemplate(id: number): Promise<CardTemplate>;
 
-        if (attempt < maxRetries) {
-          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
-          console.warn(`Connection attempt ${attempt} failed, retrying in ${delay}ms:`, error.message);
-          await new Promise(resolve => setTimeout(resolve, delay));
-        }
-      }
-    }
+  // Card Verification Events
+  getCardVerificationEvents(): Promise<CardVerificationEvent[]>;
+  getCardVerificationEvent(id: number): Promise<CardVerificationEvent | undefined>;
+  getCardVerificationEventsByCard(cardId: number): Promise<CardVerificationEvent[]>;
+  getCardVerificationEventsByMember(memberId: number): Promise<CardVerificationEvent[]>;
+  getCardVerificationEventsByDateRange(startDate: Date, endDate: Date): Promise<CardVerificationEvent[]>;
+  createCardVerificationEvent(event: InsertCardVerificationEvent): Promise<CardVerificationEvent>;
 
-    throw lastError;
-  }
-
-  getMetrics() {
-    return {
-      totalConnections: this.activeConnections + this.connectionPool.length,
-      activeConnections: this.activeConnections,
-      pooledConnections: this.connectionPool.length,
-      maxConnections: this.maxConnections,
-      utilizationRate: (this.activeConnections / this.maxConnections) * 100
-    };
-  }
-
-  async healthCheck(): Promise<{ status: string; details: any }> {
-    try {
-      const connection = await this.getConnection();
-      const result = await connection.query('SELECT 1');
-      await this.releaseConnection(connection);
-
-      return {
-        status: 'healthy',
-        details: {
-          responseTime: result.duration,
-          timestamp: new Date().toISOString(),
-          metrics: this.getMetrics()
-        }
-      };
-    } catch (error: unknown) {
-      return {
-        status: 'unhealthy',
-        details: {
-          error: (error as Error).message,
-          timestamp: new Date().toISOString(),
-          metrics: this.getMetrics()
-        }
-      };
-    }
-  }
-}
-
-// Enhanced storage implementation with connection pooling
-class EnhancedStorage implements IStorage {
-  public db: any;
-  private dbManager: DatabaseManager;
-  private queryCache = new Map<string, { data: any; timestamp: number }>();
-  private cacheTimeout = 300000; // 5 minutes
-
-  constructor() {
-    this.dbManager = DatabaseManager.getInstance();
-    this.initializeDatabase();
-  }
-
-  private async initializeDatabase(): Promise<void> {
-    try {
-      // This would initialize actual database connection
-      console.log('🗄️ Initializing enhanced database storage with connection pooling...');
-
-      // Mock database for demonstration
-      this.db = {
-        query: async (sql: string, params: any[] = []) => {
-          const connection = await this.dbManager.getConnection();
-          try {
-            const cacheKey = `${sql}:${JSON.stringify(params)}`;
-            const cached = this.queryCache.get(cacheKey);
-
-            if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-              return cached.data;
-            }
-
-            const result = await connection.query(sql, params);
-            await this.dbManager.releaseConnection(connection);
-
-            // Cache the result
-            this.queryCache.set(cacheKey, {
-              data: result,
-              timestamp: Date.now()
-            });
-
-            return result;
-          } catch (error) {
-            await this.dbManager.releaseConnection(connection);
-            throw error;
-          }
-        }
-      };
-    } catch (error) {
-      console.error('Database initialization failed:', error);
-      throw error;
-    }
-  }
-
-  async getMetrics(): Promise<any> {
-    return {
-      database: this.dbManager.getMetrics(),
-      cache: {
-        size: this.queryCache.size,
-        hitRate: 0, // Would track actual cache hit rate
-        entries: Array.from(this.queryCache.entries()).map(([key, value]) => ({
-          key: key.substring(0, 50) + '...',
-          timestamp: new Date(value.timestamp).toISOString(),
-          age: Date.now() - value.timestamp
-        }))
-      }
-    };
-  }
-
-  async clearCache(): Promise<void> {
-    this.queryCache.clear();
-    console.log('Query cache cleared');
-  }
-
-  async getSchemesByMember(memberId: number): Promise<Scheme[]> {
-    // Mock implementation
-    return [];
-  }
-
-  async getPremiumsByMember(memberId: number, activeOnly?: boolean): Promise<Premium[]> {
-    // Mock implementation
-    return [];
-  }
-
-  async getClaimsByMember(memberId: number): Promise<Claim[]> {
-    // Mock implementation
-    return [];
-  }
-
-  async getWellnessActivitiesByMember(memberId: number): Promise<WellnessActivity[]> {
-    // Mock implementation
-    return [];
-  }
-
-  async getProvider(providerId: number): Promise<Provider | undefined> {
-    // Mock implementation
-    return undefined;
-  }
-
-  async getClaimsByProvider(providerId: number, fromDate: Date): Promise<Claim[]> {
-    // Mock implementation
-    return [];
-  }
-
-  async updateProvider(providerId: number, data: Partial<Provider>): Promise<Provider | undefined> {
-    // Mock implementation
-    return undefined;
-  }
-
-  async getWellnessScoreByMember(memberId: number): Promise<number> {
-    // Mock implementation
-    return 0;
-  }
-
-  async getProviderQuality(providerId: number): Promise<ProviderQuality | undefined> {
-    // Mock implementation
-    return undefined;
-  }
-
-  async getProviderSatisfaction(providerId: number): Promise<ProviderSatisfaction | undefined> {
-    // Mock implementation
-    return undefined;
-  }
-
-  async getProviderCompliance(providerId: number): Promise<ProviderCompliance | undefined> {
-    // Mock implementation
-    return undefined;
-  }
-
-  async getProvidersInNetwork(filters: { specialty?: string; location?: string }): Promise<Provider[]> {
-    // Mock implementation
-    return [];
-  }
-
-  async createCommunicationLog(payload: any): Promise<any> {
-    // Mock implementation
-    return {};
-  }
+  // Card Production Batches
+  getCardProductionBatches(): Promise<CardProductionBatch[]>;
+  getCardProductionBatch(id: number): Promise<CardProductionBatch | undefined>;
+  getCardProductionBatchesByStatus(status: string): Promise<CardProductionBatch[]>;
+  getCardProductionBatchesByDateRange(startDate: Date, endDate: Date): Promise<CardProductionBatch[]>;
+  createCardProductionBatch(batch: InsertCardProductionBatch): Promise<CardProductionBatch>;
+  updateCardProductionBatch(id: number, updates: Partial<CardProductionBatch>): Promise<CardProductionBatch>;
 }
 
 // In-memory storage implementation
@@ -463,10 +439,10 @@ export class MemStorage implements IStorage {
   private benefitUtilization: Map<number, BenefitUtilization>;
 
   // Card Management Storage
-  private memberCards: Map<number, MemberCard>;
-  private cardTemplates: Map<number, CardTemplate>;
-  private cardVerificationEvents: Map<number, CardVerificationEvent>;
-  private cardProductionBatches: Map<number, CardProductionBatch>;
+  private memberCards: Map<number, MemberCard> = new Map();
+  private cardTemplates: Map<number, CardTemplate> = new Map();
+  private cardVerificationEvents: Map<number, CardVerificationEvent> = new Map();
+  private cardProductionBatches: Map<number, CardProductionBatch> = new Map();
 
   // Member Engagement Hub IDs
   private onboardingSessionId: number;
@@ -645,7 +621,7 @@ export class MemStorage implements IStorage {
       startDate: startDate.toISOString().split('T')[0],
       endDate: endDate.toISOString().split('T')[0],
       status: 'active',
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
     
     this.periods.set(period.id, period);
@@ -659,7 +635,7 @@ export class MemStorage implements IStorage {
       childRate: 175.00,
       specialNeedsRate: 225.00,
       taxRate: 0.10,
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
     
     this.premiumRates.set(premiumRate.id, premiumRate);
@@ -756,7 +732,7 @@ export class MemStorage implements IStorage {
       const newBenefit: Benefit = {
         ...benefit,
         id,
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       };
       this.benefits.set(id, newBenefit);
     });
@@ -879,7 +855,7 @@ export class MemStorage implements IStorage {
     const newPremiumRate: PremiumRate = {
       ...premiumRate,
       id,
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
     this.premiumRates.set(id, newPremiumRate);
     return newPremiumRate;
@@ -905,7 +881,7 @@ export class MemStorage implements IStorage {
     const newAgeBandedRate: AgeBandedRate = {
       ...ageBandedRate,
       id,
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
     this.ageBandedRates.set(id, newAgeBandedRate);
     return newAgeBandedRate;
@@ -931,7 +907,7 @@ export class MemStorage implements IStorage {
     const newFamilyRate: FamilyRate = {
       ...familyRate,
       id,
-      createdAt: new Date()
+      createdAt: new Date().toISOString()
     };
     this.familyRates.set(id, newFamilyRate);
     return newFamilyRate;
@@ -1323,12 +1299,12 @@ export class MemStorage implements IStorage {
     
     // Check provider verification status
     const institution = await this.getMedicalInstitution(claim.institutionId);
-    const personnel = claim.personnelId ? await this.getMedicalPersonnel(claim.personnelId) : null;
+    const personnel = claim.personnelId ? await (this as any).getMedicalPersonnel(claim.personnelId) : null;
     
     // Determine provider verification status
     const isInstitutionVerified = institution && institution.approvalStatus === 'approved';
     const isPersonnelVerified = !claim.personnelId || 
-      (personnel && personnel.approvalStatus === 'approved');
+      (personnel && (personnel as any).approvalStatus === 'approved');
 
     // Set provider verified status 
     const providerVerified = isInstitutionVerified && isPersonnelVerified;
@@ -2288,14 +2264,14 @@ export class MemStorage implements IStorage {
   }
 
   // Activation Tokens
-  async getActivationToken(id: number): Promise<ActivationToken | undefined> {
-    return this.activationTokens.get(id);
-  }
-
-  async getActivationToken(tokenHash: string): Promise<ActivationToken | undefined> {
-    return Array.from(this.activationTokens.values()).find(
-      token => token.tokenHash === tokenHash
-    );
+  async getActivationToken(idOrHash: number | string): Promise<ActivationToken | undefined> {
+    if (typeof idOrHash === 'number') {
+      return this.activationTokens.get(idOrHash);
+    } else {
+      return Array.from(this.activationTokens.values()).find(
+        token => token.tokenHash === idOrHash
+      );
+    }
   }
 
   async createActivationToken(token: InsertActivationToken): Promise<ActivationToken> {
@@ -2675,11 +2651,10 @@ export class MemStorage implements IStorage {
   }
 
   // Explanation of Benefits
-  async getExplanationOfBenefits(): Promise<ExplanationOfBenefits[]> {
-    return Array.from(this.explanationOfBenefits.values());
-  }
-
-  async getExplanationOfBenefits(id: number): Promise<ExplanationOfBenefits | undefined> {
+  async getExplanationOfBenefits(id?: number): Promise<ExplanationOfBenefits[] | ExplanationOfBenefits | undefined> {
+    if (id === undefined) {
+      return Array.from(this.explanationOfBenefits.values());
+    }
     return this.explanationOfBenefits.get(id);
   }
 
@@ -2825,7 +2800,7 @@ export class MemStorage implements IStorage {
 
   async getActiveMemberCards(memberId: number): Promise<MemberCard[]> {
     return Array.from(this.memberCards.values()).filter(
-      card => card.memberId === memberId && card.status === 'active'
+      card => card.memberId === memberId && card.cardStatus === 'active'
     );
   }
 
@@ -2835,7 +2810,7 @@ export class MemStorage implements IStorage {
       ...card,
       id,
       issuedAt: new Date(),
-      expiryDate: card.expiryDate || new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000), // 3 years default
+      expiresAt: card.expiresAt || new Date(Date.now() + 3 * 365 * 24 * 60 * 60 * 1000), // 3 years default
       lastUsedAt: null,
       deactivatedAt: null,
       deactivationReason: null,

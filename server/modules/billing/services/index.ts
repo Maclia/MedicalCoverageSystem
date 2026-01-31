@@ -4,9 +4,9 @@
  */
 
 // Core billing services
-export * from './BillingService';
-export * from './AccountsReceivableService';
-export * from './BillingNotificationService';
+export * from './BillingService.js';
+export * from './AccountsReceivableService.js';
+export * from './BillingNotificationService.js';
 
 // Base service class for all billing services
-export * from './BaseBillingService';
+export * from './BaseBillingService.js';

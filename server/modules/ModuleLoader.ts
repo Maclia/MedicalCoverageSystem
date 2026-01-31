@@ -7,11 +7,10 @@ import type { Express } from 'express';
 import { moduleRegistry } from './core/registry/ModuleRegistry.js';
 
 // Import all modules
-import { BillingModule } from './billing/index';
-import { PaymentsModule } from './payments/index';
+import { BillingModule } from './billing/index.js';
+import { PaymentsModule } from './payments/index.js';
 import { CommissionsModule } from './commissions/index.js';
 import { ClaimsFinancialModule } from './claims-financial/index.js';
-import { FraudDetectionModule } from './fraud-detection/index';
 
 export interface ModuleLoadOptions {
   autoInitialize?: boolean;
@@ -75,15 +74,12 @@ export class ModuleLoader {
       new CommissionsModule(),
       new ClaimsFinancialModule(),
 
-      // Fraud Detection module
-      new FraudDetectionModule(),
-
-      // Core business modules
-      new CoreModule(),
-      new PoliciesModule(),
-      new MembersModule(),
-      new ProvidersModule(),
-      new ClaimsModule(),
+      // Additional modules can be added here
+      // new CoreModule(),
+      // new PoliciesModule(),
+      // new MembersModule(),
+      // new ProvidersModule(),
+      // new ClaimsModule(),
     ];
 
     for (const module of modules) {

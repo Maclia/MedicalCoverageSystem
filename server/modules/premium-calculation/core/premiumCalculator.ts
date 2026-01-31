@@ -3,6 +3,7 @@
  * Integrates individual risk assessment scores into pricing models with demographic adjustments
  */
 
+import { validatePremiumData } from './validator';
 import { IStorage } from '../../../storage';
 import * as schema from '../../shared/schema.js';
 import { getActivePeriod, countMembersByType, getLatestPremium } from '../../../utils/dbOperations';
@@ -171,6 +172,7 @@ export async function calculateRiskAdjustedPremium(
   storage: IStorage,
   input: PremiumCalculationInput
 ): Promise<PremiumResult> {
+  validatePremiumData(input);
   try {
     // Step 1: Calculate base premium using existing method
     const basePremium = await calculateBasePremium(storage, input.companyId, input.periodId);

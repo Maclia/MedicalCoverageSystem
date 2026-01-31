@@ -91,7 +91,7 @@ class BackgroundScheduler {
   addJob(job: Omit<ScheduledJob, 'lastRun'>): void {
     this.jobs.set(job.id, {
       ...job,
-      lastRun: undefined
+      lastRun: undefined as any
     });
   }
 
@@ -211,7 +211,7 @@ class BackgroundScheduler {
       return new Date(now.getTime() + 60 * 60 * 1000);
     }
 
-    const [minute, hour, day, month, dayOfWeek] = parts;
+    const [minute = '*', hour = '*', day = '*', month = '*', dayOfWeek = '*'] = parts;
 
     const nextRun = new Date(now);
 
@@ -220,7 +220,7 @@ class BackgroundScheduler {
       // Keep current minute or go to next minute
     } else if (minute.includes('/')) {
       // Handle intervals like */5
-      const interval = parseInt(minute.split('/')[1]);
+      const interval = parseInt(minute.split('/')[1] || '1');
       const currentMinute = nextRun.getMinutes();
       const nextMinute = Math.ceil((currentMinute + 1) / interval) * interval;
       if (nextMinute >= 60) {
@@ -231,7 +231,7 @@ class BackgroundScheduler {
       }
     } else {
       // Specific minute
-      const targetMinute = parseInt(minute);
+      const targetMinute = parseInt(minute || '0');
       if (targetMinute > nextRun.getMinutes()) {
         nextRun.setMinutes(targetMinute);
       } else {
@@ -253,7 +253,8 @@ class BackgroundScheduler {
    */
   private async sendDailyOnboardingReminders(): Promise<void> {
     try {
-      const activeSessions = await storage.getAllOnboardingSessions().filter(session =>
+      const allSessions = (await (storage as any).getAllOnboardingSessions?.() ?? []) as any[];
+      const activeSessions = allSessions.filter(session =>
         session.status === 'active' && session.currentDay < 7
       );
 
@@ -266,14 +267,14 @@ class BackgroundScheduler {
 
         // Send reminder based on current day
         if (session.currentDay === 1) {
-          await emailWorkflows.sendTriggeredEmails('day1_incomplete', session.memberId);
+          await (emailWorkflows as any).sendTriggeredEmails?.('day1_incomplete', session.memberId);
         } else if (session.currentDay === 2) {
           // Check if they completed Day 1 tasks
-          const day1Tasks = await storage.getOnboardingTasksBySessionAndDay(session.id, 1);
-          const completedDay1 = day1Tasks.filter(task => task.completionStatus).length;
+          const day1Tasks = (await (storage as any).getOnboardingTasksBySessionAndDay?.(session.id, 1) ?? []) as any[];
+          const completedDay1 = day1Tasks.filter((task: any) => task.completionStatus).length;
 
           if (completedDay1 === 0) {
-            await emailWorkflows.sendTriggeredEmails('48_hours_since_activation', session.memberId);
+            await (emailWorkflows as any).sendTriggeredEmails?.('48_hours_since_activation', session.memberId);
           }
         }
       }

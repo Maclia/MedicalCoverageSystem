@@ -1,7 +1,6 @@
 import type { Request, Response } from "express";
 import { db } from "../db";
 import { storage } from "../storage";
-import logger from "../logger";
 import {
   companies,
   members,
@@ -18,7 +17,7 @@ import {
   communicationLogs
 } from "../../shared/schema.js";
 import { authenticate, AuthenticatedRequest, requireRole } from "../middleware/auth";
-import { eq, and, desc, asc, gte, lte, or, inArray, isNotNull, sql } from "drizzle-orm";
+import { eq, and, desc, asc, gte, lte, or, inArray, isNotNull } from "drizzle-orm";
 
 // Analytics calculation utilities
 export class AnalyticsEngine {
@@ -43,8 +42,9 @@ export class AnalyticsEngine {
     }
 
     const claimsData = await db.select().from(claims)
-      .where(gte(claims.claimDate, startDate.toISOString()))
+      .where(claims.claimDate >= startDate.toISOString())
       .orderBy(claims.claimDate)
+      .all();
 
     // Group by month and calculate frequency
     const monthlyData = this.groupByMonth(claimsData, startDate, now);
@@ -52,27 +52,16 @@ export class AnalyticsEngine {
     // Detect anomalies (fraud indicators)
     const anomalies = this.detectAnomalies(claimsData);
 
-    // Calculate frequency metrics safely
-    let current = 0;
-    let previous = 0;
-    let changePercent = 0;
-    let trend: 'up' | 'down' | 'stable' = 'stable';
-
-    if (monthlyData.length > 0) {
-      current = monthlyData[monthlyData.length - 1].count;
-      if (monthlyData.length > 1) {
-        previous = monthlyData[monthlyData.length - 2].count;
-        changePercent = previous > 0 ? ((current - previous) / previous) * 100 : 0;
-        trend = current > previous ? 'up' : 'down';
-      }
-    }
-
     return {
       frequency: {
-        current,
-        previous,
-        changePercent,
-        trend
+        current: monthlyData.length > 0 ? monthlyData[monthlyData.length - 1].count : 0,
+        previous: monthlyData.length > 1 ? monthlyData[monthlyData.length - 2].count : 0,
+        changePercent: monthlyData.length > 1
+          ? ((monthlyData[monthlyData.length - 1].count - monthlyData[monthlyData.length - 2].count) / monthlyData[monthlyData.length - 2].count) * 100
+          : 0,
+        trend: monthlyData.length > 1
+          ? monthlyData[monthlyData.length - 1].count > monthlyData[monthlyData.length - 2].count ? 'up' : 'down'
+          : 'stable'
       },
       monthlyTrend: monthlyData,
       periodDescription: this.getTimeRangeDescription(timeRange),
@@ -103,7 +92,8 @@ export class AnalyticsEngine {
     // Get historical claims data
     const claimsData = await db.select().from(claims)
       .where(claims.claimDate >= startDate.toISOString())
-      .orderBy(claims.claimDate);
+      .orderBy(claims.claimDate)
+      .all();
 
     // Calculate cost trends
     const monthlyCosts = this.calculateMonthlyCosts(claimsData, startDate, now);
@@ -118,7 +108,7 @@ export class AnalyticsEngine {
       averageCost: {
         current: monthlyCosts.length > 0 ? monthlyCosts[monthlyCosts.length - 1].average : 0,
         previous: monthlyCosts.length > 1 ? monthlyCosts[monthlyCosts.length - 2].average : 0,
-      changePercent: monthlyCosts.length > 1 && monthlyCosts[monthlyCosts.length - 2].average > 0
+        changePercent: monthlyCosts.length > 1
           ? ((monthlyCosts[monthlyCosts.length - 1].average - monthlyCosts[monthlyCosts.length - 2].average) / monthlyCosts[monthlyCosts.length - 2].average) * 100
           : 0,
         trend: monthlyCosts.length > 1
@@ -154,12 +144,14 @@ export class AnalyticsEngine {
 
     // Get member data with claims history
     const membersData = await db.select().from(members)
-      .where(members.createdAt >= startDate.toISOString());
+      .where(members.createdAt >= startDate.toISOString())
+      .all();
 
     // Get claims per member
     const memberIds = membersData.map(m => m.id);
     const claimsPerMember = await db.select().from(claims)
-      .where(claims.memberId.inArray(memberIds));
+      .where(claims.memberId.inArray(memberIds))
+      .all();
 
     // Calculate health scores and utilization
     const healthScores = this.calculateHealthScores(membersData, claimsPerMember);
@@ -205,7 +197,8 @@ export class AnalyticsEngine {
 
     // Get all member data in range
     const membersData = await db.select().from(members)
-      .where(members.createdAt >= startDate.toISOString());
+      .where(members.createdAt >= startDate.toISOString())
+      .all();
 
     // Calculate utilization by category
     const utilizationCategories = [
@@ -269,10 +262,12 @@ export class AnalyticsEngine {
 
     // Get premiums and claims data
     const premiumsData = await db.select().from(premiums)
-      .where(premiums.effectiveStartDate >= startDate.toISOString());
+      .where(premiums.effectiveStartDate >= startDate.toISOString())
+      .all();
 
     const claimsData = await db.select().from(claims)
-      .where(claims.claimDate >= startDate.toISOString());
+      .where(claims.claimDate >= startDate.toISOString())
+      .all();
 
     // Calculate ROI metrics
     const totalPremiums = premiumsData.reduce((sum, p) => sum + p.total, 0);
@@ -409,7 +404,7 @@ export class AnalyticsEngine {
 
   private static detectAnomalies(claimsData: any[]) {
     // Simple anomaly detection
-    const anomalies: Array<{type: string, risk: string, description: string, month: string}> = [];
+    const anomalies = [];
 
     // Check for unusual claim patterns
     const monthlyClaims = this.groupByMonth(claimsData,
@@ -666,7 +661,7 @@ export class AnalyticsEngine {
   static async predictMemberClaimsCost(memberId: number, timeframe: '6months' | '12months' | '24months' = '12months') {
     try {
       // Get member's historical data
-      const member = await db.select().from(members).where(eq(members.id, memberId)).limit(1);
+      const member = await storage.db.select().from(members).where(eq(members.id, memberId)).limit(1);
       if (!member.length) {
         throw new Error('Member not found');
       }
@@ -1252,7 +1247,8 @@ export class AnalyticsEngine {
       };
 
       // Determine overall health
-      const warningCount = Object.values(systemHealth.moduleHealth).filter(m => m.status === 'warning').length;
+      const warningCount = systemHealth.moduleStatus ?
+        Object.values(systemHealth.moduleHealth).filter(m => m.status === 'warning').length : 0;
 
       if (warningCount > 2) {
         systemHealth.overall = 'warning';
@@ -2103,18 +2099,6 @@ export class AnalyticsEngine {
       'Establish claim review thresholds'
     ];
   }
-
-  static async getTotalMembers() {
-    try {
-      const totalMembers = await db.select().from(members);
-      return {
-        totalMembers: totalMembers.length
-      };
-    } catch (error) {
-      console.error('Error getting total members:', error);
-      throw error;
-    }
-  }
 }
 
 // Setup analytics routes
@@ -2567,12 +2551,6 @@ export function setupAnalyticsRoutes(router: any) {
         error: error instanceof Error ? error.message : 'Unknown error'
       });
     }
-  });
-
-  // Welcome endpoint
-  router.get('/welcome', async (req: Request, res: Response) => {
-  logger.info(`Request received: ${req.method} ${req.originalUrl}`);
-    res.json({ message: 'Welcome to the Analytics API Service!' });
   });
 
   return router;
