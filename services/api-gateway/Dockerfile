@@ -1,5 +1,8 @@
 FROM node:18-alpine AS base
 
+# Install dumb-init for signal handling
+RUN apk add --no-cache dumb-init
+
 # Install dependencies only when needed
 FROM base AS deps
 WORKDIR /app

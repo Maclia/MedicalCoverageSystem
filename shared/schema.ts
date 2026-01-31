@@ -105,6 +105,7 @@ export const members = pgTable("members", {
   companyId: integer("company_id").references(() => companies.id).notNull(),
   firstName: text("first_name").notNull(),
   lastName: text("last_name").notNull(),
+  secondName: text("second_name"),
   email: text("email").notNull(),
   phone: text("phone").notNull(),
   dateOfBirth: date("date_of_birth").notNull(),

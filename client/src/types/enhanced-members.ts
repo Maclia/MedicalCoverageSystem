@@ -7,6 +7,7 @@ export interface Member {
   memberType: "principal" | "dependent";
   firstName: string;
   lastName: string;
+  secondName?: string;
   email: string;
   phone: string;
   dateOfBirth: string;
@@ -311,6 +312,7 @@ export interface CreateMemberRequest {
   memberType: "principal" | "dependent";
   firstName: string;
   lastName: string;
+  secondName?: string;
   email: string;
   phone: string;
   dateOfBirth: string;
@@ -339,6 +341,7 @@ export interface CreateMemberRequest {
 export interface UpdateMemberRequest {
   firstName?: string;
   lastName?: string;
+  secondName?: string;
   email?: string;
   phone?: string;
   address?: string;
@@ -471,6 +474,7 @@ export interface CorporateMemberBulkEnroll {
   members: Array<{
     firstName: string;
     lastName: string;
+    secondName?: string;
     email: string;
     phone: string;
     dateOfBirth: string;

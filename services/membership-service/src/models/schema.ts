@@ -96,6 +96,7 @@ export const members = pgTable('members', {
   memberId: varchar('member_id', { length: 20 }).unique().notNull(),
   firstName: varchar('first_name', { length: 50 }).notNull(),
   lastName: varchar('last_name', { length: 50 }).notNull(),
+  secondName: varchar('second_name', { length: 50 }),
   email: varchar('email', { length: 100 }).unique().notNull(),
   phone: varchar('phone', { length: 20 }).notNull(),
   dateOfBirth: date('date_of_birth').notNull(),
@@ -131,7 +132,7 @@ export const members = pgTable('members', {
   emailIndex: index('member_email_idx').on(table.email),
   companyIndex: index('member_company_idx').on(table.companyId),
   statusIndex: index('member_status_idx').on(table.membershipStatus),
-  nameIndex: index('member_name_idx').on(table.lastName, table.firstName)
+  nameIndex: index('member_name_idx').on(table.lastName, table.firstName, table.secondName)
 }));
 
 export const memberLifeEvents = pgTable('member_life_events', {
