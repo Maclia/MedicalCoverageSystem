@@ -200,7 +200,7 @@ export const standardErrorResponse = (
 
   // Determine error type and status code
   let statusCode = 500;
-  let errorCode = ErrorCodes.INTERNAL_SERVER_ERROR;
+  let errorCode: string = ErrorCodes.INTERNAL_SERVER_ERROR;
   let message = 'An internal server error occurred';
 
   if (err.statusCode || err.status) {

@@ -24,6 +24,8 @@ export interface StandardApiResponse<T = any> {
     timestamp: string;
     requestId?: string;
     processingTime?: number;
+    service?: string;
+    location?: string;
   };
   correlationId?: string;
 }

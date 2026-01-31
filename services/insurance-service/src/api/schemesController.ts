@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { schemeService } from '../services/SchemeService';
+import { schemeService, SchemeBenefitData } from '../services/SchemeService';
 import { benefitService } from '../services/BenefitService';
 import { createLogger } from '../utils/logger';
 import {
@@ -7,7 +7,7 @@ import {
   ErrorCodes,
   createValidationErrorResponse
 } from '../utils/api-standardization';
-import { Joi } from 'joi';
+import Joi from 'joi';
 
 const logger = createLogger();
 
@@ -54,7 +54,7 @@ const createSchemeSchema = Joi.object({
 
 const updateSchemeSchema = createSchemeSchema.fork(
   ['name', 'companyId', 'schemeType', 'coverageType', 'minAge', 'maxAge', 'startDate'],
-  (schema) => schema.optional()
+  (schema: Joi.Schema) => schema.optional()
 );
 
 const addBenefitToSchemeSchema = Joi.object({
@@ -82,7 +82,7 @@ const validate = (schema: Joi.ObjectSchema) => {
     });
 
     if (error) {
-      const details = error.details.map(detail => ({
+      const details = error.details.map((detail: any) => ({
         field: detail.path.join('.'),
         message: detail.message,
         value: detail.context?.value
@@ -121,7 +121,7 @@ const validateQuery = (req: Request, res: Response, next: Function) => {
   });
 
   if (error) {
-    const details = error.details.map(detail => ({
+    const details = error.details.map((detail: any) => ({
       field: detail.path.join('.'),
       message: detail.message,
       value: detail.context?.value
@@ -370,8 +370,8 @@ export class SchemesController {
         correlationId: req.correlationId
       });
 
-      const benefitData = { ...req.body, schemeId };
-      const result = await schemeService.addBenefitToScheme(benefitData, req.correlationId);
+      const benefitData = { ...req.body, schemeId } as SchemeBenefitData;
+      const result = await schemeService.addBenefitToScheme(schemeId, benefitData, req.correlationId);
 
       if (result.success) {
         res.status(201).json(result);
