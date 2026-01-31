@@ -79,6 +79,8 @@ import { setupMemberRoutes } from "./routes/members";
 import { setupCorporateMemberRoutes } from "./routes/corporate-members";
 // Import system integration routes
 import { setupSystemIntegrationRoutes } from "./routes/system-integration";
+// Import tokens routes
+import tokensRouter from "./routes/tokens";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Middleware to handle zod validation errors
@@ -4084,6 +4086,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Use schemes & benefits management routes
   registerSchemesRoutes(app);
+
+  // Use tokens routes
+  app.use(tokensRouter);
 
   // Setup enhanced Members & Clients module routes
   setupMemberRoutes(app);
