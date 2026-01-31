@@ -6,7 +6,7 @@ import {
   ErrorCodes,
   createValidationErrorResponse
 } from '../utils/api-standardization';
-import { Joi } from 'joi';
+import Joi from 'joi';
 
 const logger = createLogger();
 
@@ -37,7 +37,7 @@ const createBenefitSchema = Joi.object({
 
 const updateBenefitSchema = createBenefitSchema.fork(
   ['name', 'category'],
-  (schema) => schema.optional()
+  (schema: Joi.Schema) => schema.optional()
 );
 
 // Validation middleware
@@ -49,7 +49,7 @@ const validate = (schema: Joi.ObjectSchema) => {
     });
 
     if (error) {
-      const details = error.details.map(detail => ({
+      const details = error.details.map((detail: any) => ({
         field: detail.path.join('.'),
         message: detail.message,
         value: detail.context?.value
@@ -91,7 +91,7 @@ const validateQuery = (req: Request, res: Response, next: Function) => {
   });
 
   if (error) {
-    const details = error.details.map(detail => ({
+    const details = error.details.map((detail: any) => ({
       field: detail.path.join('.'),
       message: detail.message,
       value: detail.context?.value

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { SchemesController, validationMiddleware } from './schemesController';
 import { BenefitsController, benefitsValidationMiddleware } from './benefitsController';
-import { standardizeResponse } from '../utils/api-standardization';
+import { standardizeResponse, ErrorCodes } from '../utils/api-standardization';
 import { createLogger } from '../utils/logger';
 
 const router = Router();
@@ -55,25 +55,25 @@ router.get('/docs', (req, res) => {
       schemes: {
         base: '/schemes',
         methods: {
-          GET: 'List schemes (with pagination and filtering)',
-          POST: 'Create new scheme',
-          GET: '/:id', 'Get specific scheme',
-          PUT: '/:id', 'Update scheme',
-          DELETE: '/:id', 'Delete scheme',
-          POST: '/:id/benefits', 'Add benefit to scheme',
-          DELETE: '/:id/benefits/:benefitId', 'Remove benefit from scheme'
+          'GET /schemes': 'List schemes (with pagination and filtering)',
+          'POST /schemes': 'Create new scheme',
+          'GET /schemes/:id': 'Get specific scheme',
+          'PUT /schemes/:id': 'Update scheme',
+          'DELETE /schemes/:id': 'Delete scheme',
+          'POST /schemes/:id/benefits': 'Add benefit to scheme',
+          'DELETE /schemes/:id/benefits/:benefitId': 'Remove benefit from scheme'
         }
       },
       benefits: {
         base: '/benefits',
         methods: {
-          GET: 'List benefits (with pagination and filtering)',
-          POST: 'Create new benefit',
-          GET: '/categories', 'Get benefit categories',
-          GET: '/popular', 'Get popular benefits',
-          GET: '/:id', 'Get specific benefit',
-          PUT: '/:id', 'Update benefit',
-          DELETE: '/:id', 'Delete benefit'
+          'GET /benefits': 'List benefits (with pagination and filtering)',
+          'POST /benefits': 'Create new benefit',
+          'GET /benefits/categories': 'Get benefit categories',
+          'GET /benefits/popular': 'Get popular benefits',
+          'GET /benefits/:id': 'Get specific benefit',
+          'PUT /benefits/:id': 'Update benefit',
+          'DELETE /benefits/:id': 'Delete benefit'
         }
       }
     },
@@ -148,13 +148,13 @@ router.delete('/benefits/:id', BenefitsController.deleteBenefit);
 // GET /coverage/verify/:memberId - Verify coverage for member
 router.get('/coverage/verify/:memberId', async (req, res) => {
   try {
-    const memberId = Number(req.params.id);
+    const memberId = Number(req.params.memberId);
 
     if (isNaN(memberId) || memberId <= 0) {
       return res.error(
         ErrorCodes.BAD_REQUEST,
         'Invalid member ID',
-        { memberId: req.params.id }
+        { memberId: req.params.memberId }
       );
     }
 
@@ -210,7 +210,7 @@ router.get('/coverage/verify/:memberId', async (req, res) => {
 
   } catch (error) {
     logger.error('Failed to verify coverage', error as Error, {
-      memberId: req.params.id,
+      memberId: req.params.memberId,
       correlationId: req.correlationId
     });
 
@@ -225,13 +225,13 @@ router.get('/coverage/verify/:memberId', async (req, res) => {
 // GET /coverage/summary/:memberId - Get member's coverage summary
 router.get('/coverage/summary/:memberId', async (req, res) => {
   try {
-    const memberId = Number(req.params.id);
+    const memberId = Number(req.params.memberId);
 
     if (isNaN(memberId) || memberId <= 0) {
       return res.error(
         ErrorCodes.BAD_REQUEST,
         'Invalid member ID',
-        { memberId: req.params.id }
+        { memberId: req.params.memberId }
       );
     }
 
@@ -295,7 +295,7 @@ router.get('/coverage/summary/:memberId', async (req, res) => {
 
   } catch (error) {
     logger.error('Failed to get coverage summary', error as Error, {
-      memberId: req.params.id,
+      memberId: req.params.memberId,
       correlationId: req.correlationId
     });
 
