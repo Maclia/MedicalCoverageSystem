@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 export const config = {
-  port: parseInt(process.env.PORT || '3000', 10),
+  port: parseInt(process.env.PORT || '3001', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
 
   redis: {
@@ -24,42 +24,37 @@ export const config = {
 
   services: {
     core: {
-      url: process.env.CORE_SERVICE_URL || 'http://localhost:3001',
+      url: process.env.CORE_SERVICE_URL || 'http://localhost:3003',
       timeout: parseInt(process.env.CORE_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.CORE_SERVICE_RETRIES || '3', 10),
     },
     insurance: {
-      url: process.env.INSURANCE_SERVICE_URL || 'http://localhost:3002',
+      url: process.env.INSURANCE_SERVICE_URL || 'http://localhost:3008',
       timeout: parseInt(process.env.INSURANCE_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.INSURANCE_SERVICE_RETRIES || '3', 10),
     },
     hospital: {
-      url: process.env.HOSPITAL_SERVICE_URL || 'http://localhost:3003',
+      url: process.env.HOSPITAL_SERVICE_URL || 'http://localhost:3007',
       timeout: parseInt(process.env.HOSPITAL_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.HOSPITAL_SERVICE_RETRIES || '3', 10),
     },
     billing: {
-      url: process.env.BILLING_SERVICE_URL || 'http://localhost:3004',
+      url: process.env.BILLING_SERVICE_URL || 'http://localhost:3002',
       timeout: parseInt(process.env.BILLING_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.BILLING_SERVICE_RETRIES || '3', 10),
     },
-    claims: {
-      url: process.env.CLAIMS_SERVICE_URL || 'http://localhost:3005',
-      timeout: parseInt(process.env.CLAIMS_SERVICE_TIMEOUT || '5000', 10),
-      retries: parseInt(process.env.CLAIMS_SERVICE_RETRIES || '3', 10),
-    },
     finance: {
-      url: process.env.FINANCE_SERVICE_URL || 'http://localhost:3006',
+      url: process.env.FINANCE_SERVICE_URL || 'http://localhost:3004',
       timeout: parseInt(process.env.FINANCE_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.FINANCE_SERVICE_RETRIES || '3', 10),
     },
     crm: {
-      url: process.env.CRM_SERVICE_URL || 'http://localhost:3007',
+      url: process.env.CRM_SERVICE_URL || 'http://localhost:3005',
       timeout: parseInt(process.env.CRM_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.CRM_SERVICE_RETRIES || '3', 10),
     },
     membership: {
-      url: process.env.MEMBERSHIP_SERVICE_URL || 'http://localhost:3008',
+      url: process.env.MEMBERSHIP_SERVICE_URL || 'http://localhost:3006',
       timeout: parseInt(process.env.MEMBERSHIP_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.MEMBERSHIP_SERVICE_RETRIES || '3', 10),
     },
@@ -82,7 +77,7 @@ export const config = {
   },
 
   security: {
-    corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001'],
+    corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001', 'http://localhost'],
     enableCSP: process.env.ENABLE_CSP !== 'false',
     trustProxy: process.env.TRUST_PROXY === 'true',
   },
