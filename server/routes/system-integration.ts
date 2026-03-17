@@ -11,14 +11,14 @@ import {
   schemes,
   providers,
   premiums,
-  documents,
+  memberDocuments,
   communicationLogs,
   auditLogs,
   wellnessActivities,
   riskAssessments,
   benefits
 } from "../../shared/schema.js";
-import { eq, and, desc, asc, inArray, or, isNotNull } from "drizzle-orm";
+import { eq, and, desc, asc, gte, inArray, or, isNotNull } from "drizzle-orm";
 
 // Cross-module integration schemas
 const memberClaimsIntegrationSchema = z.object({

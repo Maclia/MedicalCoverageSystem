@@ -25,13 +25,44 @@ declare module 'path' {
 
 declare module 'express' {
   import type * as http from 'http';
-  export type Request = http.IncomingMessage & { body?: any; params?: any; query?: any; originalUrl?: string; ip?: string; get?: (header: string) => string };
-  export type Response = http.ServerResponse & { json?: (body: any) => void; status?: (code: number) => Response; set?: (headers: any) => Response; end?: (data: string) => void; sendFile?: (path: string) => void };
+
+  export type Request = http.IncomingMessage & {
+    body?: any;
+    params?: any;
+    query?: any;
+    originalUrl?: string;
+    ip?: string;
+    get?: (header: string) => string;
+  };
+
+  export type Response = http.ServerResponse & {
+    json?: (body: any) => void;
+    status?: (code: number) => Response;
+    set?: (headers: any) => Response;
+    end?: (data: string) => void;
+    sendFile?: (path: string) => void;
+  };
+
   export type NextFunction = (err?: any) => void;
+  export type RequestHandler = (req: Request, res: Response, next: NextFunction) => any;
+
+  export interface Router {
+    (req: Request, res: Response, next?: NextFunction): any;
+    get(path: string, ...handlers: Array<RequestHandler | Router>): any;
+    post(path: string, ...handlers: Array<RequestHandler | Router>): any;
+    put(path: string, ...handlers: Array<RequestHandler | Router>): any;
+    delete(path: string, ...handlers: Array<RequestHandler | Router>): any;
+    patch(path: string, ...handlers: Array<RequestHandler | Router>): any;
+    use(path: string | RequestHandler | Router, ...handlers: Array<RequestHandler | Router>): any;
+  }
+
+  export function Router(options?: any): Router;
+
   export type Express = any;
-  
+
   interface ExpressApp {
     (): Express;
+    Router: typeof Router;
     json(options?: any): any;
     urlencoded(options?: any): any;
     static(path: string): any;

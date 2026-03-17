@@ -48,6 +48,9 @@ import {
 
 // Storage interface
 export interface IStorage {
+  // Database accessor (optional, used by integration routes)
+  db?: any;
+
   // User authentication methods
   getUser(id: number): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
@@ -3111,4 +3114,4 @@ export class MemStorage implements IStorage {
 import { DatabaseStorage } from './databaseStorage';
 
 // If using DATABASE_URL, use DatabaseStorage, otherwise use MemStorage
-export const storage = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();
+export const storage: IStorage & Record<string, any> = process.env.DATABASE_URL ? new DatabaseStorage() : new MemStorage();

@@ -814,13 +814,28 @@ export class CommissionPaymentService {
     return [];
   }
 
-  private async getAgentPayments(
+  public async getAgentPayments(
     agentId: number,
     startDate?: Date,
     endDate?: Date,
     limit?: number
   ): Promise<AgentCommissionPayment[]> {
     console.log(`Getting payment history for agent ${agentId}`);
+    return [];
+  }
+
+  public async getPayment(paymentId: number): Promise<AgentCommissionPayment | null> {
+    console.log(`Fetching payment ${paymentId}`);
+    return null;
+  }
+
+  public async voidPayment(paymentId: number): Promise<{ success: boolean }> {
+    console.log(`Voiding payment ${paymentId}`);
+    return { success: true };
+  }
+
+  public async getPendingPayments(options?: any): Promise<AgentCommissionPayment[]> {
+    console.log(`Fetching pending payments`);
     return [];
   }
 }

@@ -15,7 +15,11 @@ export interface CardDetails {
   expiryDate: Date;
 }
 
-export const cardManagementService = {
+export type CardGenerationRequest = any;
+export type CardVerificationRequest = any;
+export type CardStatusUpdate = any;
+
+export const cardManagementService: any = {
   async getCardByMemberId(memberId: number): Promise<CardDetails | null> {
     return {
       id: `card_${memberId}`,

@@ -713,6 +713,29 @@ export class CommissionCalculationService implements CommissionCalculationEngine
   private async saveCommissionStatement(statement: CommissionStatement): Promise<void> {
     console.log(`Saving commission statement for agent ${statement.agentId}`);
   }
+
+  // ---------------------------------------------------------------------------
+  // Route stubs (compile-time helpers)
+  // ---------------------------------------------------------------------------
+  public async getCalculation(calculationId: number): Promise<CommissionCalculationResult | null> {
+    return null;
+  }
+
+  public async getCommissionRules(filters?: any): Promise<any[]> {
+    return [];
+  }
+
+  public async createCommissionRule(rule: any): Promise<any> {
+    return { ...rule, id: Date.now() };
+  }
+
+  public async updateCommissionRule(ruleId: number, rule: any): Promise<any> {
+    return { ...rule, id: ruleId };
+  }
+
+  public async deleteCommissionRule(ruleId: number): Promise<void> {
+    return;
+  }
 }
 
 // Supporting classes
@@ -802,5 +825,32 @@ export interface CommissionStatement {
   totals: any;
   metadata: Record<string, any>;
 }
+
+// -----------------------------------------------------------------------------
+// Lightweight route-facing helpers (stubs)
+// -----------------------------------------------------------------------------
+
+// These helper methods exist to satisfy route-level compilation and should be
+// replaced with fully implemented persistence/query logic as the system matures.
+
+CommissionCalculationService.prototype.getCalculation = async function (calculationId: number) {
+  return null;
+};
+
+CommissionCalculationService.prototype.getCommissionRules = async function (filters?: any) {
+  return [];
+};
+
+CommissionCalculationService.prototype.createCommissionRule = async function (rule: any) {
+  return { ...rule, id: Date.now() };
+};
+
+CommissionCalculationService.prototype.updateCommissionRule = async function (ruleId: number, rule: any) {
+  return { ...rule, id: ruleId };
+};
+
+CommissionCalculationService.prototype.deleteCommissionRule = async function (ruleId: number) {
+  return;
+};
 
 export const commissionCalculationService = new CommissionCalculationService();
