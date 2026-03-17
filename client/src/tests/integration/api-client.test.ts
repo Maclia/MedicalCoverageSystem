@@ -35,7 +35,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
         const mockResponse = TestDataFactory.createMockMember(mockMemberData);
 
         // Mock successful fetch response
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve({ success: true, data: mockResponse })
         });
@@ -80,7 +80,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
           totalPages: 1
         };
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve(mockResponse)
         });
@@ -89,7 +89,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
 
         // Verify query parameters were built correctly (as expected by current client implementation)
         expect(global.fetch).toHaveBeenCalledWith(
-          "/api/members/searchTerm=John&gender=male&hasDisability=false&city=Nairobi&page=1&limit=10",
+          "/api/members?searchTerm=John&gender=male&hasDisability=false&city=Nairobi&page=1&limit=10",
           {
             method: "GET",
             headers: { "Content-Type": "application/json" }
@@ -114,35 +114,30 @@ describe("Enhanced Members API Client Integration Tests", () => {
 
     it("Update member with enhanced fields", async () => {
       const test = await TestRunner.runTest("Update member with enhanced fields", async () => {
-        const updateData = {
-          id: 1,
+        const memberId = 1;
+        const updatePayload = {
           gender: "female",
           maritalStatus: "divorced",
           address: "456 New Address",
           city: "Mombasa",
           isActive: true
         };
+        const updateRequest = { id: memberId, ...updatePayload };
 
-        const mockResponse = TestDataFactory.createMockMember(updateData);
+        const mockResponse = TestDataFactory.createMockMember({ id: memberId, ...updatePayload } as any);
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve({ success: true, data: mockResponse })
         });
 
-        const result = await membersAPI.updateMember(updateData as any);
+        const result = await membersAPI.updateMember(updateRequest as any);
 
         // Verify API was called correctly
-        expect(global.fetch).toHaveBeenCalledWith("/api/members/1", {
+        expect(global.fetch).toHaveBeenCalledWith(`/api/members/${memberId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            gender: "female",
-            maritalStatus: "divorced",
-            address: "456 New Address",
-            city: "Mombasa",
-            isActive: true
-          })
+          body: JSON.stringify(updatePayload)
         });
 
         // Verify updated fields
@@ -155,24 +150,22 @@ describe("Enhanced Members API Client Integration Tests", () => {
 
     it("Member lifecycle operations", async () => {
       const test = await TestRunner.runTest("Member lifecycle operations", async () => {
+        const memberId = 1;
+        const reason = "Non-payment of premiums";
         const mockResponse = TestDataFactory.createMockMember({ membershipStatus: "suspended" });
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve({ success: true, data: mockResponse })
         });
 
-        const result = await membersAPI.suspendMember(1, "Non-payment of premiums");
+        const result = await membersAPI.suspendMember(memberId, reason);
 
         // Verify API was called correctly
-        expect(global.fetch).toHaveBeenCalledWith("/api/members/lifecycle", {
-          method: "POST",
+        expect(global.fetch).toHaveBeenCalledWith(`/api/members/${memberId}/suspend`, {
+          method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            memberId: 1,
-            action: "suspend",
-            reason: "Non-payment of premiums"
-          })
+          body: JSON.stringify({ reason })
         });
 
         Assert.equals(result.membershipStatus, "suspended", "Member should be suspended");
@@ -219,7 +212,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
           writable: true
         });
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve({ data: mockDocument })
         });
@@ -239,24 +232,25 @@ describe("Enhanced Members API Client Integration Tests", () => {
 
     it("Verify document", async () => {
       const test = await TestRunner.runTest("Verify document", async () => {
-        const verificationData = { documentId: 1, isVerified: true, notes: "Document verified and approved" } as any;
-        const mockDocument = TestDataFactory.createMockMember({ isActive: true });
+        const documentId = 1;
+        const verificationPayload = { documentId, isVerified: true, notes: "Document verified and approved" };
+        const mockDocument = { ...TestDataFactory.createMockMember({ isActive: true }), isVerified: true, verificationDate: new Date().toISOString() } as any;
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve({
             success: true,
-            data: { ...mockDocument, isVerified: true, verificationDate: new Date().toISOString() }
+            data: mockDocument
           })
         });
 
-        await membersAPI.verifyDocument(1, verificationData);
+        await membersAPI.verifyDocument(documentId, verificationPayload as any);
 
         // Verify API was called correctly
-        expect(global.fetch).toHaveBeenCalledWith("/api/documents/1/verify", {
+        expect(global.fetch).toHaveBeenCalledWith(`/api/documents/${documentId}/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(verificationData)
+          body: JSON.stringify(verificationPayload)
         });
       });
       TestRunner.addTest(test);
@@ -288,7 +282,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
           updatedAt: new Date().toISOString()
         };
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve(mockConsent)
         });
@@ -321,7 +315,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
 
         const mockResponse = { success: true, processed: 3, failed: 0, errors: [] };
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve(mockResponse)
         });
@@ -368,7 +362,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
           ]
         };
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve(mockResponse)
         });
@@ -398,7 +392,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
         const mockError = new Error("Validation failed: Invalid email format");
         (mockError as any).statusCode = 400;
 
-        (global.fetch as jest.Mock).mockRejectedValue(mockError);
+        (global.fetch as any).mockRejectedValue(mockError);
 
         try {
           await membersAPI.createMember(TestDataFactory.createValidMemberRequest());
@@ -415,7 +409,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
         const mockNetworkError = new Error("Network error: Failed to fetch");
         (mockNetworkError as any).name = "TypeError";
 
-        (global.fetch as jest.Mock).mockRejectedValue(mockNetworkError);
+        (global.fetch as any).mockRejectedValue(mockNetworkError);
 
         try {
           await membersAPI.getMember(1);
@@ -446,7 +440,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
           totalPages: 1
         };
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve(mockResponse)
         });
@@ -463,7 +457,7 @@ describe("Enhanced Members API Client Integration Tests", () => {
       const test = await TestRunner.runTest("Get dashboard statistics with enhanced metrics", async () => {
         const mockStats = TestDataFactory.createMockDashboardStats();
 
-        (global.fetch as jest.Mock).mockResolvedValue({
+        (global.fetch as any).mockResolvedValue({
           ok: true,
           json: () => Promise.resolve(mockStats)
         });
