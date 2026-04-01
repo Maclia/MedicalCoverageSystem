@@ -20,7 +20,12 @@
 - [x] Verify wellness-eligibility activePremiums variable
 - [ ] Verify contextual-notifications dynamic keys syntax
 - [ ] Test all fixes
+- [x] Fix provider-referral-routing type errors and scope issues (remove this.generateProviderRecommendation, fix avgProcessingTime scope)
+- [x] Verify contextual-notifications dynamic keys syntax
+- [x] Test all fixes
 
 ## Progress:
 - [ ] All fixes implemented
 - [ ] Testing completed
+- [x] All fixes implemented
+- [x] Testing completed

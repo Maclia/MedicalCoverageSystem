@@ -1,0 +1,290 @@
+version: '3.8'
+
+x-service-defaults: &service-defaults
+  restart: unless-stopped
+  networks:
+    - medical-services-network
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  environment:
+    NODE_ENV: ${NODE_ENV:-production}
+    REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+    JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+  healthcheck: &default-healthcheck
+    test: ["CMD", "node", "-e", "require('http').get('http://localhost:${PORT:-3000}/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+    interval: 30s
+    timeout: 10s
+    retries: 5
+
+x-service-template: &service-template
+  <<: *service-defaults
+  build:
+    context: ./services/${SERVICE_NAME}
+    dockerfile: Dockerfile
+  container_name: medical_${SERVICE_SHORT_NAME}_service
+  ports:
+    - "${PORT}:${PORT}"
+
+services:
+  # Shared Infrastructure
+  postgres:
+    image: postgres:15-alpine
+    container_name: medical_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres_password_2024}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d
+    networks:
+      - medical-services-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: medical_redis
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - medical-services-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+      target: ${NODE_ENV:-development}
+    container_name: medical_frontend
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+      VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3001}
+      VITE_ENVIRONMENT: ${VITE_ENVIRONMENT:-development}
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    networks:
+      - medical-services-network
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # API Gateway - Routes to all microservices
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: medical_api_gateway
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/api_gateway
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      SERVICE_TIMEOUT: 30000
+      # Service URLs - Update these if using service discovery
+      CORE_SERVICE_URL: http://core-service:3003
+      INSURANCE_SERVICE_URL: http://insurance-service:3008
+      HOSPITAL_SERVICE_URL: http://hospital-service:3007
+      BILLING_SERVICE_URL: http://billing-service:3002
+      FINANCE_SERVICE_URL: http://finance-service:3004
+      CRM_SERVICE_URL: http://crm-service:3005
+      MEMBERSHIP_SERVICE_URL: http://membership-service:3006
+      WELLNESS_SERVICE_URL: http://wellness-service:3009
+    ports:
+      - "3001:3001"
+    networks:
+      - medical-services-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Microservices - Dynamic service definition
+  # Config: name, port, database
+  billing-service:
+    <<: *service-defaults
+    build:
+      context: ./services/billing-service
+      dockerfile: Dockerfile
+    container_name: medical_billing_service
+    environment:
+      <<: [*service-defaults.environment]
+      PORT: 3002
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_billing
+    ports:
+      - "3002:3002"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
+  core-service:
+    <<: *service-defaults
+    build:
+      context: ./services/core-service
+      dockerfile: Dockerfile
+    container_name: medical_core_service
+    environment:
+      <<: [*service-defaults.environment]
+      PORT: 3003
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_core
+    ports:
+      - "3003:3003"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
+  finance-service:
+    <<: *service-defaults
+    build:
+      context: ./services/finance-service
+      dockerfile: Dockerfile
+    container_name: medical_finance_service
+    environment:
+      <<: [*service-defaults.environment]
+      PORT: 3004
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_finance
+    ports:
+      - "3004:3004"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3004/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
+  crm-service:
+    <<: *service-defaults
+    build:
+      context: ./services/crm-service
+      dockerfile: Dockerfile
+    container_name: medical_crm_service
+    environment:
+      <<: [*service-defaults.environment]
+      PORT: 3005
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_crm
+    ports:
+      - "3005:3005"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3005/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
+  membership-service:
+    <<: *service-defaults
+    build:
+      context: ./services/membership-service
+      dockerfile: Dockerfile
+    container_name: medical_membership_service
+    environment:
+      <<: [*service-defaults.environment]
+      PORT: 3006
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_membership
+    ports:
+      - "3006:3006"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3006/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
+  hospital-service:
+    <<: *service-defaults
+    build:
+      context: ./services/hospital-service
+      dockerfile: Dockerfile
+    container_name: medical_hospital_service
+    environment:
+      <<: [*service-defaults.environment]
+      PORT: 3007
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_hospital
+    ports:
+      - "3007:3007"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3007/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
+  insurance-service:
+    <<: *service-defaults
+    build:
+      context: ./services/insurance-service
+      dockerfile: Dockerfile
+    container_name: medical_insurance_service
+    environment:
+      <<: [*service-defaults.environment]
+      PORT: 3008
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_insurance
+    ports:
+      - "3008:3008"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3008/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
+  wellness-service:
+    <<: *service-defaults
+    build:
+      context: ./services/wellness-service
+      dockerfile: Dockerfile
+    container_name: medical_wellness_service
+    environment:
+      <<: [*service-defaults.environment]
+      PORT: 3009
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_wellness
+    ports:
+      - "3009:3009"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3009/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: medical_nginx_proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - medical-services-network
+    depends_on:
+      - frontend
+      - api-gateway
+    restart: unless-stopped
+    profiles: []
+
+volumes:
+  postgres_data:
+  redis_data:
+  nginx_logs:
+
+networks:
+  medical-services-network:
+    driver: bridge
