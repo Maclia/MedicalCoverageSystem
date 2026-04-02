@@ -20,7 +20,7 @@ COPY tsconfig.json ./
 COPY src ./src
 
 # Install all dependencies (including dev dependencies for build; prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 # Build TypeScript
 RUN npm run build

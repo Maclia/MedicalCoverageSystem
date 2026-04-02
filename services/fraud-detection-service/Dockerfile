@@ -8,7 +8,7 @@ COPY package.json ./
 COPY package-lock.json* ./
 
 # Install dependencies (prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 # Copy source code
 COPY src ./src
@@ -34,7 +34,7 @@ COPY package.json ./
 COPY package-lock.json* ./
 
 # Install production dependencies only
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev; else npm install --omit=dev; fi && \
+RUN if [ -f package-lock.json ]; then npm ci --omit=dev --legacy-peer-deps; else npm install --omit=dev --legacy-peer-deps; fi && \
     npm cache clean --force
 
 # Copy built application from builder
