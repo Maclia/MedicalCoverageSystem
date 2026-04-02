@@ -1,5 +1,3 @@
-version: '3.8'
-
 x-service-defaults: &service-defaults
   restart: unless-stopped
   networks:
@@ -13,20 +11,11 @@ x-service-defaults: &service-defaults
     NODE_ENV: ${NODE_ENV:-production}
     REDIS_URL: ${REDIS_URL:-redis://redis:6379}
     JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
-  healthcheck: &default-healthcheck
-    test: ["CMD", "node", "-e", "require('http').get('http://localhost:${PORT:-3000}/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
-    interval: 30s
-    timeout: 10s
-    retries: 5
 
-x-service-template: &service-template
-  <<: *service-defaults
-  build:
-    context: ./services/${SERVICE_NAME}
-    dockerfile: Dockerfile
-  container_name: medical_${SERVICE_SHORT_NAME}_service
-  ports:
-    - "${PORT}:${PORT}"
+x-default-healthcheck: &default-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 5
 
 services:
   # Shared Infrastructure
