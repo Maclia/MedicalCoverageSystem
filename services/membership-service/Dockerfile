@@ -1,5 +1,5 @@
 # Build stage
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
 RUN apk add --no-cache dumb-init
 
@@ -12,7 +12,7 @@ COPY package*.json ./
 COPY tsconfig.json ./
 
 # Install dependencies (prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
+RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 # Copy source code
 COPY src/ ./src/
