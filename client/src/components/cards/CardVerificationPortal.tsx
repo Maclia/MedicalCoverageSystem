@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { CardVerificationRequest, CardVerificationResponse } from '../../../server/services/cardManagementService';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Input } from '../ui/input';
@@ -11,7 +10,7 @@ import { Loader2, CheckCircle, XCircle, Camera, Wifi, HandTap } from 'lucide-rea
 
 interface CardVerificationPortalProps {
   providerId: string;
-  onVerificationComplete?: (result: CardVerificationResponse) => void;
+  onVerificationComplete?: (result: any) => void;
   className?: string;
 }
 
@@ -23,7 +22,7 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
   const [verificationMethod, setVerificationMethod] = useState<'qr_scan' | 'manual_entry' | 'nfc_tap'>('qr_scan');
   const [qrCodeData, setQrCodeData] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  const [lastVerification, setLastVerification] = useState<CardVerificationResponse | null>(null);
+  const [lastVerification, setLastVerification] = useState<any>(null);
   const [location, setLocation] = useState('');
   const [deviceInfo, setDeviceInfo] = useState('');
 
@@ -37,7 +36,7 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
     setLastVerification(null);
 
     try {
-      const verificationRequest: CardVerificationRequest = {
+      const verificationRequest = {
         qrCodeData: qrCodeData.trim(),
         providerId,
         verificationType: verificationMethod,
@@ -60,7 +59,7 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
         onVerificationComplete?.(result.data);
 
         // Clear form on successful verification
-        if (result.data.valid) {
+        if (result.data.verification?.result === 'success') {
           setQrCodeData('');
         }
       } else {
@@ -69,8 +68,10 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
     } catch (error) {
       console.error('Error verifying card:', error);
       setLastVerification({
-        valid: false,
-        reason: error instanceof Error ? error.message : 'Verification failed'
+        verification: {
+          result: 'failed'
+        },
+        message: error instanceof Error ? error.message : 'Verification failed'
       });
     } finally {
       setIsVerifying(false);
@@ -90,15 +91,15 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
     }
   };
 
-  const getStatusColor = (valid: boolean | undefined) => {
-    if (valid === true) return 'bg-green-100 text-green-800 border-green-200';
-    if (valid === false) return 'bg-red-100 text-red-800 border-red-200';
+  const getStatusColor = (result: string | undefined) => {
+    if (result === 'success') return 'bg-green-100 text-green-800 border-green-200';
+    if (result === 'failed') return 'bg-red-100 text-red-800 border-red-200';
     return 'bg-gray-100 text-gray-800 border-gray-200';
   };
 
-  const getStatusIcon = (valid: boolean | undefined) => {
-    if (valid === true) return <CheckCircle className="w-5 h-5 text-green-600" />;
-    if (valid === false) return <XCircle className="w-5 h-5 text-red-600" />;
+  const getStatusIcon = (result: string | undefined) => {
+    if (result === 'success') return <CheckCircle className="w-5 h-5 text-green-600" />;
+    if (result === 'failed') return <XCircle className="w-5 h-5 text-red-600" />;
     return null;
   };
 
@@ -217,41 +218,46 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
 
           {/* Verification Result */}
           {lastVerification && (
-            <Alert className={getStatusColor(lastVerification.valid)}>
+            <Alert className={getStatusColor(lastVerification.verification?.result)}>
               <div className="flex items-start gap-3">
-                {getStatusIcon(lastVerification.valid)}
+                {getStatusIcon(lastVerification.verification?.result)}
                 <div className="flex-1">
                   <AlertDescription>
                     <div className="font-medium mb-2">
-                      {lastVerification.valid ? '✓ Card Verified Successfully' : '✗ Card Verification Failed'}
+                      {lastVerification.message || (lastVerification.verification?.result === 'success' ? '✓ Card Verified Successfully' : '✗ Card Verification Failed')}
                     </div>
 
-                    {lastVerification.valid && lastVerification.card && lastVerification.member ? (
+                    {lastVerification.verification?.result === 'success' && lastVerification.card ? (
                       <div className="space-y-2 mt-3 p-3 bg-white bg-opacity-50 rounded">
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
-                            <strong>Member Name:</strong> {lastVerification.member.name}
+                            <strong>Member ID:</strong> #{lastVerification.card.memberId}
                           </div>
                           <div>
-                            <strong>Member ID:</strong> #{lastVerification.member.id}
+                            <strong>Card Number:</strong> {lastVerification.card.cardNumber}
                           </div>
                           <div>
-                            <strong>Card Type:</strong> {lastVerification.card.cardType}
+                            <strong>Card Status:</strong> {lastVerification.card.status}
                           </div>
                           <div>
-                            <strong>Member Type:</strong> {lastVerification.member.memberType}
+                            <strong>Expiry Date:</strong> {new Date(lastVerification.card.expiryDate).toLocaleDateString()}
                           </div>
                         </div>
 
-                        {lastVerification.member.dateOfBirth && (
-                          <div className="text-sm">
-                            <strong>Date of Birth:</strong> {new Date(lastVerification.member.dateOfBirth).toLocaleDateString()}
+                        {lastVerification.verification && (
+                          <div className="text-sm mt-3 p-2 bg-blue-50 rounded">
+                            <strong>Verification Details:</strong>
+                            <div>Method: {lastVerification.verification.method}</div>
+                            <div>Fraud Risk Score: {lastVerification.verification.fraudRiskScore}/100</div>
+                            {lastVerification.verification.fraudIndicators?.length > 0 && (
+                              <div>Indicators: {lastVerification.verification.fraudIndicators.join(', ')}</div>
+                            )}
                           </div>
                         )}
 
                         <div className="flex gap-2 mt-3">
                           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                            Active
+                            {lastVerification.card.status}
                           </Badge>
                           <Badge variant="outline">
                             Card ID: #{lastVerification.card.id}
@@ -260,7 +266,7 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
                       </div>
                     ) : (
                       <div className="text-sm mt-2">
-                        <strong>Reason:</strong> {lastVerification.reason || 'Unknown error occurred'}
+                        <strong>Reason:</strong> {lastVerification.message || 'Unknown error occurred'}
                       </div>
                     )}
                   </AlertDescription>

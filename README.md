@@ -73,10 +73,11 @@ npm run vercel:deploy
 ## ✅ Current Status
 
 ✅ **Production Ready**
-- 9 independent microservices
+- 9 independent microservices + API Gateway
 - Type-safe development (TypeScript)
 - Comprehensive API documentation
 - Automated health monitoring
+- Card membership system fully integrated
 - Clean, consolidated documentation
 - Docker & Vercel deployment ready
 
@@ -97,10 +98,11 @@ npm run vercel:deploy
 
 ## 🔗 Resources
 
-- [Full Deployment Guide](./MASTER_DEPLOYMENT_GUIDE.md)
-- [API Documentation](./docs/API_DOCUMENTATION.md)
-- [Troubleshooting](./MASTER_DEPLOYMENT_GUIDE.md#troubleshooting)
-- [Architecture Details](./docs/COMPLETE-SYSTEM-INTEGRATION-REPORT.md)
+- [Full Deployment Guide](./SETUP_AND_DEPLOYMENT.md)
+- [API Documentation](./API_REFERENCE.md)
+- [Troubleshooting](./SETUP_AND_DEPLOYMENT.md#troubleshooting)
+- [Architecture Details](./SYSTEM_ARCHITECTURE.md)
+- [Card Membership System](./CARD_INTEGRATION_STATUS.md)
 
 ---
 

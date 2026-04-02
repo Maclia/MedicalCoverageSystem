@@ -46,3 +46,8 @@ SELECT 'CREATE DATABASE api_gateway' WHERE NOT EXISTS (
 SELECT 'CREATE DATABASE medical_coverage_core' WHERE NOT EXISTS (
   SELECT FROM pg_database WHERE datname = 'medical_coverage_core'
 )\gexec
+
+-- fraud_detection
+SELECT 'CREATE DATABASE medical_coverage_fraud_detection' WHERE NOT EXISTS (
+  SELECT FROM pg_database WHERE datname = 'medical_coverage_fraud_detection'
+)\gexec

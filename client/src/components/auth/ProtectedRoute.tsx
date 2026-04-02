@@ -1,10 +1,9 @@
-import React, { ReactNode } from 'react';
-// import { useLocation, useNavigate } from 'wouter';
+import React, { ReactNode, useEffect } from 'react';
+import { useLocation } from 'wouter';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { LockClosedIcon, HomeIcon } from '@heroicons/react/24/outline';
-import Login from './Login';
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -19,8 +18,15 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requireAuth = true,
   fallbackPath = '/login'
 }) => {
+  const [, navigate] = useLocation();
   const { user, isAuthenticated, isLoading, hasRole } = useAuth();
-  // const [location, navigate] = useLocation();
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && requireAuth && !isAuthenticated) {
+      navigate(fallbackPath, { replace: true });
+    }
+  }, [isLoading, requireAuth, isAuthenticated, navigate, fallbackPath]);
 
   // Show loading state while checking authentication
   if (isLoading) {
@@ -34,17 +40,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // Redirect to login if authentication is required but user is not authenticated
-  if (requireAuth && !isAuthenticated) {
-    // const returnUrl = encodeURIComponent(location);
-    // const loginPath = `${fallbackPath}${returnUrl ? `?redirect=${returnUrl}` : ''}`;
-    // navigate(loginPath, { replace: true });
-    console.log('Would redirect to login');
-    return null;
+  // If authenticated and no role restrictions, render children
+  if (isAuthenticated && (allowedRoles.length === 0 || (user && allowedRoles.includes(user.userType)))) {
+    return <>{children}</>;
   }
 
-  // Check role-based access
-  if (allowedRoles.length > 0 && user && !allowedRoles.includes(user.userType)) {
+  // Check role-based access - show access denied
+  if (user && allowedRoles.length > 0 && !allowedRoles.includes(user.userType)) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
@@ -69,7 +71,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
             <div className="space-y-2">
               <Button
-                onClick={() => navigate('/dashboard', { replace: true })}
+                onClick={() => navigate(`/dashboard/${user.userType}`, { replace: true })}
                 className="w-full"
                 variant="outline"
               >
@@ -115,8 +117,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     );
   }
 
-  // If all checks pass, render the children
-  return <>{children}</>;
+  // Fallback: if we get here, user is not authenticated and allowedRoles is empty
+  // (shouldn't reach here due to useEffect redirect)
+  return null;
 };
 
 export default ProtectedRoute;

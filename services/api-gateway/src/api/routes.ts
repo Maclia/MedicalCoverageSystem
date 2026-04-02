@@ -119,6 +119,11 @@ router.get('/docs', (req, res) => {
         service: 'core',
         description: 'Authentication and user management'
       },
+      cards: {
+        path: '/api/cards/*',
+        service: 'core',
+        description: 'Member card management and verification'
+      },
       core: {
         path: '/api/core/*',
         service: 'core',
@@ -316,6 +321,7 @@ router.get('/swagger.json', (req, res) => {
 // Core service routes (authentication)
 router.use('/api/auth', authRateLimit, dynamicProxyMiddleware('core'));
 router.use('/api/core', authenticateToken, dynamicProxyMiddleware('core'));
+router.use('/api/cards', authenticateToken, userRateLimit, dynamicProxyMiddleware('core'));
 
 /**
  * @swagger

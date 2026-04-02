@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// import { useNavigate, useLocation } from 'wouter';
+import { useLocation } from 'wouter';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,8 +55,7 @@ const roleInfos: RoleInfo[] = [
 ];
 
 const Login: React.FC = () => {
-  // const navigate = useNavigate();
-  // const [location] = useLocation();
+  const [, navigate] = useLocation();
   const { login, isAuthenticated, isLoading, error, clearError } = useAuth();
 
   const [formData, setFormData] = useState({
@@ -68,14 +67,14 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>('insurance');
 
-  // Redirect if already authenticated
+  // Redirect to role-specific dashboard if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      // const redirectTo = new URLSearchParams(location.search).get('redirect') || '/dashboard';
-      // navigate(redirectTo);
-      console.log('User authenticated, would redirect to dashboard');
+      // Navigate based on user role to role-specific dashboard
+      const dashboardRoute = `/dashboard/${selectedRole}`;
+      navigate(dashboardRoute, { replace: true });
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, selectedRole, navigate]);
 
   // Clear error when form data changes
   useEffect(() => {

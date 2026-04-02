@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import Sidebar from "./Sidebar";
-import Header from "./Header";
+import RoleSidebar from "./RoleSidebar";
+import RoleAwareHeader from "./RoleAwareHeader";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -29,16 +29,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
           aria-hidden="true"
         ></div>
         <div className="fixed inset-y-0 left-0 flex flex-col w-64 bg-white">
-          <Sidebar />
+          <RoleSidebar />
         </div>
       </div>
       
       {/* Desktop sidebar */}
-      <Sidebar />
+      <RoleSidebar />
       
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header toggleSidebar={toggleSidebar} />
+        <RoleAwareHeader toggleSidebar={toggleSidebar} />
         <main className="flex-1 overflow-y-auto bg-neutral-50 p-6">
           {children}
         </main>

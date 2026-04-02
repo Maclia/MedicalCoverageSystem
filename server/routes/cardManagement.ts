@@ -1,563 +1,409 @@
-import express from 'express';
-import { cardManagementService, CardGenerationRequest, CardVerificationRequest, CardStatusUpdate } from '../services/cardManagementService';
-import { storage } from '../storage';
+/**
+ * Card Management API Routes
+ * RESTful endpoints for member card operations
+ */
 
-const router = express.Router();
+import express, { Request, Response, Router } from 'express';
+import { cardManagementService } from '../services/cardManagementService.js';
 
-// Member Card Management Routes
+const router: Router = express.Router();
 
-// Generate new card for a member
-router.post('/cards/generate', async (req, res) => {
+/**
+ * POST /api/cards/generate
+ * Generate a new card for a member
+ */
+router.post('/generate', async (req: Request, res: Response) => {
   try {
-    const { memberId, cardType, templateId, companyId, expeditedShipping }: CardGenerationRequest = req.body;
+    const { memberId, cardType, templateId, expeditedShipping, deliveryAddress } = req.body;
 
-    // Validate required fields
     if (!memberId || !cardType) {
       return res.status(400).json({
-        success: false,
-        error: 'Member ID and card type are required'
+        error: 'Missing required fields: memberId, cardType',
       });
     }
 
-    const cards = await cardManagementService.generateCardForMember({
+    if (!['digital', 'physical', 'both'].includes(cardType)) {
+      return res.status(400).json({
+        error: 'Invalid cardType. Must be: digital, physical, or both',
+      });
+    }
+
+    const result = await cardManagementService.generateMemberCard({
       memberId,
       cardType,
       templateId,
-      companyId,
-      expeditedShipping
+      expeditedShipping,
+      deliveryAddress,
     });
 
-    res.json({
-      success: true,
-      data: cards,
-      message: `Successfully generated ${cards.length} card(s)`
-    });
+    res.status(201).json(result);
   } catch (error) {
-    console.error('Error generating card:', error);
     res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to generate card'
+      error: error.message || 'Failed to generate card',
     });
   }
 });
 
-// Get cards for a specific member
-router.get('/cards/member/:memberId', async (req, res) => {
+/**
+ * GET /api/cards/member/:memberId
+ * Get all cards for a member
+ */
+router.get('/member/:memberId', async (req: Request, res: Response) => {
   try {
-    const memberId = parseInt(req.params.memberId);
-    if (isNaN(memberId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid member ID'
-      });
-    }
+    const { memberId } = req.params;
+    const { activeOnly } = req.query;
 
-    const cards = await storage.getMemberCardsByMember(memberId);
+    const cards = await cardManagementService.getMemberCards(parseInt(memberId), activeOnly === 'true');
 
     res.json({
       success: true,
-      data: cards
+      count: cards.length,
+      cards,
     });
   } catch (error) {
-    console.error('Error fetching member cards:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch member cards'
+      error: error.message || 'Failed to retrieve cards',
     });
   }
 });
 
-// Get specific card details
-router.get('/cards/:cardId', async (req, res) => {
+/**
+ * GET /api/cards/member/:memberId/active
+ * Get active cards for a member
+ */
+router.get('/member/:memberId/active', async (req: Request, res: Response) => {
   try {
-    const cardId = parseInt(req.params.cardId);
-    if (isNaN(cardId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid card ID'
-      });
-    }
+    const { memberId } = req.params;
 
-    const card = await storage.getMemberCard(cardId);
-    if (!card) {
-      return res.status(404).json({
-        success: false,
-        error: 'Card not found'
-      });
-    }
+    const cards = await cardManagementService.getMemberCards(parseInt(memberId), true);
 
     res.json({
       success: true,
-      data: card
+      count: cards.length,
+      cards,
     });
   } catch (error) {
-    console.error('Error fetching card:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch card'
+      error: error.message || 'Failed to retrieve active cards',
     });
   }
 });
 
-// Update card status
-router.put('/cards/:cardId/status', async (req, res) => {
+/**
+ * GET /api/cards/:cardId
+ * Get a specific card
+ */
+router.get('/:cardId', async (req: Request, res: Response) => {
   try {
-    const cardId = parseInt(req.params.cardId);
-    const { status, reason, notes }: CardStatusUpdate = req.body;
+    const { cardId } = req.params;
 
-    if (isNaN(cardId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid card ID'
-      });
-    }
-
-    if (!status) {
-      return res.status(400).json({
-        success: false,
-        error: 'Status is required'
-      });
-    }
-
-    const updatedCard = await cardManagementService.updateCardStatus({
-      cardId,
-      status,
-      reason,
-      notes
-    });
+    const card = await cardManagementService.getCard(parseInt(cardId));
 
     res.json({
       success: true,
-      data: updatedCard,
-      message: 'Card status updated successfully'
+      card,
     });
   } catch (error) {
-    console.error('Error updating card status:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to update card status'
+    res.status(404).json({
+      error: error.message || 'Card not found',
     });
   }
 });
 
-// Request card replacement
-router.post('/cards/:cardId/replace', async (req, res) => {
+/**
+ * POST /api/cards/verify
+ * Verify a card
+ */
+router.post('/verify', async (req: Request, res: Response) => {
   try {
-    const cardId = parseInt(req.params.cardId);
-    const { reason, expedited } = req.body;
-
-    if (isNaN(cardId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid card ID'
-      });
-    }
-
-    if (!reason) {
-      return res.status(400).json({
-        success: false,
-        error: 'Reason for replacement is required'
-      });
-    }
-
-    const newCard = await cardManagementService.requestCardReplacement(
-      cardId,
-      reason,
-      expedited
-    );
-
-    res.json({
-      success: true,
-      data: newCard,
-      message: 'Card replacement requested successfully'
-    });
-  } catch (error) {
-    console.error('Error requesting card replacement:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to request card replacement'
-    });
-  }
-});
-
-// Card Verification Routes
-
-// Verify card (for providers)
-router.post('/cards/verify', async (req, res) => {
-  try {
-    const { qrCodeData, providerId, verificationType, location, deviceInfo }: CardVerificationRequest = req.body;
+    const { qrCodeData, providerId, verificationType, location, deviceInfo, ipAddress, geolocation } = req.body;
 
     if (!qrCodeData || !providerId || !verificationType) {
       return res.status(400).json({
-        success: false,
-        error: 'QR code data, provider ID, and verification type are required'
+        error: 'Missing required fields: qrCodeData, providerId, verificationType',
       });
     }
 
-    const verificationResult = await cardManagementService.verifyCard({
-      qrCodeData,
-      providerId,
-      verificationType,
-      location,
-      deviceInfo
-    });
+    const result = await cardManagementService.verifyCard(
+      {
+        qrCodeData,
+        providerId,
+        verificationType,
+        location,
+        deviceInfo,
+        ipAddress,
+        geolocation,
+      },
+      null
+    );
 
-    res.json({
-      success: true,
-      data: verificationResult
-    });
+    res.json(result);
   } catch (error) {
-    console.error('Error verifying card:', error);
-    res.status(500).json({
+    res.status(400).json({
       success: false,
-      error: 'Failed to verify card'
+      error: error.message || 'Card verification failed',
     });
   }
 });
 
-// Get verification history for a card
-router.get('/cards/:cardId/verifications', async (req, res) => {
+/**
+ * PUT /api/cards/:cardId/status
+ * Update card status
+ */
+router.put('/:cardId/status', async (req: Request, res: Response) => {
   try {
-    const cardId = parseInt(req.params.cardId);
-    if (isNaN(cardId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid card ID'
-      });
-    }
-
-    const verifications = await storage.getCardVerificationEventsByCard(cardId);
-
-    res.json({
-      success: true,
-      data: verifications
-    });
-  } catch (error) {
-    console.error('Error fetching verification history:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch verification history'
-    });
-  }
-});
-
-// Card Template Routes
-
-// Get all card templates
-router.get('/templates', async (req, res) => {
-  try {
-    const { companyId, templateType, active } = req.query;
-
-    let templates;
-    if (companyId) {
-      templates = await storage.getCardTemplatesByCompany(parseInt(companyId as string));
-    } else if (templateType) {
-      templates = await storage.getCardTemplatesByType(templateType as string);
-    } else if (active !== undefined) {
-      templates = active === 'true'
-        ? await storage.getActiveCardTemplates()
-        : await storage.getCardTemplates();
-    } else {
-      templates = await storage.getCardTemplates();
-    }
-
-    res.json({
-      success: true,
-      data: templates
-    });
-  } catch (error) {
-    console.error('Error fetching card templates:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch card templates'
-    });
-  }
-});
-
-// Create new card template
-router.post('/templates', async (req, res) => {
-  try {
-    const templateData = req.body;
-
-    const newTemplate = await storage.createCardTemplate(templateData);
-
-    res.status(201).json({
-      success: true,
-      data: newTemplate,
-      message: 'Card template created successfully'
-    });
-  } catch (error) {
-    console.error('Error creating card template:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to create card template'
-    });
-  }
-});
-
-// Update card template
-router.put('/templates/:templateId', async (req, res) => {
-  try {
-    const templateId = parseInt(req.params.templateId);
-    if (isNaN(templateId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid template ID'
-      });
-    }
-
-    const updatedTemplate = await storage.updateCardTemplate(templateId, req.body);
-
-    res.json({
-      success: true,
-      data: updatedTemplate,
-      message: 'Card template updated successfully'
-    });
-  } catch (error) {
-    console.error('Error updating card template:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to update card template'
-    });
-  }
-});
-
-// Deactivate card template
-router.post('/templates/:templateId/deactivate', async (req, res) => {
-  try {
-    const templateId = parseInt(req.params.templateId);
-    if (isNaN(templateId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid template ID'
-      });
-    }
-
-    const deactivatedTemplate = await storage.deactivateCardTemplate(templateId);
-
-    res.json({
-      success: true,
-      data: deactivatedTemplate,
-      message: 'Card template deactivated successfully'
-    });
-  } catch (error) {
-    console.error('Error deactivating card template:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to deactivate card template'
-    });
-  }
-});
-
-// Production Batch Routes
-
-// Get production batches
-router.get('/batches', async (req, res) => {
-  try {
-    const { status, startDate, endDate } = req.query;
-
-    let batches;
-    if (status) {
-      batches = await storage.getCardProductionBatchesByStatus(status as string);
-    } else if (startDate && endDate) {
-      batches = await storage.getCardProductionBatchesByDateRange(
-        new Date(startDate as string),
-        new Date(endDate as string)
-      );
-    } else {
-      batches = await storage.getCardProductionBatches();
-    }
-
-    res.json({
-      success: true,
-      data: batches
-    });
-  } catch (error) {
-    console.error('Error fetching production batches:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch production batches'
-    });
-  }
-});
-
-// Update production batch status
-router.put('/batches/:batchId/status', async (req, res) => {
-  try {
-    const batchId = parseInt(req.params.batchId);
-    const { status, trackingNumber } = req.body;
-
-    if (isNaN(batchId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid batch ID'
-      });
-    }
+    const { cardId } = req.params;
+    const { status, reason } = req.body;
 
     if (!status) {
       return res.status(400).json({
-        success: false,
-        error: 'Status is required'
+        error: 'Missing required field: status',
       });
     }
 
-    const updatedBatch = await cardManagementService.updateProductionBatchStatus(
-      batchId,
+    const validStatuses = ['active', 'inactive', 'expired', 'lost', 'stolen', 'damaged', 'replaced'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        error: `Invalid status. Must be one of: ${validStatuses.join(', ')}`,
+      });
+    }
+
+    const result = await cardManagementService.updateCardStatus({
+      cardId: parseInt(cardId),
       status,
-      trackingNumber
+      reason,
+    });
+
+    res.json(result);
+  } catch (error) {
+    res.status(400).json({
+      error: error.message || 'Failed to update card status',
+    });
+  }
+});
+
+/**
+ * POST /api/cards/:cardId/replace
+ * Request card replacement
+ */
+router.post('/:cardId/replace', async (req: Request, res: Response) => {
+  try {
+    const { cardId } = req.params;
+    const { reason, expedited } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        error: 'Missing required field: reason',
+      });
+    }
+
+    const result = await cardManagementService.requestCardReplacement(parseInt(cardId), reason, expedited);
+
+    res.status(201).json(result);
+  } catch (error) {
+    res.status(400).json({
+      error: error.message || 'Failed to request replacement',
+    });
+  }
+});
+
+/**
+ * GET /api/cards/history/:cardId
+ * Get verification history for a card
+ */
+router.get('/history/:cardId', async (req: Request, res: Response) => {
+  try {
+    const { cardId } = req.params;
+    const { limit } = req.query;
+
+    const history = await cardManagementService.getCardVerificationHistory(
+      parseInt(cardId),
+      limit ? parseInt(limit as string) : 20
     );
 
     res.json({
       success: true,
-      data: updatedBatch,
-      message: 'Production batch status updated successfully'
+      count: history.length,
+      events: history,
     });
   } catch (error) {
-    console.error('Error updating production batch status:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to update production batch status'
+      error: error.message || 'Failed to retrieve verification history',
     });
   }
 });
 
-// Analytics and Reporting Routes
+/**
+ * === Template Management Routes ===
+ */
 
-// Get card usage statistics
-router.get('/analytics/usage', async (req, res) => {
+/**
+ * GET /api/cards/templates
+ * Get all card templates
+ */
+router.get('/templates', async (req: Request, res: Response) => {
   try {
-    const { memberId, startDate, endDate } = req.query;
+    const { activeOnly } = req.query;
 
-    const statistics = await cardManagementService.getCardUsageStatistics(
-      memberId ? parseInt(memberId as string) : undefined,
-      startDate ? new Date(startDate as string) : undefined,
-      endDate ? new Date(endDate as string) : undefined
-    );
+    const templates = await cardManagementService.getCardTemplates(activeOnly !== 'false');
 
     res.json({
       success: true,
-      data: statistics
+      count: templates.length,
+      templates,
     });
   } catch (error) {
-    console.error('Error fetching usage statistics:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to fetch usage statistics'
+      error: error.message || 'Failed to retrieve templates',
     });
   }
 });
 
-// Get verification events
-router.get('/verifications', async (req, res) => {
+/**
+ * POST /api/cards/templates
+ * Create a new card template (admin only)
+ */
+router.post('/templates', async (req: Request, res: Response) => {
   try {
-    const { cardId, memberId, startDate, endDate } = req.query;
+    const templateData = req.body;
 
-    let verifications;
-    if (cardId) {
-      verifications = await storage.getCardVerificationEventsByCard(parseInt(cardId as string));
-    } else if (memberId) {
-      verifications = await storage.getCardVerificationEventsByMember(parseInt(memberId as string));
-    } else if (startDate && endDate) {
-      verifications = await storage.getCardVerificationEventsByDateRange(
-        new Date(startDate as string),
-        new Date(endDate as string)
-      );
-    } else {
-      verifications = await storage.getCardVerificationEvents();
+    if (!templateData.templateName || !templateData.templateType) {
+      return res.status(400).json({
+        error: 'Missing required fields: templateName, templateType',
+      });
     }
 
-    res.json({
+    const template = await cardManagementService.upsertCardTemplate(templateData);
+
+    res.status(201).json({
       success: true,
-      data: verifications
-    });
-  } catch (error) {
-    console.error('Error fetching verification events:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch verification events'
-    });
-  }
-});
-
-// Member-facing Routes
-
-// Get member's active cards
-router.get('/member/active-cards/:memberId', async (req, res) => {
-  try {
-    const memberId = parseInt(req.params.memberId);
-    if (isNaN(memberId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid member ID'
-      });
-    }
-
-    const activeCards = await storage.getActiveMemberCards(memberId);
-
-    res.json({
-      success: true,
-      data: activeCards
-    });
-  } catch (error) {
-    console.error('Error fetching active cards:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Failed to fetch active cards'
-    });
-  }
-});
-
-// Download digital card (returns card data for mobile app)
-router.get('/member/download-card/:cardId', async (req, res) => {
-  try {
-    const cardId = parseInt(req.params.cardId);
-    if (isNaN(cardId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid card ID'
-      });
-    }
-
-    const card = await storage.getMemberCard(cardId);
-    if (!card) {
-      return res.status(404).json({
-        success: false,
-        error: 'Card not found'
-      });
-    }
-
-    if (card.cardType !== 'digital') {
-      return res.status(400).json({
-        success: false,
-        error: 'Only digital cards can be downloaded'
-      });
-    }
-
-    // Get member and template information for complete card data
-    const member = await storage.getMember(card.memberId);
-    const template = await storage.getCardTemplate(card.templateId);
-
-    const cardData = {
-      card,
-      member: {
-        id: member?.id,
-        name: `${member?.firstName} ${member?.lastName}`,
-        memberType: member?.memberType,
-        dateOfBirth: member?.dateOfBirth
-      },
       template,
-      qrCodeData: card.qrCodeData
-    };
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message || 'Failed to create template',
+    });
+  }
+});
+
+/**
+ * PUT /api/cards/templates/:templateId
+ * Update a card template (admin only)
+ */
+router.put('/templates/:templateId', async (req: Request, res: Response) => {
+  try {
+    const { templateId } = req.params;
+    const templateData = req.body;
+
+    templateData.id = parseInt(templateId);
+
+    const template = await cardManagementService.upsertCardTemplate(templateData);
 
     res.json({
       success: true,
-      data: cardData
+      template,
     });
   } catch (error) {
-    console.error('Error downloading card:', error);
     res.status(500).json({
-      success: false,
-      error: 'Failed to download card'
+      error: error.message || 'Failed to update template',
+    });
+  }
+});
+
+/**
+ * === Production Batch Routes ===
+ */
+
+/**
+ * GET /api/cards/batches
+ * Get all production batches
+ */
+router.get('/batches', async (req: Request, res: Response) => {
+  try {
+    const { status } = req.query;
+
+    const batches = await cardManagementService.getProductionBatches(status as string);
+
+    res.json({
+      success: true,
+      count: batches.length,
+      batches,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message || 'Failed to retrieve batches',
+    });
+  }
+});
+
+/**
+ * GET /api/cards/batches/:batchId
+ * Get batch details
+ */
+router.get('/batches/:batchId', async (req: Request, res: Response) => {
+  try {
+    const { batchId } = req.params;
+
+    const batch = await cardManagementService.getBatchDetails(batchId);
+
+    res.json({
+      success: true,
+      batch,
+    });
+  } catch (error) {
+    res.status(404).json({
+      error: error.message || 'Batch not found',
+    });
+  }
+});
+
+/**
+ * PUT /api/cards/batches/:batchId/status
+ * Update batch status
+ */
+router.put('/batches/:batchId/status', async (req: Request, res: Response) => {
+  try {
+    const { batchId } = req.params;
+    const { status, ...additionalData } = req.body;
+
+    if (!status) {
+      return res.status(400).json({
+        error: 'Missing required field: status',
+      });
+    }
+
+    const batch = await cardManagementService.updateBatchStatus(batchId, status, additionalData);
+
+    res.json({
+      success: true,
+      batch,
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: error.message || 'Failed to update batch status',
+    });
+  }
+});
+
+/**
+ * === Analytics Routes ===
+ */
+
+/**
+ * GET /api/cards/analytics
+ * Get card system analytics
+ */
+router.get('/analytics', async (req: Request, res: Response) => {
+  try {
+    const analytics = await cardManagementService.getCardAnalytics();
+
+    res.json({
+      success: true,
+      data: analytics,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: error.message || 'Failed to generate analytics',
     });
   }
 });

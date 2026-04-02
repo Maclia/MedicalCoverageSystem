@@ -4,8 +4,8 @@
  */
 
 import crypto from 'crypto';
-import { db } from '../db.js';
-import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../shared/schema.js';
+import { db } from '../db';
+import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../../shared/schema';
 import { eq, and } from 'drizzle-orm';
 
 export interface CardGenerationRequest {
@@ -98,7 +98,7 @@ class CardManagementService {
         message: `Card generated successfully with number ${cardNumber}`,
       };
     } catch (error) {
-      throw new Error(`Failed to generate card: ${error.message}`);
+      throw new Error(`Failed to generate card: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -116,7 +116,7 @@ class CardManagementService {
       const cards = await query;
       return cards;
     } catch (error) {
-      throw new Error(`Failed to retrieve member cards: ${error.message}`);
+      throw new Error(`Failed to retrieve member cards: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -137,7 +137,7 @@ class CardManagementService {
 
       return card[0];
     } catch (error) {
-      throw new Error(`Failed to retrieve card: ${error.message}`);
+      throw new Error(`Failed to retrieve card: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -254,7 +254,7 @@ class CardManagementService {
         message: isActive ? 'Card verified successfully' : 'Card verification failed',
       };
     } catch (error) {
-      throw new Error(`Card verification failed: ${error.message}`);
+      throw new Error(`Card verification failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -286,7 +286,7 @@ class CardManagementService {
         message: `Card status updated to ${update.status}`,
       };
     } catch (error) {
-      throw new Error(`Failed to update card status: ${error.message}`);
+      throw new Error(`Failed to update card status: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -325,7 +325,7 @@ class CardManagementService {
         message: `Replacement card requested - New card number: ${newCard.card.cardNumber}`,
       };
     } catch (error) {
-      throw new Error(`Failed to request replacement: ${error.message}`);
+      throw new Error(`Failed to request replacement: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -342,7 +342,7 @@ class CardManagementService {
 
       return await query;
     } catch (error) {
-      throw new Error(`Failed to retrieve templates: ${error.message}`);
+      throw new Error(`Failed to retrieve templates: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -363,7 +363,7 @@ class CardManagementService {
         return created[0];
       }
     } catch (error) {
-      throw new Error(`Failed to save template: ${error.message}`);
+      throw new Error(`Failed to save template: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -380,7 +380,7 @@ class CardManagementService {
 
       return await query;
     } catch (error) {
-      throw new Error(`Failed to retrieve batches: ${error.message}`);
+      throw new Error(`Failed to retrieve batches: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -401,7 +401,7 @@ class CardManagementService {
 
       return batch[0];
     } catch (error) {
-      throw new Error(`Failed to retrieve batch: ${error.message}`);
+      throw new Error(`Failed to retrieve batch: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -428,7 +428,7 @@ class CardManagementService {
 
       return updated[0];
     } catch (error) {
-      throw new Error(`Failed to update batch: ${error.message}`);
+      throw new Error(`Failed to update batch: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -446,7 +446,7 @@ class CardManagementService {
 
       return events;
     } catch (error) {
-      throw new Error(`Failed to retrieve verification history: ${error.message}`);
+      throw new Error(`Failed to retrieve verification history: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -494,7 +494,7 @@ class CardManagementService {
         recentVerifications,
       };
     } catch (error) {
-      throw new Error(`Failed to generate analytics: ${error.message}`);
+      throw new Error(`Failed to generate analytics: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

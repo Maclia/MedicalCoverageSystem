@@ -193,7 +193,7 @@ PostgreSQL Instance
 | Service | Responsibility | Database | Ports |
 |---------|---------------|----------|-------|
 | **API Gateway** | Request routing, auth | api_gateway | 3001 |
-| **Core** | Users, companies, members | medical_coverage_core | 3003 |
+| **Core** | Users, companies, members, **member cards** | medical_coverage_core | 3003 |
 | **Insurance** | Policies, benefits, schemes | medical_coverage_insurance | 3008 |
 | **Hospital** | Facilities, appointments, medical records | medical_coverage_hospital | 3007 |
 | **Billing** | Invoices, accounts receivable | medical_coverage_billing | 3002 |
@@ -214,6 +214,7 @@ API Gateway (3001)
     ├─ Routes based on URL path
     │
     ├─ /api/core/* → Core Service (3003)
+    ├─ /api/cards/* → Core Service (3003)
     ├─ /api/insurance/* → Insurance Service (3008)
     ├─ /api/hospital/* → Hospital Service (3007)
     ├─ /api/billing/* → Billing Service (3002)

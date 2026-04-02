@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react';
-import { MemberCard, CardTemplate } from '@shared/schema';
+import React, { useState } from 'react';
 
-// Fallback QR Code component when qrcode.react is not available
+/**
+ * DigitalCard Component
+ * Displays member insurance card in digital format with customizable templates
+ */
+
+// Simple QR Code SVG fallback component
 const QRCodeSVG: React.FC<{
   value: string;
   size: number;
-  level?: string;
-  includeMargin?: boolean;
   fgColor?: string;
   bgColor?: string;
 }> = ({ value, size, fgColor = '#000000', bgColor = '#FFFFFF' }) => {
@@ -24,202 +26,234 @@ const QRCodeSVG: React.FC<{
         fontSize: '8px',
         color: fgColor,
         textAlign: 'center',
-        padding: '2px'
+        padding: '2px',
       }}
       title={value}
     >
-      QR
+      QR: {value.substring(0, 8)}...
     </div>
   );
 };
 
 interface DigitalCardProps {
-  card: MemberCard;
-  member?: {
+  card: {
     id: number;
-    name: string;
-    memberType: string;
-    dateOfBirth: string;
+    memberId: number;
+    cardNumber: string;
+    cardType: string;
+    status: string;
+    expiryDate: Date | string;
+    qrCodeData: string;
+    personalizationData?: string;
+    templateType?: string;
   };
-  template?: CardTemplate;
-  showQRCode?: boolean;
+  template?: {
+    backgroundColor?: string;
+    foregroundColor?: string;
+    accentColor?: string;
+    logoUrl?: string;
+  };
   compact?: boolean;
+  showQR?: boolean;
+  onDownload?: () => void;
   className?: string;
 }
 
 export const DigitalCard: React.FC<DigitalCardProps> = ({
   card,
-  member,
   template,
-  showQRCode = true,
   compact = false,
-  className = ''
+  showQR = true,
+  onDownload,
+  className = '',
 }) => {
-  const [cardData, setCardData] = useState<any>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isFlipped, setIsFlipped] = useState(false);
 
-  useEffect(() => {
-    const loadCardData = async () => {
-      try {
-        setIsLoading(true);
-        const response = await fetch(`/api/cards/member/download-card/${card.id}`);
-        const result = await response.json();
+  const defaultTemplate = {
+    backgroundColor: '#1e3a8a',
+    foregroundColor: '#ffffff',
+    accentColor: '#3b82f6',
+    logoUrl: '/medical-logo.svg',
+  };
 
-        if (result.success) {
-          setCardData(result.data);
-        }
-      } catch (error) {
-        console.error('Error loading card data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const finalTemplate = { ...defaultTemplate, ...template };
+  const expiryDate = new Date(card.expiryDate);
+  const formattedExpiry = `${String(expiryDate.getMonth() + 1).padStart(2, '0')}/${expiryDate.getFullYear()}`;
 
-    if (showQRCode) {
-      loadCardData();
-    } else {
-      setIsLoading(false);
+  const maskCardNumber = (cardNumber: string): string => {
+    const parts = cardNumber.split('-');
+    if (parts.length >= 4) {
+      return `${parts[0]}-${parts[1]}-****-${parts[3]}`;
     }
-  }, [card.id, showQRCode]);
+    return '****';
+  };
 
-  if (isLoading) {
+  const getStatusColor = (): string => {
+    switch (card.status) {
+      case 'active':
+        return '#10b981';
+      case 'inactive':
+        return '#ef4444';
+      case 'expired':
+        return '#f59e0b';
+      case 'lost':
+        return '#a855f7';
+      case 'stolen':
+        return '#dc2626';
+      default:
+        return '#6b7280';
+    }
+  };
+
+  if (compact) {
     return (
-      <div className={`animate-pulse ${className}`}>
-        <div className="bg-gray-200 h-48 w-80 rounded-lg"></div>
+      <div
+        className={`flex items-center justify-between p-4 rounded-lg border-2 ${className}`}
+        style={{
+          backgroundColor: finalTemplate.backgroundColor,
+          borderColor: finalTemplate.accentColor,
+          color: finalTemplate.foregroundColor,
+        }}
+      >
+        <div>
+          <div className="text-sm font-semibold">Insurance Card</div>
+          <div className="text-xs opacity-75 mt-1">{maskCardNumber(card.cardNumber)}</div>
+          <div className="text-xs opacity-75">Expires: {formattedExpiry}</div>
+        </div>
+        <div
+          className="px-3 py-1 rounded-full text-xs font-semibold"
+          style={{
+            backgroundColor: getStatusColor(),
+            color: '#ffffff',
+          }}
+        >
+          {card.status.toUpperCase()}
+        </div>
       </div>
     );
   }
 
-  const cardDesign = template ? JSON.parse(template.cardDesign || '{}') : {
-    backgroundColor: '#1e40af',
-    textColor: '#ffffff',
-    logoPosition: 'top-left',
-    memberInfoPosition: 'center'
-  };
-
-  const cardStyle = {
-    backgroundColor: cardDesign.backgroundColor || '#1e40af',
-    color: cardDesign.textColor || '#ffffff',
-    minHeight: compact ? '120px' : '200px',
-    width: compact ? '280px' : '340px'
-  };
-
-  const formatExpirationDate = (date: string) => {
-    return new Date(date).toLocaleDateString('en-US', {
-      month: '2-digit',
-      year: '2-digit'
-    });
-  };
-
-  const getMemberName = () => {
-    if (member) return member.name;
-    if (cardData?.member) return cardData.member.name;
-    return 'Card Holder';
-  };
-
-  const getMemberType = () => {
-    if (member) return member.memberType;
-    if (cardData?.member) return cardData.member.memberType;
-    return 'Member';
-  };
-
   return (
-    <div
-      className={`relative rounded-lg shadow-lg overflow-hidden ${className}`}
-      style={cardStyle}
-    >
-      {/* Card Header */}
-      <div className="flex justify-between items-start p-4">
-        {/* Logo */}
-        <div className={`absolute ${cardDesign.logoPosition === 'top-left' ? 'top-4 left-4' : cardDesign.logoPosition === 'top-right' ? 'top-4 right-4' : ''}`}>
-          <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center">
-            <span className="text-blue-600 font-bold text-xs">MC</span>
+    <div className={`w-full max-w-md mx-auto ${className}`} onClick={() => setIsFlipped(!isFlipped)}>
+      {!isFlipped ? (
+        // Front of card
+        <div
+          className="rounded-2xl p-8 shadow-2xl cursor-pointer transition-all hover:shadow-xl"
+          style={{
+            backgroundColor: finalTemplate.backgroundColor,
+            color: finalTemplate.foregroundColor,
+            aspectRatio: '1.58',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%)',
+          }}
+        >
+          {/* Header */}
+          <div className="flex justify-between items-start">
+            {finalTemplate.logoUrl && (
+              <img src={finalTemplate.logoUrl} alt="Logo" className="h-8 opacity-90" />
+            )}
+            <span className="text-xl font-bold tracking-wider">Medical Coverage</span>
           </div>
-        </div>
 
-        {/* Card Type Badge */}
-        <div className="absolute top-4 right-4">
-          <span className="bg-white bg-opacity-20 px-2 py-1 rounded text-xs font-medium">
-            {card.cardType.toUpperCase()}
-          </span>
-        </div>
-      </div>
+          {/* Member Info */}
+          <div>
+            <div className="text-sm opacity-75 mb-2">CARDHOLDER</div>
+            <div className="text-lg font-semibold mb-6">Member ID: {card.memberId}</div>
 
-      {/* Main Content */}
-      <div
-        className={`px-4 pb-4 ${cardDesign.memberInfoPosition === 'center' ? 'text-center' : ''}`}
-      >
-        {!compact && (
-          <>
-            <h3 className="text-lg font-bold mb-1">
-              {getMemberName()}
-            </h3>
-            <p className="text-sm opacity-90 mb-3">
-              {getMemberType()}
-            </p>
-          </>
-        )}
-
-        {/* Card Number */}
-        <div className="mb-3">
-          <div className="text-xs opacity-75 mb-1">Card Number</div>
-          <div className="font-mono text-sm">
-            {card.id.toString().padStart(16, '0').replace(/(.{4})/g, '$1 ').trim()}
+            {/* Card Number */}
+            <div className="text-xs opacity-60 tracking-widest mb-2">CARD NUMBER</div>
+            <div className="text-xl font-mono tracking-wider">{maskCardNumber(card.cardNumber)}</div>
           </div>
-        </div>
 
-        {!compact && (
-          <>
-            {/* Member ID */}
-            <div className="mb-3">
-              <div className="text-xs opacity-75 mb-1">Member ID</div>
-              <div className="text-sm font-medium">
-                #{card.memberId.toString().padStart(8, '0')}
+          {/* Footer */}
+          <div className="flex justify-between items-end">
+            <div>
+              <div className="text-xs opacity-75 mb-1">VALID THRU</div>
+              <div className="text-lg font-mono font-bold">{formattedExpiry}</div>
+            </div>
+            <div
+              className="px-3 py-1 rounded-full text-xs font-bold"
+              style={{
+                backgroundColor: getStatusColor(),
+                color: '#ffffff',
+              }}
+            >
+              {card.status.toUpperCase()}
+            </div>
+          </div>
+
+          {/* Flip indicator */}
+          <div className="text-center mt-4 text-xs opacity-50">Click to flip</div>
+        </div>
+      ) : (
+        // Back of card
+        <div
+          className="rounded-2xl p-8 shadow-2xl cursor-pointer transition-all hover:shadow-xl"
+          style={{
+            backgroundColor: finalTemplate.backgroundColor,
+            color: finalTemplate.foregroundColor,
+            aspectRatio: '1.58',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            backgroundImage: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%)',
+          }}
+        >
+          {/* Security Strip */}
+          <div
+            className="w-full h-12 rounded -mx-8 mb-4"
+            style={{
+              backgroundColor: finalTemplate.accentColor,
+              opacity: 0.3,
+            }}
+          >
+            <div className="text-center pt-3 text-xs font-mono opacity-75">Security Verified</div>
+          </div>
+
+          {/* QR Code */}
+          {showQR && (
+            <div className="flex justify-center mb-6">
+              <div className="bg-white p-4 rounded-lg">
+                <QRCodeSVG
+                  value={card.qrCodeData}
+                  size={150}
+                  fgColor="#000000"
+                  bgColor="#ffffff"
+                />
               </div>
             </div>
+          )}
 
-            {/* Expiration */}
-            <div className="flex justify-between items-end">
-              <div>
-                <div className="text-xs opacity-75 mb-1">Valid Thru</div>
-                <div className="text-sm font-medium">
-                  {formatExpirationDate(card.expiresAt)}
-                </div>
-              </div>
+          {/* Customer Service */}
+          <div className="text-center text-xs">
+            <div className="opacity-75 mb-2">CUSTOMER SERVICE</div>
+            <div className="font-mono">1-800-MEDICAL-1</div>
+            <div className="text-xs opacity-60 mt-2">www.medicalcoverage.com</div>
+          </div>
 
-              {/* Status */}
-              <div>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                  card.cardStatus === 'active'
-                    ? 'bg-green-500 bg-opacity-20 text-green-100'
-                    : 'bg-red-500 bg-opacity-20 text-red-100'
-                }`}>
-                  {card.cardStatus}
-                </span>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* QR Code Overlay */}
-      {showQRCode && cardData?.qrCodeData && (
-        <div className="absolute bottom-4 right-4 bg-white p-2 rounded-lg">
-          <QRCodeSVG
-            value={cardData.qrCodeData}
-            size={compact ? 40 : 60}
-            level="H"
-            includeMargin={false}
-            fgColor="#000000"
-            bgColor="#FFFFFF"
-          />
+          {/* Flip indicator */}
+          <div className="text-center mt-4 text-xs opacity-50">Click to flip</div>
         </div>
       )}
 
-      {/* Card Network Branding */}
-      <div className="absolute bottom-4 left-4">
-        <div className="text-xs opacity-75">MediCoverage Network</div>
-      </div>
+      {/* Download Button */}
+      {onDownload && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDownload();
+          }}
+          className="mt-4 w-full py-2 px-4 rounded-lg font-semibold transition-all hover:opacity-90"
+          style={{
+            backgroundColor: finalTemplate.accentColor,
+            color: finalTemplate.backgroundColor,
+          }}
+        >
+          Download Card
+        </button>
+      )}
     </div>
   );
 };
