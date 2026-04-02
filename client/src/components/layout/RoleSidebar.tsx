@@ -33,12 +33,12 @@ export default function RoleSidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto py-4">
-        {Object.entries(groupedNav).map(([category, items]) => (
+        {Object.entries(groupedNav).map(([category, items]: [string, Array<{ id: string; path: string; label: string; description: string; icon: React.ComponentType<{ className?: string }>; badge?: string }>]) => (
           <div key={category}>
             <div className={`px-4 mb-3 text-xs font-semibold text-neutral-500 uppercase tracking-wider`}>
               {category}
             </div>
-            {items.map((item) => (
+            {items.map((item: { id: string; path: string; label: string; description: string; icon: React.ComponentType<{ className?: string }>; badge?: string }) => (
               <Link
                 key={item.id}
                 href={item.path}

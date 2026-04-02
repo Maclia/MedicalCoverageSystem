@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { InvoicesController, invoicesValidationMiddleware } from '../api/invoicesController';
 import { PaymentsController, paymentsValidationMiddleware } from '../api/paymentsController';
 import { CommissionsController, commissionsValidationMiddleware } from '../api/commissionsController';
+import { TokenBillingController, TokenBillingValidationMiddleware } from '../api/tokenBillingController';
 import { auditMiddleware } from '../middleware/auditMiddleware';
 import { responseStandardizationMiddleware } from '../middleware/responseStandardizationMiddleware';
 import { authMiddleware } from '../middleware/authMiddleware';
@@ -72,5 +73,31 @@ router.post('/commissions', commissionRateLimit, commissionsValidationMiddleware
 router.post('/commissions/:id/approve', writeRateLimit, CommissionsController.approveCommission);
 router.post('/commissions/:id/pay', writeRateLimit, CommissionsController.payCommission);
 router.post('/commissions/:id/reject', writeRateLimit, commissionsValidationMiddleware.validateApproveReject, CommissionsController.rejectCommission);
+
+// Token Billing routes
+const tokenRateLimit = rateLimitMiddleware({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
+  message: 'Too many token requests, please try again later.'
+});
+
+// Token purchases
+router.post('/tokens/purchases', tokenRateLimit, TokenBillingValidationMiddleware.validateCreatePurchase, TokenBillingController.createPurchase);
+router.get('/tokens/purchases', TokenBillingController.getPurchases);
+router.get('/tokens/purchases/:id', TokenBillingController.getPurchase);
+router.post('/tokens/purchases/:id/complete', writeRateLimit, TokenBillingValidationMiddleware.validateCompletePurchase, TokenBillingController.completePurchase);
+
+// Token subscriptions
+router.post('/tokens/subscriptions', tokenRateLimit, TokenBillingValidationMiddleware.validateCreateSubscription, TokenBillingController.createSubscription);
+router.get('/tokens/subscriptions/:id', TokenBillingController.getSubscription);
+router.post('/tokens/subscriptions/:id/bill', writeRateLimit, TokenBillingController.processBilling);
+router.post('/tokens/subscriptions/:id/cancel', writeRateLimit, TokenBillingValidationMiddleware.validateCancelSubscription, TokenBillingController.cancelSubscription);
+
+// Auto-topup
+router.post('/tokens/auto-topup', tokenRateLimit, TokenBillingValidationMiddleware.validateSetupAutoTopup, TokenBillingController.setupAutoTopup);
+router.get('/tokens/auto-topup', TokenBillingController.getAutoTopupPolicy);
+
+// Token billing statistics
+router.get('/tokens/stats', TokenBillingController.getBillingStats);
 
 export default router;
