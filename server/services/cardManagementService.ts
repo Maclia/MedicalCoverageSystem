@@ -4,9 +4,11 @@
  */
 
 import crypto from 'crypto';
-import { db } from '../db.js';
-import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../shared/schema.js';
 import { eq, and } from 'drizzle-orm';
+import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../shared/schema.js';
+
+// Type for the database connection - flexible for any drizzle database instance
+type DatabaseConnection = any;
 
 export interface CardGenerationRequest {
   memberId: number;
@@ -33,6 +35,12 @@ export interface CardStatusUpdate {
 }
 
 class CardManagementService {
+  private db: DatabaseConnection;
+
+  constructor(database: DatabaseConnection) {
+    this.db = database;
+  }
+
   /**
    * Generate a new card for a member
    */
@@ -47,12 +55,12 @@ class CardManagementService {
 
       // Get template (use default if not specified)
       const template = request.templateId
-        ? await db
+        ? await this.db
             .select()
             .from(cardTemplates)
             .where(eq(cardTemplates.id, request.templateId))
             .limit(1)
-        : await db
+        : await this.db
             .select()
             .from(cardTemplates)
             .where(and(eq(cardTemplates.isDefault, true), eq(cardTemplates.isActive, true)))
@@ -65,7 +73,7 @@ class CardManagementService {
       const digitalCardUrl = `/cards/digital/${request.memberId}/${cardNumber}`;
 
       // Create card record
-      const card = await db
+      const card = await this.db
         .insert(memberCards)
         .values({
           memberId: request.memberId,
@@ -98,7 +106,8 @@ class CardManagementService {
         message: `Card generated successfully with number ${cardNumber}`,
       };
     } catch (error) {
-      throw new Error(`Failed to generate card: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to generate card: ${errorMessage}`);
     }
   }
 
@@ -107,16 +116,19 @@ class CardManagementService {
    */
   async getMemberCards(memberId: number, activeOnly: boolean = false) {
     try {
-      let query = db.select().from(memberCards).where(eq(memberCards.memberId, memberId));
-
+      const conditions = [eq(memberCards.memberId, memberId)];
       if (activeOnly) {
-        query = query.where(eq(memberCards.status, 'active'));
+        conditions.push(eq(memberCards.status, 'active'));
       }
 
-      const cards = await query;
+      const cards = await this.db
+        .select()
+        .from(memberCards)
+        .where(and(...conditions));
       return cards;
     } catch (error) {
-      throw new Error(`Failed to retrieve member cards: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to retrieve member cards: ${errorMessage}`);
     }
   }
 
@@ -125,7 +137,7 @@ class CardManagementService {
    */
   async getCard(cardId: number) {
     try {
-      const card = await db
+      const card = await this.db
         .select()
         .from(memberCards)
         .where(eq(memberCards.id, cardId))
@@ -137,7 +149,8 @@ class CardManagementService {
 
       return card[0];
     } catch (error) {
-      throw new Error(`Failed to retrieve card: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to retrieve card: ${errorMessage}`);
     }
   }
 
@@ -150,7 +163,7 @@ class CardManagementService {
       const cardInfo = this.parseQRCodeData(request.qrCodeData);
 
       // Find the card
-      const card = await db
+      const card = await this.db
         .select()
         .from(memberCards)
         .where(eq(memberCards.cardNumber, cardInfo.cardNumber))
@@ -214,7 +227,7 @@ class CardManagementService {
       const verificationResult = isActive ? 'success' : 'failed';
 
       // Create verification event
-      const event = await db
+      const event = await this.db
         .insert(cardVerificationEvents)
         .values({
           cardId: cardData.id,
@@ -254,7 +267,8 @@ class CardManagementService {
         message: isActive ? 'Card verified successfully' : 'Card verification failed',
       };
     } catch (error) {
-      throw new Error(`Card verification failed: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Card verification failed: ${errorMessage}`);
     }
   }
 
@@ -263,7 +277,7 @@ class CardManagementService {
    */
   async updateCardStatus(update: CardStatusUpdate) {
     try {
-      const card = await db
+      const card = await this.db
         .update(memberCards)
         .set({
           status: update.status,
@@ -286,7 +300,8 @@ class CardManagementService {
         message: `Card status updated to ${update.status}`,
       };
     } catch (error) {
-      throw new Error(`Failed to update card status: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to update card status: ${errorMessage}`);
     }
   }
 
@@ -299,7 +314,7 @@ class CardManagementService {
       const originalCard = await this.getCard(cardId);
 
       // Mark original card as replaced
-      await db
+      await this.db
         .update(memberCards)
         .set({
           status: 'replaced',
@@ -316,7 +331,7 @@ class CardManagementService {
       });
 
       // Link to original card
-      await db.update(memberCards).set({ previousCardId: cardId }).where(eq(memberCards.id, newCard.card.id));
+      await this.db.update(memberCards).set({ previousCardId: cardId }).where(eq(memberCards.id, newCard.card.id));
 
       return {
         success: true,
@@ -325,7 +340,8 @@ class CardManagementService {
         message: `Replacement card requested - New card number: ${newCard.card.cardNumber}`,
       };
     } catch (error) {
-      throw new Error(`Failed to request replacement: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to request replacement: ${errorMessage}`);
     }
   }
 
@@ -334,15 +350,19 @@ class CardManagementService {
    */
   async getCardTemplates(activeOnly: boolean = true) {
     try {
-      let query = db.select().from(cardTemplates);
-
+      let templates;
       if (activeOnly) {
-        query = query.where(eq(cardTemplates.isActive, true));
+        templates = await this.db
+          .select()
+          .from(cardTemplates)
+          .where(eq(cardTemplates.isActive, true));
+      } else {
+        templates = await this.db.select().from(cardTemplates);
       }
-
-      return await query;
+      return templates;
     } catch (error) {
-      throw new Error(`Failed to retrieve templates: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to retrieve templates: ${errorMessage}`);
     }
   }
 
@@ -352,18 +372,19 @@ class CardManagementService {
   async upsertCardTemplate(template: any) {
     try {
       if (template.id) {
-        const updated = await db
+        const updated = await this.db
           .update(cardTemplates)
           .set({ ...template, updatedAt: new Date() })
           .where(eq(cardTemplates.id, template.id))
           .returning();
         return updated[0];
       } else {
-        const created = await db.insert(cardTemplates).values(template).returning();
+        const created = await this.db.insert(cardTemplates).values(template).returning();
         return created[0];
       }
     } catch (error) {
-      throw new Error(`Failed to save template: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to save template: ${errorMessage}`);
     }
   }
 
@@ -372,15 +393,19 @@ class CardManagementService {
    */
   async getProductionBatches(status?: string) {
     try {
-      let query = db.select().from(cardProductionBatches);
-
+      let batches;
       if (status) {
-        query = query.where(eq(cardProductionBatches.productionStatus, status));
+        batches = await this.db
+          .select()
+          .from(cardProductionBatches)
+          .where(eq(cardProductionBatches.productionStatus, status));
+      } else {
+        batches = await this.db.select().from(cardProductionBatches);
       }
-
-      return await query;
+      return batches;
     } catch (error) {
-      throw new Error(`Failed to retrieve batches: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to retrieve batches: ${errorMessage}`);
     }
   }
 
@@ -389,7 +414,7 @@ class CardManagementService {
    */
   async getBatchDetails(batchId: string) {
     try {
-      const batch = await db
+      const batch = await this.db
         .select()
         .from(cardProductionBatches)
         .where(eq(cardProductionBatches.batchId, batchId))
@@ -401,7 +426,8 @@ class CardManagementService {
 
       return batch[0];
     } catch (error) {
-      throw new Error(`Failed to retrieve batch: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to retrieve batch: ${errorMessage}`);
     }
   }
 
@@ -410,7 +436,7 @@ class CardManagementService {
    */
   async updateBatchStatus(batchId: string, status: string, additionalData?: any) {
     try {
-      const updated = await db
+      const updated = await this.db
         .update(cardProductionBatches)
         .set({
           productionStatus: status,
@@ -428,7 +454,8 @@ class CardManagementService {
 
       return updated[0];
     } catch (error) {
-      throw new Error(`Failed to update batch: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to update batch: ${errorMessage}`);
     }
   }
 
@@ -437,7 +464,7 @@ class CardManagementService {
    */
   async getCardVerificationHistory(cardId: number, limit: number = 20) {
     try {
-      const events = await db
+      const events = await this.db
         .select()
         .from(cardVerificationEvents)
         .where(eq(cardVerificationEvents.cardId, cardId))
@@ -446,7 +473,8 @@ class CardManagementService {
 
       return events;
     } catch (error) {
-      throw new Error(`Failed to retrieve verification history: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to retrieve verification history: ${errorMessage}`);
     }
   }
 
@@ -456,32 +484,32 @@ class CardManagementService {
   async getCardAnalytics() {
     try {
       const [totalCards, activeCards, verificationStats, recentVerifications] = await Promise.all([
-        db
+        this.db
           .select()
           .from(memberCards)
-          .then((cards) => cards.length),
+          .then((cards: typeof memberCards.$inferSelect[]) => cards.length),
 
-        db
+        this.db
           .select()
           .from(memberCards)
           .where(eq(memberCards.status, 'active'))
-          .then((cards) => cards.length),
+          .then((cards: typeof memberCards.$inferSelect[]) => cards.length),
 
-        db
+        this.db
           .select()
           .from(cardVerificationEvents)
-          .then((events) => ({
+          .then((events: typeof cardVerificationEvents.$inferSelect[]) => ({
             total: events.length,
-            successful: events.filter((e) => e.verificationResult === 'success').length,
-            failed: events.filter((e) => e.verificationResult === 'failed').length,
+            successful: events.filter((e: typeof cardVerificationEvents.$inferSelect) => e.verificationResult === 'success').length,
+            failed: events.filter((e: typeof cardVerificationEvents.$inferSelect) => e.verificationResult === 'failed').length,
           })),
 
-        db
+        this.db
           .select()
           .from(cardVerificationEvents)
           .orderBy(cardVerificationEvents.verificationTimestamp)
           .limit(5)
-          .then((events) => events),
+          .then((events: typeof cardVerificationEvents.$inferSelect[]) => events),
       ]);
 
       return {
@@ -494,7 +522,8 @@ class CardManagementService {
         recentVerifications,
       };
     } catch (error) {
-      throw new Error(`Failed to generate analytics: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to generate analytics: ${errorMessage}`);
     }
   }
 
@@ -576,7 +605,7 @@ class CardManagementService {
    */
   private async getLastVerificationLocation(cardId: number) {
     try {
-      const events = await db
+      const events = await this.db
         .select()
         .from(cardVerificationEvents)
         .where(eq(cardVerificationEvents.cardId, cardId))
@@ -597,7 +626,7 @@ class CardManagementService {
    */
   private async getLastVerificationTime(cardId: number) {
     try {
-      const events = await db
+      const events = await this.db
         .select()
         .from(cardVerificationEvents)
         .where(eq(cardVerificationEvents.cardId, cardId))
@@ -617,7 +646,7 @@ class CardManagementService {
     try {
       const batchId = `BATCH-${Date.now()}-${Math.random().toString(36).substring(7)}`;
 
-      await db
+      await this.db
         .insert(cardProductionBatches)
         .values({
           batchId,
@@ -630,7 +659,7 @@ class CardManagementService {
         .returning();
 
       // Update card with batch ID
-      await db.update(memberCards).set({ batchId }).where(eq(memberCards.id, cardId));
+      await this.db.update(memberCards).set({ batchId }).where(eq(memberCards.id, cardId));
     } catch (error) {
       console.error('Failed to initialize physical card production:', error);
     }
@@ -649,4 +678,5 @@ class CardManagementService {
   }
 }
 
-export const cardManagementService = new CardManagementService();
+export { CardManagementService };
+export const cardManagementService = (db: DatabaseConnection) => new CardManagementService(db);
