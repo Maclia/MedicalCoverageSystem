@@ -6,6 +6,16 @@ const router = Router();
 const logger = createLogger();
 
 /**
+ * Helper function to safely convert unknown error to Error
+ */
+function toError(error: unknown): Error {
+  if (error instanceof Error) {
+    return error;
+  }
+  return new Error(String(error));
+}
+
+/**
  * Generate a new member card
  * POST /api/core/cards/generate
  */
@@ -33,7 +43,7 @@ router.post('/generate', async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    logger.error('Error generating card:', error);
+    logger.error('Error generating card:', toError(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to generate card',
@@ -64,7 +74,7 @@ router.get('/member/:memberId', async (req: Request, res: Response) => {
       data: cards,
     });
   } catch (error) {
-    logger.error('Error retrieving member cards:', error);
+    logger.error('Error retrieving member cards:', toError(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve cards',
@@ -94,7 +104,7 @@ router.get('/member/:memberId/active', async (req: Request, res: Response) => {
       data: cards,
     });
   } catch (error) {
-    logger.error('Error retrieving active cards:', error);
+    logger.error('Error retrieving active cards:', toError(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve cards',
@@ -124,7 +134,7 @@ router.get('/:cardId', async (req: Request, res: Response) => {
       data: card,
     });
   } catch (error) {
-    logger.error('Error retrieving card:', error);
+    logger.error('Error retrieving card:', toError(error));
     res.status(error instanceof Error && error.message === 'Card not found' ? 404 : 500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve card',
@@ -165,7 +175,7 @@ router.post('/verify', async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    logger.error('Error verifying card:', error);
+    logger.error('Error verifying card:', toError(error));
     res.status(400).json({
       success: false,
       error: error instanceof Error ? error.message : 'Card verification failed',
@@ -200,7 +210,7 @@ router.put('/:cardId/status', async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    logger.error('Error updating card status:', error);
+    logger.error('Error updating card status:', toError(error));
     res.status(error instanceof Error && error.message === 'Card not found' ? 404 : 500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update card status',
@@ -231,7 +241,7 @@ router.post('/:cardId/replace', async (req: Request, res: Response) => {
       data: result,
     });
   } catch (error) {
-    logger.error('Error requesting card replacement:', error);
+    logger.error('Error requesting card replacement:', toError(error));
     res.status(error instanceof Error && error.message === 'Card not found' ? 404 : 500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to request replacement',
@@ -262,7 +272,7 @@ router.get('/history/:cardId', async (req: Request, res: Response) => {
       data: history,
     });
   } catch (error) {
-    logger.error('Error retrieving verification history:', error);
+    logger.error('Error retrieving verification history:', toError(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve history',
@@ -285,7 +295,7 @@ router.get('/templates', async (req: Request, res: Response) => {
       data: templates,
     });
   } catch (error) {
-    logger.error('Error retrieving templates:', error);
+    logger.error('Error retrieving templates:', toError(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve templates',
@@ -315,7 +325,7 @@ router.post('/templates', async (req: Request, res: Response) => {
       data: template,
     });
   } catch (error) {
-    logger.error('Error creating template:', error);
+    logger.error('Error creating template:', toError(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to create template',
@@ -346,7 +356,7 @@ router.put('/templates/:templateId', async (req: Request, res: Response) => {
       data: template,
     });
   } catch (error) {
-    logger.error('Error updating template:', error);
+    logger.error('Error updating template:', toError(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update template',
@@ -369,7 +379,7 @@ router.get('/batches', async (req: Request, res: Response) => {
       data: batches,
     });
   } catch (error) {
-    logger.error('Error retrieving batches:', error);
+    logger.error('Error retrieving batches:', toError(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve batches',
@@ -392,7 +402,7 @@ router.get('/batches/:batchId', async (req: Request, res: Response) => {
       data: batch,
     });
   } catch (error) {
-    logger.error('Error retrieving batch:', error);
+    logger.error('Error retrieving batch:', toError(error));
     res.status(error instanceof Error && error.message === 'Batch not found' ? 404 : 500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve batch',
@@ -423,7 +433,7 @@ router.put('/batches/:batchId/status', async (req: Request, res: Response) => {
       data: batch,
     });
   } catch (error) {
-    logger.error('Error updating batch status:', error);
+    logger.error('Error updating batch status:', toError(error));
     res.status(error instanceof Error && error.message === 'Batch not found' ? 404 : 500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update batch status',
@@ -444,7 +454,7 @@ router.get('/analytics', async (req: Request, res: Response) => {
       data: analytics,
     });
   } catch (error) {
-    logger.error('Error retrieving analytics:', error);
+    logger.error('Error retrieving analytics:', toError(error));
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve analytics',

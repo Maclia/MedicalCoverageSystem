@@ -1,8 +1,13 @@
 import { createLogger } from '../utils/logger';
 import {
   ResponseFactory,
-  ErrorCodes
+  ErrorCodes,
+  createValidationErrorResponse,
+  ValidationError
 } from '../utils/api-standardization';
+import { db } from '../config/database';
+import { tokenPurchases, tokenSubscriptions, autoTopupPolicies } from '../models/schema';
+import { eq, and, desc, gte, lte, count, sum } from 'drizzle-orm';
 
 const logger = createLogger();
 
@@ -74,7 +79,7 @@ export class TokenBillingService {
     try {
       const errors = this.validatePurchaseData(data);
       if (errors.length > 0) {
-        return createValidationErrorResponse(errors);
+        return createValidationErrorResponse(this.formatValidationErrors(errors));
       }
 
       const purchaseReferenceId = this.generatePurchaseReferenceId();
@@ -85,7 +90,7 @@ export class TokenBillingService {
           purchaseReferenceId,
           organizationId: data.organizationId,
           purchasedBy: data.purchasedBy,
-          purchaseType: data.purchaseType as any,
+          purchaseType: data.purchaseType,
           tokenQuantity: data.tokenQuantity.toString(),
           pricePerToken: data.pricePerToken.toString(),
           totalAmount: data.totalAmount.toString(),
@@ -159,7 +164,7 @@ export class TokenBillingService {
     try {
       const errors = this.validateSubscriptionData(data);
       if (errors.length > 0) {
-        return createValidationErrorResponse(errors);
+        return createValidationErrorResponse(this.formatValidationErrors(errors));
       }
 
       const subscription = await db
@@ -171,7 +176,7 @@ export class TokenBillingService {
           pricePerToken: data.pricePerToken.toString(),
           totalAmount: data.totalAmount.toString(),
           currency: data.currency || 'USD',
-          frequency: data.frequency as any,
+          frequency: data.frequency,
           paymentMethodId: data.paymentMethodId,
           nextBillingDate: data.nextBillingDate,
           status: 'active',
@@ -209,6 +214,9 @@ export class TokenBillingService {
       }
 
       const sub = subscription[0];
+      if (!sub) {
+        return ResponseFactory.createErrorResponse(ErrorCodes.NOT_FOUND, 'Subscription not found');
+      }
 
       // Create token purchase record
       const purchase = await db
@@ -266,7 +274,7 @@ export class TokenBillingService {
     try {
       const errors = this.validateAutoTopupData(data);
       if (errors.length > 0) {
-        return createValidationErrorResponse(errors);
+        return createValidationErrorResponse(this.formatValidationErrors(errors));
       }
 
       // Check if policy already exists
@@ -282,7 +290,7 @@ export class TokenBillingService {
           .update(autoTopupPolicies)
           .set({
             isEnabled: data.isEnabled,
-            triggerType: data.triggerType as any,
+            triggerType: data.triggerType,
             thresholdPercentage: data.thresholdPercentage?.toString(),
             scheduleFrequency: data.scheduleFrequency,
             topupPackageId: data.topupPackageId,
@@ -304,7 +312,7 @@ export class TokenBillingService {
         .values({
           organizationId: data.organizationId,
           isEnabled: data.isEnabled,
-          triggerType: data.triggerType as any,
+          triggerType: data.triggerType,
           thresholdPercentage: data.thresholdPercentage?.toString(),
           scheduleFrequency: data.scheduleFrequency,
           topupPackageId: data.topupPackageId,
@@ -560,6 +568,17 @@ export class TokenBillingService {
         break;
     }
     return next;
+  }
+
+  /**
+   * Format validation errors to ValidationError[] format
+   */
+  private formatValidationErrors(errors: string[]): ValidationError[] {
+    return errors.map((message, index) => ({
+      field: `field_${index}`,
+      message: message,
+      value: undefined
+    }));
   }
 }
 

@@ -1,6 +1,9 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { tokenBillingService, TokenPurchaseData, TokenSubscriptionData, AutoTopupPolicyData } from '../services/TokenBillingService';
+import { db } from '../config/database';
+import { autoTopupPolicies } from '../models/schema';
+import { eq } from 'drizzle-orm';
 import { createLogger } from '../utils/logger';
 import { ResponseFactory, createValidationErrorResponse, ErrorCodes } from '../utils/api-standardization';
 
@@ -289,8 +292,19 @@ export class TokenBillingController {
   static async getAutoTopupPolicy(req: Request, res: Response) {
     try {
       const organizationId = parseInt(req.query.organizationId as string);
-      // Placeholder - would query from database
-      res.json(ResponseFactory.createSuccessResponse(null, 'Auto-topup policy retrieved'));
+      
+      if (!organizationId || organizationId <= 0) {
+        return res.status(400).json(ResponseFactory.createErrorResponse(ErrorCodes.BAD_REQUEST, 'Valid organizationId is required'));
+      }
+
+      const policy = await db
+        .select()
+        .from(autoTopupPolicies)
+        .where(eq(autoTopupPolicies.organizationId, organizationId))
+        .limit(1);
+
+      const policyData = policy.length > 0 ? policy[0] : null;
+      res.json(ResponseFactory.createSuccessResponse(policyData, 'Auto-topup policy retrieved'));
     } catch (error) {
       logger.error('Error in getAutoTopupPolicy:', error);
       res.status(500).json(ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to retrieve auto-topup policy'));

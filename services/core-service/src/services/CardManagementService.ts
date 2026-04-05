@@ -4,9 +4,9 @@
  */
 
 import crypto from 'crypto';
-import { db } from '../db';
+import { db } from '../config/database';
 import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../../shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, count, sum } from 'drizzle-orm';
 
 export interface CardGenerationRequest {
   memberId: number;
@@ -441,7 +441,7 @@ class CardManagementService {
         .select()
         .from(cardVerificationEvents)
         .where(eq(cardVerificationEvents.cardId, cardId))
-        .orderBy(cardVerificationEvents.verificationTimestamp)
+        .orderBy(desc(cardVerificationEvents.verificationTimestamp))
         .limit(limit);
 
       return events;
@@ -459,29 +459,29 @@ class CardManagementService {
         db
           .select()
           .from(memberCards)
-          .then((cards) => cards.length),
+          .then((cards: any[]) => cards.length),
 
         db
           .select()
           .from(memberCards)
           .where(eq(memberCards.status, 'active'))
-          .then((cards) => cards.length),
+          .then((cards: any[]) => cards.length),
 
         db
           .select()
           .from(cardVerificationEvents)
-          .then((events) => ({
+          .then((events: any[]) => ({
             total: events.length,
-            successful: events.filter((e) => e.verificationResult === 'success').length,
-            failed: events.filter((e) => e.verificationResult === 'failed').length,
+            successful: events.filter((e: any) => e.verificationResult === 'success').length,
+            failed: events.filter((e: any) => e.verificationResult === 'failed').length,
           })),
 
         db
           .select()
           .from(cardVerificationEvents)
-          .orderBy(cardVerificationEvents.verificationTimestamp)
+          .orderBy(desc(cardVerificationEvents.verificationTimestamp))
           .limit(5)
-          .then((events) => events),
+          .then((events: any[]) => events),
       ]);
 
       return {
@@ -580,7 +580,7 @@ class CardManagementService {
         .select()
         .from(cardVerificationEvents)
         .where(eq(cardVerificationEvents.cardId, cardId))
-        .orderBy(cardVerificationEvents.verificationTimestamp)
+        .orderBy(desc(cardVerificationEvents.verificationTimestamp))
         .limit(1);
 
       if (!events.length || !events[0].geolocation) return null;
@@ -601,7 +601,7 @@ class CardManagementService {
         .select()
         .from(cardVerificationEvents)
         .where(eq(cardVerificationEvents.cardId, cardId))
-        .orderBy(cardVerificationEvents.verificationTimestamp)
+        .orderBy(desc(cardVerificationEvents.verificationTimestamp))
         .limit(1);
 
       return events.length ? events[0].verificationTimestamp : null;
