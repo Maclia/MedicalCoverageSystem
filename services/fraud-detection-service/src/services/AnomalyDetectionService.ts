@@ -188,7 +188,8 @@ export class AnomalyDetectionService {
   detectBillingPatternAnomaly(
     memberId: string,
     claimsInWindow: any[]
-  ): AnomalyDetectionResult {
+    )
+    : AnomalyDetectionResult {
     const anomalies: string[] = [];
     let score = 0;
 

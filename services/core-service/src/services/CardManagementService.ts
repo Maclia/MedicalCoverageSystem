@@ -6,7 +6,7 @@
 import crypto from 'crypto';
 import { db } from '../config/database';
 import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../../shared/schema';
-import { eq, and, desc, gte, lte, count, sum } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, count, sum, sql } from 'drizzle-orm';
 
 export interface CardGenerationRequest {
   memberId: number;
@@ -33,68 +33,48 @@ export interface CardStatusUpdate {
 }
 
 class CardManagementService {
-  /**
-   * Generate a new card for a member
-   */
   async generateMemberCard(request: CardGenerationRequest) {
     try {
-      // Generate unique card number
       const cardNumber = this.generateCardNumber();
-
-      // Set expiry date (typically 5 years from now)
       const expiryDate = new Date();
       expiryDate.setFullYear(expiryDate.getFullYear() + 5);
+      let templateType = 'standard';
 
-      // Get template (use default if not specified)
-      const template = request.templateId
-        ? await db
-            .select()
-            .from(cardTemplates)
-            .where(eq(cardTemplates.id, request.templateId))
-            .limit(1)
-        : await db
-            .select()
-            .from(cardTemplates)
-            .where(and(eq(cardTemplates.isDefault, true), eq(cardTemplates.isActive, true)))
-            .limit(1);
+      if (request.templateId) {
+        const templateResult = await db.execute(
+          sql`SELECT template_type FROM card_templates WHERE id = ${request.templateId} LIMIT 1`
+        );
+        if (templateResult.rows.length > 0) {
+          templateType = templateResult.rows[0].template_type as string;
+        }
+      } else {
+        const defaultTemplate = await db.execute(
+          sql`SELECT template_type FROM card_templates WHERE is_default = true AND is_active = true LIMIT 1`
+        );
+        if (defaultTemplate.rows.length > 0) {
+          templateType = defaultTemplate.rows[0].template_type as string;
+        }
+      }
 
-      // Generate QR code data
       const qrCodeData = this.generateQRCodeData(request.memberId, cardNumber);
-
-      // Generate digital card URL
       const digitalCardUrl = `/cards/digital/${request.memberId}/${cardNumber}`;
 
-      // Create card record
-      const card = await db
-        .insert(memberCards)
-        .values({
-          memberId: request.memberId,
-          cardNumber,
-          cardType: request.cardType,
-          status: 'pending',
-          templateType: template[0]?.templateType || 'standard',
-          expiryDate,
-          qrCodeData,
-          digitalCardUrl,
-          nfcEnabled: true,
-          chipEnabled: true,
-          personalizationData: JSON.stringify({
-            template: template[0],
-            generated: new Date(),
-          }),
-          deliveryMethod: request.expeditedShipping ? 'express' : 'standard_mail',
-          deliveryAddress: request.deliveryAddress,
-        })
-        .returning();
+      const cardResult = await db.execute(
+        sql`INSERT INTO member_cards 
+            (member_id, card_number, card_type, status, template_type, expiry_date, qr_code_data, digital_card_url, nfc_enabled, chip_enabled, personalization_data, delivery_method, delivery_address)
+            VALUES (${request.memberId}, ${cardNumber}, ${request.cardType}, 'pending', ${templateType}, ${expiryDate}, ${qrCodeData}, ${digitalCardUrl}, true, true, ${JSON.stringify({ template: templateType, generated: new Date() })}, ${request.expeditedShipping ? 'express' : 'standard_mail'}, ${request.deliveryAddress || null})
+            RETURNING *`
+      );
 
-      // If physical card requested, create production batch record
+      const card = cardResult.rows[0];
+
       if (request.cardType === 'physical' || request.cardType === 'both') {
-        await this.initializePhysicalCardProduction(card[0].id);
+        await this.initializePhysicalCardProduction(card.id);
       }
 
       return {
         success: true,
-        card: card[0],
+        card: card,
         message: `Card generated successfully with number ${cardNumber}`,
       };
     } catch (error) {
@@ -102,81 +82,85 @@ class CardManagementService {
     }
   }
 
-  /**
-   * Get all cards for a member
-   */
   async getMemberCards(memberId: number, activeOnly: boolean = false) {
     try {
-      let query = db.select().from(memberCards).where(eq(memberCards.memberId, memberId));
+      let query = sql`SELECT * FROM member_cards WHERE member_id = ${memberId}`;
 
       if (activeOnly) {
-        query = query.where(eq(memberCards.status, 'active'));
+        query = sql`SELECT * FROM member_cards WHERE member_id = ${memberId} AND status = 'active'`;
       }
 
-      const cards = await query;
-      return cards;
+      const cards = await db.execute(query);
+      return cards.rows;
     } catch (error) {
       throw new Error(`Failed to retrieve member cards: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  /**
-   * Get a specific card
-   */
   async getCard(cardId: number) {
     try {
-      const card = await db
-        .select()
-        .from(memberCards)
-        .where(eq(memberCards.id, cardId))
-        .limit(1);
+      const card = await db.execute(
+        sql`SELECT * FROM member_cards WHERE id = ${cardId} LIMIT 1`
+      );
 
-      if (!card.length) {
+      if (!card.rows.length) {
         throw new Error('Card not found');
       }
 
-      return card[0];
+      return card.rows[0];
     } catch (error) {
       throw new Error(`Failed to retrieve card: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  /**
-   * Verify a card
-   */
   async verifyCard(request: CardVerificationRequest, memberId: number | null = null) {
     try {
-      // Parse QR code data to get card info
       const cardInfo = this.parseQRCodeData(request.qrCodeData);
+      let cardData: any;
 
-      // Find the card
-      const card = await db
-        .select()
-        .from(memberCards)
-        .where(eq(memberCards.cardNumber, cardInfo.cardNumber))
-        .limit(1);
+      if (cardInfo.cardId) {
+        const cardResult = await db.execute(
+          sql`SELECT mc.*, m.status as member_status, m.plan_id 
+              FROM member_cards mc
+              JOIN members m ON mc.member_id = m.id
+              WHERE mc.id = ${cardInfo.cardId}
+              LIMIT 1`
+        );
+        if (cardResult.rows.length > 0) {
+          cardData = cardResult.rows[0];
+        }
+      }
 
-      if (!card.length) {
+      if (!cardData && cardInfo.cardNumber) {
+        const cardResult = await db.execute(
+          sql`SELECT mc.*, m.status as member_status, m.plan_id 
+              FROM member_cards mc
+              JOIN members m ON mc.member_id = m.id
+              WHERE mc.card_number = ${cardInfo.cardNumber}
+              LIMIT 1`
+        );
+        if (cardResult.rows.length > 0) {
+          cardData = cardResult.rows[0];
+        }
+      }
+
+      if (!cardData) {
         throw new Error('Card not found');
       }
 
-      const cardData = card[0];
-
-      // Check if card is active and not expired
       const now = new Date();
-      const isExpired = cardData.expiryDate < now;
-      const isActive = cardData.status === 'active' && !isExpired;
+      const expiryDate = new Date(cardData.expiry_date);
+      const isActive = cardData.status === 'active' && expiryDate > now && cardData.member_status === 'active';
 
-      // Calculate fraud risk score
       let fraudRiskScore = 0;
       const fraudIndicators: string[] = [];
 
       if (cardData.status === 'lost' || cardData.status === 'stolen') {
-        fraudRiskScore += 90;
+        fraudRiskScore += 100;
         fraudIndicators.push('Card reported lost/stolen');
       }
 
-      if (isExpired) {
+      if (expiryDate <= now) {
         fraudRiskScore += 50;
         fraudIndicators.push('Card expired');
       }
@@ -186,7 +170,6 @@ class CardManagementService {
         fraudIndicators.push('Card inactive or suspended');
       }
 
-      // Geolocation-based fraud detection (if provided)
       if (request.geolocation) {
         const lastVerificationLocation = await this.getLastVerificationLocation(cardData.id);
         if (lastVerificationLocation) {
@@ -197,7 +180,6 @@ class CardManagementService {
             lastVerificationLocation.lng
           );
 
-          // Impossible travel detection (>900 km in < 24 hours)
           const lastVerificationTime = await this.getLastVerificationTime(cardData.id);
           if (lastVerificationTime) {
             const timeDiffHours = (now.getTime() - lastVerificationTime.getTime()) / (1000 * 60 * 60);
@@ -213,43 +195,31 @@ class CardManagementService {
 
       const verificationResult = isActive ? 'success' : 'failed';
 
-      // Create verification event
-      const event = await db
-        .insert(cardVerificationEvents)
-        .values({
-          cardId: cardData.id,
-          memberId: memberId || cardData.memberId,
-          verifierId: this.parseProviderIdToInt(request.providerId),
-          verificationMethod: request.verificationType,
-          verificationResult,
-          verificationData: JSON.stringify({
-            qrCodeData: request.qrCodeData,
-            location: request.location,
-            deviceInfo: request.deviceInfo,
-          }),
-          ipAddress: request.ipAddress,
-          geolocation: request.geolocation ? JSON.stringify(request.geolocation) : null,
-          fraudRiskScore,
-          fraudIndicators: JSON.stringify(fraudIndicators),
-        })
-        .returning();
+      const eventResult = await db.execute(
+        sql`INSERT INTO card_verification_events 
+            (card_id, member_id, verifier_id, verification_method, verification_result, verification_data, ip_address, geolocation, fraud_risk_score, fraud_indicators, verification_timestamp)
+            VALUES (${cardData.id}, ${memberId || cardData.member_id}, ${this.parseProviderIdToInt(request.providerId)}, ${request.verificationType}, ${verificationResult}, ${JSON.stringify({ qrCodeData: request.qrCodeData, location: request.location, deviceInfo: request.deviceInfo })}, ${request.ipAddress || null}, ${request.geolocation ? JSON.stringify(request.geolocation) : null}, ${fraudRiskScore}, ${JSON.stringify(fraudIndicators)}, ${now})
+            RETURNING *`
+      );
+
+      const event = eventResult.rows[0];
 
       return {
         success: verificationResult === 'success',
         card: {
           id: cardData.id,
-          memberId: cardData.memberId,
-          cardNumber: this.maskCardNumber(cardData.cardNumber),
+          memberId: cardData.member_id,
+          cardNumber: this.maskCardNumber(cardData.card_number),
           status: cardData.status,
-          expiryDate: cardData.expiryDate,
+          expiryDate: expiryDate,
         },
         verification: {
-          id: event[0].id,
+          id: event.id,
           method: request.verificationType,
           result: verificationResult,
           fraudRiskScore,
           fraudIndicators,
-          timestamp: event[0].verificationTimestamp,
+          timestamp: event.verification_timestamp,
         },
         message: isActive ? 'Card verified successfully' : 'Card verification failed',
       };
@@ -258,31 +228,29 @@ class CardManagementService {
     }
   }
 
-  /**
-   * Update card status
-   */
   async updateCardStatus(update: CardStatusUpdate) {
     try {
-      const card = await db
-        .update(memberCards)
-        .set({
-          status: update.status,
-          deactivationDate: ['inactive', 'lost', 'stolen', 'damaged'].includes(update.status)
-            ? new Date()
-            : undefined,
-          replacementReason: update.reason,
-          updatedAt: new Date(),
-        })
-        .where(eq(memberCards.id, update.cardId))
-        .returning();
+      const deactivationDate = ['inactive', 'lost', 'stolen', 'damaged'].includes(update.status)
+        ? new Date()
+        : null;
 
-      if (!card.length) {
+      const cardResult = await db.execute(
+        sql`UPDATE member_cards 
+            SET status = ${update.status}, 
+                deactivation_date = ${deactivationDate}, 
+                replacement_reason = ${update.reason || null}, 
+                updated_at = ${new Date()}
+            WHERE id = ${update.cardId}
+            RETURNING *`
+      );
+
+      if (!cardResult.rows.length) {
         throw new Error('Card not found');
       }
 
       return {
         success: true,
-        card: card[0],
+        card: cardResult.rows[0],
         message: `Card status updated to ${update.status}`,
       };
     } catch (error) {
@@ -290,359 +258,319 @@ class CardManagementService {
     }
   }
 
-  /**
-   * Request card replacement
-   */
   async requestCardReplacement(cardId: number, reason: string, expedited: boolean = false) {
     try {
-      // Get original card
       const originalCard = await this.getCard(cardId);
 
-      // Mark original card as replaced
-      await db
-        .update(memberCards)
-        .set({
-          status: 'replaced',
-          deactivationDate: new Date(),
-        })
-        .where(eq(memberCards.id, cardId));
+      await db.execute(
+        sql`UPDATE member_cards 
+            SET status = 'replaced', 
+                replacement_reason = ${reason}, 
+                updated_at = ${new Date()}
+            WHERE id = ${cardId}`
+      );
 
-      // Generate new card
-      const newCard = await this.generateMemberCard({
-        memberId: originalCard.memberId,
-        cardType: originalCard.cardType as 'digital' | 'physical' | 'both',
-        templateId: undefined,
+      const newCardRequest: CardGenerationRequest = {
+        memberId: originalCard.member_id,
+        cardType: originalCard.card_type,
         expeditedShipping: expedited,
-      });
+        deliveryAddress: originalCard.delivery_address,
+      };
 
-      // Link to original card
-      await db.update(memberCards).set({ previousCardId: cardId }).where(eq(memberCards.id, newCard.card.id));
+      const newCard = await this.generateMemberCard(newCardRequest);
 
       return {
         success: true,
-        originalCard: cardId,
         newCard: newCard.card,
-        message: `Replacement card requested - New card number: ${newCard.card.cardNumber}`,
+        message: `Card replacement requested. New card number: ${newCard.card.card_number}`,
       };
     } catch (error) {
-      throw new Error(`Failed to request replacement: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to request card replacement: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  /**
-   * Get all card templates
-   */
-  async getCardTemplates(activeOnly: boolean = true) {
+  async initializePhysicalCardProduction(cardId: number) {
     try {
-      let query = db.select().from(cardTemplates);
+      await db.execute(
+        sql`INSERT INTO card_production_batches 
+            (card_id, production_stage, status, started_at)
+            VALUES (${cardId}, 'initiated', 'pending', ${new Date()})`
+      );
+    } catch (error) {
+      throw new Error(`Failed to initialize physical card production: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 
-      if (activeOnly) {
-        query = query.where(eq(cardTemplates.isActive, true));
+  async getCardProductionStatus(cardId: number) {
+    try {
+      const result = await db.execute(
+        sql`SELECT cpb.*, u.name as operator_name
+            FROM card_production_batches cpb
+            LEFT JOIN users u ON cpb.operator_id = u.id
+            WHERE cpb.card_id = ${cardId}
+            ORDER BY cpb.created_at DESC
+            LIMIT 1`
+      );
+
+      if (!result.rows.length) {
+        throw new Error('Production record not found');
       }
 
-      return await query;
+      const production = result.rows[0];
+      return {
+        cardId: production.card_id,
+        stage: production.production_stage,
+        status: production.status,
+        startedAt: production.started_at,
+        completedAt: production.completed_at,
+        operator: production.operator_name,
+        trackingNumber: production.tracking_number,
+        estimatedDelivery: production.estimated_delivery,
+      };
     } catch (error) {
-      throw new Error(`Failed to retrieve templates: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to get production status: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  /**
-   * Create or update card template
-   */
-  async upsertCardTemplate(template: any) {
+  async updateProductionStage(cardId: number, stage: string, operatorId: number, notes?: string) {
     try {
-      if (template.id) {
-        const updated = await db
-          .update(cardTemplates)
-          .set({ ...template, updatedAt: new Date() })
-          .where(eq(cardTemplates.id, template.id))
-          .returning();
-        return updated[0];
-      } else {
-        const created = await db.insert(cardTemplates).values(template).returning();
-        return created[0];
+      const isComplete = stage === 'delivered' || stage === 'quality_check';
+      const completedAt = isComplete ? new Date() : null;
+
+      await db.execute(
+        sql`UPDATE card_production_batches 
+            SET production_stage = ${stage}, 
+                status = ${isComplete ? 'completed' : 'in_progress'},
+                operator_id = ${operatorId},
+                notes = ${notes || null},
+                completed_at = ${completedAt},
+                updated_at = ${new Date()}
+            WHERE card_id = ${cardId}
+            AND (status = 'pending' OR status = 'in_progress')`
+      );
+
+      if (stage === 'shipped') {
+        await db.execute(
+          sql`UPDATE member_cards 
+              SET status = 'active', 
+                  shipped_at = ${new Date()},
+                  updated_at = ${new Date()}
+              WHERE id = ${cardId}`
+        );
       }
-    } catch (error) {
-      throw new Error(`Failed to save template: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
-   * Get production batches
-   */
-  async getProductionBatches(status?: string) {
-    try {
-      let query = db.select().from(cardProductionBatches);
-
-      if (status) {
-        query = query.where(eq(cardProductionBatches.productionStatus, status));
-      }
-
-      return await query;
-    } catch (error) {
-      throw new Error(`Failed to retrieve batches: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
-   * Get batch details
-   */
-  async getBatchDetails(batchId: string) {
-    try {
-      const batch = await db
-        .select()
-        .from(cardProductionBatches)
-        .where(eq(cardProductionBatches.batchId, batchId))
-        .limit(1);
-
-      if (!batch.length) {
-        throw new Error('Batch not found');
-      }
-
-      return batch[0];
-    } catch (error) {
-      throw new Error(`Failed to retrieve batch: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
-   * Update batch status
-   */
-  async updateBatchStatus(batchId: string, status: string, additionalData?: any) {
-    try {
-      const updated = await db
-        .update(cardProductionBatches)
-        .set({
-          productionStatus: status,
-          ...(status === 'shipped' && { shippingDate: new Date() }),
-          ...(status === 'completed' && { completionDate: new Date() }),
-          ...additionalData,
-          updatedAt: new Date(),
-        })
-        .where(eq(cardProductionBatches.batchId, batchId))
-        .returning();
-
-      if (!updated.length) {
-        throw new Error('Batch not found');
-      }
-
-      return updated[0];
-    } catch (error) {
-      throw new Error(`Failed to update batch: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
-   * Get verification events for a card
-   */
-  async getCardVerificationHistory(cardId: number, limit: number = 20) {
-    try {
-      const events = await db
-        .select()
-        .from(cardVerificationEvents)
-        .where(eq(cardVerificationEvents.cardId, cardId))
-        .orderBy(desc(cardVerificationEvents.verificationTimestamp))
-        .limit(limit);
-
-      return events;
-    } catch (error) {
-      throw new Error(`Failed to retrieve verification history: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-
-  /**
-   * Get analytics for card system
-   */
-  async getCardAnalytics() {
-    try {
-      const [totalCards, activeCards, verificationStats, recentVerifications] = await Promise.all([
-        db
-          .select()
-          .from(memberCards)
-          .then((cards: any[]) => cards.length),
-
-        db
-          .select()
-          .from(memberCards)
-          .where(eq(memberCards.status, 'active'))
-          .then((cards: any[]) => cards.length),
-
-        db
-          .select()
-          .from(cardVerificationEvents)
-          .then((events: any[]) => ({
-            total: events.length,
-            successful: events.filter((e: any) => e.verificationResult === 'success').length,
-            failed: events.filter((e: any) => e.verificationResult === 'failed').length,
-          })),
-
-        db
-          .select()
-          .from(cardVerificationEvents)
-          .orderBy(desc(cardVerificationEvents.verificationTimestamp))
-          .limit(5)
-          .then((events: any[]) => events),
-      ]);
 
       return {
-        cards: {
-          total: totalCards,
-          active: activeCards,
-          activePercentage: ((activeCards / totalCards) * 100).toFixed(2),
-        },
-        verification: verificationStats,
-        recentVerifications,
+        success: true,
+        message: `Card production stage updated to ${stage}`,
       };
     } catch (error) {
-      throw new Error(`Failed to generate analytics: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(`Failed to update production stage: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
-  // ===== Helper Methods =====
+  async getCardStatistics(startDate?: Date, endDate?: Date) {
+    try {
+      const dateCondition = startDate && endDate 
+        ? sql`WHERE created_at BETWEEN ${startDate} AND ${endDate}`
+        : startDate 
+          ? sql`WHERE created_at >= ${startDate}`
+          : endDate 
+            ? sql`WHERE created_at <= ${endDate}`
+            : sql``;
 
-  /**
-   * Generate a unique card number
-   */
+      const statsResult = await db.execute(
+        sql`SELECT 
+            COUNT(*) as total_cards,
+            COUNT(CASE WHEN status = 'active' THEN 1 END) as active_cards,
+            COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_cards,
+            COUNT(CASE WHEN status = 'expired' THEN 1 END) as expired_cards,
+            COUNT(CASE WHEN status = 'lost' OR status = 'stolen' THEN 1 END) as lost_stolen_cards,
+            COUNT(CASE WHEN card_type = 'physical' THEN 1 END) as physical_cards,
+            COUNT(CASE WHEN card_type = 'digital' THEN 1 END) as digital_cards
+            FROM member_cards ${dateCondition}`
+      );
+
+      const verificationStatsResult = await db.execute(
+        sql`SELECT 
+            COUNT(*) as total_verifications,
+            COUNT(CASE WHEN verification_result = 'success' THEN 1 END) as successful_verifications,
+            COUNT(CASE WHEN verification_result = 'failed' THEN 1 END) as failed_verifications,
+            AVG(fraud_risk_score) as avg_fraud_score
+            FROM card_verification_events`
+      );
+
+      return {
+        cards: statsResult.rows[0],
+        verifications: verificationStatsResult.rows[0],
+      };
+    } catch (error) {
+      throw new Error(`Failed to get card statistics: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async bulkGenerateCards(requests: CardGenerationRequest[]) {
+    try {
+      const results = [];
+      const errors = [];
+
+      for (const request of requests) {
+        try {
+          const result = await this.generateMemberCard(request);
+          results.push(result);
+        } catch (error) {
+          errors.push({
+            memberId: request.memberId,
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+
+      return {
+        success: errors.length === 0,
+        totalProcessed: requests.length,
+        successful: results.length,
+        failed: errors.length,
+        results,
+        errors,
+      };
+    } catch (error) {
+      throw new Error(`Bulk card generation failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async deactivateExpiredCards() {
+    try {
+      const result = await db.execute(
+        sql`UPDATE member_cards 
+            SET status = 'expired', 
+                deactivation_date = ${new Date()},
+                updated_at = ${new Date()}
+            WHERE expiry_date < ${new Date()}
+            AND status = 'active'
+            RETURNING id, card_number, expiry_date`
+      );
+
+      return {
+        success: true,
+        deactivatedCount: result.rows.length,
+        cards: result.rows,
+      };
+    } catch (error) {
+      throw new Error(`Failed to deactivate expired cards: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  async getVerificationHistory(cardId: number, limit: number = 50) {
+    try {
+      const history = await db.execute(
+        sql`SELECT cve.*, u.name as verifier_name
+            FROM card_verification_events cve
+            LEFT JOIN users u ON cve.verifier_id = u.id
+            WHERE cve.card_id = ${cardId}
+            ORDER BY cve.verification_timestamp DESC
+            LIMIT ${limit}`
+      );
+
+      return history.rows;
+    } catch (error) {
+      throw new Error(`Failed to get verification history: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
   private generateCardNumber(): string {
-    // Generate in format: MC-XXXX-XXXX-XXXX (Medical Coverage Card)
-    const parts = [];
-    parts.push('MC');
-    for (let i = 0; i < 3; i++) {
-      const part = Math.floor(Math.random() * 10000)
-        .toString()
-        .padStart(4, '0');
-      parts.push(part);
-    }
-    return parts.join('-');
+    const prefix = 'MCS';
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = crypto.randomBytes(4).toString('hex').toUpperCase();
+    return `${prefix}${timestamp}${random}`;
   }
 
-  /**
-   * Generate QR code data
-   */
   private generateQRCodeData(memberId: number, cardNumber: string): string {
-    const timestamp = Date.now();
-    const data = `${cardNumber}|${memberId}|${timestamp}`;
-    const checksum = crypto.createHash('sha256').update(data).digest('hex').substring(0, 8);
-    return `MC|${cardNumber}|${memberId}|${checksum}`;
-  }
-
-  /**
-   * Parse QR code data
-   */
-  private parseQRCodeData(qrCodeData: string) {
-    const parts = qrCodeData.split('|');
-    if (parts[0] !== 'MC' || parts.length < 3) {
-      throw new Error('Invalid QR code format');
-    }
-
-    return {
-      format: parts[0],
-      cardNumber: parts[1],
-      memberId: parseInt(parts[2]),
-      checksum: parts[3] || '',
+    const data = {
+      mid: memberId,
+      cn: cardNumber,
+      ts: Date.now(),
     };
+    return Buffer.from(JSON.stringify(data)).toString('base64');
   }
 
-  /**
-   * Mask card number for display
-   */
-  private maskCardNumber(cardNumber: string): string {
-    const parts = cardNumber.split('-');
-    if (parts.length >= 4) {
-      return `${parts[0]}-${parts[1]}-****-${parts[3]}`;
+  private parseQRCodeData(qrCodeData: string): { cardId?: number; cardNumber?: string; memberId?: number } {
+    try {
+      const decoded = Buffer.from(qrCodeData, 'base64').toString('utf-8');
+      const data = JSON.parse(decoded);
+      return {
+        cardId: data.cid,
+        cardNumber: data.cn,
+        memberId: data.mid,
+      };
+    } catch {
+      return {};
     }
-    return '****';
   }
 
-  /**
-   * Calculate distance between two coordinates (Haversine formula)
-   */
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth radius in km
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  private maskCardNumber(cardNumber: string): string {
+    if (cardNumber.length <= 8) {
+      return cardNumber;
+    }
+    return cardNumber.substring(0, 4) + '*'.repeat(cardNumber.length - 8) + cardNumber.substring(cardNumber.length - 4);
+  }
+
+  private parseProviderIdToInt(providerId: string): number {
+    const parsed = parseInt(providerId, 10);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  private calculateDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371;
+    const dLat = this.toRad(lat2 - lat1);
+    const dLng = this.toRad(lng2 - lng1);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
 
-  /**
-   * Get last verification location for a card
-   */
-  private async getLastVerificationLocation(cardId: number) {
+  private toRad(deg: number): number {
+    return deg * (Math.PI / 180);
+  }
+
+  private async getLastVerificationLocation(cardId: number): Promise<{ lat: number; lng: number } | null> {
     try {
-      const events = await db
-        .select()
-        .from(cardVerificationEvents)
-        .where(eq(cardVerificationEvents.cardId, cardId))
-        .orderBy(desc(cardVerificationEvents.verificationTimestamp))
-        .limit(1);
+      const result = await db.execute(
+        sql`SELECT geolocation 
+            FROM card_verification_events 
+            WHERE card_id = ${cardId} 
+            AND geolocation IS NOT NULL 
+            ORDER BY verification_timestamp DESC 
+            LIMIT 1`
+      );
 
-      if (!events.length || !events[0].geolocation) return null;
-
-      const geoData = JSON.parse(events[0].geolocation);
-      return { lat: geoData.lat, lng: geoData.lng };
-    } catch (error) {
+      if (result.rows.length > 0 && result.rows[0].geolocation) {
+        const geo = typeof result.rows[0].geolocation === 'string'
+          ? JSON.parse(result.rows[0].geolocation)
+          : result.rows[0].geolocation;
+        return { lat: geo.lat, lng: geo.lng };
+      }
+      return null;
+    } catch {
       return null;
     }
   }
 
-  /**
-   * Get last verification time for a card
-   */
-  private async getLastVerificationTime(cardId: number) {
+  private async getLastVerificationTime(cardId: number): Promise<Date | null> {
     try {
-      const events = await db
-        .select()
-        .from(cardVerificationEvents)
-        .where(eq(cardVerificationEvents.cardId, cardId))
-        .orderBy(desc(cardVerificationEvents.verificationTimestamp))
-        .limit(1);
+      const result = await db.execute(
+        sql`SELECT verification_timestamp 
+            FROM card_verification_events 
+            WHERE card_id = ${cardId} 
+            ORDER BY verification_timestamp DESC 
+            LIMIT 1`
+      );
 
-      return events.length ? events[0].verificationTimestamp : null;
-    } catch (error) {
+      if (result.rows.length > 0) {
+        return new Date(result.rows[0].verification_timestamp);
+      }
       return null;
-    }
-  }
-
-  /**
-   * Initialize physical card production
-   */
-  private async initializePhysicalCardProduction(cardId: number) {
-    try {
-      const batchId = `BATCH-${Date.now()}-${Math.random().toString(36).substring(7)}`;
-
-      await db
-        .insert(cardProductionBatches)
-        .values({
-          batchId,
-          batchName: `Batch ${new Date().toISOString()}`,
-          batchType: 'initial_issue',
-          totalCards: 1,
-          processedCards: 0,
-          productionStatus: 'pending',
-        })
-        .returning();
-
-      // Update card with batch ID
-      await db.update(memberCards).set({ batchId }).where(eq(memberCards.id, cardId));
-    } catch (error) {
-      console.error('Failed to initialize physical card production:', error);
-    }
-  }
-
-  /**
-   * Parse provider ID (handle both string and number formats)
-   */
-  private parseProviderIdToInt(providerId: string): number | null {
-    try {
-      const id = parseInt(providerId);
-      return isNaN(id) ? null : id;
     } catch {
       return null;
     }
@@ -650,3 +578,4 @@ class CardManagementService {
 }
 
 export const cardManagementService = new CardManagementService();
+export default cardManagementService;

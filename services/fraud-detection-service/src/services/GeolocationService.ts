@@ -41,7 +41,6 @@ export interface GeolocationResult {
 
 export class GeolocationService {
   private ipGeolocationClient?: AxiosInstance;
-  private deviceClient?: AxiosInstance;
   private trustedDevices: Map<string, DeviceAnalysis>;
   private locationCache: Map<string, { data: LocationData; timestamp: number }>;
 
@@ -55,9 +54,9 @@ export class GeolocationService {
    * Initialize geolocation API clients
    */
   private initializeClients(): void {
-    const { geolocation } = config;
+    const geolocation = config.geolocation;
 
-    if (geolocation.enabled) {
+    if (geolocation?.enabled) {
       this.ipGeolocationClient = axios.create({
         baseURL: geolocation.apiUrl,
         timeout: geolocation.timeout,
@@ -296,35 +295,40 @@ export class GeolocationService {
   private calculateLocationRiskScore(result: GeolocationResult): number {
     let score = 0;
 
-    // VPN/Proxy risk
-    if (result.location.isVpn) score += 25;
-    if (result.location.isProxy) score += 25;
-
-    // Bot risk
-    if (result.location.isBot) score += 35;
-
     // High-risk country
     const highRiskCountries = config.geolocation.highRiskCountries || [];
     if (result.location.country && highRiskCountries.includes(result.location.country)) {
       score += 30;
     }
 
+    // VPN/Proxy
+    if (result.location.isVpn) {
+      score += 25;
+    }
+    if (result.location.isProxy) {
+      score += 20;
+    }
+
+    // Bot
+    if (result.location.isBot) {
+      score += 35;
+    }
+
     return Math.min(100, score);
   }
 
   /**
-   * Detect impossible travel
+   * Detect impossible travel between two locations
    */
   private detectImpossibleTravel(
     previousLocation: LocationData,
     currentLocation: LocationData
   ): string | null {
     if (!previousLocation.latitude || !previousLocation.longitude ||
-        !currentLocation.latitude || !currentLocation.longitude) {
+      !currentLocation.latitude || !currentLocation.longitude) {
       return null;
     }
 
-    // Calculate distance (simplified)
     const distance = this.calculateDistance(
       previousLocation.latitude,
       previousLocation.longitude,
@@ -332,20 +336,16 @@ export class GeolocationService {
       currentLocation.longitude
     );
 
-    // Assume 500 mph max travel speed
-    const maxSpeed = 500;
-    const timeWindowMinutes = 15; // Last location accessed 15 minutes ago
-    const maxDistance = (maxSpeed * timeWindowMinutes) / 60;
-
-    if (distance > maxDistance) {
-      return `Distance ${Math.round(distance)} miles in ${timeWindowMinutes} minutes`;
+    // If distance is > 1000km, flag as suspicious
+    if (distance > 1000) {
+      return `${Math.round(distance)} km in impossible time`;
     }
 
     return null;
   }
 
   /**
-   * Calculate distance between two coordinates (Haversine formula)
+   * Calculate distance between two coordinates using Haversine formula
    */
   private calculateDistance(
     lat1: number,
@@ -353,28 +353,35 @@ export class GeolocationService {
     lat2: number,
     lon2: number
   ): number {
-    const R = 3959; // Earth's radius in miles
-    const dLat = ((lat2 - lat1) * Math.PI) / 180;
-    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const R = 6371; // Earth's radius in km
+    const dLat = this.toRad(lat2 - lat1);
+    const dLon = this.toRad(lon2 - lon1);
     const a =
       Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos((lat1 * Math.PI) / 180) *
-        Math.cos((lat2 * Math.PI) / 180) *
-        Math.sin(dLon / 2) *
-        Math.sin(dLon / 2);
+      Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
+  }
+
+  private toRad(deg: number): number {
+    return deg * (Math.PI / 180);
   }
 
   /**
    * Parse device type from user agent
    */
-  private parseDeviceType(
-    userAgent: string
-  ): 'mobile' | 'desktop' | 'tablet' | 'unknown' {
-    if (/mobile/i.test(userAgent)) return 'mobile';
-    if (/tablet|ipad/i.test(userAgent)) return 'tablet';
-    if (/windows|macintosh|linux/i.test(userAgent)) return 'desktop';
+  private parseDeviceType(userAgent: string): 'mobile' | 'desktop' | 'tablet' | 'unknown' {
+    const ua = userAgent.toLowerCase();
+    if (/(tablet|ipad)|(android(?!.*mobile))/i.test(ua)) {
+      return 'tablet';
+    }
+    if (/mobile|iphone|ipod|android.*mobile|blackberry|iemobile|opera mini/i.test(ua)) {
+      return 'mobile';
+    }
+    if (/desktop|windows|mac|linux/i.test(ua)) {
+      return 'desktop';
+    }
     return 'unknown';
   }
 
@@ -382,10 +389,12 @@ export class GeolocationService {
    * Parse OS from user agent
    */
   private parseOS(userAgent: string): string {
-    if (/windows/i.test(userAgent)) return 'Windows';
-    if (/android/i.test(userAgent)) return 'Android';
-    if (/iphone|ipad|mac/i.test(userAgent)) return 'iOS/macOS';
-    if (/linux/i.test(userAgent)) return 'Linux';
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('windows')) return 'Windows';
+    if (ua.includes('mac os') || ua.includes('macos')) return 'macOS';
+    if (ua.includes('linux')) return 'Linux';
+    if (ua.includes('android')) return 'Android';
+    if (ua.includes('iphone') || ua.includes('ipad') || ua.includes('ipod')) return 'iOS';
     return 'Unknown';
   }
 
@@ -393,26 +402,34 @@ export class GeolocationService {
    * Parse browser from user agent
    */
   private parseBrowser(userAgent: string): string {
-    if (/chrome/i.test(userAgent) && !/edg/i.test(userAgent)) return 'Chrome';
-    if (/firefox/i.test(userAgent)) return 'Firefox';
-    if (/safari/i.test(userAgent) && !/chrome/i.test(userAgent)) return 'Safari';
-    if (/edg/i.test(userAgent)) return 'Edge';
-    if (/trident/i.test(userAgent)) return 'Internet Explorer';
+    const ua = userAgent.toLowerCase();
+    if (ua.includes('edg/')) return 'Edge';
+    if (ua.includes('chrome/') && !ua.includes('chromium')) return 'Chrome';
+    if (ua.includes('safari/') && !ua.includes('chrome')) return 'Safari';
+    if (ua.includes('firefox/')) return 'Firefox';
+    if (ua.includes('opera/') || ua.includes('opr/')) return 'Opera';
     return 'Unknown';
   }
 
   /**
-   * Detect suspicious user agents
+   * Check if user agent is suspicious
    */
   private isSuspiciousUserAgent(userAgent: string): boolean {
-    const suspiciousPatterns = [
-      /bot|crawler|spider|scraper/i,
-      /headless/i,
-      /phantom/i,
-      /curl|wget|python|java(?!script)/i,
-    ];
+    const ua = userAgent.toLowerCase();
+    // Check for empty or very short user agents
+    if (userAgent.length < 20) return true;
 
-    return suspiciousPatterns.some(pattern => pattern.test(userAgent));
+    // Check for known automation tools
+    if (ua.includes('phantomjs') || ua.includes('selenium') || ua.includes('puppeteer')) {
+      return true;
+    }
+
+    // Check for suspicious patterns
+    if (ua.includes('bot') || ua.includes('crawler') || ua.includes('spider')) {
+      return true;
+    }
+
+    return false;
   }
 
   /**
@@ -423,32 +440,44 @@ export class GeolocationService {
     device: DeviceAnalysis,
     memberId: string
   ): void {
-    const registered: DeviceAnalysis = {
-      ...device,
-      firstSeen: new Date(),
-      lastSeen: new Date(),
-    };
+    const existing = this.trustedDevices.get(deviceId);
 
-    this.trustedDevices.set(deviceId, registered);
+    if (!existing) {
+      device.firstSeen = new Date();
+    }
 
-    logger.info(`Device registered`, {
+    device.lastSeen = new Date();
+    this.trustedDevices.set(deviceId, device);
+
+    logger.debug(`Device registered`, {
       deviceId,
       memberId,
-      os: device.os,
-      browser: device.browser,
+      deviceType: device.deviceType,
     });
   }
 
   /**
-   * Record device access (update last seen)
+   * Record device access for tracking
    */
   recordDeviceAccess(deviceId: string): void {
-    const device = this.trustedDevices.get(deviceId);
-    if (device) {
-      device.lastSeen = new Date();
+    const existing = this.trustedDevices.get(deviceId);
+    if (existing) {
+      existing.lastSeen = new Date();
+      this.trustedDevices.set(deviceId, existing);
+    }
+  }
+
+  /**
+   * Clear expired cache entries
+   */
+  clearExpiredCache(): void {
+    const now = Date.now();
+    const maxAge = 24 * 60 * 60 * 1000; // 24 hours
+
+    for (const [ip, cached] of this.locationCache.entries()) {
+      if (now - cached.timestamp > maxAge) {
+        this.locationCache.delete(ip);
+      }
     }
   }
 }
-
-// Export singleton instance
-export const geolocationService = new GeolocationService();

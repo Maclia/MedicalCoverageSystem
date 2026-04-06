@@ -15,4 +15,5 @@ const client = postgres(connectionString, {
 });
 
 export const db = drizzle(client, { schema });
+export const rawDb = client; // Raw postgres-js client for raw SQL queries
 export { schema };

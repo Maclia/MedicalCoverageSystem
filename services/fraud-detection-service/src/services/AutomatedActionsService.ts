@@ -113,7 +113,7 @@ export class AutomatedActionsService {
       // });
 
       action.status = 'completed';
-      action.completedAt = new DateTime().toISOString();
+      action.completedAt = new Date().toISOString();
       action.result = {
         claimDenied: true,
         denialDate: new Date().toISOString(),
