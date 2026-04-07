@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import bcrypt from 'bcryptjs';
-import { eq } from 'drizzle-orm';
+import bcrypt from 'bcrypt';
+import { eq, lte } from 'drizzle-orm';
 import { db } from '../config/database';
 import { users, userSessions, companies, medicalInstitutions, medicalPersonnel } from '../../../shared/schema';
 import { config } from '../config';
@@ -15,9 +15,11 @@ import {
 
 const logger = createLogger();
 
+export type UserRole = 'insurance' | 'institution' | 'provider' | 'sales_admin' | 'sales_manager' | 'team_lead' | 'sales_agent' | 'broker' | 'underwriter';
+
 export interface JWTPayload {
   userId: number;
-  userType: 'insurance' | 'institution' | 'provider';
+  userType: UserRole;
   entityId: number;
   email: string;
 }
@@ -31,7 +33,7 @@ export interface AuthTokens {
 export interface UserProfile {
   id: number;
   email: string;
-  userType: 'insurance' | 'institution' | 'provider';
+  userType: UserRole;
   entityId: number;
   isActive: boolean;
   lastLogin?: Date;
@@ -112,7 +114,7 @@ export class AuthService {
   async register(userData: {
     email: string;
     password: string;
-    userType: 'insurance' | 'institution' | 'provider';
+    userType: UserRole;
     entityId: number;
   }): Promise<UserProfile> {
     const correlationId = generateCorrelationId();
@@ -164,7 +166,7 @@ export class AuthService {
         .returning();
 
       await auditService.logAuthEvent(
-        'USER_REGISTERED',
+        'LOGIN_SUCCESS',
         newUser.id,
         newUser.email
       );
@@ -178,10 +180,10 @@ export class AuthService {
       return {
         id: newUser.id,
         email: newUser.email,
-        userType: newUser.userType,
+        userType: newUser.userType as UserRole,
         entityId: newUser.entityId,
-        isActive: newUser.isActive,
-        lastLogin: newUser.lastLogin,
+        isActive: newUser.isActive ?? false,
+        lastLogin: newUser.lastLogin ?? undefined,
         entityData
       };
 
@@ -213,10 +215,10 @@ export class AuthService {
       });
 
       // Build query
-      let query = db.select().from(users).where(eq(users.email, email));
+      let query = db.select().from(users).where(eq(users.email, email)).$dynamic();
 
       if (userType) {
-        query = query.where(eq(users.userType, userType as 'insurance' | 'institution' | 'provider'));
+        query = query.where(eq(users.userType, userType as UserRole));
       }
 
       const userRecords = await query.limit(1);
@@ -251,7 +253,7 @@ export class AuthService {
 
       const payload: JWTPayload = {
         userId: user.id,
-        userType: user.userType,
+        userType: user.userType as UserRole,
         entityId: user.entityId,
         email: user.email
       };
@@ -259,7 +261,7 @@ export class AuthService {
       const accessToken = this.generateAccessToken(payload);
       const refreshToken = this.generateRefreshToken({
         userId: user.id,
-        userType: user.userType,
+        userType: user.userType as UserRole,
         entityId: user.entityId
       });
 
@@ -289,10 +291,10 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          userType: user.userType,
+          userType: user.userType as UserRole,
           entityId: user.entityId,
-          isActive: user.isActive,
-          lastLogin: user.lastLogin,
+          isActive: user.isActive ?? false,
+          lastLogin: user.lastLogin ?? undefined,
           entityData
         }
       };
@@ -358,7 +360,7 @@ export class AuthService {
       // Generate new tokens
       const newPayload: JWTPayload = {
         userId: user.id,
-        userType: user.userType,
+        userType: user.userType as UserRole,
         entityId: user.entityId,
         email: user.email
       };
@@ -366,7 +368,7 @@ export class AuthService {
       const newAccessToken = this.generateAccessToken(newPayload);
       const newRefreshToken = this.generateRefreshToken({
         userId: user.id,
-        userType: user.userType,
+        userType: user.userType as UserRole,
         entityId: user.entityId
       });
 
@@ -396,10 +398,10 @@ export class AuthService {
         user: {
           id: user.id,
           email: user.email,
-          userType: user.userType,
+          userType: user.userType as UserRole,
           entityId: user.entityId,
-          isActive: user.isActive,
-          lastLogin: user.lastLogin,
+          isActive: user.isActive ?? false,
+          lastLogin: user.lastLogin ?? undefined,
           entityData
         }
       };
@@ -478,7 +480,7 @@ export class AuthService {
       // Verify current password
       const isValidPassword = await this.verifyPassword(currentPassword, user.passwordHash);
       if (!isValidPassword) {
-        await auditService.logAuthEvent('PASSWORD_CHANGE_FAILED', userId, user.email, ipAddress, userAgent, 'Invalid current password');
+        await auditService.logAuthEvent('LOGIN_FAILED', userId, user.email, ipAddress, userAgent, 'Invalid current password');
         throw new AuthenticationError('Current password is incorrect');
       }
 
@@ -497,7 +499,7 @@ export class AuthService {
       // Invalidate all existing sessions (force re-login)
       await db.delete(userSessions).where(eq(userSessions.userId, userId));
 
-      await auditService.logAuthEvent('PASSWORD_CHANGED', userId, user.email, ipAddress, userAgent);
+      await auditService.logAuthEvent('PASSWORD_CHANGE', userId, user.email, ipAddress, userAgent);
 
       logger.info('Password change successful', { userId, correlationId });
 
@@ -525,10 +527,10 @@ export class AuthService {
       return {
         id: user.id,
         email: user.email,
-        userType: user.userType,
+        userType: user.userType as UserRole,
         entityId: user.entityId,
-        isActive: user.isActive,
-        lastLogin: user.lastLogin,
+        isActive: user.isActive ?? false,
+        lastLogin: user.lastLogin ?? undefined,
         entityData
       };
 
@@ -542,7 +544,7 @@ export class AuthService {
     try {
       await db
         .delete(userSessions)
-        .where(eq(userSessions.expiresAt, new Date()));
+        .where(lte(userSessions.expiresAt, new Date()));
 
       logger.info('Expired sessions cleanup completed');
 

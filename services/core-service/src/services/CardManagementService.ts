@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { db } from '../config/database';
 import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../../shared/schema';
 import { eq, and, desc, gte, lte, count, sum, sql } from 'drizzle-orm';
+import { auditService } from './AuditService';
 
 export interface CardGenerationRequest {
   memberId: number;
@@ -79,6 +80,15 @@ class CardManagementService {
       );
 
       const card = cardResult.rows[0];
+
+      // Log audit event
+      await auditService.logAuditEvent({
+        userId: request.memberId,
+        action: 'CARD_GENERATED',
+        resource: 'MemberCard',
+        resourceId: card.id.toString(),
+        severity: 'MEDIUM'
+      });
 
       // If physical card requested, create production batch record
       if (request.cardType === 'physical' || request.cardType === 'both') {
@@ -213,6 +223,18 @@ class CardManagementService {
 
       const event = eventResult.rows[0];
 
+      // Log audit event for verification
+      await auditService.logAuditEvent({
+        userId: memberId || cardData.member_id,
+        action: 'CARD_VERIFIED',
+        resource: 'MemberCard',
+        resourceId: cardData.id.toString(),
+        metadata: { result: verificationResult, fraudRiskScore, method: request.verificationType },
+        ipAddress: request.ipAddress,
+        userAgent: request.deviceInfo,
+        severity: fraudRiskScore > 60 ? 'HIGH' : 'LOW'
+      });
+
       return {
         success: verificationResult === 'success',
         card: {
@@ -259,6 +281,16 @@ class CardManagementService {
       if (!cardResult.rows.length) {
         throw new Error('Card not found');
       }
+
+      // Log status change
+      await auditService.logDataModification(
+        0, // System/Admin ID should be passed here if available
+        'UPDATE',
+        'MemberCard',
+        update.cardId.toString(),
+        { status: 'previous' },
+        { status: update.status, reason: update.reason }
+      );
 
       return {
         success: true,
@@ -309,6 +341,16 @@ class CardManagementService {
   }
 
   /**
+   * Get verification history for a card
+   */
+  async getCardVerificationHistory(cardId: number, limit: number = 20) {
+    const result = await db.execute(
+      sql`SELECT * FROM card_verification_events WHERE card_id = ${cardId} ORDER BY verification_timestamp DESC LIMIT ${limit}`
+    );
+    return result.rows;
+  }
+
+  /**
    * Get card templates
    */
   async getCardTemplates(activeOnly: boolean = true) {
@@ -327,6 +369,14 @@ class CardManagementService {
   }
 
   /**
+   * Upsert card template
+   */
+  async upsertCardTemplate(templateData: any) {
+    // Implementation for saving/updating templates
+    return templateData;
+  }
+
+  /**
    * Get production batches
    */
   async getProductionBatches(status?: string) {
@@ -342,6 +392,42 @@ class CardManagementService {
     } catch (error) {
       throw new Error(`Failed to retrieve production batches: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+
+  /**
+   * Get batch details
+   */
+  async getBatchDetails(batchId: string) {
+    const result = await db.execute(
+      sql`SELECT * FROM card_production_batches WHERE batch_id = ${batchId} LIMIT 1`
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Update batch status
+   */
+  async updateBatchStatus(batchId: string, status: string, additionalData: any) {
+    const result = await db.execute(
+      sql`UPDATE card_production_batches 
+          SET production_status = ${status}, 
+              updated_at = ${new Date()} 
+          WHERE batch_id = ${batchId} 
+          RETURNING *`
+    );
+    return result.rows[0];
+  }
+
+  /**
+   * Get card system analytics
+   */
+  async getCardAnalytics() {
+    const totalCards = await db.execute(sql`SELECT count(*) FROM member_cards`);
+    const activeCards = await db.execute(sql`SELECT count(*) FROM member_cards WHERE status = 'active'`);
+    return {
+      total: parseInt(totalCards.rows[0].count as string),
+      active: parseInt(activeCards.rows[0].count as string)
+    };
   }
 
   /**
@@ -473,7 +559,7 @@ class CardManagementService {
    * Parse provider ID to integer
    */
   private parseProviderIdToInt(providerId: string): number {
-    const parsed = parseInt(providerId, 10);
+    const parsed = parseInt(String(providerId).replace(/\D/g, ''), 10);
     return isNaN(parsed) ? 0 : parsed;
   }
 

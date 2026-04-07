@@ -233,8 +233,8 @@ function toOpportunity(payload: OpportunityPayload): Opportunity {
 
   return {
     id: randomUUID(),
-    title: String(payload.title).trim(),
-    customerName: String(payload.customerName).trim(),
+    title: String(payload.title ?? '').trim(),
+    customerName: String(payload.customerName ?? '').trim(),
     customerEmail: typeof payload.customerEmail === 'string' ? payload.customerEmail.trim() : undefined,
     customerPhone: typeof payload.customerPhone === 'string' ? payload.customerPhone.trim() : undefined,
     estimatedValue: Number(payload.estimatedValue),
@@ -245,7 +245,7 @@ function toOpportunity(payload: OpportunityPayload): Opportunity {
       typeof payload.expectedCloseDate === 'string' && payload.expectedCloseDate.trim()
         ? payload.expectedCloseDate
         : undefined,
-    owner: String(payload.owner).trim(),
+    owner: String(payload.owner ?? '').trim(),
     source: typeof payload.source === 'string' ? payload.source.trim() : undefined,
     priority: payload.priority as OpportunityPriority,
     notes: typeof payload.notes === 'string' ? payload.notes.trim() : undefined,

@@ -27,7 +27,7 @@ export interface NavItem {
   id: string;
   label: string;
   path: string;
-  icon: any;
+  icon: React.ComponentType<{ className?: string }>;
   category: string;
   roles: ('insurance' | 'institution' | 'provider')[];
   badge?: string;
