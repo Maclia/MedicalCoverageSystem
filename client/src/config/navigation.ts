@@ -3,6 +3,7 @@
  * 
  * Defines which navigation items are available to each user role
  */
+import React from 'react';
 
 import {
   HomeIcon,
