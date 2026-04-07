@@ -30,7 +30,7 @@ export interface NavItem {
   category: string;
   roles: ('insurance' | 'institution' | 'provider')[];
   badge?: string;
-  description?: string;
+  description: string;
 }
 
 /**
