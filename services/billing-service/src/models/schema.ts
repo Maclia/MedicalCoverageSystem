@@ -1,11 +1,15 @@
 import { pgTable, serial, varchar, text, decimal, integer, boolean, timestamp, jsonb, pgEnum } from 'drizzle-orm/pg-core';
 
 // Enums
-const invoiceStatusEnum = pgEnum('invoice_status', ['draft', 'sent', 'paid', 'partially_paid', 'overdue', 'cancelled', 'refunded']);
-const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'completed', 'failed', 'refunded', 'partially_refunded']);
-const paymentMethodEnum = pgEnum('payment_method', ['cash', 'mpesa', 'card', 'bank_transfer', 'insurance', 'mobile_money']);
-const commissionTypeEnum = pgEnum('commission_type', ['referral', 'service', 'performance', 'bonus']);
-const commissionStatusEnum = pgEnum('commission_status', ['pending', 'approved', 'paid', 'rejected']);
+export const invoiceStatusEnum = pgEnum('invoice_status', ['draft', 'sent', 'paid', 'partially_paid', 'overdue', 'cancelled', 'refunded']);
+export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'completed', 'failed', 'refunded', 'partially_refunded']);
+export const paymentMethodEnum = pgEnum('payment_method', ['cash', 'mpesa', 'card', 'bank_transfer', 'insurance', 'mobile_money']);
+export const commissionTypeEnum = pgEnum('commission_type', ['referral', 'service', 'performance', 'bonus']);
+export const commissionStatusEnum = pgEnum('commission_status', ['pending', 'approved', 'paid', 'rejected']);
+
+export const tokenPurchaseStatusEnum = pgEnum('token_purchase_status', ['pending', 'processing', 'completed', 'failed', 'cancelled']);
+export const tokenSubscriptionStatusEnum = pgEnum('token_subscription_status', ['active', 'inactive', 'cancelled']);
+export const tokenFrequencyEnum = pgEnum('token_frequency', ['weekly', 'monthly', 'quarterly', 'annual']);
 
 // Invoices table
 export const invoices = pgTable('invoices', {
@@ -235,4 +239,71 @@ export const billingAuditLogs = pgTable('billing_audit_logs', {
 
   timestamp: timestamp('timestamp').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow()
+});
+
+// Token purchases table
+export const tokenPurchases = pgTable('token_purchases', {
+  id: serial('id').primaryKey(),
+  purchaseReferenceId: varchar('purchase_reference_id', { length: 100 }).notNull().unique(),
+  organizationId: integer('organization_id').notNull(),
+  purchasedBy: integer('purchased_by'),
+  purchaseType: varchar('purchase_type', { length: 50 }).notNull(), // 'one-time', 'subscription', 'auto-topup'
+  tokenQuantity: decimal('token_quantity', { precision: 12, scale: 2 }).notNull(),
+  pricePerToken: decimal('price_per_token', { precision: 12, scale: 2 }).notNull(),
+  totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 10 }).notNull().default('USD'),
+  packageId: integer('package_id'),
+  paymentMethodId: integer('payment_method_id').notNull(),
+  subscriptionId: integer('subscription_id'),
+  status: tokenPurchaseStatusEnum('status').notNull().default('pending'),
+  gatewayProvider: varchar('gateway_provider', { length: 100 }),
+  gatewayTransactionId: varchar('gateway_transaction_id', { length: 255 }),
+  paymentInitiatedAt: timestamp('payment_initiated_at'),
+  paymentCompletedAt: timestamp('payment_completed_at'),
+  tokensAllocatedAt: timestamp('tokens_allocated_at'),
+  tokenExpirationDate: timestamp('token_expiration_date'),
+  metadata: text('metadata'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+});
+
+// Token subscriptions table
+export const tokenSubscriptions = pgTable('token_subscriptions', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').notNull(),
+  packageId: integer('package_id').notNull(),
+  tokenQuantity: decimal('token_quantity', { precision: 12, scale: 2 }).notNull(),
+  pricePerToken: decimal('price_per_token', { precision: 12, scale: 2 }).notNull(),
+  totalAmount: decimal('total_amount', { precision: 12, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 10 }).notNull().default('USD'),
+  frequency: tokenFrequencyEnum('frequency').notNull(),
+  status: tokenSubscriptionStatusEnum('status').notNull().default('active'),
+  paymentMethodId: integer('payment_method_id').notNull(),
+  lastBillingDate: timestamp('last_billing_date'),
+  nextBillingDate: timestamp('next_billing_date').notNull(),
+  failedPaymentCount: integer('failed_payment_count').notNull().default(0),
+  startedAt: timestamp('started_at').notNull().defaultNow(),
+  cancelledAt: timestamp('cancelled_at'),
+  cancelledBy: integer('cancelled_by'),
+  cancellationReason: text('cancellation_reason'),
+  metadata: text('metadata'),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
+});
+
+// Auto top-up policies table
+export const autoTopupPolicies = pgTable('auto_topup_policies', {
+  id: serial('id').primaryKey(),
+  organizationId: integer('organization_id').notNull().unique(),
+  isEnabled: boolean('is_enabled').notNull().default(false),
+  triggerType: varchar('trigger_type', { length: 50 }).notNull(), // 'percentage-based', 'schedule-based'
+  thresholdPercentage: decimal('threshold_percentage', { precision: 5, scale: 2 }),
+  scheduleFrequency: varchar('schedule_frequency', { length: 50 }),
+  topupPackageId: integer('topup_package_id'),
+  topupTokenQuantity: decimal('topup_token_quantity', { precision: 12, scale: 2 }),
+  paymentMethodId: integer('payment_method_id').notNull(),
+  maxSpendingLimitPerMonth: decimal('max_spending_limit_per_month', { precision: 12, scale: 2 }),
+  invoiceEnabled: boolean('invoice_enabled').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow()
 });

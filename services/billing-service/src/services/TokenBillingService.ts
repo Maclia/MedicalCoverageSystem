@@ -115,7 +115,7 @@ export class TokenBillingService {
       return ResponseFactory.createSuccessResponse(purchase[0], 'Token purchase initiated successfully');
     } catch (error) {
       logger.error('Error processing token purchase:', error);
-      return ResponseFactory.createServerErrorResponse('Failed to process token purchase');
+      return ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to process token purchase');
     }
   }
 
@@ -153,7 +153,7 @@ export class TokenBillingService {
       return ResponseFactory.createSuccessResponse(updated[0], 'Token purchase completed');
     } catch (error) {
       logger.error('Error completing token purchase:', error);
-      return ResponseFactory.createServerErrorResponse('Failed to complete purchase');
+      return ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to complete purchase');
     }
   }
 
@@ -194,7 +194,7 @@ export class TokenBillingService {
       return ResponseFactory.createSuccessResponse(subscription[0], 'Subscription created successfully');
     } catch (error) {
       logger.error('Error creating subscription:', error);
-      return ResponseFactory.createServerErrorResponse('Failed to create subscription');
+      return ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to create subscription');
     }
   }
 
@@ -263,7 +263,7 @@ export class TokenBillingService {
       );
     } catch (error) {
       logger.error('Error processing subscription billing:', error);
-      return ResponseFactory.createServerErrorResponse('Failed to process billing');
+      return ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to process billing');
     }
   }
 
@@ -327,7 +327,7 @@ export class TokenBillingService {
       return ResponseFactory.createSuccessResponse(policy[0], 'Auto-topup policy created');
     } catch (error) {
       logger.error('Error setting up auto-topup:', error);
-      return ResponseFactory.createServerErrorResponse('Failed to setup auto-topup');
+      return ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to setup auto-topup');
     }
   }
 
@@ -339,7 +339,8 @@ export class TokenBillingService {
       let query = db
         .select()
         .from(tokenPurchases)
-        .where(eq(tokenPurchases.organizationId, organizationId));
+        .where(eq(tokenPurchases.organizationId, organizationId))
+        .$dynamic();
 
       if (filters?.status) {
         query = query.where(eq(tokenPurchases.status, filters.status));
@@ -358,7 +359,7 @@ export class TokenBillingService {
       return ResponseFactory.createSuccessResponse(purchases, 'Purchases retrieved successfully');
     } catch (error) {
       logger.error('Error retrieving purchases:', error);
-      return ResponseFactory.createServerErrorResponse('Failed to retrieve purchases');
+      return ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to retrieve purchases');
     }
   }
 
@@ -380,7 +381,7 @@ export class TokenBillingService {
       return ResponseFactory.createSuccessResponse(subscription[0], 'Subscription retrieved successfully');
     } catch (error) {
       logger.error('Error retrieving subscription:', error);
-      return ResponseFactory.createServerErrorResponse('Failed to retrieve subscription');
+      return ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to retrieve subscription');
     }
   }
 
@@ -418,7 +419,7 @@ export class TokenBillingService {
       return ResponseFactory.createSuccessResponse(cancelled[0], 'Subscription cancelled successfully');
     } catch (error) {
       logger.error('Error cancelling subscription:', error);
-      return ResponseFactory.createServerErrorResponse('Failed to cancel subscription');
+      return ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to cancel subscription');
     }
   }
 
@@ -464,7 +465,7 @@ export class TokenBillingService {
       }, 'Billing statistics retrieved');
     } catch (error) {
       logger.error('Error retrieving billing stats:', error);
-      return ResponseFactory.createServerErrorResponse('Failed to retrieve statistics');
+      return ResponseFactory.createErrorResponse(ErrorCodes.INTERNAL_SERVER_ERROR, 'Failed to retrieve statistics');
     }
   }
 

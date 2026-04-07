@@ -5,7 +5,7 @@
 
 import crypto from 'crypto';
 import { db } from '../config/database';
-import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../../shared/schema';
+import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '@shared/schema';
 import { eq, and, desc, gte, lte, count, sum, sql } from 'drizzle-orm';
 import { auditService } from './AuditService';
 

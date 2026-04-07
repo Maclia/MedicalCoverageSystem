@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, count, gte, lte, sum } from 'drizzle-orm';
+import { eq, and, desc, asc, count, gte, lte, sum, sql } from 'drizzle-orm';
 import { db } from '../config/database';
 import {
   commissions,
@@ -387,7 +387,30 @@ export class CommissionService {
     correlationId?: string
   ): Promise<any> {
     try {
-      let query = db.select({
+      const whereConditions = [];
+
+      if (filters.personnelId) {
+        whereConditions.push(eq(commissions.personnelId, filters.personnelId));
+      }
+
+      if (filters.status) {
+        whereConditions.push(eq(commissions.status, filters.status as any));
+      }
+
+      if (filters.commissionType) {
+        whereConditions.push(eq(commissions.commissionType, filters.commissionType as any));
+      }
+
+      if (filters.dateRange?.start) {
+        whereConditions.push(gte(commissions.calculationDate, filters.dateRange.start));
+      }
+
+      if (filters.dateRange?.end) {
+        whereConditions.push(lte(commissions.calculationDate, filters.dateRange.end));
+      }
+
+      // Base query for both count and data
+      const baseQuery = db.select({
         commission: commissions,
         invoice: {
           invoiceNumber: invoices.invoiceNumber
@@ -400,34 +423,22 @@ export class CommissionService {
       .leftJoin(invoices, eq(commissions.invoiceId, invoices.id))
       .leftJoin(payments, eq(commissions.paymentId, payments.id));
 
-      // Apply filters
-      if (filters.personnelId) {
-        query = query.where(eq(commissions.personnelId, filters.personnelId));
-      }
-
-      if (filters.status) {
-        query = query.where(eq(commissions.status, filters.status as any));
-      }
-
-      if (filters.commissionType) {
-        query = query.where(eq(commissions.commissionType, filters.commissionType as any));
-      }
-
-      if (filters.dateRange?.start) {
-        query = query.where(gte(commissions.calculationDate, filters.dateRange.start));
-      }
-
-      if (filters.dateRange?.end) {
-        query = query.where(lte(commissions.calculationDate, filters.dateRange.end));
-      }
+      // Apply filters to base query
+      const filteredQuery = whereConditions.length > 0
+        ? baseQuery.where(and(...whereConditions))
+        : baseQuery;
 
       // Get total count for pagination
-      const totalCountQuery = query;
-      const [totalResult] = await totalCountQuery.select({ count: count() });
+      const [totalResult] = await db
+        .select({ count: count() })
+        .from(commissions)
+        .leftJoin(invoices, eq(commissions.invoiceId, invoices.id))
+        .leftJoin(payments, eq(commissions.paymentId, payments.id))
+        .where(whereConditions.length > 0 ? and(...whereConditions) : undefined); // Apply conditions to count query
       const total = totalResult.count;
 
-      // Apply pagination and ordering
-      const results = await query
+      // Apply pagination and ordering to filtered query
+      const results = await filteredQuery
         .orderBy(desc(commissions.calculationDate))
         .limit(pagination.limit)
         .offset((pagination.page - 1) * pagination.limit);
@@ -728,14 +739,18 @@ export class CommissionService {
       // Get recent commissions (last 30 days)
       const thirtyDaysAgo = moment().subtract(30, 'days').toDate();
 
-      const recentCommissions = await db
+      const recentCommissionsRaw = await db
         .select({
           totalAmount: sum(commissions.commissionAmount).mapWith(Number),
-          commissionCount: count(commissions.id),
-          averageCommission: sum(commissions.commissionAmount).mapWith(Number) / count(commissions.id)
+          commissionCount: count(commissions.id)
         })
         .from(commissions)
         .where(gte(commissions.calculationDate, thirtyDaysAgo));
+
+      const recentCommissions = recentCommissionsRaw[0] || { totalAmount: 0, commissionCount: 0 };
+      const averageCommission = recentCommissions.commissionCount > 0
+        ? recentCommissions.totalAmount / recentCommissions.commissionCount
+        : 0;
 
       // Get top performers
       const topPerformers = await db
@@ -747,13 +762,17 @@ export class CommissionService {
         .from(commissions)
         .where(eq(commissions.status, 'paid'))
         .groupBy(commissions.personnelId)
-        .orderBy({ totalCommission: 'desc' })
+        .orderBy(desc(sql`totalCommission`)) // Use sql template literal for alias
         .limit(10);
 
       const statistics = {
         statusDistribution: statusStats,
         typeDistribution: typeStats,
-        recentCommissions: recentCommissions[0] || { totalAmount: 0, commissionCount: 0, averageCommission: 0 },
+        recentCommissions: {
+          totalAmount: recentCommissions.totalAmount,
+          commissionCount: recentCommissions.commissionCount,
+          averageCommission: averageCommission
+        },
         topPerformers,
         generatedAt: new Date().toISOString()
       };

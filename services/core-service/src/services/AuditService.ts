@@ -1,6 +1,6 @@
-import { eq } from 'drizzle-orm';
-import { db } from '../db';
-import { auditLogs } from '../../../shared/schema';
+import { eq, and, desc, lte, gte } from 'drizzle-orm';
+import { db } from '../config/database';
+import { auditLogs } from '@shared/schema';
 import { loggerInstance, generateCorrelationId } from '../utils/logger';
 
 export interface AuditEventData {
@@ -221,9 +221,11 @@ export class AuditService {
       const records = await db
         .select()
         .from(auditLogs)
-        .where(eq(auditLogs.resource, resourceType))
-        .where(eq(auditLogs.resourceId, resourceId))
-        .orderBy(auditLogs.timestamp, 'desc')
+        .where(and(
+          eq(auditLogs.resource, resourceType),
+          eq(auditLogs.resourceId, resourceId)
+        ))
+        .orderBy(desc(auditLogs.timestamp))
         .limit(limit)
         .offset(offset);
 
@@ -247,19 +249,18 @@ export class AuditService {
     limit: number = 100
   ): Promise<any[]> {
     try {
-      let query = db.select().from(auditLogs).where(eq(auditLogs.userId, userId));
+      let query = db.select().from(auditLogs).where(eq(auditLogs.userId, userId)).$dynamic();
 
       // Add date filters if provided
       if (startDate) {
-        // Note: Drizzle ORM syntax for date comparison may need adjustment
-        // query = query.where(auditLogs.timestamp.gte(startDate));
+        query = query.where(gte(auditLogs.timestamp, startDate));
       }
       if (endDate) {
-        // query = query.where(auditLogs.timestamp.lte(endDate));
+        query = query.where(lte(auditLogs.timestamp, endDate));
       }
 
       const records = await query
-        .orderBy(auditLogs.timestamp, 'desc')
+        .orderBy(desc(auditLogs.timestamp))
         .limit(limit);
 
       return records;
