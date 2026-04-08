@@ -280,11 +280,10 @@ export class AuditTrailError extends FinanceError {
   }
 }
 
-export class RegulatoryViolationError extends ComplianceError {
+export class RegulatoryViolationError extends FinanceError {
   constructor(regulation: string, message: string, severity: 'high' | 'critical' = 'high') {
-    super(`Regulatory violation (${regulation}): ${message}`, regulation);
+    super(`Regulatory violation (${regulation}): ${message}`, 400, 'REGULATORY_VIOLATION', severity, true);
     this.name = 'RegulatoryViolationError';
-    this.financialImpact = severity === 'critical' ? 'critical' : 'high';
   }
 }
 
@@ -377,30 +376,35 @@ export function getFinancialImpact(error: Error): string {
 }
 
 export function createErrorFromCode(errorCode: string, message?: string, requiresAudit?: boolean): FinanceError {
-  const errorMap: Record<string, typeof FinanceError> = {
-    VALIDATION_ERROR: ValidationError,
-    NOT_FOUND: NotFoundError,
-    DUPLICATE_RESOURCE: DuplicateResourceError,
-    BUSINESS_RULE_VIOLATION: BusinessRuleError,
-    AUTHENTICATION_ERROR: AuthenticationError,
-    AUTHORIZATION_ERROR: AuthorizationError,
-    RATE_LIMIT_EXCEEDED: RateLimitError,
-    DATABASE_ERROR: DatabaseError,
-    CONFIGURATION_ERROR: ConfigurationError,
-    INVOICE_CALCULATION_ERROR: InvoiceCalculationError,
-    PAYMENT_PROCESSING_ERROR: PaymentProcessingError,
-    COMMISSION_CALCULATION_ERROR: CommissionCalculationError,
-    REPORT_GENERATION_ERROR: ReportGenerationError,
-    DATA_INTEGRITY_ERROR: DataIntegrityError,
-    COMPLIANCE_ERROR: ComplianceError,
-    AUDIT_TRAIL_ERROR: AuditTrailError,
-    RECONCILIATION_ERROR: ReconciliationError,
-    DATA_EXPORT_ERROR: DataExportError,
-    DATA_IMPORT_ERROR: DataImportError,
+  // Factory function map for creating errors from error codes
+  // Each factory handles the specific constructor signature of its error class
+  const errorFactories: Record<string, (message?: string, requiresAudit?: boolean) => FinanceError> = {
+    VALIDATION_ERROR: (msg, audit) => new ValidationError(msg || 'Validation failed', undefined, audit),
+    NOT_FOUND: (msg, audit) => new NotFoundError(msg || 'Resource', audit),
+    DUPLICATE_RESOURCE: (msg, audit) => new DuplicateResourceError('Resource', msg || 'field', audit),
+    BUSINESS_RULE_VIOLATION: (msg, audit) => new BusinessRuleError(msg || 'Business rule violated', undefined, audit),
+    AUTHENTICATION_ERROR: (msg, audit) => new AuthenticationError(msg || 'Authentication required', audit ?? true),
+    AUTHORIZATION_ERROR: (msg, audit) => new AuthorizationError(msg || 'Access denied', audit ?? true),
+    RATE_LIMIT_EXCEEDED: (msg, audit) => new RateLimitError(msg || 'Rate limit exceeded', audit),
+    DATABASE_ERROR: (msg, audit) => new DatabaseError(msg || 'Database operation failed', undefined, audit),
+    CONFIGURATION_ERROR: (msg, audit) => new ConfigurationError(msg || 'Configuration error', audit ?? true),
+    INVOICE_CALCULATION_ERROR: (msg, audit) => new InvoiceCalculationError(msg || 'Invoice calculation failed'),
+    PAYMENT_PROCESSING_ERROR: (msg, audit) => new PaymentProcessingError(msg || 'Payment processing failed', 0, 0),
+    COMMISSION_CALCULATION_ERROR: (msg, audit) => new CommissionCalculationError(msg || 'Commission calculation failed', 0),
+    REPORT_GENERATION_ERROR: (msg, audit) => new ReportGenerationError(msg || 'Report generation failed', 'unknown'),
+    DATA_INTEGRITY_ERROR: (msg, audit) => new DataIntegrityError(msg || 'Data integrity violation', 'unknown', 0),
+    COMPLIANCE_ERROR: (msg, audit) => new ComplianceError(msg || 'Compliance violation', 'unknown', audit ?? true),
+    AUDIT_TRAIL_ERROR: (msg, audit) => new AuditTrailError(msg || 'Audit trail error', audit ?? true),
+    RECONCILIATION_ERROR: (msg, audit) => new ReconciliationError(msg || 'Reconciliation failed', 'unknown'),
+    DATA_EXPORT_ERROR: (msg, audit) => new DataExportError(msg || 'Data export failed', 'unknown'),
+    DATA_IMPORT_ERROR: (msg, audit) => new DataImportError(msg || 'Data import failed', 'unknown'),
   };
 
-  const ErrorClass = errorMap[errorCode] || FinanceError;
-  return new ErrorClass(message || `Error: ${errorCode}`);
+  const factory = errorFactories[errorCode];
+  if (factory) {
+    return factory(message, requiresAudit);
+  }
+  return new FinanceError(message || `Error: ${errorCode}`, 500, errorCode, 'none', requiresAudit ?? false);
 }
 
 export default {

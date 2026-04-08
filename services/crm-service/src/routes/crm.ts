@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { CrmService } from '../services/CrmService';
 import {
   auditMiddleware,
@@ -22,7 +22,7 @@ router.use(auditMiddleware);
  * @desc    Health check endpoint
  * @access  Public
  */
-router.get('/health', asyncHandler(async (req, res) => {
+router.get('/health', asyncHandler(async (req: Request, res: Response) => {
   const db = require('../models/Database').database;
   const health = await db.healthCheck();
 
@@ -40,7 +40,7 @@ router.get('/health', asyncHandler(async (req, res) => {
  * @desc    Root endpoint
  * @access  Public
  */
-router.get('/', (req, res) => {
+router.get('/', (req: Request, res: Response) => {
   CrmResponseHelper.success(res, {
     service: 'crm-service',
     status: 'running',
@@ -57,7 +57,7 @@ router.get('/', (req, res) => {
  */
 router.get('/leads',
   crmDataAccessMiddleware('leads', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const searchParams = {
       query: req.query.search || req.query.query,
       filters: req.query.filters ? JSON.parse(req.query.filters as string) : undefined,
@@ -82,9 +82,9 @@ router.get('/leads',
  */
 router.post('/leads',
   crmOperationMiddleware('create_lead', 'lead'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const lead = await crmService.createLead(req.body, {
-      userId: (req.user as any)?.userId,
+      userId: (req as any).user?.userId,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -100,7 +100,7 @@ router.post('/leads',
  */
 router.get('/leads/:id',
   crmDataAccessMiddleware('leads', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const lead = await crmService.getLeadById(parseInt(req.params.id));
 
     CrmResponseHelper.success(res, lead, 'Lead retrieved successfully');
@@ -114,12 +114,12 @@ router.get('/leads/:id',
  */
 router.put('/leads/:id',
   crmOperationMiddleware('update_lead', 'lead'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const lead = await crmService.updateLead(
       parseInt(req.params.id),
       req.body,
       {
-        userId: (req.user as any)?.userId,
+        userId: (req as any).user?.userId,
         ipAddress: req.ip,
         userAgent: req.headers['user-agent']
       }
@@ -137,9 +137,9 @@ router.put('/leads/:id',
 router.post('/leads/:id/convert',
   leadLifecycleMiddleware('conversion'),
   crmOperationMiddleware('convert_lead', 'lead'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const result = await crmService.convertLead(parseInt(req.params.id), req.body, {
-      userId: (req.user as any)?.userId,
+      userId: (req as any).user?.userId,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -157,7 +157,7 @@ router.post('/leads/:id/convert',
  */
 router.get('/contacts',
   crmDataAccessMiddleware('contacts', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Similar search implementation for contacts
     const searchParams = {
       query: req.query.search || req.query.query,
@@ -182,9 +182,9 @@ router.get('/contacts',
  */
 router.post('/contacts',
   crmOperationMiddleware('create_contact', 'contact'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const contact = await crmService.createContact(req.body, {
-      userId: (req.user as any)?.userId,
+      userId: (req as any).user?.userId,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -200,7 +200,7 @@ router.post('/contacts',
  */
 router.get('/contacts/:id',
   crmDataAccessMiddleware('contacts', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const contact = await crmService.getContactById(parseInt(req.params.id));
 
     CrmResponseHelper.success(res, contact, 'Contact retrieved successfully');
@@ -216,7 +216,7 @@ router.get('/contacts/:id',
  */
 router.get('/companies',
   crmDataAccessMiddleware('companies', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Similar search implementation for companies
     const searchParams = {
       query: req.query.search || req.query.query,
@@ -241,9 +241,9 @@ router.get('/companies',
  */
 router.post('/companies',
   crmOperationMiddleware('create_company', 'company'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const company = await crmService.createCompany(req.body, {
-      userId: (req.user as any)?.userId,
+      userId: (req as any).user?.userId,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -259,7 +259,7 @@ router.post('/companies',
  */
 router.get('/companies/:id',
   crmDataAccessMiddleware('companies', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const company = await crmService.getCompanyById(parseInt(req.params.id));
 
     CrmResponseHelper.success(res, company, 'Company retrieved successfully');
@@ -275,7 +275,7 @@ router.get('/companies/:id',
  */
 router.get('/opportunities',
   crmDataAccessMiddleware('opportunities', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Similar search implementation for opportunities
     const searchParams = {
       query: req.query.search || req.query.query,
@@ -301,9 +301,9 @@ router.get('/opportunities',
 router.post('/opportunities',
   opportunityLifecycleMiddleware('creation'),
   crmOperationMiddleware('create_opportunity', 'opportunity'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const opportunity = await crmService.createOpportunity(req.body, {
-      userId: (req.user as any)?.userId,
+      userId: (req as any).user?.userId,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -319,7 +319,7 @@ router.post('/opportunities',
  */
 router.get('/opportunities/:id',
   crmDataAccessMiddleware('opportunities', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const opportunity = await crmService.getOpportunityById(parseInt(req.params.id));
 
     CrmResponseHelper.success(res, opportunity, 'Opportunity retrieved successfully');
@@ -334,12 +334,12 @@ router.get('/opportunities/:id',
 router.put('/opportunities/:id',
   opportunityLifecycleMiddleware('update'),
   crmOperationMiddleware('update_opportunity', 'opportunity'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const opportunity = await crmService.updateOpportunity(
       parseInt(req.params.id),
       req.body,
       {
-        userId: (req.user as any)?.userId,
+        userId: (req as any).user?.userId,
         ipAddress: req.ip,
         userAgent: req.headers['user-agent']
       }
@@ -358,7 +358,7 @@ router.put('/opportunities/:id',
  */
 router.get('/activities',
   crmDataAccessMiddleware('activities', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Similar search implementation for activities
     const searchParams = {
       query: req.query.search || req.query.query,
@@ -383,9 +383,9 @@ router.get('/activities',
  */
 router.post('/activities',
   crmOperationMiddleware('create_activity', 'activity'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const activity = await crmService.createActivity(req.body, {
-      userId: (req.user as any)?.userId,
+      userId: (req as any).user?.userId,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
@@ -401,7 +401,7 @@ router.post('/activities',
  */
 router.get('/activities/:id',
   crmDataAccessMiddleware('activities', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const activity = await crmService.getActivityById(parseInt(req.params.id));
 
     CrmResponseHelper.success(res, activity, 'Activity retrieved successfully');
@@ -415,12 +415,12 @@ router.get('/activities/:id',
  */
 router.put('/activities/:id',
   crmOperationMiddleware('update_activity', 'activity'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const activity = await crmService.updateActivity(
       parseInt(req.params.id),
       req.body,
       {
-        userId: (req.user as any)?.userId,
+        userId: (req as any).user?.userId,
         ipAddress: req.ip,
         userAgent: req.headers['user-agent']
       }
@@ -439,7 +439,7 @@ router.put('/activities/:id',
  */
 router.get('/email-campaigns',
   crmDataAccessMiddleware('email_campaigns', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Placeholder - would implement email campaign search
     const result = { campaigns: [], pagination: { page: 1, limit: 20, total: 0, totalPages: 0 } };
 
@@ -455,7 +455,7 @@ router.get('/email-campaigns',
 router.post('/email-campaigns',
   emailCampaignMiddleware('creation'),
   crmOperationMiddleware('create_email_campaign', 'campaign'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Placeholder - would implement createEmailCampaign in CrmService
     const campaign = { id: 1, ...req.body, createdAt: new Date() };
 
@@ -471,7 +471,7 @@ router.post('/email-campaigns',
 router.post('/email-campaigns/:id/send',
   emailCampaignMiddleware('send'),
   crmOperationMiddleware('send_email_campaign', 'campaign'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Placeholder - would implement sendEmailCampaign in CrmService
     const campaign = { id: parseInt(req.params.id), sentAt: new Date() };
     const recipientCount = req.body.recipientCount || 0;
@@ -489,7 +489,7 @@ router.post('/email-campaigns/:id/send',
  */
 router.get('/dashboard/metrics',
   crmDataAccessMiddleware('analytics', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     const metrics = await crmService.getDashboardMetrics(req.query);
 
     CrmResponseHelper.dashboardMetrics(res, metrics);
@@ -503,7 +503,7 @@ router.get('/dashboard/metrics',
  */
 router.get('/analytics',
   crmDataAccessMiddleware('analytics', 'read'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Placeholder - would implement detailed analytics
     const analytics = {
       leadConversionRate: 25.5,
@@ -527,7 +527,7 @@ router.get('/analytics',
  */
 router.post('/leads/bulk-update',
   crmOperationMiddleware('bulk_update', 'leads'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Placeholder - would implement bulkUpdateLeads
     const result = { updatedCount: req.body.leadIds?.length || 0 };
 
@@ -543,7 +543,7 @@ router.post('/leads/bulk-update',
 router.post('/opportunities/bulk-update',
   opportunityLifecycleMiddleware('bulk_update'),
   crmOperationMiddleware('bulk_update', 'opportunities'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Placeholder - would implement bulkUpdateOpportunities
     const result = { updatedCount: req.body.opportunityIds?.length || 0 };
 
@@ -560,7 +560,7 @@ router.post('/opportunities/bulk-update',
  */
 router.post('/export/leads',
   dataOperationMiddleware('export', 'leads'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Placeholder - would implement exportLeads
     const exportResult = {
       downloadUrl: '/downloads/leads_export.csv',
@@ -580,7 +580,7 @@ router.post('/export/leads',
  */
 router.post('/import/leads',
   dataOperationMiddleware('import', 'leads'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Placeholder - would implement importLeads
     const importResult = {
       importedCount: 125,
@@ -600,7 +600,7 @@ router.post('/import/leads',
  */
 router.post('/export/contacts',
   dataOperationMiddleware('export', 'contacts'),
-  asyncHandler(async (req, res) => {
+  asyncHandler(async (req: Request, res: Response) => {
     // Placeholder - would implement exportContacts
     const exportResult = {
       downloadUrl: '/downloads/contacts_export.csv',

@@ -25,12 +25,11 @@ export class WinstonLogger {
               winston.format.colorize(),
               winston.format.simple(),
               winston.format.timestamp(),
-              winston.format.printf(
-                `${winston.format.colorize()}[${winston.format.timestamp()}] [${serviceName}] %s %s`,
-                winston.format.level(),
-                winston.format.unlabelize(),
-                winston.format.printf(`${winston.format.message()}`)
-              )
+winston.format.printf((info: winston.Logform.TransformableInfo) => {
+                const { timestamp, level, message, ...meta } = info;
+                const metaStr = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
+                return `[${timestamp}] [${serviceName}] ${level}: ${message}${metaStr}`;
+              })
             )
           })
         ] : []),

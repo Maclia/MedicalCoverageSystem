@@ -41,7 +41,6 @@ export class WinstonLogger {
           message,
           ...meta
         };
-
         return JSON.stringify(logEntry);
       })
     );
@@ -538,3 +537,4 @@ export class WinstonLogger {
 }
 
 export default WinstonLogger;
+

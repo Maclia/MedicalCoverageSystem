@@ -40,7 +40,7 @@ export const errorAuditMiddleware = (err: any, req: Request, res: Response, next
   logger.error('Gateway request error', err, {
     method: req.method,
     url: req.url,
-    userId: req.user?.id,
+    userId: req.user?.userId,
     body: req.body,
     params: req.params,
     query: req.query,

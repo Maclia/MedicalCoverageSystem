@@ -1,4 +1,19 @@
 import { Request, Response, NextFunction } from 'express';
+
+// Define User interface locally
+interface User {
+  userId: string;
+  // Add other common user properties if needed
+}
+
+// Extend Express Request interface to include user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: User;
+    }
+  }
+}
 import { WinstonLogger } from '../utils/WinstonLogger';
 
 /**
@@ -210,7 +225,7 @@ function getClientIP(req: Request): string {
  * Extract user ID from request
  */
 function extractUserId(req: Request): string | undefined {
-  return (req.user as any)?.userId || req.headers['x-user-id'] as string;
+  return req.user?.userId || req.headers['x-user-id'] as string;
 }
 
 /**

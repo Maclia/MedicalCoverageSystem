@@ -323,54 +323,87 @@ export class InvoiceService {
     correlationId?: string
   ): Promise<any> {
     try {
-      let query = db.select().from(invoices);
+      // Build where conditions
+      const whereConditions = [];
 
-      // Apply filters
       if (filters.patientId) {
-        query = query.where(eq(invoices.patientId, filters.patientId));
+        whereConditions.push(eq(invoices.patientId, filters.patientId));
       }
 
       if (filters.status) {
-        query = query.where(eq(invoices.status, filters.status as any));
+        whereConditions.push(eq(invoices.status, filters.status as any));
       }
 
       if (filters.institutionId) {
-        query = query.where(eq(invoices.institutionId, filters.institutionId));
+        whereConditions.push(eq(invoices.institutionId, filters.institutionId));
       }
 
       if (filters.dateRange?.start) {
-        query = query.where(gte(invoices.issueDate, filters.dateRange.start));
+        whereConditions.push(gte(invoices.issueDate, filters.dateRange.start));
       }
 
       if (filters.dateRange?.end) {
-        query = query.where(lte(invoices.issueDate, filters.dateRange.end));
+        whereConditions.push(lte(invoices.issueDate, filters.dateRange.end));
       }
 
       // Get total count for pagination
-      const totalCountQuery = query;
-      const [totalResult] = await totalCountQuery.select({ count: count() });
-      const total = totalResult.count;
+      const countQuery = db.select({ count: count() }).from(invoices);
+      
+      // Build and execute query with or without conditions
+      if (whereConditions.length > 0) {
+        const conditions = and(...whereConditions);
+        
+        // Get count with conditions
+        const [totalResult] = await countQuery.where(conditions);
+        const total = totalResult.count;
 
-      // Apply pagination and ordering
-      const results = await query
-        .orderBy(desc(invoices.issueDate))
-        .limit(pagination.limit)
-        .offset((pagination.page - 1) * pagination.limit);
+        // Get results with conditions, pagination and ordering
+        const results = await db.select().from(invoices)
+          .where(conditions)
+          .orderBy(desc(invoices.issueDate))
+          .limit(pagination.limit)
+          .offset((pagination.page - 1) * pagination.limit);
 
-      logger.debug('Invoices retrieved', {
-        filters,
-        pagination,
-        total,
-        correlationId
-      });
+        logger.debug('Invoices retrieved', {
+          filters,
+          pagination,
+          total,
+          correlationId
+        });
 
-      return ResponseFactory.createPaginatedResponse(
-        results,
-        pagination.page,
-        pagination.limit,
-        total,
-        correlationId
-      );
+        return ResponseFactory.createPaginatedResponse(
+          results,
+          pagination.page,
+          pagination.limit,
+          total,
+          correlationId
+        );
+      } else {
+        // Get count without conditions
+        const [totalResult] = await countQuery;
+        const total = totalResult.count;
+
+        // Get results without conditions, with pagination and ordering
+        const results = await db.select().from(invoices)
+          .orderBy(desc(invoices.issueDate))
+          .limit(pagination.limit)
+          .offset((pagination.page - 1) * pagination.limit);
+
+        logger.debug('Invoices retrieved', {
+          filters,
+          pagination,
+          total,
+          correlationId
+        });
+
+        return ResponseFactory.createPaginatedResponse(
+          results,
+          pagination.page,
+          pagination.limit,
+          total,
+          correlationId
+        );
+      }
 
     } catch (error) {
       logger.error('Failed to get invoices', error as Error, {
@@ -427,8 +460,21 @@ export class InvoiceService {
 
       // Validate update data if items are being changed
       if (data.items) {
-        const tempValidationErrors = this.validateInvoiceData({
+        // Convert null values to undefined to match InvoiceData interface
+        const existingData: InvoiceData = {
           ...existingInvoice[0],
+          patientEmail: existingInvoice[0].patientEmail ?? undefined,
+          institutionId: existingInvoice[0].institutionId ?? undefined,
+          institutionName: existingInvoice[0].institutionName ?? undefined,
+          description: existingInvoice[0].description ?? undefined,
+          items: (existingInvoice[0].items as InvoiceItem[]) ?? [],
+          notes: existingInvoice[0].notes ?? undefined,
+          metadata: existingInvoice[0].metadata ?? undefined,
+          createdBy: existingInvoice[0].createdBy ?? undefined
+        };
+        
+        const tempValidationErrors = this.validateInvoiceData({
+          ...existingData,
           ...data
         });
 

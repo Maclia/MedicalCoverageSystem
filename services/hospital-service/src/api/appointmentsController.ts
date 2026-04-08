@@ -6,7 +6,7 @@ import {
   ErrorCodes,
   createValidationErrorResponse
 } from '../utils/api-standardization';
-import { Joi } from 'joi';
+import * as Joi from 'joi';
 import moment from 'moment';
 
 const logger = createLogger();
@@ -51,7 +51,7 @@ const createAppointmentSchema = Joi.object({
 
 const updateAppointmentSchema = createAppointmentSchema.fork(
   ['patientId', 'personnelId', 'appointmentType', 'appointmentDateTime', 'duration'],
-  (schema) => schema.optional()
+  (schema: Joi.Schema) => schema.optional()
 );
 
 const timeSlotsSchema = Joi.object({
@@ -86,14 +86,14 @@ const cancelAppointmentSchema = Joi.object({
 
 // Validation middleware
 const validate = (schema: Joi.ObjectSchema) => {
-  return (req: Request, res: Response, next: Function) => {
+  return (req: Request, res: Response, next: (err?: any) => void) => {
     const { error, value } = schema.validate(req.body, {
       abortEarly: false,
       stripUnknown: true
     });
 
     if (error) {
-      const details = error.details.map(detail => ({
+      const details = error.details.map((detail: Joi.ValidationErrorItem) => ({
         field: detail.path.join('.'),
         message: detail.message,
         value: detail.context?.value
@@ -115,7 +115,7 @@ const validate = (schema: Joi.ObjectSchema) => {
 };
 
 // Query parameter validation
-const validateQuery = (req: Request, res: Response, next: Function) => {
+const validateQuery = (req: Request, res: Response, next: (err?: any) => void) => {
   const schema = Joi.object({
     patientId: Joi.number().integer().positive().optional(),
     personnelId: Joi.number().integer().positive().optional(),
@@ -135,7 +135,7 @@ const validateQuery = (req: Request, res: Response, next: Function) => {
   });
 
   if (error) {
-    const details = error.details.map(detail => ({
+    const details = error.details.map((detail: Joi.ValidationErrorItem) => ({
       field: detail.path.join('.'),
       message: detail.message,
       value: detail.context?.value
@@ -151,16 +151,16 @@ const validateQuery = (req: Request, res: Response, next: Function) => {
 };
 
 // Time slots query validation
-const validateTimeSlotsQuery = (req: Request, res: Response, next: Function) => {
-  const schema = timeSlotsSchema.validate({
+const validateTimeSlotsQuery = (req: Request, res: Response, next: (err?: any) => void) => {
+  const result = timeSlotsSchema.validate({
     personnelId: req.query.personnelId,
     startDate: new Date(req.query.startDate as string),
     endDate: new Date(req.query.endDate as string),
     duration: Number(req.query.duration)
   });
 
-  if (schema.error) {
-    const details = schema.error.details.map(detail => ({
+  if (result.error) {
+    const details = result.error.details.map((detail: Joi.ValidationErrorItem) => ({
       field: detail.path.join('.'),
       message: detail.message,
       value: detail.context?.value
@@ -171,7 +171,7 @@ const validateTimeSlotsQuery = (req: Request, res: Response, next: Function) => 
     );
   }
 
-  req.query = schema.value;
+  req.query = result.value;
   next();
 };
 
@@ -206,7 +206,7 @@ export class AppointmentsController {
       res.json(result);
 
     } catch (error) {
-      logger.error('Failed to get appointments', error as Error, {
+logger.error('Failed to get appointments', error instanceof Error ? error : new Error(String(error)), {
         correlationId: req.correlationId
       });
 
@@ -246,7 +246,7 @@ export class AppointmentsController {
       res.json(result);
 
     } catch (error) {
-      logger.error('Failed to get appointment', error as Error, {
+logger.error('Failed to get appointment', error instanceof Error ? error : new Error(String(error)), {
         appointmentId: req.params.id,
         correlationId: req.correlationId
       });
@@ -282,7 +282,7 @@ export class AppointmentsController {
       }
 
     } catch (error) {
-      logger.error('Failed to create appointment', error as Error, {
+logger.error('Failed to create appointment', error instanceof Error ? error : new Error(String(error)), {
         appointmentData: {
           patientId: req.body.patientId,
           personnelId: req.body.personnelId,
@@ -335,7 +335,7 @@ export class AppointmentsController {
       }
 
     } catch (error) {
-      logger.error('Failed to update appointment', error as Error, {
+logger.error('Failed to update appointment', error instanceof Error ? error : new Error(String(error)), {
         appointmentId: req.params.id,
         updates: req.body,
         correlationId: req.correlationId
@@ -386,7 +386,7 @@ export class AppointmentsController {
       }
 
     } catch (error) {
-      logger.error('Failed to cancel appointment', error as Error, {
+logger.error('Failed to cancel appointment', error instanceof Error ? error : new Error(String(error)), {
         appointmentId: req.params.id,
         reason: req.body.reason,
         correlationId: req.correlationId
@@ -466,7 +466,7 @@ export class AppointmentsController {
       res.json(result);
 
     } catch (error) {
-      logger.error('Failed to get available time slots', error as Error, {
+logger.error('Failed to get available time slots', error instanceof Error ? error : new Error(String(error)), {
         personnelId: req.query.personnelId,
         correlationId: req.correlationId
       });
@@ -475,7 +475,7 @@ export class AppointmentsController {
         ResponseFactory.createErrorResponse(
           ErrorCodes.INTERNAL_SERVER_ERROR,
           'Failed to retrieve available time slots',
-          { originalError: (Error as Error).message },
+          { originalError: (error as Error).message },
           req.correlationId
         )
       );

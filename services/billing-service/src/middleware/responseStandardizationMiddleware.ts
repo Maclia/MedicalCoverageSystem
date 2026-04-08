@@ -34,7 +34,7 @@ export const responseStandardizationMiddleware = (req: Request, res: Response, n
 
     // For error responses (4xx, 5xx status codes)
     if (res.statusCode >= 400) {
-      let errorCode = ErrorCodes.INTERNAL_SERVER_ERROR;
+      let errorCode: string = ErrorCodes.INTERNAL_SERVER_ERROR;
       let message = 'An error occurred';
 
       if (res.statusCode === 400) {
@@ -77,20 +77,20 @@ export const responseStandardizationMiddleware = (req: Request, res: Response, n
   };
 
   // Add helper method for success responses
-  res.success = function(data?: any, message?: string) {
+  (res as any).success = function(data?: any, message?: string) {
     const response = ResponseFactory.createSuccessResponse(data, message, req.correlationId);
     return originalJson.call(this, response);
   };
 
   // Add helper method for error responses
-  res.error = function(errorCode: string, message: string, details?: any) {
+  (res as any).error = function(errorCode: string, message: string, details?: any) {
     const response = ResponseFactory.createErrorResponse(errorCode, message, details, req.correlationId);
     res.statusCode = getStatusCodeFromError(errorCode);
     return originalJson.call(this, response);
   };
 
   // Add helper method for paginated responses
-  res.paginated = function(data: any[], page: number, limit: number, total: number, message?: string) {
+  (res as any).paginated = function(data: any[], page: number, limit: number, total: number, message?: string) {
     const response = ResponseFactory.createPaginatedResponse(data, page, limit, total, req.correlationId, message);
     return originalJson.call(this, response);
   };

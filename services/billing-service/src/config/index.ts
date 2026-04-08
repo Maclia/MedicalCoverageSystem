@@ -73,6 +73,12 @@ export const config = {
     gracePeriodDays: parseInt(process.env.GRACE_PERIOD_DAYS || '30', 10),
     minPaymentAmount: parseFloat(process.env.MIN_PAYMENT_AMOUNT || '100.00'),
     maxInvoiceAmount: parseFloat(process.env.MAX_INVOICE_AMOUNT || '1000000.00'),
+    invoiceGenerationDays: [1, 15], // 1st and 15th of each month
+    paymentReminderDays: [7, 14, 21], // Send reminders at 7, 14, and 21 days
+    statementGenerationDay: 1, // Generate statements on 1st of each month
+    autoPaymentProcessing: process.env.AUTO_PAYMENT_PROCESSING === 'true',
+    retryFailedPayments: process.env.RETRY_FAILED_PAYMENTS === 'true',
+    maxRetryAttempts: parseInt(process.env.MAX_RETRY_ATTEMPTS || '3', 10),
 
     // Payment processing configuration
     payment: {
@@ -107,16 +113,6 @@ export const config = {
     performanceBonus: parseFloat(process.env.PERFORMANCE_BONUS_RATE || '0.03'), // 3%
     maxCommissionRate: parseFloat(process.env.MAX_COMMISSION_RATE || '0.25'), // 25%
     minCommissionAmount: parseFloat(process.env.MIN_COMMISSION_AMOUNT || '50.00')
-  },
-
-  // Invoice and billing cycles
-  billing: {
-    invoiceGenerationDays: [1, 15], // 1st and 15th of each month
-    paymentReminderDays: [7, 14, 21], // Send reminders at 7, 14, and 21 days
-    statementGenerationDay: 1, // Generate statements on 1st of each month
-    autoPaymentProcessing: process.env.AUTO_PAYMENT_PROCESSING === 'true',
-    retryFailedPayments: process.env.RETRY_FAILED_PAYMENTS === 'true',
-    maxRetryAttempts: parseInt(process.env.MAX_RETRY_ATTEMPTS || '3', 10)
   }
 };
 

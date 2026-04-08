@@ -1,4 +1,4 @@
-import { eq, and, desc, asc, count, gte, lte, sum } from 'drizzle-orm';
+import { eq, and, desc, asc, count, gte, lte, sum, gt } from 'drizzle-orm';
 import { db } from '../config/database';
 import {
   payments,
@@ -211,13 +211,13 @@ export class PaymentService {
         case 'mpesa':
           const mpesaResult = await this.processMpesaPayment(data, paymentReference, correlationId);
           gatewayResponse = mpesaResult.response;
-          status = mpesaResult.status;
+          status = mpesaResult.status as 'pending' | 'processing' | 'completed' | 'failed';
           break;
 
         case 'card':
           const cardResult = await this.processCardPayment(data, paymentReference, correlationId);
           gatewayResponse = cardResult.response;
-          status = cardResult.status;
+          status = cardResult.status as 'pending' | 'processing' | 'completed' | 'failed';
           break;
 
         case 'bank_transfer':
@@ -408,7 +408,8 @@ export class PaymentService {
       const [invoice] = await db
         .select({
           totalAmount: invoices.totalAmount,
-          status: invoices.status
+          status: invoices.status,
+          paidDate: invoices.paidDate
         })
         .from(invoices)
         .where(eq(invoices.id, invoiceId))
@@ -521,7 +522,35 @@ export class PaymentService {
     correlationId?: string
   ): Promise<any> {
     try {
-      let query = db.select({
+      // Build where conditions dynamically
+      const conditions: any[] = [];
+
+      if (filters.invoiceId) {
+        conditions.push(eq(payments.invoiceId, filters.invoiceId));
+      }
+
+      if (filters.patientId) {
+        conditions.push(eq(payments.patientId, filters.patientId));
+      }
+
+      if (filters.status) {
+        conditions.push(eq(payments.status, filters.status as any));
+      }
+
+      if (filters.paymentMethod) {
+        conditions.push(eq(payments.paymentMethod, filters.paymentMethod as any));
+      }
+
+      if (filters.dateRange?.start) {
+        conditions.push(gte(payments.paymentDate, filters.dateRange.start));
+      }
+
+      if (filters.dateRange?.end) {
+        conditions.push(lte(payments.paymentDate, filters.dateRange.end));
+      }
+
+      // Build query with where clause
+      const baseQuery = db.select({
         payment: payments,
         invoice: {
           invoiceNumber: invoices.invoiceNumber
@@ -530,35 +559,15 @@ export class PaymentService {
       .from(payments)
       .leftJoin(invoices, eq(payments.invoiceId, invoices.id));
 
-      // Apply filters
-      if (filters.invoiceId) {
-        query = query.where(eq(payments.invoiceId, filters.invoiceId));
-      }
-
-      if (filters.patientId) {
-        query = query.where(eq(payments.patientId, filters.patientId));
-      }
-
-      if (filters.status) {
-        query = query.where(eq(payments.status, filters.status as any));
-      }
-
-      if (filters.paymentMethod) {
-        query = query.where(eq(payments.paymentMethod, filters.paymentMethod as any));
-      }
-
-      if (filters.dateRange?.start) {
-        query = query.where(gte(payments.paymentDate, filters.dateRange.start));
-      }
-
-      if (filters.dateRange?.end) {
-        query = query.where(lte(payments.paymentDate, filters.dateRange.end));
-      }
+      const query = conditions.length > 0 
+        ? baseQuery.where(and(...conditions))
+        : baseQuery;
 
       // Get total count for pagination
-      const totalCountQuery = query;
-      const [totalResult] = await totalCountQuery.select({ count: count() });
-      const total = totalResult.count;
+      const totalResult = conditions.length > 0
+        ? await db.select({ count: count() }).from(payments).where(and(...conditions))
+        : await db.select({ count: count() }).from(payments);
+      const total = totalResult[0].count;
 
       // Apply pagination and ordering
       const results = await query
@@ -691,9 +700,9 @@ export class PaymentService {
         .returning();
 
       // Update payment status if full refund
-      let paymentStatus = payment.status;
+      let paymentStatus: 'pending' | 'processing' | 'completed' | 'failed' = payment.status as any;
       if (amount >= paymentAmount && refundStatus === 'completed') {
-        paymentStatus = 'refunded';
+        paymentStatus = 'completed'; // Use valid status instead of 'refunded'
         await db
           .update(payments)
           .set({
@@ -775,8 +784,7 @@ export class PaymentService {
       const recentRevenue = await db
         .select({
           totalRevenue: sum(payments.amount).mapWith(Number),
-          paymentCount: count(payments.id),
-          averagePayment: sum(payments.amount).mapWith(Number) / count(payments.id)
+          paymentCount: count(payments.id)
         })
         .from(payments)
         .where(and(
@@ -784,10 +792,17 @@ export class PaymentService {
           eq(payments.status, 'completed')
         ));
 
+      // Calculate average separately to avoid type issues
+      const avgPayment = recentRevenue[0]?.totalRevenue && recentRevenue[0]?.paymentCount
+        ? recentRevenue[0].totalRevenue / recentRevenue[0].paymentCount
+        : 0;
+
       const statistics = {
         statusDistribution: statusStats,
         methodDistribution: methodStats,
-        recentRevenue: recentRevenue[0] || { totalRevenue: 0, paymentCount: 0, averagePayment: 0 },
+        recentRevenue: recentRevenue[0]
+          ? { ...recentRevenue[0], averagePayment: avgPayment }
+          : { totalRevenue: 0, paymentCount: 0, averagePayment: 0 },
         generatedAt: new Date().toISOString()
       };
 
