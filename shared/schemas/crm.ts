@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, varchar, decimal, sql } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, varchar, decimal,foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -113,7 +113,7 @@ export const agents = pgTable('agents', {
   agentType: agentTypeEnum('agent_type').default('individual'),
   teamId: integer('team_id').references(() => salesTeams.id),
   territoryId: integer('territory_id').references(() => territories.id),
-  supervisorId: integer('supervisor_id').references(() => agents.id),
+  supervisorId: integer('supervisor_id') , //.references(() => agents.id as any),
   commissionTierId: integer('commission_tier_id'),
   baseCommissionRate: real('base_commission_rate').default(0),
   overrideRate: real('override_rate'),

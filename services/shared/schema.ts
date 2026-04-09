@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, sql } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, index, json, uniqueIndex  } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -40,6 +41,156 @@ export const consentTypeEnum = pgEnum('consent_type', ['data_processing', 'marke
 export const auditActionEnum = pgEnum('audit_action', ['create', 'read', 'update', 'delete', 'view']);
 export const auditEntityTypeEnum = pgEnum('audit_entity_type', ['member', 'company', 'benefit', 'claim', 'document']);
 
+// Claims submitted by medical panels
+export const diagnosisCodeTypeEnum = pgEnum('diagnosis_code_type', ['ICD-10', 'ICD-11']);
+
+// Enum for fraud risk indicators
+export const fraudRiskLevelEnum = pgEnum('fraud_risk_level', ['none', 'low', 'medium', 'high', 'confirmed']);
+
+// Claims processing enums
+export const adjudicationResultEnum = pgEnum('adjudication_result', ['APPROVED', 'PARTIALLY_APPROVED', 'DENIED', 'PENDING_REVIEW']);
+export const medicalNecessityResultEnum = pgEnum('medical_necessity_result', ['PASS', 'FAIL', 'REVIEW_REQUIRED']);
+export const eobStatusEnum = pgEnum('eob_status', ['GENERATED', 'SENT', 'ACKNOWLEDGED', 'DISPUTED']);
+export const claimEventTypeEnum = pgEnum('claim_event_type', ['SUBMITTED', 'ELIGIBILITY_CHECKED', 'VALIDATED', 'ADJUDICATED', 'MEDICAL_REVIEW', 'FRAUD_DETECTED', 'APPROVED', 'DENIED', 'PAID']);
+
+// Payment types enum
+export const paymentTypeEnum = pgEnum('payment_type', ['premium', 'claim', 'disbursement']);
+export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'completed', 'failed', 'cancelled']);
+export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
+export const procedureCategoryEnum = pgEnum('procedure_category', ['consultation', 'surgery', 'diagnostic', 'laboratory', 'imaging', 'dental', 'vision', 'medication', 'therapy', 'emergency', 'maternity', 'preventative', 'other']);
+
+// CRM Lead Management Enums
+export const leadSourceEnum = pgEnum('lead_source', ['website', 'referral', 'campaign', 'cold_call', 'partner', 'event', 'social_media', 'email_marketing', 'third_party', 'manual']);
+export const leadStatusEnum = pgEnum('lead_status', ['new', 'contacted', 'qualified', 'nurturing', 'converted', 'lost', 'duplicate']);
+export const leadPriorityEnum = pgEnum('priority', ['low', 'medium', 'high', 'urgent']);
+export const opportunityStageEnum = pgEnum('opportunity_stage', ['lead', 'qualified', 'quotation', 'underwriting', 'issuance', 'closed_won', 'closed_lost']);
+export const activityTypeEnum = pgEnum('activity_type', ['call', 'email', 'meeting', 'sms', 'whatsapp', 'note', 'task', 'demo', 'proposal']);
+export const territoryTypeEnum = pgEnum('territory_type', ['geographic', 'industry', 'company_size', 'product_line', 'mixed']);
+
+// Agent Management Enums
+export const agentTypeEnum = pgEnum('agent_type', ['internal_agent', 'external_broker', 'independent_agent', 'captive_agent', 'agency']);
+export const licenseStatusEnum = pgEnum('license_status', ['active', 'expired', 'suspended', 'pending', 'revoked']);
+
+// Workflow Automation Enums
+export const triggerTypeEnum = pgEnum('trigger_type', ['lead_created', 'lead_status_changed', 'opportunity_stage_changed', 'date_based', 'manual', 'webhook', 'email_opened', 'link_clicked']);
+export const workflowExecutionStatusEnum = pgEnum('workflow_execution_status', ['running', 'completed', 'failed', 'cancelled', 'paused']);
+export const campaignStatusEnum = pgEnum('campaign_status', ['draft', 'scheduled', 'running', 'completed', 'paused', 'cancelled']);
+
+// User type enum for authentication
+export const userTypeEnum = pgEnum('user_type', ['insurance', 'institution', 'provider', 'sales_admin', 'sales_manager', 'team_lead', 'sales_agent', 'broker', 'underwriter']);
+
+// Token System Enums
+export const tokenPurchaseTypeEnum = pgEnum('token_purchase_type', ['one_time', 'subscription', 'auto_topup']);
+export const tokenPurchaseStatusEnum = pgEnum('token_purchase_status', ['pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded']);
+export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'paused', 'payment_failed', 'cancelled', 'expired']);
+export const subscriptionFrequencyEnum = pgEnum('subscription_frequency', ['monthly', 'quarterly', 'annual']);
+export const autoTopupTriggerTypeEnum = pgEnum('auto_topup_trigger_type', ['threshold', 'scheduled', 'both']);
+export const autoTopupScheduleFrequencyEnum = pgEnum('auto_topup_schedule_frequency', ['daily', 'weekly', 'monthly']);
+export const notificationThresholdTypeEnum = pgEnum('notification_threshold_type', ['percentage', 'absolute']);
+
+// Card management enums
+export const cardTypeEnum = pgEnum('card_type', ['physical', 'digital', 'both']);
+export const cardStatusEnum = pgEnum('card_status', ['pending', 'active', 'inactive', 'expired', 'lost', 'stolen', 'damaged', 'replaced']);
+export const cardTemplateEnum = pgEnum('card_template', ['standard', 'premium', 'corporate', 'family', 'individual']);
+
+// Payment Management Enums
+export const financePaymentStatusEnum = pgEnum('finance_payment_status', ['pending', 'completed', 'failed', 'reversed', 'refunded']);
+export const paymentMethodTypeEnum = pgEnum('payment_method_type', ['bank', 'card', 'mobile_money', 'digital_wallet', 'ach', 'wire']);
+export const paymentGatewayTypeEnum = pgEnum('payment_gateway_type', ['stripe', 'paypal', 'mpesa', 'bank_transfer', 'square', 'adyen']);
+export const paymentNotificationTypeEnum = pgEnum('payment_notification_type', ['payment_receipt', 'payment_failure', 'payment_retry', 'upcoming_payment', 'auto_payment_confirmation', 'payment_method_expiry', 'payment_method_update_request', 'payment_allocation_confirmation', 'refund_confirmation', 'chargeback_notification', 'reversal_notification', 'payment_method_added', 'payment_method_removed', 'subscription_renewal', 'payment_reminder', 'overdue_payment', 'payment_plan_update']);
+export const paymentNotificationChannelEnum = pgEnum('payment_notification_channel', ['email', 'sms', 'push', 'in_app', 'postal_mail', 'whatsapp']);
+export const paymentNotificationStatusEnum = pgEnum('payment_notification_status', ['scheduled', 'sent', 'delivered', 'failed', 'bounced', 'opened', 'clicked', 'replied']);
+export const reconciliationStatusEnum = pgEnum('reconciliation_status', ['pending', 'in_progress', 'completed', 'requires_review']);
+export const exceptionTypeEnum = pgEnum('exception_type', ['unmatched_payment', 'partial_match', 'overpayment', 'duplicate_payment', 'chargeback', 'refund_mismatch']);
+export const exceptionSeverityEnum = pgEnum('exception_severity', ['low', 'medium', 'high', 'critical']);
+export const paymentReversalTypeEnum = pgEnum('payment_reversal_type', ['chargeback', 'refund', 'bank_error', 'duplicate', 'fraud']);
+
+// Commission Management Enums
+export const commissionStatusEnum = pgEnum('commission_status', ['accrued', 'earned', 'paid', 'clawed_back', 'adjusted']);
+export const commissionFinanceTransactionTypeEnum = pgEnum('commission_finance_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
+export const clawbackTypeEnum = pgEnum('clawback_type', ['early_cancellation', 'policy_lapse', 'fraud', 'compliance', 'performance']);
+export const paymentRunStatusEnum = pgEnum('payment_run_status', ['draft', 'pending_approval', 'approved', 'processing', 'processed', 'failed']);
+export const auditStatusEnum = pgEnum('audit_status', ['pending', 'in_progress', 'completed', 'exceptions_found']);
+export const auditTypeEnum = pgEnum('audit_type', ['pre_payment', 'post_payment', 'random', 'targeted', 'investigative']);
+export const findingTypeEnum = pgEnum('finding_type', ['calculation_error', 'policy_violation', 'documentation_gap', 'compliance_issue', 'fraud_detection']);
+export const findingSeverityEnum = pgEnum('finding_severity', ['low', 'medium', 'high', 'critical']);
+export const adjustmentTypeEnum = pgEnum('adjustment_type', ['bonus', 'penalty', 'correction', 'retroactive', 'clawback_recovery']);
+export const taxTypeEnum = pgEnum('tax_type', ['income_tax', 'withholding_tax', 'vat', 'gst']);
+export const taxCalculationMethodEnum = pgEnum('tax_calculation_method', ['flat_rate', 'progressive', 'tiered']);
+export const reportStatusEnum = pgEnum('report_status', ['generating', 'completed', 'failed']);
+export const reportTypeEnum = pgEnum('report_type', ['summary', 'detailed', 'tax', 'compliance', 'agent_performance']);
+export const leaderboardCategoryEnum = pgEnum('leaderboard_category', ['total_sales', 'new_business', 'renewals', 'commission_earned', 'growth_rate', 'customer_satisfaction', 'quality_score']);
+export const performancePeriodTypeEnum = pgEnum('performance_period_type', ['daily', 'weekly', 'monthly', 'quarterly', 'annual']);
+//user
+export const commissionTransactionTypeEnum = pgEnum('commission_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
+
+// Task Management Tables
+export const taskStatusEnum = pgEnum('task_status', ['pending', 'in_progress', 'completed', 'cancelled', 'on_hold', 'escalated']);
+export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high', 'urgent']);
+export const taskCategoryEnum = pgEnum('task_category', ['follow_up', 'documentation', 'meeting', 'call', 'email', 'review', 'custom']);
+
+// Enums for Claims Financial Management
+export const ClaimReserveType =pgEnum('claim_reserve_type', ['INCURRED_LOSS', 'EXPENSE', 'SALVAGE_RECOVERY', 'LEGAL_EXPENSES']);
+export const ClaimReserveStatus = pgEnum('claim_reserve_status', ['ACTIVE', 'CLOSED', 'REJECTED', 'EXHAUSTED', 'SUPERSEDED']);
+export const ClaimPaymentType = pgEnum( 'ClaimPaymentType', ['INDEMNITY', 'EXPENSE', 'LEGAL',  'MEDICAL', 'REHABILITATION', 'LOSS_OF_EARNINGS']);
+export const ClaimPaymentStatus = pgEnum( 'ClaimPaymentStatus', ['PENDING', 'APPROVED', 'PROCESSING', 'COMPLETED','FAILED', 'REJECTED',  'CANCELLED', 'ESCALATED']);
+export const ClaimApprovalStatus =pgEnum('ClaimApprovalStatus',['PENDING', 'APPROVED', 'REJECTED',  'CANCELLED', 'COMPLETED']);
+export const FinancialTransactionType =pgEnum ('FinancialTransactionType',['PAYMENT_REQUEST','PAYMENT_EXECUTION','RESERVE_INCREASE','RESERVE_DECREASE','RECOVERY_RECEIVED','EXPENSE_ALLOCATION']);
+export const FinancialTransactionStatus = pgEnum( 'FinancialTransactionStatus',['PENDING', 'APPROVED','POSTED','REJECTED', 'FAILED']);
+
+// Schemes & Benefits Module Enums
+
+// Scheme definition enums
+export const schemeTypeEnum = pgEnum('scheme_type', ['individual_medical', 'corporate_medical', 'nhif_top_up', 'student_cover', 'international_health', 'micro_insurance']);
+export const pricingModelEnum = pgEnum('pricing_model', ['age_rated', 'community_rated', 'group_rate', 'experience_rated']);
+export const targetMarketEnum = pgEnum('target_market', ['individuals', 'small_groups', 'large_corporates', 'students', 'seniors', 'expatriates']);
+export const planTierEnum = pgEnum('plan_tier', ['bronze', 'silver', 'gold', 'platinum', 'vip']);
+
+// Cost sharing rules enums
+export const costSharingTypeEnum = pgEnum('cost_sharing_type', ['copay_fixed', 'copay_percentage', 'coinsurance', 'deductible', 'annual_deductible']);
+export const limitTypeEnum = pgEnum('limit_type', ['overall_annual', 'benefit_annual', 'sub_limit', 'frequency', 'age_based']);
+export const limitCategoryEnum = pgEnum('limit_category', ['icu', 'room_type', 'procedure_type', 'professional_fee', 'medication', 'therapy']);
+export const frequencyLimitEnum = pgEnum('frequency_limit', ['per_visit', 'per_day', 'per_admission', 'annual', 'lifetime']);
+
+// Corporate customization enums
+export const employeeGradeEnum = pgEnum('employee_grade', ['executive', 'senior_management', 'middle_management', 'junior_staff', 'intern']);
+
+// Rules engine enums
+export const ruleCategoryEnum = pgEnum('rule_category', ['eligibility', 'benefit_application', 'limit_check', 'cost_sharing', 'exclusion']);
+export const ruleTypeEnum = pgEnum('rule_type', ['condition', 'calculation', 'validation', 'workflow']);
+export const ruleResultEnum = pgEnum('rule_result', ['PASS', 'FAIL', 'SKIP']);
+
+// Enhanced Provider Management System
+
+// Provider Management Enums
+export const providerVerificationStatusEnum = pgEnum('provider_verification_status', ['pending', 'verified', 'rejected', 'suspended', 'under_review']);
+export const providerOnboardingStatusEnum = pgEnum('provider_onboarding_status', ['registered', 'document_pending', 'verification_in_progress', 'approved', 'rejected', 'active', 'suspended']);
+export const providerPerformanceTierEnum = pgEnum('provider_performance_tier', ['excellent', 'good', 'average', 'below_average', 'poor']);
+export const accreditationStatusEnum = pgEnum('accreditation_status', ['accredited', 'provisional', 'not_accredited', 'expired']);
+export const complianceStatusEnum = pgEnum('compliance_status', ['compliant', 'minor_violations', 'major_violations', 'suspended']);
+
+//Claims
+export const claimReserveTypeEnum = pgEnum('reserve_type', ['INCURRED_LOSS', 'EXPENSE', 'SALVAGE_RECOVERY', 'LEGAL_EXPENSES'] as const);
+export const claimReserveStatusEnum = pgEnum('reserve_status', ['ACTIVE', 'CLOSED', 'EXHAUSTED', 'SUPERSEDED'] as const);
+export const claimPaymentTypeEnum = pgEnum('claim_payment_type', ['INDEMNITY', 'EXPENSE', 'LEGAL', 'MEDICAL', 'REHABILITATION', 'LOSS_OF_EARNINGS'] as const);
+export const claimPaymentStatusEnum = pgEnum('claim_payment_status', ['PENDING', 'APPROVED', 'PROCESSING', 'COMPLETED', 'FAILED', 'REJECTED', 'CANCELLED', 'ESCALATED'] as const);
+export const claimApprovalStatusEnum = pgEnum('claim_approval_status', ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED'] as const);
+export const financialTransactionTypeEnum = pgEnum('financial_transaction_type', ['PAYMENT_REQUEST', 'PAYMENT_EXECUTION', 'RESERVE_INCREASE', 'RESERVE_DECREASE', 'RECOVERY_RECEIVED', 'EXPENSE_ALLOCATION'] as const);
+export const financialTransactionStatusEnum = pgEnum('financial_transaction_status', ['PENDING', 'APPROVED', 'POSTED', 'REJECTED', 'FAILED'] as const);
+
+// Communication
+export const communicationStatusEnum =pgEnum('communicationStatusEnum', ['SCHEDULED','PENDING', 'SENT', 'DELIVERED', 'FAILED', 'BOUNCED'] as const);
+
+// Notification System Tables
+export const notificationTypeEnum = pgEnum('notification_type', ['email', 'sms', 'in_app', 'push', 'webhook']);
+export const notificationChannelEnum = pgEnum('notification_channel', ['email', 'sms', 'mobile_app', 'web', 'api']);
+export const notificationPriorityEnum = pgEnum('notification_priority', ['low', 'medium', 'high', 'urgent']);
+export const notificationStatusEnum = pgEnum('notification_status', ['pending', 'sent', 'failed', 'scheduled', 'cancelled']);
+
+//====================================================================================================================
+//                                                   END OF ENUMS
+//====================================================================================================================
+
 // Companies table
 export const companies = pgTable("companies", {
   id: serial("id").primaryKey(),
@@ -73,7 +224,7 @@ export const members = pgTable("members", {
   dateOfBirth: date("date_of_birth").notNull(),
   employeeId: text("employee_id").notNull(),
   memberType: memberTypeEnum("member_type").notNull(),
-  principalId: integer("principal_id").references(() => members.id),
+  principalId: integer("principal_id").references((): any => members.id),
   dependentType: dependentTypeEnum("dependent_type"),
   hasDisability: boolean("has_disability").default(false),
   disabilityDetails: text("disability_details"),
@@ -402,7 +553,7 @@ export const agents = pgTable('agents', {
   baseCommissionRate: decimal('base_commission_rate', { precision: 5, scale: 2 }),
   overrideRate: decimal('override_rate', { precision: 5, scale: 2 }),
   // Hierarchy
-  supervisorId: uuid('supervisor_id').references(() => agents.id),
+  supervisorId: uuid('supervisor_id').references((): any => agents.id),
   teamId: uuid('team_id').references(() => salesTeams.id),
   // Performance
   targetAnnualPremium: integer('target_annual_premium'),
@@ -436,7 +587,7 @@ export const commissionTiers = pgTable('commission_tiers', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-export const commissionTransactionTypeEnum = pgEnum('commission_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
+//Commissions 
 
 export const commissionTransactions = pgTable('commission_transactions', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -474,7 +625,7 @@ export const agentPerformance = pgTable('agent_performance', {
   policiesSold: integer('policies_sold').default(0),
   totalPremium: integer('total_premium').default(0),
   totalCommission: integer('total_commission').default(0),
-  conversionRate: decimal('conversion_rate', { precision: 5, scale: 2 }).default(0),
+  conversionRate: decimal('conversion_rate', { precision: 5, scale: 2 }).default("0"), // Percentage
   averageDealSize: integer('average_deal_size').default(0),
   // Rankings
   teamRank: integer('team_rank'),
@@ -761,11 +912,7 @@ export const panelDocumentation = pgTable("panel_documentation", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Claims submitted by medical panels
-export const diagnosisCodeTypeEnum = pgEnum('diagnosis_code_type', ['ICD-10', 'ICD-11']);
 
-// Enum for fraud risk indicators
-export const fraudRiskLevelEnum = pgEnum('fraud_risk_level', ['none', 'low', 'medium', 'high', 'confirmed']);
 
 // Diagnosis Codes Table
 export const diagnosisCodes = pgTable("diagnosis_codes", {
@@ -911,41 +1058,7 @@ export type InsertFamilyRate = z.infer<typeof insertFamilyRateSchema>;
 export type DiagnosisCode = typeof diagnosisCodes.$inferSelect;
 export type InsertDiagnosisCode = z.infer<typeof insertDiagnosisCodeSchema>;
 
-// Payment types enum
-export const paymentTypeEnum = pgEnum('payment_type', ['premium', 'claim', 'disbursement']);
-export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'completed', 'failed', 'cancelled']);
-export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
-export const procedureCategoryEnum = pgEnum('procedure_category', ['consultation', 'surgery', 'diagnostic', 'laboratory', 'imaging', 'dental', 'vision', 'medication', 'therapy', 'emergency', 'maternity', 'preventative', 'other']);
 
-// CRM Lead Management Enums
-export const leadSourceEnum = pgEnum('lead_source', ['website', 'referral', 'campaign', 'cold_call', 'partner', 'event', 'social_media', 'email_marketing', 'third_party', 'manual']);
-export const leadStatusEnum = pgEnum('lead_status', ['new', 'contacted', 'qualified', 'nurturing', 'converted', 'lost', 'duplicate']);
-export const leadPriorityEnum = pgEnum('priority', ['low', 'medium', 'high', 'urgent']);
-export const opportunityStageEnum = pgEnum('opportunity_stage', ['lead', 'qualified', 'quotation', 'underwriting', 'issuance', 'closed_won', 'closed_lost']);
-export const activityTypeEnum = pgEnum('activity_type', ['call', 'email', 'meeting', 'sms', 'whatsapp', 'note', 'task', 'demo', 'proposal']);
-export const territoryTypeEnum = pgEnum('territory_type', ['geographic', 'industry', 'company_size', 'product_line', 'mixed']);
-
-// Agent Management Enums
-export const agentTypeEnum = pgEnum('agent_type', ['internal_agent', 'external_broker', 'independent_agent', 'captive_agent', 'agency']);
-export const licenseStatusEnum = pgEnum('license_status', ['active', 'expired', 'suspended', 'pending', 'revoked']);
-/* commissionTransactionTypeEnum moved above commissionTransactions */
-
-// Workflow Automation Enums
-export const triggerTypeEnum = pgEnum('trigger_type', ['lead_created', 'lead_status_changed', 'opportunity_stage_changed', 'date_based', 'manual', 'webhook', 'email_opened', 'link_clicked']);
-export const workflowExecutionStatusEnum = pgEnum('workflow_execution_status', ['running', 'completed', 'failed', 'cancelled', 'paused']);
-export const campaignStatusEnum = pgEnum('campaign_status', ['draft', 'scheduled', 'running', 'completed', 'paused', 'cancelled']);
-
-// User type enum for authentication
-export const userTypeEnum = pgEnum('user_type', ['insurance', 'institution', 'provider', 'sales_admin', 'sales_manager', 'team_lead', 'sales_agent', 'broker', 'underwriter']);
-
-// Token System Enums
-export const tokenPurchaseTypeEnum = pgEnum('token_purchase_type', ['one_time', 'subscription', 'auto_topup']);
-export const tokenPurchaseStatusEnum = pgEnum('token_purchase_status', ['pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded']);
-export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'paused', 'payment_failed', 'cancelled', 'expired']);
-export const subscriptionFrequencyEnum = pgEnum('subscription_frequency', ['monthly', 'quarterly', 'annual']);
-export const autoTopupTriggerTypeEnum = pgEnum('auto_topup_trigger_type', ['threshold', 'scheduled', 'both']);
-export const autoTopupScheduleFrequencyEnum = pgEnum('auto_topup_schedule_frequency', ['daily', 'weekly', 'monthly']);
-export const notificationThresholdTypeEnum = pgEnum('notification_threshold_type', ['percentage', 'absolute']);
 
 // Users table for authentication
 export const users = pgTable("users", {
@@ -1853,11 +1966,6 @@ export type InsertJourneyStage = z.infer<typeof insertJourneyStageSchema>;
 export type RecommendationHistory = typeof recommendationHistory.$inferSelect;
 export type InsertRecommendationHistory = z.infer<typeof insertRecommendationHistorySchema>;
 
-// Claims processing enums
-export const adjudicationResultEnum = pgEnum('adjudication_result', ['APPROVED', 'PARTIALLY_APPROVED', 'DENIED', 'PENDING_REVIEW']);
-export const medicalNecessityResultEnum = pgEnum('medical_necessity_result', ['PASS', 'FAIL', 'REVIEW_REQUIRED']);
-export const eobStatusEnum = pgEnum('eob_status', ['GENERATED', 'SENT', 'ACKNOWLEDGED', 'DISPUTED']);
-export const claimEventTypeEnum = pgEnum('claim_event_type', ['SUBMITTED', 'ELIGIBILITY_CHECKED', 'VALIDATED', 'ADJUDICATED', 'MEDICAL_REVIEW', 'FRAUD_DETECTED', 'APPROVED', 'DENIED', 'PAID']);
 
 // Enhanced claims processing tables
 
@@ -2013,12 +2121,9 @@ export type InsertClaimAuditTrail = z.infer<typeof insertClaimAuditTrailSchema>;
 export type BenefitUtilization = typeof benefitUtilization.$inferSelect;
 export type InsertBenefitUtilization = z.infer<typeof insertBenefitUtilizationSchema>;
 
+//==============================================
 // Card Management System
-
-// Card management enums
-export const cardTypeEnum = pgEnum('card_type', ['physical', 'digital', 'both']);
-export const cardStatusEnum = pgEnum('card_status', ['pending', 'active', 'inactive', 'expired', 'lost', 'stolen', 'damaged', 'replaced']);
-export const cardTemplateEnum = pgEnum('card_template', ['standard', 'premium', 'corporate', 'family', 'individual']);
+//==============================================
 
 // Member Cards table
 export const memberCards = pgTable("member_cards", {
@@ -2043,7 +2148,7 @@ export const memberCards = pgTable("member_cards", {
   personalizationData: text("personalization_data"), // JSON with member-specific card design
   securityPin: text("security_pin"), // Encrypted PIN for virtual card access
   replacementReason: text("replacement_reason"),
-  previousCardId: integer("previous_card_id").references(() => memberCards.id),
+  previousCardId: integer("previous_card_id").references((): any => memberCards.id),
   deliveryMethod: text("delivery_method"), // 'standard_mail', 'express', 'pickup', 'digital_only'
   deliveryAddress: text("delivery_address"),
   batchId: text("batch_id"), // For batch processing
@@ -2116,25 +2221,26 @@ export const cardProductionBatches = pgTable("card_production_batches", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Insert schemas for card management
-// // export const insertMemberCardSchema = createInsertSchema(memberCards).omit({
+//Insert schemas for card management
+
+export const insertMemberCardSchema = createInsertSchema(memberCards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+} as any);
+
+// export const insertCardTemplateSchema = createInsertSchema(cardTemplates).omit({
 //   id: true,
 //   createdAt: true,
 //   updatedAt: true,
 // });
 
-// // export const insertCardTemplateSchema = createInsertSchema(cardTemplates).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertCardVerificationEventSchema = createInsertSchema(cardVerificationEvents).omit({
+// export const insertCardVerificationEventSchema = createInsertSchema(cardVerificationEvents).omit({
 //   id: true,
 //   createdAt: true,
 // });
 
-// // export const insertCardProductionBatchSchema = createInsertSchema(cardProductionBatches).omit({
+// export const insertCardProductionBatchSchema = createInsertSchema(cardProductionBatches).omit({
 //   id: true,
 //   createdAt: true,
 //   updatedAt: true,
@@ -2237,36 +2343,7 @@ export type InsertPharmacyPriceList = z.infer<typeof insertPharmacyPriceListSche
 export type ConsumablesPriceList = typeof consumablesPriceLists.$inferSelect;
 export type InsertConsumablesPriceList = z.infer<typeof insertConsumablesPriceListSchema>;
 
-// Schemes & Benefits Module Enums
 
-// Scheme definition enums
-export const schemeTypeEnum = pgEnum('scheme_type', ['individual_medical', 'corporate_medical', 'nhif_top_up', 'student_cover', 'international_health', 'micro_insurance']);
-export const pricingModelEnum = pgEnum('pricing_model', ['age_rated', 'community_rated', 'group_rate', 'experience_rated']);
-export const targetMarketEnum = pgEnum('target_market', ['individuals', 'small_groups', 'large_corporates', 'students', 'seniors', 'expatriates']);
-export const planTierEnum = pgEnum('plan_tier', ['bronze', 'silver', 'gold', 'platinum', 'vip']);
-
-// Cost sharing rules enums
-export const costSharingTypeEnum = pgEnum('cost_sharing_type', ['copay_fixed', 'copay_percentage', 'coinsurance', 'deductible', 'annual_deductible']);
-export const limitTypeEnum = pgEnum('limit_type', ['overall_annual', 'benefit_annual', 'sub_limit', 'frequency', 'age_based']);
-export const limitCategoryEnum = pgEnum('limit_category', ['icu', 'room_type', 'procedure_type', 'professional_fee', 'medication', 'therapy']);
-export const frequencyLimitEnum = pgEnum('frequency_limit', ['per_visit', 'per_day', 'per_admission', 'annual', 'lifetime']);
-
-// Corporate customization enums
-export const employeeGradeEnum = pgEnum('employee_grade', ['executive', 'senior_management', 'middle_management', 'junior_staff', 'intern']);
-
-// Rules engine enums
-export const ruleCategoryEnum = pgEnum('rule_category', ['eligibility', 'benefit_application', 'limit_check', 'cost_sharing', 'exclusion']);
-export const ruleTypeEnum = pgEnum('rule_type', ['condition', 'calculation', 'validation', 'workflow']);
-export const ruleResultEnum = pgEnum('rule_result', ['PASS', 'FAIL', 'SKIP']);
-
-// Enhanced Provider Management System
-
-// Provider Management Enums
-export const providerVerificationStatusEnum = pgEnum('provider_verification_status', ['pending', 'verified', 'rejected', 'suspended', 'under_review']);
-export const providerOnboardingStatusEnum = pgEnum('provider_onboarding_status', ['registered', 'document_pending', 'verification_in_progress', 'approved', 'rejected', 'active', 'suspended']);
-export const providerPerformanceTierEnum = pgEnum('provider_performance_tier', ['excellent', 'good', 'average', 'below_average', 'poor']);
-export const accreditationStatusEnum = pgEnum('accreditation_status', ['accredited', 'provisional', 'not_accredited', 'expired']);
-export const complianceStatusEnum = pgEnum('compliance_status', ['compliant', 'minor_violations', 'major_violations', 'suspended']);
 
 // Provider Onboarding Applications table
 export const providerOnboardingApplications = pgTable("provider_onboarding_applications", {
@@ -2803,7 +2880,7 @@ export const planTiers = pgTable("plan_tiers", {
 // Enhanced benefits structure (extends current benefits)
 export const enhancedBenefits = pgTable("enhanced_benefits", {
   id: serial("id").primaryKey(),
-  parentId: integer("parent_id").references(() => enhancedBenefits.id), // For hierarchical benefits
+  parentId: integer("parent_id").references((): any => enhancedBenefits.id), // For hierarchical benefits
   benefitCode: text("benefit_code").notNull().unique(),
   benefitName: text("benefit_name").notNull(),
   benefitCategory: text("benefit_category").notNull(), // 'inpatient', 'outpatient', 'dental', 'optical', 'maternity', 'chronic', 'wellness', 'evacuation'
@@ -3184,7 +3261,7 @@ export const insertFraudDetectionResultSchema = createInsertSchema(fraudDetectio
 export const insertExplanationOfBenefitsSchema = createInsertSchema(explanationOfBenefits);
 export const insertClaimAuditTrailSchema = createInsertSchema(claimAuditTrails);
 export const insertBenefitUtilizationSchema = createInsertSchema(benefitUtilization);
-export const insertMemberCardSchema = createInsertSchema(memberCards);
+// export const insertMemberCardSchema = createInsertSchema(memberCards);
 export const insertCardTemplateSchema = createInsertSchema(cardTemplates);
 export const insertCardVerificationEventSchema = createInsertSchema(cardVerificationEvents);
 export const insertCardProductionBatchSchema = createInsertSchema(cardProductionBatches);
@@ -3224,10 +3301,7 @@ export const insertMemberRiderSelectionSchema = createInsertSchema(memberRiderSe
 export const insertBenefitRuleSchema = createInsertSchema(benefitRules);
 export const insertRuleExecutionLogSchema = createInsertSchema(ruleExecutionLogs);
 
-// Task Management Tables
-export const taskStatusEnum = pgEnum('task_status', ['pending', 'in_progress', 'completed', 'cancelled', 'on_hold', 'escalated']);
-export const taskPriorityEnum = pgEnum('task_priority', ['low', 'medium', 'high', 'urgent']);
-export const taskCategoryEnum = pgEnum('task_category', ['follow_up', 'documentation', 'meeting', 'call', 'email', 'review', 'custom']);
+
 
 export const tasks = pgTable('tasks', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -3286,11 +3360,6 @@ export const taskTemplates = pgTable('task_templates', {
   createdBy: integer('created_by').references(() => users.id),
 });
 
-// Notification System Tables
-export const notificationTypeEnum = pgEnum('notification_type', ['email', 'sms', 'in_app', 'push', 'webhook']);
-export const notificationChannelEnum = pgEnum('notification_channel', ['email', 'sms', 'mobile_app', 'web', 'api']);
-export const notificationPriorityEnum = pgEnum('notification_priority', ['low', 'medium', 'high', 'urgent']);
-export const notificationStatusEnum = pgEnum('notification_status', ['pending', 'sent', 'failed', 'scheduled', 'cancelled']);
 
 export const notifications = pgTable('notifications', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -3468,7 +3537,7 @@ export const billingCommunications = pgTable("billing_communications", {
   messageContent: text("message_content").notNull(),
   scheduledDate: timestamp("scheduled_date").notNull(),
   sentDate: timestamp("sent_date"),
-  status: communicationStatusEnum("status").default("scheduled").notNull(),
+  status: communicationStatusEnum("status").default('SCHEDULED').notNull(),
   deliveryAttempts: integer("delivery_attempts").default(0).notNull(),
   responseReceived: boolean("response_received").default(false).notNull(),
   responseDate: timestamp("response_date"),
@@ -3584,7 +3653,7 @@ export const insertBillingCommunicationSchema = createInsertSchema(billingCommun
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+} as any);
 
 export const insertBillingCommunicationTemplateSchema = createInsertSchema(billingCommunicationTemplates).omit({
   id: true,
@@ -3650,17 +3719,7 @@ export type InsertDunningRule = z.infer<typeof insertDunningRuleSchema>;
 // COMPREHENSIVE FINANCE MANAGEMENT SYSTEM - MODULE 2: PAYMENT MANAGEMENT
 // ============================================================================
 
-// Payment Management Enums
-export const financePaymentStatusEnum = pgEnum('finance_payment_status', ['pending', 'completed', 'failed', 'reversed', 'refunded']);
-export const paymentMethodTypeEnum = pgEnum('payment_method_type', ['bank', 'card', 'mobile_money', 'digital_wallet', 'ach', 'wire']);
-export const paymentGatewayTypeEnum = pgEnum('payment_gateway_type', ['stripe', 'paypal', 'mpesa', 'bank_transfer', 'square', 'adyen']);
-export const paymentNotificationTypeEnum = pgEnum('payment_notification_type', ['payment_receipt', 'payment_failure', 'payment_retry', 'upcoming_payment', 'auto_payment_confirmation', 'payment_method_expiry', 'payment_method_update_request', 'payment_allocation_confirmation', 'refund_confirmation', 'chargeback_notification', 'reversal_notification', 'payment_method_added', 'payment_method_removed', 'subscription_renewal', 'payment_reminder', 'overdue_payment', 'payment_plan_update']);
-export const paymentNotificationChannelEnum = pgEnum('payment_notification_channel', ['email', 'sms', 'push', 'in_app', 'postal_mail', 'whatsapp']);
-export const paymentNotificationStatusEnum = pgEnum('payment_notification_status', ['scheduled', 'sent', 'delivered', 'failed', 'bounced', 'opened', 'clicked', 'replied']);
-export const reconciliationStatusEnum = pgEnum('reconciliation_status', ['pending', 'in_progress', 'completed', 'requires_review']);
-export const exceptionTypeEnum = pgEnum('exception_type', ['unmatched_payment', 'partial_match', 'overpayment', 'duplicate_payment', 'chargeback', 'refund_mismatch']);
-export const exceptionSeverityEnum = pgEnum('exception_severity', ['low', 'medium', 'high', 'critical']);
-export const paymentReversalTypeEnum = pgEnum('payment_reversal_type', ['chargeback', 'refund', 'bank_error', 'duplicate', 'fraud']);
+
 
 // Payments table
 export const payments = pgTable("payments", {
@@ -3958,22 +4017,7 @@ export type InsertReconciliationException = z.infer<typeof insertReconciliationE
 // COMPREHENSIVE FINANCE MANAGEMENT SYSTEM - MODULE 3: COMMISSION PAYMENTS
 // ============================================================================
 
-// Commission Management Enums
-export const commissionStatusEnum = pgEnum('commission_status', ['accrued', 'earned', 'paid', 'clawed_back', 'adjusted']);
-export const commissionFinanceTransactionTypeEnum = pgEnum('commission_finance_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
-export const clawbackTypeEnum = pgEnum('clawback_type', ['early_cancellation', 'policy_lapse', 'fraud', 'compliance', 'performance']);
-export const paymentRunStatusEnum = pgEnum('payment_run_status', ['draft', 'pending_approval', 'approved', 'processing', 'processed', 'failed']);
-export const auditStatusEnum = pgEnum('audit_status', ['pending', 'in_progress', 'completed', 'exceptions_found']);
-export const auditTypeEnum = pgEnum('audit_type', ['pre_payment', 'post_payment', 'random', 'targeted', 'investigative']);
-export const findingTypeEnum = pgEnum('finding_type', ['calculation_error', 'policy_violation', 'documentation_gap', 'compliance_issue', 'fraud_detection']);
-export const findingSeverityEnum = pgEnum('finding_severity', ['low', 'medium', 'high', 'critical']);
-export const adjustmentTypeEnum = pgEnum('adjustment_type', ['bonus', 'penalty', 'correction', 'retroactive', 'clawback_recovery']);
-export const taxTypeEnum = pgEnum('tax_type', ['income_tax', 'withholding_tax', 'vat', 'gst']);
-export const taxCalculationMethodEnum = pgEnum('tax_calculation_method', ['flat_rate', 'progressive', 'tiered']);
-export const reportStatusEnum = pgEnum('report_status', ['generating', 'completed', 'failed']);
-export const reportTypeEnum = pgEnum('report_type', ['summary', 'detailed', 'tax', 'compliance', 'agent_performance']);
-export const leaderboardCategoryEnum = pgEnum('leaderboard_category', ['total_sales', 'new_business', 'renewals', 'commission_earned', 'growth_rate', 'customer_satisfaction', 'quality_score']);
-export const performancePeriodTypeEnum = pgEnum('performance_period_type', ['daily', 'weekly', 'monthly', 'quarterly', 'annual']);
+
 
 // Commission accruals table
 export const commissionAccruals = pgTable("commission_accruals", {
@@ -4315,7 +4359,7 @@ export const insertAgentLeaderboardSchema = createInsertSchema(agentLeaderboards
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}as any);
 
 export const insertCommissionReportSchema = createInsertSchema(commissionReports).omit({
   id: true,
@@ -4373,65 +4417,7 @@ export type InsertPolicy = z.infer<typeof insertPolicySchema>;
 // FINANCE MANAGEMENT MODULE 4: CLAIMS FINANCIAL MANAGEMENT
 // ========================================
 
-// Enums for Claims Financial Management
-export enum ClaimReserveType {
-  INCURRED_LOSS = 'INCURRED_LOSS',
-  EXPENSE = 'EXPENSE',
-  SALVAGE_RECOVERY = 'SALVAGE_RECOVERY',
-  LEGAL_EXPENSES = 'LEGAL_EXPENSES'
-}
 
-export enum ClaimReserveStatus {
-  ACTIVE = 'ACTIVE',
-  CLOSED = 'CLOSED',
-  EXHAUSTED = 'EXHAUSTED',
-  SUPERSEDED = 'SUPERSEDED'
-}
-
-export enum ClaimPaymentType {
-  INDEMNITY = 'INDEMNITY',
-  EXPENSE = 'EXPENSE',
-  LEGAL = 'LEGAL',
-  MEDICAL = 'MEDICAL',
-  REHABILITATION = 'REHABILITATION',
-  LOSS_OF_EARNINGS = 'LOSS_OF_EARNINGS'
-}
-
-export enum ClaimPaymentStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  PROCESSING = 'PROCESSING',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-  REJECTED = 'REJECTED',
-  CANCELLED = 'CANCELLED',
-  ESCALATED = 'ESCALATED'
-}
-
-export enum ClaimApprovalStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  CANCELLED = 'CANCELLED',
-  COMPLETED = 'COMPLETED'
-}
-
-export enum FinancialTransactionType {
-  PAYMENT_REQUEST = 'PAYMENT_REQUEST',
-  PAYMENT_EXECUTION = 'PAYMENT_EXECUTION',
-  RESERVE_INCREASE = 'RESERVE_INCREASE',
-  RESERVE_DECREASE = 'RESERVE_DECREASE',
-  RECOVERY_RECEIVED = 'RECOVERY_RECEIVED',
-  EXPENSE_ALLOCATION = 'EXPENSE_ALLOCATION'
-}
-
-export enum FinancialTransactionStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  POSTED = 'POSTED',
-  REJECTED = 'REJECTED',
-  FAILED = 'FAILED'
-}
 
 // Claim Reserves Table - Financial reserves set aside for claims
 export const claimReserves = pgTable('claim_reserves', {
@@ -4440,7 +4426,7 @@ export const claimReserves = pgTable('claim_reserves', {
   reserveType: claimReserveTypeEnum('reserve_type').notNull(),
   amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
-  status: claimReserveStatusEnum('status').notNull().default(ClaimReserveStatus.ACTIVE),
+  status: claimReserveStatusEnum('status').notNull().default('ACTIVE'),
   notes: text('notes'),
   reservedAt: timestamp('reserved_at').notNull().defaultNow(),
   lastAdjustmentAt: timestamp('last_adjustment_at'),
@@ -4484,7 +4470,7 @@ export const claimFinancePayments = pgTable('claim_finance_payments', {
   payeeReference: varchar('payee_reference', { length: 100 }),
   paymentMethod: varchar('payment_method', { length: 50 }), // BANK_TRANSFER, CHECK, MOBILE_MONEY, CREDIT_CARD
   paymentReference: varchar('payment_reference', { length: 100 }),
-  status: claimPaymentStatusEnum('claim_payment_status').notNull().default(ClaimPaymentStatus.PENDING),
+  status: claimPaymentStatusEnum('claim_payment_status').notNull().default('PENDING'),
   dueDate: timestamp('due_date').notNull(),
   requestedBy: integer('requested_by').references(() => users.id),
   approvedBy: integer('approved_by').references(() => users.id),
@@ -4515,7 +4501,7 @@ export const claimApprovalWorkflows = pgTable('claim_approval_workflows', {
   workflowType: varchar('workflow_type', { length: 50 }).notNull(), // CLAIM_APPROVAL, PAYMENT_APPROVAL, RESERVE_APPROVAL
   currentStep: integer('current_step').notNull().default(1),
   totalSteps: integer('total_steps'),
-  status: claimApprovalStatusEnum('claim_approval_status').notNull().default(ClaimApprovalStatus.PENDING),
+  status: claimApprovalStatusEnum('claim_approval_status').notNull().default('PENDING'),
   initiatorId: integer('initiator_id').references(() => users.id).notNull(),
   currentAssigneeId: integer('current_assignee_id').references(() => users.id),
   priority: varchar('priority', { length: 20 }).default('NORMAL'), // LOW, NORMAL, HIGH, URGENT
@@ -4563,7 +4549,7 @@ export const claimFinancialTransactions = pgTable('claim_financial_transactions'
   transactionType: financialTransactionTypeEnum('transaction_type').notNull(),
   amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
-  status: financialTransactionStatusEnum('status').notNull().default(FinancialTransactionStatus.PENDING),
+  status: financialTransactionStatusEnum('status').notNull().default('PENDING'),
   description: text('description').notNull(),
   referenceId: integer('reference_id'), // References payment_id, reserve_id, or other entity
   paymentReference: varchar('payment_reference', { length: 100 }),
@@ -4609,7 +4595,7 @@ export const claimAnalytics = pgTable('claim_analytics', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 }, (table) => ({
-  claimIdx: index('claim_analytics_claim_idx').on(table.claimId).unique(),
+  claimIdx: uniqueIndex('claim_analytics_claim_idx').on(table.claimId),
   lastCalculatedIdx: index('claim_analytics_last_calculated_idx').on(table.lastCalculatedAt),
   riskScoreIdx: index('claim_analytics_risk_score_idx').on(table.riskScore)
 }));
@@ -4639,67 +4625,61 @@ export const claimFinancialMetrics = pgTable('claim_financial_metrics', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 }, (table) => ({
-  claimPeriodIdx: index('claim_financial_metrics_claim_period_idx').on(table.claimId, table.metricPeriod).unique(),
+  claimPeriodIdx: uniqueIndex('claim_financial_metrics_claim_period_idx').on(table.claimId, table.metricPeriod),
   metricDateIdx: index('claim_financial_metrics_date_idx').on(table.metricDate),
   lossRatioIdx: index('claim_financial_metrics_loss_ratio_idx').on(table.lossRatio)
 }));
 
 // Schema Validation
-export const claimReserveTypeEnum = pgEnum('reserve_type', Object.values(ClaimReserveType));
-export const claimReserveStatusEnum = pgEnum('reserve_status', Object.values(ClaimReserveStatus));
-export const claimPaymentTypeEnum = pgEnum('claim_payment_type', Object.values(ClaimPaymentType));
-export const claimPaymentStatusEnum = pgEnum('claim_payment_status', Object.values(ClaimPaymentStatus));
-export const claimApprovalStatusEnum = pgEnum('claim_approval_status', Object.values(ClaimApprovalStatus));
-export const financialTransactionTypeEnum = pgEnum('financial_transaction_type', Object.values(FinancialTransactionType));
-export const financialTransactionStatusEnum = pgEnum('financial_transaction_status', Object.values(FinancialTransactionStatus));
+// Fix variable declaration order issues
 
 // Zod schemas for validation
 export const insertClaimReserveSchema = createInsertSchema(claimReserves).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}as any);
 
 export const insertClaimReserveTransactionSchema = createInsertSchema(claimReserveTransactions).omit({
   id: true,
   createdAt: true,
-});
+}as any);
 
 export const insertClaimFinancePaymentSchema = createInsertSchema(claimFinancePayments).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}as any);
 
 export const insertClaimApprovalWorkflowSchema = createInsertSchema(claimApprovalWorkflows).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+} as any);
 
 export const insertClaimApprovalStepSchema = createInsertSchema(claimApprovalSteps).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+} as any);
 
 export const insertClaimFinancialTransactionSchema = createInsertSchema(claimFinancialTransactions).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+} as any);
 
 export const insertClaimAnalyticsSchema = createInsertSchema(claimAnalytics).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}as any);
 
 export const insertClaimFinancialMetricsSchema = createInsertSchema(claimFinancialMetrics).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
-});
+}as any);
 
 // Type exports for Module 4
 export type ClaimReserve = typeof claimReserves.$inferSelect;
@@ -4708,8 +4688,8 @@ export type InsertClaimReserve = z.infer<typeof insertClaimReserveSchema>;
 export type ClaimReserveTransaction = typeof claimReserveTransactions.$inferSelect;
 export type InsertClaimReserveTransaction = z.infer<typeof insertClaimReserveTransactionSchema>;
 
-export type ClaimPayment = typeof claimPayments.$inferSelect;
-export type InsertClaimPayment = z.infer<typeof insertClaimPaymentSchema>;
+// export type ClaimPayment = typeof claimPayments.$inferSelect;
+// export type InsertClaimPayment = z.infer<typeof insertClaimPaymentSchema>;
 
 export type ClaimApprovalWorkflow = typeof claimApprovalWorkflows.$inferSelect;
 export type InsertClaimApprovalWorkflow = z.infer<typeof insertClaimApprovalWorkflowSchema>;
