@@ -211,7 +211,7 @@ export const wellnessGoals = pgTable('wellness_goals', {
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   targetValue: decimal('target_value', { precision: 10, scale: 2 }),
-  currentValue: decimal('current_value', { precision: 10, scale: 2 }).default(0),
+  currentValue: decimal('current_value', { precision: 10, scale: 2 }).default('0'),
   unit: varchar('unit', { length: 20 }),
   startDate: timestamp('start_date').notNull(),
   targetDate: timestamp('target_date').notNull(),
