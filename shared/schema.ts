@@ -111,7 +111,7 @@ export const members = pgTable("members", {
   dateOfBirth: date("date_of_birth").notNull(),
   employeeId: text("employee_id").notNull(),
   memberType: memberTypeEnum("member_type").notNull(),
-  principalId: integer("principal_id").references(() => members.id),
+  principalId: integer("principal_id").references(() => members.id).notNull(),
   dependentType: dependentTypeEnum("dependent_type"),
   hasDisability: boolean("has_disability").default(false),
   disabilityDetails: text("disability_details"),
