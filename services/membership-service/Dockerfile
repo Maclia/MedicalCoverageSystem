@@ -1,18 +1,25 @@
-# Build stage
-FROM node:20-alpine AS base
-
-RUN apk add --no-cache dumb-init
-
-FROM base AS builder
+# Multi-stage build for Membership Service
+FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files first (for layer caching optimization)
 COPY package*.json ./
-COPY tsconfig.json ./
 
-# Install dependencies (prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
+# Install all dependencies (including dev) for build
+RUN npm ci --legacy-peer-deps && npm cache clean --force
+
+# Build stage
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache dumb-init
+
+# Copy from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY package*.json tsconfig.json ./
 
 # Copy source code
 COPY src/ ./src/
@@ -21,23 +28,28 @@ COPY src/ ./src/
 RUN npm run build
 
 # Production stage
-FROM base AS production
-
-# Create app user
-RUN addgroup -g 1001 -S membership && \
-    adduser -S membership -u 1001 -G membership
+FROM node:20-alpine AS production
 
 WORKDIR /app
 
+# Install dumb-init for signal handling
+RUN apk add --no-cache dumb-init
+
+# Create app user (non-root)
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S membership -u 1001 -G nodejs
+
 # Copy package files
-COPY --from=builder --chown=membership:membership /app/package*.json ./
+COPY package*.json ./
 
-# Copy built application
-COPY --from=builder --chown=membership:membership /app/dist ./dist
-COPY --from=builder --chown=membership:membership /app/node_modules ./node_modules
+# Install production dependencies only
+RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
 
-# Create logs directory
-RUN mkdir -p /app/logs && chown membership:membership /app/logs
+# Copy built application from builder stage
+COPY --from=builder --chown=membership:nodejs /app/dist ./dist
+
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chown -R membership:nodejs /app
 
 # Switch to non-root user
 USER membership
@@ -45,10 +57,13 @@ USER membership
 # Expose port
 EXPOSE 3005
 
+# Environment variables
+ENV NODE_ENV=production
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3005/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:3005/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 
-# Start the application with dumb-init
-ENTRYPOINT ["dumb-init", "--"]
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "dist/index.js"]

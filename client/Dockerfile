@@ -1,63 +1,58 @@
 # Multi-stage build for the frontend application
-FROM node:18-alpine AS base
+FROM node:20-alpine AS base
 
-# Install dependencies only when needed
+# Install system dependencies
+RUN apk add --no-cache curl dumb-init
+
+# Dependencies stage - copy package files FIRST for layer caching
 FROM base AS deps
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache \
-    curl
+COPY package*.json ./
 
-# Copy package files
-COPY package.json package-lock.json* ./
-
-# Install dependencies
-RUN npm install
+# Install all dependencies (including dev) for building
+RUN npm ci && npm cache clean --force
 
 # Development stage
 FROM base AS development
+
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache \
-    curl
-
 # Copy package files
-COPY package.json package-lock.json* ./
+COPY package*.json ./
 
-# Install all dependencies
-RUN npm install
+# Install all dependencies for development
+RUN npm ci && npm cache clean --force
 
 # Copy source code
 COPY . .
 
 # Expose port
-EXPOSE 3000
+EXPOSE 5173
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3000 || exit 1
+    CMD curl -f http://localhost:5173 || exit 1
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
 
 # Start the development server
 CMD ["npm", "run", "dev"]
 
 # Build stage
 FROM base AS builder
+
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache \
-    curl
+# Copy from dependencies stage first (for layer caching)
+COPY --from=deps /app/node_modules ./node_modules
 
-# Copy package files
-COPY package.json package-lock.json* ./
-
-# Install dependencies
-RUN npm install
-
-# Copy source code
-COPY . .
+# Copy package files and source
+COPY package*.json tsconfig.json vite.config.ts ./
+COPY src ./src
+COPY public ./public
+COPY index.html ./
 
 # Build the application
 RUN npm run build
@@ -74,49 +69,50 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Create non-root user
-RUN addgroup -g 1001 -S nginx && \
-    adduser -S nginx -u 1001 -G nginx
+# Create non-root user explicitly (nginx user may already exist)
+RUN addgroup -g 1001 -S appuser 2>/dev/null || true && \
+    adduser -S appuser -u 1001 -G appuser 2>/dev/null || true
 
-# Set correct permissions
+# Set correct permissions for nginx
 RUN chown -R nginx:nginx /usr/share/nginx/html && \
     chown -R nginx:nginx /var/cache/nginx && \
     chown -R nginx:nginx /var/log/nginx && \
-    chown -R nginx:nginx /etc/nginx/conf.d
-
-# Create nginx runtime directories
-RUN touch /var/run/nginx.pid && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
+    touch /var/run/nginx.pid && \
     chown -R nginx:nginx /var/run/nginx.pid
 
-# Switch to non-root user
+# Switch to nginx user (already non-root)
 USER nginx
 
 # Expose port
-EXPOSE 3000
+EXPOSE 80
+
+# Environment variables
+ENV NODE_ENV=production
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:3000 || exit 1
+    CMD curl -f http://localhost:80 || exit 1
 
 # Start nginx
 CMD ["nginx", "-g", "daemon off;"]
 
 # Test stage (for running tests)
 FROM base AS test
+
 WORKDIR /app
 
-# Install test dependencies
-RUN apk add --no-cache \
-    curl
+# Copy from dependencies stage
+COPY --from=deps /app/node_modules ./node_modules
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Copy package files and source
+COPY package*.json ./
+COPY src ./src
+COPY jest.config.js tsconfig.test.json ./
+COPY public ./public
 
-# Install all dependencies
-RUN npm install
+# Expose port for test development
+EXPOSE 5173
 
-# Copy source code
-COPY . .
-
-# Run tests
+# Run tests (can be overridden with docker run)
 CMD ["npm", "run", "test"]

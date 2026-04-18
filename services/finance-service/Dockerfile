@@ -1,14 +1,25 @@
+# Multi-stage build for Finance Service
+FROM node:20-alpine AS dependencies
+
+WORKDIR /app
+
+# Copy package files first (for layer caching optimization)
+COPY package*.json ./
+
+# Install all dependencies (including dev) for build
+RUN npm ci --legacy-peer-deps && npm cache clean --force
+
 # Build stage
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
+# Install system dependencies
+RUN apk add --no-cache dumb-init
 
-# Install dependencies (prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi && npm cache clean --force
+# Copy from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY package*.json tsconfig.json ./
 
 # Copy source code
 COPY src/ ./src/
@@ -19,19 +30,26 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine AS production
 
-# Create app user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S finance -u 1001
-
 WORKDIR /app
 
-# Copy built application
-COPY --from=builder --chown=finance:nodejs /app/dist ./dist
-COPY --from=builder --chown=finance:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=finance:nodejs /app/package*.json ./
+# Install dumb-init for signal handling
+RUN apk add --no-cache dumb-init
 
-# Create logs directory
-RUN mkdir -p /app/logs && chown finance:nodejs /app/logs
+# Create app user (non-root)
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S finance -u 1001 -G nodejs
+
+# Copy package files
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --omit=dev --legacy-peer-deps && npm cache clean --force
+
+# Copy built application from builder stage
+COPY --from=builder --chown=finance:nodejs /app/dist ./dist
+
+# Create logs directory with proper permissions
+RUN mkdir -p /app/logs && chown -R finance:nodejs /app
 
 # Switch to non-root user
 USER finance
@@ -39,9 +57,13 @@ USER finance
 # Expose port
 EXPOSE 3007
 
+# Environment variables
+ENV NODE_ENV=production
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "http.get('http://localhost:3007/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
+  CMD node -e "require('http').get('http://localhost:3007/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
 
-# Start the application
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "dist/index.js"]
