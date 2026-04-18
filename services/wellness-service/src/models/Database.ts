@@ -101,10 +101,15 @@ export class Database {
         WHERE datname = current_database()
       `;
 
+      const poolInfo = poolStats[0] ? {
+        active_connections: String(poolStats[0].active_connections ?? 0),
+        active_queries: String(poolStats[0].active_queries ?? 0),
+      } : undefined;
+
       return {
         status: result.length > 0 ? 'healthy' : 'unhealthy',
         latency,
-        poolInfo: poolStats[0],
+        poolInfo,
       };
     } catch (error) {
       console.error('Wellness database health check failed:', error);
