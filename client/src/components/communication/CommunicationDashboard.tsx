@@ -36,7 +36,6 @@ import {
   Activity,
   User,
   Phone,
-  MessageSquare,
   Globe,
   Shield,
   Zap
@@ -156,7 +155,7 @@ export const CommunicationDashboard: React.FC<CommunicationDashboardProps> = ({
 
   const handleMarkAsRead = async (threadId: string) => {
     try {
-      await communicationApi.markThreadAsRead(threadId);
+      await communicationApi.markThreadAsRead(threadId, memberId);
       await loadDashboard();
     } catch (error) {
       console.error('Error marking thread as read:', error);

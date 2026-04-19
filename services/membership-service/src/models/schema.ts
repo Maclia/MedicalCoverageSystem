@@ -1,7 +1,6 @@
 import {
   pgTable,
   serial,
-  varchar,
   text,
   integer,
   decimal,
@@ -9,332 +8,356 @@ import {
   timestamp,
   jsonb,
   date,
-  unique,
-  index,
-  foreignKey,
-  pgEnum,
-  primaryKey
+  index
 } from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
 
-// Enums
-export const membershipStatusEnum = pgEnum('membership_status', [
-  'pending',
-  'active',
-  'suspended',
-  'terminated',
-  'expired'
-]);
+// Import shared enums
+import {
+  membershipStatusEnum,
+  memberTypeEnum,
+  dependentTypeEnum,
+  genderEnum,
+  maritalStatusEnum,
+  clientTypeEnum,
+  billingFrequencyEnum,
+  lifeEventTypeEnum,
+  documentTypeEnum,
+  communicationTypeEnum,
+  communicationChannelEnum,
+  deliveryStatusEnum,
+  consentTypeEnum,
+  approvalStatusEnum
+} from "../../../shared/schema";
 
-export const memberTypeEnum = pgEnum('member_type', [
-  'principal',
-  'dependent'
-]);
+// Companies table
+export const companies = pgTable("companies", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  registrationNumber: text("registration_number").notNull().unique(),
+  contactPerson: text("contact_person").notNull(),
+  contactEmail: text("contact_email").notNull(),
+  contactPhone: text("contact_phone").notNull(),
+  clientType: clientTypeEnum('client_type').notNull(),
+  billingFrequency: billingFrequencyEnum('billing_frequency').notNull(),
+  billingAddress: text("billing_address"),
+  physicalAddress: text("physical_address"),
+  postalCode: text("postal_code"),
+  city: text("city"),
+  country: text("country").default('Kenya'),
+  website: text("website"),
+  taxId: text("tax_id"),
+  industry: text("industry"),
+  numberOfEmployees: integer("number_of_employees").default(0),
+  annualRevenue: decimal("annual_revenue", { precision: 15, scale: 2 }),
+  creditLimit: decimal("credit_limit", { precision: 15, scale: 2 }),
+  creditRating: text("credit_rating"),
+  paymentTerms: text("payment_terms"),
+  isApproved: boolean("is_approved").default(false),
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  isActive: boolean("is_active").default(true),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  nameIdx: index('companies_name_idx').on(table.name),
+  registrationNumberIdx: index('companies_registration_number_idx').on(table.registrationNumber),
+  clientTypeIdx: index('companies_client_type_idx').on(table.clientType),
+  billingFrequencyIdx: index('companies_billing_frequency_idx').on(table.billingFrequency),
+  isActiveIdx: index('companies_is_active_idx').on(table.isActive),
+  approvedAtIdx: index('companies_approved_at_idx').on(table.approvedAt),
+}));
 
-export const dependentTypeEnum = pgEnum('dependent_type', [
-  'spouse',
-  'child',
-  'parent'
-]);
-
-export const genderEnum = pgEnum('gender', [
-  'male',
-  'female',
-  'other'
-]);
-
-export const maritalStatusEnum = pgEnum('marital_status', [
-  'single',
-  'married',
-  'divorced',
-  'widowed'
-]);
-
-export const documentTypeEnum = pgEnum('document_type', [
-  'national_id',
-  'passport',
-  'birth_certificate',
-  'marriage_certificate',
-  'employment_letter',
-  'medical_report',
-  'student_letter',
-  'disability_certificate',
-  'income_proof',
-  'address_proof',
-  'other'
-]);
-
-export const lifeEventTypeEnum = pgEnum('life_event_type', [
-  'enrollment',
-  'activation',
-  'suspension',
-  'reinstatement',
-  'termination',
-  'renewal',
-  'benefit_change',
-  'coverage_update',
-  'data_update'
-]);
-
-export const communicationTypeEnum = pgEnum('communication_type', [
-  'enrollment_confirmation',
-  'suspension_notice',
-  'termination_notice',
-  'renewal_notification',
-  'benefit_update',
-  'payment_reminder',
-  'wellness_invite',
-  'policy_update',
-  'general_announcement',
-  'compliance_notice'
-]);
-
-// Tables
-export const members = pgTable('members', {
-  id: serial('id').primaryKey(),
-  companyId: integer('company_id').notNull(),
-  memberId: varchar('member_id', { length: 20 }).unique().notNull(),
-  firstName: varchar('first_name', { length: 50 }).notNull(),
-  lastName: varchar('last_name', { length: 50 }).notNull(),
-  secondName: varchar('second_name', { length: 50 }),
-  email: varchar('email', { length: 100 }).unique().notNull(),
-  phone: varchar('phone', { length: 20 }).notNull(),
-  dateOfBirth: date('date_of_birth').notNull(),
-  gender: genderEnum('gender'),
-  maritalStatus: maritalStatusEnum('marital_status'),
-  nationalId: varchar('national_id', { length: 50 }),
-  passportNumber: varchar('passport_number', { length: 50 }),
-  address: text('address'),
-  city: varchar('city', { length: 100 }),
-  postalCode: varchar('postal_code', { length: 20 }),
-  country: varchar('country', { length: 50 }).default('Kenya'),
-  employeeId: varchar('employee_id', { length: 50 }).notNull(),
-  memberType: memberTypeEnum('member_type').default('principal'),
-  principalId: integer('principal_id').references(() => members.id),
+// Members table
+export const members: any = pgTable("members", {
+  id: serial("id").primaryKey(),
+  memberNumber: text("member_number").notNull().unique(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  principalId: integer("principal_id").references(() => members.id),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  middleName: text("middle_name"),
+  dateOfBirth: date("date_of_birth").notNull(),
+  gender: genderEnum('gender').notNull(),
+  maritalStatus: maritalStatusEnum('marital_status').notNull(),
+  nationalId: text("national_id").unique(),
+  passportNumber: text("passport_number").unique(),
+  phoneNumber: text("phone_number").notNull(),
+  email: text("email").unique(),
+  postalAddress: text("postal_address"),
+  physicalAddress: text("physical_address"),
+  postalCode: text("postal_code"),
+  city: text("city"),
+  country: text("country").default('Kenya'),
+  occupation: text("occupation"),
+  employer: text("employer"),
+  department: text("department"),
+  jobTitle: text("job_title"),
+  employmentDate: date("employment_date"),
+  annualIncome: decimal("annual_income", { precision: 15, scale: 2 }),
+  nextOfKin: text("next_of_kin"),
+  nextOfKinRelationship: text("next_of_kin_relationship"),
+  nextOfKinPhone: text("next_of_kin_phone"),
+  nextOfKinEmail: text("next_of_kin_email"),
+  beneficiaryName: text("beneficiary_name"),
+  beneficiaryRelationship: text("beneficiary_relationship"),
+  beneficiaryPercentage: integer("beneficiary_percentage").default(100),
+  beneficiaryPhone: text("beneficiary_phone"),
+  beneficiaryEmail: text("beneficiary_email"),
+  membershipStatus: membershipStatusEnum('membership_status').notNull().default('pending'),
+  membershipType: memberTypeEnum('membership_type').notNull(),
   dependentType: dependentTypeEnum('dependent_type'),
-  membershipStatus: membershipStatusEnum('membership_status').default('pending'),
-  enrollmentDate: date('enrollment_date').notNull(),
-  activationDate: date('activation_date'),
-  lastSuspensionDate: date('last_suspension_date'),
-  suspensionReason: text('suspension_reason'),
-  terminationDate: date('termination_date'),
-  terminationReason: text('termination_reason'),
-  renewalDate: date('renewal_date'),
-  beneficiaryName: varchar('beneficiary_name', { length: 100 }),
-  beneficiaryRelationship: varchar('beneficiary_relationship', { length: 50 }),
-  beneficiaryContact: varchar('beneficiary_contact', { length: 100 }),
-  hasDisability: boolean('has_disability').default(false),
-  disabilityDetails: text('disability_details'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+  enrollmentDate: date("enrollment_date"),
+  effectiveDate: date("effective_date"),
+  terminationDate: date("termination_date"),
+  terminationReason: text("termination_reason"),
+  suspensionDate: date("suspension_date"),
+  suspensionReason: text("suspension_reason"),
+  reinstatementDate: date("reinstatement_date"),
+  reinstatementReason: text("reinstatement_reason"),
+  isPrimary: boolean("is_primary").default(false),
+  isDependent: boolean("is_dependent").default(false),
+  isPrincipal: boolean("is_principal").default(false),
+  isEmployee: boolean("is_employee").default(false),
+  isSpouse: boolean("is_spouse").default(false),
+  isChild: boolean("is_child").default(false),
+  isParent: boolean("is_parent").default(false),
+  isGuardian: boolean("is_guardian").default(false),
+  isStudent: boolean("is_student").default(false),
+  isRetired: boolean("is_retired").default(false),
+  isDisabled: boolean("is_disabled").default(false),
+  isPregnant: boolean("is_pregnant").default(false),
+  isSmoker: boolean("is_smoker").default(false),
+  hasPreExistingConditions: boolean("has_pre_existing_conditions").default(false),
+  preExistingConditions: text("pre_existing_conditions"),
+  allergies: text("allergies"),
+  medications: text("medications"),
+  medicalHistory: text("medical_history"),
+  height: decimal("height", { precision: 5, scale: 2 }),
+  weight: decimal("weight", { precision: 5, scale: 2 }),
+  bloodType: text("blood_type"),
+  bloodPressure: text("blood_pressure"),
+  cholesterol: text("cholesterol"),
+  lastCheckupDate: date("last_checkup_date"),
+  nextCheckupDate: date("next_checkup_date"),
+  isVerified: boolean("is_verified").default(false),
+  verifiedBy: integer("verified_by"),
+  verifiedAt: timestamp("verified_at"),
+  notes: text("notes"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  memberIdIndex: index('member_member_id_idx').on(table.memberId),
-  emailIndex: index('member_email_idx').on(table.email),
-  companyIndex: index('member_company_idx').on(table.companyId),
-  statusIndex: index('member_status_idx').on(table.membershipStatus),
-  nameIndex: index('member_name_idx').on(table.lastName, table.firstName, table.secondName)
+  memberNumberIdx: index('members_member_number_idx').on(table.memberNumber),
+  companyIdIdx: index('members_company_id_idx').on(table.companyId),
+  principalIdIdx: index('members_principal_id_idx').on(table.principalId),
+  firstNameIdx: index('members_first_name_idx').on(table.firstName),
+  lastNameIdx: index('members_last_name_idx').on(table.lastName),
+  nationalIdIdx: index('members_national_id_idx').on(table.nationalId),
+  passportNumberIdx: index('members_passport_number_idx').on(table.passportNumber),
+  phoneNumberIdx: index('members_phone_number_idx').on(table.phoneNumber),
+  emailIdx: index('members_email_idx').on(table.email),
+  membershipStatusIdx: index('members_membership_status_idx').on(table.membershipStatus),
+  membershipTypeIdx: index('members_membership_type_idx').on(table.membershipType),
+  dependentTypeIdx: index('members_dependent_type_idx').on(table.dependentType),
+  enrollmentDateIdx: index('members_enrollment_date_idx').on(table.enrollmentDate),
+  effectiveDateIdx: index('members_effective_date_idx').on(table.effectiveDate),
+  terminationDateIdx: index('members_termination_date_idx').on(table.terminationDate),
+  isVerifiedIdx: index('members_is_verified_idx').on(table.isVerified),
+  createdAtIdx: index('members_created_at_idx').on(table.createdAt),
 }));
 
-export const memberLifeEvents = pgTable('member_life_events', {
-  id: serial('id').primaryKey(),
-  memberId: integer('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+// Life Events table
+export const lifeEvents = pgTable("life_events", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   eventType: lifeEventTypeEnum('event_type').notNull(),
-  eventDate: date('event_date').notNull(),
-  previousStatus: membershipStatusEnum('previous_status'),
-  newStatus: membershipStatusEnum('new_status'),
-  reason: text('reason'),
-  notes: text('notes'),
-  processedBy: integer('processed_by'),
-  metadata: jsonb('metadata'),
-  createdAt: timestamp('created_at').defaultNow().notNull()
+  eventDate: date("event_date").notNull(),
+  effectiveDate: date("effective_date").notNull(),
+  description: text("description"),
+  reason: text("reason"),
+  status: approvalStatusEnum('status').notNull().default('pending'),
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: integer("rejected_by"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  notes: text("notes"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  memberIndex: index('life_event_member_idx').on(table.memberId),
-  dateIndex: index('life_event_date_idx').on(table.eventDate),
-  typeIndex: index('life_event_type_idx').on(table.eventType)
+  memberIdIdx: index('life_events_member_id_idx').on(table.memberId),
+  companyIdIdx: index('life_events_company_id_idx').on(table.companyId),
+  eventTypeIdx: index('life_events_event_type_idx').on(table.eventType),
+  eventDateIdx: index('life_events_event_date_idx').on(table.eventDate),
+  effectiveDateIdx: index('life_events_effective_date_idx').on(table.effectiveDate),
+  statusIdx: index('life_events_status_idx').on(table.status),
+  createdAtIdx: index('life_events_created_at_idx').on(table.createdAt),
 }));
 
-export const memberDocuments = pgTable('member_documents', {
-  id: serial('id').primaryKey(),
-  memberId: integer('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
+// Documents table
+export const documents = pgTable("documents", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   documentType: documentTypeEnum('document_type').notNull(),
-  documentName: varchar('document_name', { length: 255 }).notNull(),
-  fileName: varchar('file_name', { length: 255 }).notNull(),
-  filePath: varchar('file_path', { length: 500 }).notNull(),
-  fileSize: integer('file_size').notNull(),
-  mimeType: varchar('mime_type', { length: 100 }).notNull(),
-  checksum: varchar('checksum', { length: 64 }),
-  expiresAt: date('expires_at'),
-  isVerified: boolean('is_verified').default(false),
-  verificationDate: date('verification_date'),
-  verifiedBy: integer('verified_by'),
-  uploadedBy: integer('uploaded_by'),
-  tags: jsonb('tags'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+  documentNumber: text("document_number").notNull(),
+  issueDate: date("issue_date"),
+  expiryDate: date("expiry_date"),
+  issuingAuthority: text("issuing_authority"),
+  issuingCountry: text("issuing_country"),
+  documentUrl: text("document_url"),
+  documentData: jsonb("document_data"),
+  status: approvalStatusEnum('status').notNull().default('pending'),
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: integer("rejected_by"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  notes: text("notes"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  memberIndex: index('doc_member_idx').on(table.memberId),
-  typeIndex: index('doc_type_idx').on(table.documentType),
-  verifiedIndex: index('doc_verified_idx').on(table.isVerified)
+  memberIdIdx: index('documents_member_id_idx').on(table.memberId),
+  companyIdIdx: index('documents_company_id_idx').on(table.companyId),
+  documentTypeIdx: index('documents_document_type_idx').on(table.documentType),
+  documentNumberIdx: index('documents_document_number_idx').on(table.documentNumber),
+  statusIdx: index('documents_status_idx').on(table.status),
+  createdAtIdx: index('documents_created_at_idx').on(table.createdAt),
 }));
 
-export const memberConsents = pgTable('member_consents', {
-  id: serial('id').primaryKey(),
-  memberId: integer('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
-  consentType: varchar('consent_type', { length: 100 }).notNull(),
-  consentVersion: varchar('consent_version', { length: 20 }).notNull(),
-  isConsented: boolean('is_consented').notNull(),
-  consentDate: date('consent_date').notNull(),
-  ipAddress: varchar('ip_address', { length: 45 }),
-  userAgent: text('user_agent'),
-  documentId: integer('document_id').references(() => memberDocuments.id),
-  withdrawnAt: date('withdrawn_at'),
-  withdrawnReason: text('withdrawn_reason'),
-  metadata: jsonb('metadata'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+// Consents table
+export const consents = pgTable("consents", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  consentType: consentTypeEnum('consent_type').notNull(),
+  consentGiven: boolean("consent_given").notNull(),
+  consentDate: date("consent_date").notNull(),
+  consentMethod: text("consent_method"),
+  consentIpAddress: text("consent_ip_address"),
+  consentUserAgent: text("consent_user_agent"),
+  consentUrl: text("consent_url"),
+  consentVersion: text("consent_version"),
+  consentText: text("consent_text"),
+  withdrawalDate: date("withdrawal_date"),
+  withdrawalReason: text("withdrawal_reason"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  memberIndex: index('consent_member_idx').on(table.memberId),
-  typeIndex: index('consent_type_idx').on(table.consentType),
-  consentedIndex: index('consent_consented_idx').on(table.isConsented)
+  memberIdIdx: index('consents_member_id_idx').on(table.memberId),
+  companyIdIdx: index('consents_company_id_idx').on(table.companyId),
+  consentTypeIdx: index('consents_consent_type_idx').on(table.consentType),
+  consentDateIdx: index('consents_consent_date_idx').on(table.consentDate),
+  createdAtIdx: index('consents_created_at_idx').on(table.createdAt),
 }));
 
-export const communicationLogs = pgTable('communication_logs', {
-  id: serial('id').primaryKey(),
-  memberId: integer('member_id').references(() => members.id, { onDelete: 'cascade' }),
+// Communications table
+export const communications = pgTable("communications", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
   communicationType: communicationTypeEnum('communication_type').notNull(),
-  channel: varchar('channel', { length: 50 }).notNull(), // email, sms, push, whatsapp
-  recipient: varchar('recipient', { length: 255 }).notNull(),
-  subject: varchar('subject', { length: 255 }),
-  content: text('content').notNull(),
-  status: varchar('status', { length: 50 }).default('pending'), // pending, sent, delivered, failed
-  sentAt: timestamp('sent_at'),
-  deliveredAt: timestamp('delivered_at'),
-  openedAt: timestamp('opened_at'),
-  clickCount: integer('click_count').default(0),
-  errorMessage: text('error_message'),
-  metadata: jsonb('metadata'),
-  templateId: varchar('template_id', { length: 100 }),
-  scheduledAt: timestamp('scheduled_at'),
-  createdBy: integer('created_by'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+  communicationChannel: communicationChannelEnum('communication_channel').notNull(),
+  subject: text("subject"),
+  message: text("message").notNull(),
+  templateId: text("template_id"),
+  templateData: jsonb("template_data"),
+  sender: text("sender"),
+  recipient: text("recipient"),
+  cc: text("cc"),
+  bcc: text("bcc"),
+  attachments: text("attachments"),
+  deliveryStatus: deliveryStatusEnum('delivery_status').notNull().default('pending'),
+  deliveryAttempts: integer("delivery_attempts").default(0),
+  deliveryError: text("delivery_error"),
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  openedAt: timestamp("opened_at"),
+  clickedAt: timestamp("clicked_at"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  memberIndex: index('comm_member_idx').on(table.memberId),
-  typeIndex: index('comm_type_idx').on(table.communicationType),
-  statusIndex: index('comm_status_idx').on(table.status),
-  channelIndex: index('comm_channel_idx').on(table.channel)
+  memberIdIdx: index('communications_member_id_idx').on(table.memberId),
+  companyIdIdx: index('communications_company_id_idx').on(table.companyId),
+  communicationTypeIdx: index('communications_communication_type_idx').on(table.communicationType),
+  communicationChannelIdx: index('communications_communication_channel_idx').on(table.communicationChannel),
+  deliveryStatusIdx: index('communications_delivery_status_idx').on(table.deliveryStatus),
+  sentAtIdx: index('communications_sent_at_idx').on(table.sentAt),
+  createdAtIdx: index('communications_created_at_idx').on(table.createdAt),
 }));
 
-export const dependentRules = pgTable('dependent_rules', {
-  id: serial('id').primaryKey(),
-  companyId: integer('company_id').notNull(),
-  dependentType: dependentTypeEnum('dependent_type').notNull(),
-  maxAge: integer('max_age'),
-  minAge: integer('min_age'),
-  maxNumber: integer('max_number'),
-  requiredDocuments: jsonb('required_documents'),
-  isActive: boolean('is_active').default(true),
-  effectiveDate: date('effective_date').notNull(),
-  expiryDate: date('expiry_date'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
+// Eligibility table
+export const eligibility = pgTable("eligibility", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  companyId: integer("company_id").references(() => companies.id).notNull(),
+  benefitId: integer("benefit_id"),
+  periodId: integer("period_id"),
+  isEligible: boolean("is_eligible").notNull(),
+  eligibilityReason: text("eligibility_reason"),
+  coverageStartDate: date("coverage_start_date"),
+  coverageEndDate: date("coverage_end_date"),
+  waitingPeriodDays: integer("waiting_period_days").default(0),
+  waitingPeriodStartDate: date("waiting_period_start_date"),
+  waitingPeriodEndDate: date("waiting_period_end_date"),
+  waitingPeriodCompleted: boolean("waiting_period_completed").default(false),
+  waitingPeriodCompletedAt: timestamp("waiting_period_completed_at"),
+  limits: jsonb("limits"),
+  usedLimits: jsonb("used_limits"),
+  remainingLimits: jsonb("remaining_limits"),
+  limitsResetDate: date("limits_reset_date"),
+  limitsResetType: text("limits_reset_type"),
+  isPreAuthorized: boolean("is_pre_authorized").default(false),
+  preAuthorizationRequired: boolean("pre_authorization_required").default(false),
+  preAuthorizationDate: date("pre_authorization_date"),
+  preAuthorizationNumber: text("pre_authorization_number"),
+  preAuthorizationApprovedBy: integer("pre_authorization_approved_by"),
+  preAuthorizationApprovedAt: timestamp("pre_authorization_approved_at"),
+  preAuthorizationNotes: text("pre_authorization_notes"),
+  isExempt: boolean("is_exempt").default(false),
+  exemptionReason: text("exemption_reason"),
+  exemptionDate: date("exemption_date"),
+  exemptionApprovedBy: integer("exemption_approved_by"),
+  exemptionApprovedAt: timestamp("exemption_approved_at"),
+  exemptionNotes: text("exemption_notes"),
+  status: approvalStatusEnum('status').notNull().default('pending'),
+  approvedBy: integer("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: integer("rejected_by"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  notes: text("notes"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => ({
-  companyIndex: index('dependent_rules_company_idx').on(table.companyId),
-  typeIndex: index('dependent_rules_type_idx').on(table.dependentType),
-  activeIndex: index('dependent_rules_active_idx').on(table.isActive)
+  memberIdIdx: index('eligibility_member_id_idx').on(table.memberId),
+  companyIdIdx: index('eligibility_company_id_idx').on(table.companyId),
+  benefitIdIdx: index('eligibility_benefit_id_idx').on(table.benefitId),
+  periodIdIdx: index('eligibility_period_id_idx').on(table.periodId),
+  isEligibleIdx: index('eligibility_is_eligible_idx').on(table.isEligible),
+  statusIdx: index('eligibility_status_idx').on(table.status),
+  createdAtIdx: index('eligibility_created_at_idx').on(table.createdAt),
 }));
 
-export const memberEligibility = pgTable('member_eligibility', {
-  id: serial('id').primaryKey(),
-  memberId: integer('member_id').notNull().references(() => members.id, { onDelete: 'cascade' }),
-  benefitId: integer('benefit_id').notNull(),
-  isEligible: boolean('is_eligible').notNull(),
-  effectiveDate: date('effective_date').notNull(),
-  expiryDate: date('expiry_date'),
-  coverageLimit: decimal('coverage_limit', { precision: 12, scale: 2 }),
-  remainingLimit: decimal('remaining_limit', { precision: 12, scale: 2 }),
-  utilizationCount: integer('utilization_count').default(0),
-  lastUtilizationDate: date('last_utilization_date'),
-  restrictions: jsonb('restrictions'),
-  conditions: jsonb('conditions'),
-  notes: text('notes'),
-  verifiedAt: timestamp('verified_at'),
-  verifiedBy: integer('verified_by'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull()
-}, (table) => ({
-  memberIndex: index('eligibility_member_idx').on(table.memberId),
-  benefitIndex: index('eligibility_benefit_idx').on(table.benefitId),
-  eligibleIndex: index('eligibility_eligible_idx').on(table.isEligible)
-}));
-
-// Relations
-export const membersRelations = relations(members, ({ one, many }) => ({
-  lifeEvents: many(memberLifeEvents),
-  documents: many(memberDocuments),
-  consents: many(memberConsents),
-  communications: many(communicationLogs),
-  eligibility: many(memberEligibility),
-  dependents: many(members, { relationName: 'principal_dependents' }),
-  principal: one(members, {
-    fields: [members.principalId],
-    references: [members.id],
-    relationName: 'principal_dependents'
-  })
-}));
-
-export const memberLifeEventsRelations = relations(memberLifeEvents, ({ one }) => ({
-  member: one(members, {
-    fields: [memberLifeEvents.memberId],
-    references: [members.id]
-  })
-}));
-
-export const memberDocumentsRelations = relations(memberDocuments, ({ one }) => ({
-  member: one(members, {
-    fields: [memberDocuments.memberId],
-    references: [members.id]
-  }),
-  verificationConsents: many(memberConsents)
-}));
-
-export const memberConsentsRelations = relations(memberConsents, ({ one }) => ({
-  member: one(members, {
-    fields: [memberConsents.memberId],
-    references: [members.id]
-  }),
-  document: one(memberDocuments, {
-    fields: [memberConsents.documentId],
-    references: [memberDocuments.id]
-  })
-}));
-
-export const communicationLogsRelations = relations(communicationLogs, ({ one }) => ({
-  member: one(members, {
-    fields: [communicationLogs.memberId],
-    references: [members.id]
-  })
-}));
-
-export const memberEligibilityRelations = relations(memberEligibility, ({ one }) => ({
-  member: one(members, {
-    fields: [memberEligibility.memberId],
-    references: [members.id]
-  })
-}));
-
-// Types
+// Export all tables
+export type Company = typeof companies.$inferSelect;
+export type NewCompany = typeof companies.$inferInsert;
 export type Member = typeof members.$inferSelect;
 export type NewMember = typeof members.$inferInsert;
-export type MemberLifeEvent = typeof memberLifeEvents.$inferSelect;
-export type NewMemberLifeEvent = typeof memberLifeEvents.$inferInsert;
-export type MemberDocument = typeof memberDocuments.$inferSelect;
-export type NewMemberDocument = typeof memberDocuments.$inferInsert;
-export type MemberConsent = typeof memberConsents.$inferSelect;
-export type NewMemberConsent = typeof memberConsents.$inferInsert;
-export type CommunicationLog = typeof communicationLogs.$inferSelect;
-export type NewCommunicationLog = typeof communicationLogs.$inferInsert;
-export type DependentRule = typeof dependentRules.$inferSelect;
-export type NewDependentRule = typeof dependentRules.$inferInsert;
-export type MemberEligibility = typeof memberEligibility.$inferSelect;
-export type NewMemberEligibility = typeof memberEligibility.$inferInsert;
+export type LifeEvent = typeof lifeEvents.$inferSelect;
+export type NewLifeEvent = typeof lifeEvents.$inferInsert;
+export type Document = typeof documents.$inferSelect;
+export type NewDocument = typeof documents.$inferInsert;
+export type Consent = typeof consents.$inferSelect;
+export type NewConsent = typeof consents.$inferInsert;
+export type Communication = typeof communications.$inferSelect;
+export type NewCommunication = typeof communications.$inferInsert;
+export type Eligibility = typeof eligibility.$inferSelect;
+export type NewEligibility = typeof eligibility.$inferInsert;

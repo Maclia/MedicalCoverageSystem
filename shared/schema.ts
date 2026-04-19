@@ -1,6 +1,6 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, json, jsonb } from "drizzle-orm/pg-core";
-import { index } from "drizzle-orm";
+import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, json, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
+import { AnyPgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
 
 // Enums
@@ -111,7 +111,7 @@ export const members = pgTable("members", {
   dateOfBirth: date("date_of_birth").notNull(),
   employeeId: text("employee_id").notNull(),
   memberType: memberTypeEnum("member_type").notNull(),
-  principalId: integer("principal_id").references(() => members.id).notNull(),
+  principalId: integer("principal_id").references((): AnyPgColumn => members.id).notNull(),
   dependentType: dependentTypeEnum("dependent_type"),
   hasDisability: boolean("has_disability").default(false),
   disabilityDetails: text("disability_details"),
@@ -426,7 +426,7 @@ export const territories = pgTable('territories', {
 });
 
 // Agent Management Tables
-export const agents = pgTable('agents', {
+export const agents: any = pgTable('agents', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: integer('user_id').references(() => users.id).notNull().unique(),
   agentCode: varchar('agent_code', { length: 20 }).notNull().unique(),
@@ -510,7 +510,7 @@ export const agentPerformance = pgTable('agent_performance', {
   policiesSold: integer('policies_sold').default(0),
   totalPremium: integer('total_premium').default(0),
   totalCommission: integer('total_commission').default(0),
-  conversionRate: decimal('conversion_rate', { precision: 5, scale: 2 }).default(0),
+  conversionRate: decimal('conversion_rate', { precision: 5, scale: 2 }).default('0'),
   averageDealSize: integer('average_deal_size').default(0),
   // Rankings
   teamRank: integer('team_rank'),
@@ -599,31 +599,23 @@ export const insertDependentMemberSchema = insertMemberSchema.omit({
 
 // Types
 export type Company = typeof companies.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
 
 export type Member = typeof members.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertMember = z.infer<typeof insertMemberSchema>;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPrincipalMember = z.infer<typeof insertPrincipalMemberSchema>;
-// @ts-expect-error - z.infer namespace not available
 export type InsertDependentMember = z.infer<typeof insertDependentMemberSchema>;
 
 export type Period = typeof periods.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPeriod = z.infer<typeof insertPeriodSchema>;
 
 export type PremiumRate = typeof premiumRates.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPremiumRate = z.infer<typeof insertPremiumRateSchema>;
 
 export type Premium = typeof premiums.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPremium = z.infer<typeof insertPremiumSchema>;
 
 export type Benefit = typeof benefits.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBenefit = z.infer<typeof insertBenefitSchema>;
 
 // Regions table
@@ -926,43 +918,33 @@ export const claims = pgTable("claims", {
 // });
 
 export type CompanyBenefit = typeof companyBenefits.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCompanyBenefit = z.infer<typeof insertCompanyBenefitSchema>;
 
 export type Region = typeof regions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertRegion = z.infer<typeof insertRegionSchema>;
 
 export type MedicalInstitution = typeof medicalInstitutions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertMedicalInstitution = z.infer<typeof insertMedicalInstitutionSchema>;
 
 export type MedicalPersonnel = typeof medicalPersonnel.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertMedicalPersonnel = z.infer<typeof insertMedicalPersonnelSchema>;
 
 export type PanelDocumentation = typeof panelDocumentation.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPanelDocumentation = z.infer<typeof insertPanelDocumentationSchema>;
 
 export type Claim = typeof claims.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaim = z.infer<typeof insertClaimSchema>;
 
 export type CompanyPeriod = typeof companyPeriods.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCompanyPeriod = z.infer<typeof insertCompanyPeriodSchema>;
 
 export type AgeBandedRate = typeof ageBandedRates.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertAgeBandedRate = z.infer<typeof insertAgeBandedRateSchema>;
 
 export type FamilyRate = typeof familyRates.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertFamilyRate = z.infer<typeof insertFamilyRateSchema>;
 
 export type DiagnosisCode = typeof diagnosisCodes.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertDiagnosisCode = z.infer<typeof insertDiagnosisCodeSchema>;
 
 // User type enum for authentication
@@ -1235,40 +1217,31 @@ export const actuarialRateTables = pgTable("actuarial_rate_tables", {
 
 // Types for payment entities
 export type PremiumPayment = typeof premiumPayments.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPremiumPayment = z.infer<typeof insertPremiumPaymentSchema>;
 
 export type ClaimPayment = typeof claimPayments.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimPayment = z.infer<typeof insertClaimPaymentSchema>;
 
 export type ProviderDisbursement = typeof providerDisbursements.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderDisbursement = z.infer<typeof insertProviderDisbursementSchema>;
 
 export type DisbursementItem = typeof disbursementItems.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertDisbursementItem = z.infer<typeof insertDisbursementItemSchema>;
 
 export type InsuranceBalance = typeof insuranceBalances.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertInsuranceBalance = z.infer<typeof insertInsuranceBalanceSchema>;
 
 // Types for enhanced premium calculation entities
 export type EnhancedPremiumCalculation = typeof enhancedPremiumCalculations.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertEnhancedPremiumCalculation = z.infer<typeof insertEnhancedPremiumCalculationSchema>;
 
 export type RiskAdjustmentFactor = typeof riskAdjustmentFactors.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertRiskAdjustmentFactor = z.infer<typeof insertRiskAdjustmentFactorSchema>;
 
 export type HealthcareInflationRate = typeof healthcareInflationRates.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertHealthcareInflationRate = z.infer<typeof insertHealthcareInflationRateSchema>;
 
 export type ActuarialRateTable = typeof actuarialRateTables.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertActuarialRateTable = z.infer<typeof insertActuarialRateTableSchema>;
 
 // Medical Procedures/Items tables for claim processing
@@ -1448,15 +1421,12 @@ export const claimProcedureItems = pgTable("claim_procedure_items", {
 
 // Types for medical procedures entities
 export type MedicalProcedure = typeof medicalProcedures.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertMedicalProcedure = z.infer<typeof insertMedicalProcedureSchema>;
 
 export type ProviderProcedureRate = typeof providerProcedureRates.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderProcedureRate = z.infer<typeof insertProviderProcedureRateSchema>;
 
 export type ClaimProcedureItem = typeof claimProcedureItems.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimProcedureItem = z.infer<typeof insertClaimProcedureItemSchema>;
 
 // Insert schemas for authentication tables
@@ -1478,15 +1448,12 @@ export type InsertClaimProcedureItem = z.infer<typeof insertClaimProcedureItemSc
 
 // Types for authentication entities
 export type User = typeof users.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type UserSession = typeof userSessions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertUserSession = z.infer<typeof insertUserSessionSchema>;
 
 export type AuditLog = typeof auditLogs.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 
 // Member Engagement Hub - Onboarding System
@@ -1724,44 +1691,34 @@ export const recommendationHistory = pgTable("recommendation_history", {
 
 // Types for onboarding system
 export type OnboardingSession = typeof onboardingSessions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertOnboardingSession = z.infer<typeof insertOnboardingSessionSchema>;
 
 export type OnboardingTask = typeof onboardingTasks.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertOnboardingTask = z.infer<typeof insertOnboardingTaskSchema>;
 
 export type MemberDocument = typeof memberDocuments.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertMemberDocument = z.infer<typeof insertMemberDocumentSchema>;
 
 export type OnboardingPreference = typeof onboardingPreferences.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertOnboardingPreference = z.infer<typeof insertOnboardingPreferenceSchema>;
 
 export type ActivationToken = typeof activationTokens.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertActivationToken = z.infer<typeof insertActivationTokenSchema>;
 
 // Types for personalization system
 export type MemberPreference = typeof memberPreferences.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertMemberPreference = z.infer<typeof insertMemberPreferenceSchema>;
 
 export type BehaviorAnalytic = typeof behaviorAnalytics.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBehaviorAnalytic = z.infer<typeof insertBehaviorAnalyticSchema>;
 
 export type PersonalizationScore = typeof personalizationScores.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPersonalizationScore = z.infer<typeof insertPersonalizationScoreSchema>;
 
 export type JourneyStage = typeof journeyStages.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertJourneyStage = z.infer<typeof insertJourneyStageSchema>;
 
 export type RecommendationHistory = typeof recommendationHistory.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertRecommendationHistory = z.infer<typeof insertRecommendationHistorySchema>;
 
 // Claims processing enums
@@ -1907,27 +1864,21 @@ export const benefitUtilization = pgTable("benefit_utilization", {
 
 // Types for enhanced claims processing entities
 export type ClaimAdjudicationResult = typeof claimAdjudicationResults.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimAdjudicationResult = z.infer<typeof insertClaimAdjudicationResultSchema>;
 
 export type MedicalNecessityValidation = typeof medicalNecessityValidations.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertMedicalNecessityValidation = z.infer<typeof insertMedicalNecessityValidationSchema>;
 
 export type FraudDetectionResult = typeof fraudDetectionResults.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertFraudDetectionResult = z.infer<typeof insertFraudDetectionResultSchema>;
 
 export type ExplanationOfBenefits = typeof explanationOfBenefits.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertExplanationOfBenefits = z.infer<typeof insertExplanationOfBenefitsSchema>;
 
 export type ClaimAuditTrail = typeof claimAuditTrails.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimAuditTrail = z.infer<typeof insertClaimAuditTrailSchema>;
 
 export type BenefitUtilization = typeof benefitUtilization.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBenefitUtilization = z.infer<typeof insertBenefitUtilizationSchema>;
 
 // Card Management System
@@ -1938,7 +1889,7 @@ export const cardStatusEnum = pgEnum('card_status', ['pending', 'active', 'inact
 export const cardTemplateEnum = pgEnum('card_template', ['standard', 'premium', 'corporate', 'family', 'individual']);
 
 // Member Cards table
-export const memberCards = pgTable("member_cards", {
+export const memberCards: any = pgTable("member_cards", {
   id: serial("id").primaryKey(),
   memberId: integer("member_id").references(() => members.id).notNull(),
   cardNumber: text("card_number").notNull().unique(),
@@ -2059,19 +2010,15 @@ export const cardProductionBatches = pgTable("card_production_batches", {
 
 // Types for card management entities
 export type MemberCard = typeof memberCards.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertMemberCard = z.infer<typeof insertMemberCardSchema>;
 
 export type CardTemplate = typeof cardTemplates.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCardTemplate = z.infer<typeof insertCardTemplateSchema>;
 
 export type CardVerificationEvent = typeof cardVerificationEvents.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCardVerificationEvent = z.infer<typeof insertCardVerificationEventSchema>;
 
 export type CardProductionBatch = typeof cardProductionBatches.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCardProductionBatch = z.infer<typeof insertCardProductionBatchSchema>;
 
 // Insert schemas for provider network management tables
@@ -2130,41 +2077,32 @@ export type InsertCardProductionBatch = z.infer<typeof insertCardProductionBatch
 
 // Types for provider network management entities
 export type ProviderNetwork = typeof providerNetworks.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderNetwork = z.infer<typeof insertProviderNetworkSchema>;
 
 export type ProviderNetworkAssignment = typeof providerNetworkAssignments.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderNetworkAssignment = z.infer<typeof insertProviderNetworkAssignmentSchema>;
 
 // Types for contract management entities
 export type ProviderContract = typeof providerContracts.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderContract = z.infer<typeof insertProviderContractSchema>;
 
 export type ContractDocument = typeof contractDocuments.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertContractDocument = z.infer<typeof insertContractDocumentSchema>;
 
 export type ContractSignature = typeof contractSignatures.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertContractSignature = z.infer<typeof insertContractSignatureSchema>;
 
 // Types for tariff catalog entities
 export type TariffCatalog = typeof tariffCatalogs.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertTariffCatalog = z.infer<typeof insertTariffCatalogSchema>;
 
 export type TariffItem = typeof tariffItems.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertTariffItem = z.infer<typeof insertTariffItemSchema>;
 
 export type PharmacyPriceList = typeof pharmacyPriceLists.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPharmacyPriceList = z.infer<typeof insertPharmacyPriceListSchema>;
 
 export type ConsumablesPriceList = typeof consumablesPriceLists.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertConsumablesPriceList = z.infer<typeof insertConsumablesPriceListSchema>;
 
 // Schemes & Benefits Module Enums
@@ -2589,100 +2527,76 @@ export const providerClinicalExpertise = pgTable("provider_clinical_expertise", 
 
 // Types for enhanced provider management entities
 export type ProviderOnboardingApplication = typeof providerOnboardingApplications.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderOnboardingApplication = z.infer<typeof insertProviderOnboardingApplicationSchema>;
 
 export type ProviderVerificationChecklist = typeof providerVerificationChecklist.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderVerificationChecklist = z.infer<typeof insertProviderVerificationChecklistSchema>;
 
 export type ProviderAccreditation = typeof providerAccreditations.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderAccreditation = z.infer<typeof insertProviderAccreditationSchema>;
 
 export type ProviderPerformanceMetric = typeof providerPerformanceMetrics.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderPerformanceMetric = z.infer<typeof insertProviderPerformanceMetricSchema>;
 
 export type ProviderComplianceMonitoring = typeof providerComplianceMonitoring.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderComplianceMonitoring = z.infer<typeof insertProviderComplianceMonitoringSchema>;
 
 export type ProviderQualityScore = typeof providerQualityScores.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderQualityScore = z.infer<typeof insertProviderQualityScoreSchema>;
 
 export type ProviderFinancialPerformance = typeof providerFinancialPerformance.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderFinancialPerformance = z.infer<typeof insertProviderFinancialPerformanceSchema>;
 
 export type ProviderReferralNetwork = typeof providerReferralNetwork.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderReferralNetwork = z.infer<typeof insertProviderReferralNetworkSchema>;
 
 export type ProviderEducationTraining = typeof providerEducationTraining.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderEducationTraining = z.infer<typeof insertProviderEducationTrainingSchema>;
 
 export type ProviderClinicalExpertise = typeof providerClinicalExpertise.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertProviderClinicalExpertise = z.infer<typeof insertProviderClinicalExpertiseSchema>;
 
 // Types for Schemes & Benefits module
 export type Scheme = typeof schemes.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertScheme = z.infer<typeof insertSchemeSchema>;
 
 export type SchemeVersion = typeof schemeVersions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertSchemeVersion = z.infer<typeof insertSchemeVersionSchema>;
 
 export type PlanTier = typeof planTiers.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPlanTier = z.infer<typeof insertPlanTierSchema>;
 
 export type EnhancedBenefit = typeof enhancedBenefits.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertEnhancedBenefit = z.infer<typeof insertEnhancedBenefitSchema>;
 
 export type SchemeBenefitMapping = typeof schemeBenefitMappings.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertSchemeBenefitMapping = z.infer<typeof insertSchemeBenefitMappingSchema>;
 
 export type CostSharingRule = typeof costSharingRules.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCostSharingRule = z.infer<typeof insertCostSharingRuleSchema>;
 
 export type BenefitLimit = typeof benefitLimits.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBenefitLimit = z.infer<typeof insertBenefitLimitSchema>;
 
 export type CorporateSchemeConfig = typeof corporateSchemeConfigs.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCorporateSchemeConfig = z.infer<typeof insertCorporateSchemeConfigSchema>;
 
 export type EmployeeGradeBenefit = typeof employeeGradeBenefits.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertEmployeeGradeBenefit = z.infer<typeof insertEmployeeGradeBenefitSchema>;
 
 export type DependentCoverageRule = typeof dependentCoverageRules.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertDependentCoverageRule = z.infer<typeof insertDependentCoverageRuleSchema>;
 
 export type BenefitRider = typeof benefitRiders.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBenefitRider = z.infer<typeof insertBenefitRiderSchema>;
 
 export type MemberRiderSelection = typeof memberRiderSelections.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertMemberRiderSelection = z.infer<typeof insertMemberRiderSelectionSchema>;
 
 export type BenefitRule = typeof benefitRules.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBenefitRule = z.infer<typeof insertBenefitRuleSchema>;
 
 export type RuleExecutionLog = typeof ruleExecutionLogs.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertRuleExecutionLog = z.infer<typeof insertRuleExecutionLogSchema>;
 
 // Schemes & Benefits Module Tables
@@ -2755,7 +2669,7 @@ export const planTiers = pgTable("plan_tiers", {
 });
 
 // Enhanced benefits structure (extends current benefits)
-export const enhancedBenefits = pgTable("enhanced_benefits", {
+export const enhancedBenefits: any = pgTable("enhanced_benefits", {
   id: serial("id").primaryKey(),
   parentId: integer("parent_id").references(() => enhancedBenefits.id), // For hierarchical benefits
   benefitCode: text("benefit_code").notNull().unique(),
@@ -3571,43 +3485,33 @@ export const insertDunningRuleSchema = createInsertSchema(dunningRules).omit({
 
 // Finance Management Module 1 Types
 export type Invoice = typeof invoices.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
 
 export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertInvoiceLineItem = z.infer<typeof insertInvoiceLineItemSchema>;
 
 export type InvoicePayment = typeof invoicePayments.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertInvoicePayment = z.infer<typeof insertInvoicePaymentSchema>;
 
 export type AccountsReceivable = typeof accountsReceivable.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertAccountsReceivable = z.infer<typeof insertAccountsReceivableSchema>;
 
 export type BillingCommunication = typeof billingCommunications.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBillingCommunication = z.infer<typeof insertBillingCommunicationSchema>;
 
 export type BillingCommunicationTemplate = typeof billingCommunicationTemplates.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBillingCommunicationTemplate = z.infer<typeof insertBillingCommunicationTemplateSchema>;
 
 export type CommunicationRule = typeof communicationRules.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCommunicationRule = z.infer<typeof insertCommunicationRuleSchema>;
 
 export type CollectionWorkflow = typeof collectionWorkflows.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCollectionWorkflow = z.infer<typeof insertCollectionWorkflowSchema>;
 
 export type CollectionAction = typeof collectionActions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCollectionAction = z.infer<typeof insertCollectionActionSchema>;
 
 export type DunningRule = typeof dunningRules.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertDunningRule = z.infer<typeof insertDunningRuleSchema>;
 
 // ============================================================================
@@ -3889,43 +3793,33 @@ export const insertReconciliationExceptionSchema = createInsertSchema(reconcilia
 
 // Finance Management Module 2 Types
 export type Payment = typeof payments.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPayment = z.infer<typeof insertPaymentSchema>;
 
 export type PaymentMethod = typeof paymentMethods.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPaymentMethod = z.infer<typeof insertPaymentMethodSchema>;
 
 export type PaymentAllocation = typeof paymentAllocations.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPaymentAllocation = z.infer<typeof insertPaymentAllocationSchema>;
 
 export type PaymentReconciliation = typeof paymentReconciliations.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPaymentReconciliation = z.infer<typeof insertPaymentReconciliationSchema>;
 
 export type BankStatementImport = typeof bankStatementImports.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBankStatementImport = z.infer<typeof insertBankStatementImportSchema>;
 
 export type BankTransaction = typeof bankTransactions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertBankTransaction = z.infer<typeof insertBankTransactionSchema>;
 
 export type PaymentReversal = typeof paymentReversals.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPaymentReversal = z.infer<typeof insertPaymentReversalSchema>;
 
 export type PaymentNotification = typeof paymentNotifications.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPaymentNotification = z.infer<typeof insertPaymentNotificationSchema>;
 
 export type PaymentNotificationTemplate = typeof paymentNotificationTemplates.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPaymentNotificationTemplate = z.infer<typeof insertPaymentNotificationTemplateSchema>;
 
 export type ReconciliationException = typeof reconciliationExceptions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertReconciliationException = z.infer<typeof insertReconciliationExceptionSchema>;
 
 // ============================================================================
@@ -4282,19 +4176,16 @@ export const insertAuditFindingSchema = createInsertSchema(auditFindings).omit({
 export const insertAgentPerformanceMetricSchema = createInsertSchema(agentPerformanceMetrics).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
 });
 
 export const insertAgentLeaderboardSchema = createInsertSchema(agentLeaderboards).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
 });
 
 export const insertCommissionReportSchema = createInsertSchema(commissionReports).omit({
   id: true,
   createdAt: true,
-  updatedAt: true,
 });
 
 export const insertPolicySchema = createInsertSchema(policies).omit({
@@ -4305,55 +4196,42 @@ export const insertPolicySchema = createInsertSchema(policies).omit({
 
 // Finance Management Module 3 Types
 export type CommissionAccrual = typeof commissionAccruals.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCommissionAccrual = z.infer<typeof insertCommissionAccrualSchema>;
 
 export type CommissionPaymentRun = typeof commissionPaymentRuns.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCommissionPaymentRun = z.infer<typeof insertCommissionPaymentRunSchema>;
 
 export type AgentCommissionPayment = typeof agentCommissionPayments.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertAgentCommissionPayment = z.infer<typeof insertAgentCommissionPaymentSchema>;
 
 export type PaymentRunAdjustment = typeof paymentRunAdjustments.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPaymentRunAdjustment = z.infer<typeof insertPaymentRunAdjustmentSchema>;
 
 export type PaymentRunException = typeof paymentRunExceptions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPaymentRunException = z.infer<typeof insertPaymentRunExceptionSchema>;
 
 export type TaxConfiguration = typeof taxConfigurations.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertTaxConfiguration = z.infer<typeof insertTaxConfigurationSchema>;
 
 export type TaxWithholdingCalculation = typeof taxWithholdingCalculations.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertTaxWithholdingCalculation = z.infer<typeof insertTaxWithholdingCalculationSchema>;
 
 export type CommissionAudit = typeof commissionAudits.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCommissionAudit = z.infer<typeof insertCommissionAuditSchema>;
 
 export type AuditFinding = typeof auditFindings.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertAuditFinding = z.infer<typeof insertAuditFindingSchema>;
 
 export type AgentPerformanceMetric = typeof agentPerformanceMetrics.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertAgentPerformanceMetric = z.infer<typeof insertAgentPerformanceMetricSchema>;
 
 export type AgentLeaderboard = typeof agentLeaderboards.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertAgentLeaderboard = z.infer<typeof insertAgentLeaderboardSchema>;
 
 export type CommissionReport = typeof commissionReports.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertCommissionReport = z.infer<typeof insertCommissionReportSchema>;
 
 export type Policy = typeof policies.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertPolicy = z.infer<typeof insertPolicySchema>;
 
 // ========================================
@@ -4361,64 +4239,19 @@ export type InsertPolicy = z.infer<typeof insertPolicySchema>;
 // ========================================
 
 // Enums for Claims Financial Management
-export enum ClaimReserveType {
-  INCURRED_LOSS = 'INCURRED_LOSS',
-  EXPENSE = 'EXPENSE',
-  SALVAGE_RECOVERY = 'SALVAGE_RECOVERY',
-  LEGAL_EXPENSES = 'LEGAL_EXPENSES'
-}
+export const ClaimReserveType = pgEnum ('claim_reserve_type', ['INCURRED_LOSS', 'EXPENSE','SALVAGE_RECOVERY', 'LEGAL_EXPENSES']);
 
-export enum ClaimReserveStatus {
-  ACTIVE = 'ACTIVE',
-  CLOSED = 'CLOSED',
-  EXHAUSTED = 'EXHAUSTED',
-  SUPERSEDED = 'SUPERSEDED'
-}
+export const ClaimReserveStatus = pgEnum ('claim_reserve_status', ['ACTIVE', 'CLOSED', 'EXHAUSTED', 'SUPERSEDED' ]);
 
-export enum ClaimPaymentType {
-  INDEMNITY = 'INDEMNITY',
-  EXPENSE = 'EXPENSE',
-  LEGAL = 'LEGAL',
-  MEDICAL = 'MEDICAL',
-  REHABILITATION = 'REHABILITATION',
-  LOSS_OF_EARNINGS = 'LOSS_OF_EARNINGS'
-}
+export const ClaimPaymentType = pgEnum ('claim_payment_type', ['INDEMNITY', 'EXPENSE', 'LEGAL', 'MEDICAL', 'REHABILITATION', 'LOSS_OF_EARNINGS']);
 
-export enum ClaimPaymentStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  PROCESSING = 'PROCESSING',
-  COMPLETED = 'COMPLETED',
-  FAILED = 'FAILED',
-  REJECTED = 'REJECTED',
-  CANCELLED = 'CANCELLED',
-  ESCALATED = 'ESCALATED'
-}
+export const ClaimPaymentStatus = pgEnum ('claim_payment_status', ['PENDING', 'APPROVED', 'PROCESSING', 'COMPLETED', 'FAILED', 'REJECTED', 'CANCELLED', 'ESCALATED' ]);
 
-export enum ClaimApprovalStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-  CANCELLED = 'CANCELLED',
-  COMPLETED = 'COMPLETED'
-}
+export const ClaimApprovalStatus = pgEnum ('claim_approval_status', [ 'PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED' ]);
 
-export enum FinancialTransactionType {
-  PAYMENT_REQUEST = 'PAYMENT_REQUEST',
-  PAYMENT_EXECUTION = 'PAYMENT_EXECUTION',
-  RESERVE_INCREASE = 'RESERVE_INCREASE',
-  RESERVE_DECREASE = 'RESERVE_DECREASE',
-  RECOVERY_RECEIVED = 'RECOVERY_RECEIVED',
-  EXPENSE_ALLOCATION = 'EXPENSE_ALLOCATION'
-}
+export const FinancialTransactionType = pgEnum ('financial_TransactionType', [ 'PAYMENT_REQUEST','PAYMENT_EXECUTION', 'RESERVE_INCREASE', 'RESERVE_DECREASE', 'RECOVERY_RECEIVED', 'EXPENSE_ALLOCATION']);
 
-export enum FinancialTransactionStatus {
-  PENDING = 'PENDING',
-  APPROVED = 'APPROVED',
-  POSTED = 'POSTED',
-  REJECTED = 'REJECTED',
-  FAILED = 'FAILED'
-}
+export const FinancialTransactionStatus = pgEnum ('financial_TransactionStatus', ['PENDING', 'APPROVED', 'POSTED', 'REJECTED', 'FAILED']);
 
 // Claim Reserves Table - Financial reserves set aside for claims
 export const claimReserves = pgTable('claim_reserves', {
@@ -4427,7 +4260,7 @@ export const claimReserves = pgTable('claim_reserves', {
   reserveType: claimReserveTypeEnum('reserve_type').notNull(),
   amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
-  status: claimReserveStatusEnum('status').notNull().default(ClaimReserveStatus.ACTIVE),
+  status: claimReserveStatusEnum('status').notNull().default('initial'),
   notes: text('notes'),
   reservedAt: timestamp('reserved_at').notNull().defaultNow(),
   lastAdjustmentAt: timestamp('last_adjustment_at'),
@@ -4471,7 +4304,7 @@ export const claimFinancePayments = pgTable('claim_finance_payments', {
   payeeReference: varchar('payee_reference', { length: 100 }),
   paymentMethod: varchar('payment_method', { length: 50 }), // BANK_TRANSFER, CHECK, MOBILE_MONEY, CREDIT_CARD
   paymentReference: varchar('payment_reference', { length: 100 }),
-  status: claimPaymentStatusEnum('status').notNull().default(ClaimPaymentStatus.PENDING),
+  status: claimPaymentStatusEnum('status').notNull().default('pending'),
   dueDate: timestamp('due_date').notNull(),
   requestedBy: integer('requested_by').references(() => users.id),
   approvedBy: integer('approved_by').references(() => users.id),
@@ -4502,7 +4335,7 @@ export const claimApprovalWorkflows = pgTable('claim_approval_workflows', {
   workflowType: varchar('workflow_type', { length: 50 }).notNull(), // CLAIM_APPROVAL, PAYMENT_APPROVAL, RESERVE_APPROVAL
   currentStep: integer('current_step').notNull().default(1),
   totalSteps: integer('total_steps'),
-  status: claimApprovalStatusEnum('status').notNull().default(ClaimApprovalStatus.PENDING),
+  status: claimApprovalStatusEnum('status').notNull().default('submitted'),
   initiatorId: integer('initiator_id').references(() => users.id).notNull(),
   currentAssigneeId: integer('current_assignee_id').references(() => users.id),
   priority: varchar('priority', { length: 20 }).default('NORMAL'), // LOW, NORMAL, HIGH, URGENT
@@ -4550,7 +4383,7 @@ export const claimFinancialTransactions = pgTable('claim_financial_transactions'
   transactionType: financialTransactionTypeEnum('transaction_type').notNull(),
   amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 3 }).notNull().default('USD'),
-  status: financialTransactionStatusEnum('status').notNull().default(FinancialTransactionStatus.PENDING),
+  status: financialTransactionStatusEnum('status').notNull().default('pending'),
   description: text('description').notNull(),
   referenceId: integer('reference_id'), // References payment_id, reserve_id, or other entity
   paymentReference: varchar('payment_reference', { length: 100 }),
@@ -4596,7 +4429,7 @@ export const claimAnalytics = pgTable('claim_analytics', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 }, (table: any) => ({
-  claimIdx: index('claim_analytics_claim_idx').on(table.claimId).unique(),
+  claimIdx: uniqueIndex('claim_analytics_claim_idx').on(table.claimId),
   lastCalculatedIdx: index('claim_analytics_last_calculated_idx').on(table.lastCalculatedAt),
   riskScoreIdx: index('claim_analytics_risk_score_idx').on(table.riskScore)
 }));
@@ -4626,7 +4459,7 @@ export const claimFinancialMetrics = pgTable('claim_financial_metrics', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow()
 }, (table: any) => ({
-  claimPeriodIdx: index('claim_financial_metrics_claim_period_idx').on(table.claimId, table.metricPeriod).unique(),
+  claimPeriodIdx: uniqueIndex('claim_financial_metrics_claim_period_idx').on(table.claimId, table.metricPeriod),
   metricDateIdx: index('claim_financial_metrics_date_idx').on(table.metricDate),
   lossRatioIdx: index('claim_financial_metrics_loss_ratio_idx').on(table.lossRatio)
 }));
@@ -4681,31 +4514,24 @@ export const insertClaimFinancialMetricsSchema = createInsertSchema(claimFinanci
 
 // Type exports for Module 4
 export type ClaimReserve = typeof claimReserves.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimReserve = z.infer<typeof insertClaimReserveSchema>;
 
 export type ClaimReserveTransaction = typeof claimReserveTransactions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimReserveTransaction = z.infer<typeof insertClaimReserveTransactionSchema>;
 
 export type ClaimApprovalWorkflow = typeof claimApprovalWorkflows.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimApprovalWorkflow = z.infer<typeof insertClaimApprovalWorkflowSchema>;
 
 export type ClaimApprovalStep = typeof claimApprovalSteps.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimApprovalStep = z.infer<typeof insertClaimApprovalStepSchema>;
 
 export type ClaimFinancialTransaction = typeof claimFinancialTransactions.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimFinancialTransaction = z.infer<typeof insertClaimFinancialTransactionSchema>;
 
 export type ClaimAnalytics = typeof claimAnalytics.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimAnalytics = z.infer<typeof insertClaimAnalyticsSchema>;
 
 export type ClaimFinancialMetrics = typeof claimFinancialMetrics.$inferSelect;
-// @ts-expect-error - z.infer namespace not available
 export type InsertClaimFinancialMetrics = z.infer<typeof insertClaimFinancialMetricsSchema>;
 
 // Additional analytics types for complex financial structures
@@ -4738,6 +4564,7 @@ export type ClaimLossRatioAnalysis = {
   expenseRatio: number;
   combinedRatio: number;
 };
+
 
 
 

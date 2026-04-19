@@ -9,20 +9,70 @@ import {
   decimal,
   jsonb,
   index,
-  uuid
+  uuid,
+  pgEnum
 } from 'drizzle-orm/pg-core';
+
+// Enums
+export const fraudDetectionRuleTypeEnum = pgEnum('fraud_detection_rule_type', [
+  'claim',
+  'payment',
+  'user',
+  'provider'
+]);
+
+export const fraudRiskLevelEnum = pgEnum('fraud_risk_level', [
+  'low',
+  'medium',
+  'high',
+  'critical'
+]);
+
+export const fraudDetectionCaseStatusEnum = pgEnum('fraud_detection_case_status', [
+  'open',
+  'under_review',
+  'confirmed',
+  'rejected',
+  'closed'
+]);
+
+export const fraudDetectionCasePriorityEnum = pgEnum('fraud_detection_case_priority', [
+  'low',
+  'medium',
+  'high',
+  'urgent'
+]);
+
+export const fraudDetectionDecisionEnum = pgEnum('fraud_detection_decision', [
+  'confirm',
+  'reject',
+  'escalate'
+]);
+
+export const fraudWatchlistStatusEnum = pgEnum('fraud_watchlist_status', [
+  'active',
+  'inactive',
+  'resolved'
+]);
+
+export const fraudPatternTypeEnum = pgEnum('fraud_pattern_type', [
+  'claim',
+  'payment',
+  'user',
+  'provider'
+]);
 
 // Fraud Detection Tables
 export const fraudDetectionRules = pgTable('fraud_detection_rules', {
   id: serial('id').primaryKey(),
   ruleName: varchar('rule_name', { length: 255 }).notNull(),
   description: text('description'),
-  ruleType: varchar('rule_type', { length: 50 }).notNull(), // claim, payment, user, provider
-  ruleExpression: text('rule_expression').notNull(), // JSON expression or SQL condition
-  riskScore: integer('risk_score').notNull(), // Risk score contribution
+  ruleType: fraudDetectionRuleTypeEnum('rule_type').notNull(),
+  ruleExpression: text('rule_expression').notNull(),
+  riskScore: integer('risk_score').notNull(),
   isActive: boolean('is_active').default(true),
   isCritical: boolean('is_critical').default(false),
-  priority: integer('priority').default(5), // 1-10 priority
+  priority: integer('priority').default(5),
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -37,8 +87,8 @@ export const fraudRiskIndicators = pgTable('fraud_risk_indicators', {
   id: serial('id').primaryKey(),
   indicatorName: varchar('indicator_name', { length: 255 }).notNull(),
   description: text('description'),
-  indicatorType: varchar('indicator_type', { length: 50 }).notNull(), // claim, payment, user, provider
-  riskLevel: varchar('risk_level', { length: 20 }).notNull(), // low, medium, high, critical
+  indicatorType: fraudDetectionRuleTypeEnum('indicator_type').notNull(),
+  riskLevel: fraudRiskLevelEnum('risk_level').notNull(),
   riskScore: integer('risk_score').notNull(),
   threshold: decimal('threshold', { precision: 10, scale: 2 }),
   isActive: boolean('is_active').default(true),
@@ -55,18 +105,18 @@ export const fraudRiskIndicators = pgTable('fraud_risk_indicators', {
 export const fraudDetectionCases = pgTable('fraud_detection_cases', {
   id: serial('id').primaryKey(),
   caseNumber: varchar('case_number', { length: 50 }).notNull().unique(),
-  caseType: varchar('case_type', { length: 50 }).notNull(), // claim, payment, user, provider
-  entityId: varchar('entity_id', { length: 100 }).notNull(), // ID of the entity being investigated
-  entityType: varchar('entity_type', { length: 50 }).notNull(), // claim, payment, user, provider
+  caseType: fraudDetectionRuleTypeEnum('case_type').notNull(),
+  entityId: varchar('entity_id', { length: 100 }).notNull(),
+  entityType: fraudDetectionRuleTypeEnum('entity_type').notNull(),
   riskScore: integer('risk_score').notNull(),
-  riskLevel: varchar('risk_level', { length: 20 }).notNull(), // low, medium, high, critical
-  status: varchar('status', { length: 20 }).notNull().default('open'), // open, under_review, confirmed, rejected, closed
-  assignedTo: integer('assigned_to'), // Investigator ID
-  priority: varchar('priority', { length: 20 }).default('medium'), // low, medium, high, urgent
+  riskLevel: fraudRiskLevelEnum('risk_level').notNull(),
+  status: fraudDetectionCaseStatusEnum('status').notNull().default('open'),
+  assignedTo: integer('assigned_to'),
+  priority: fraudDetectionCasePriorityEnum('priority').default('medium'),
   description: text('description'),
   findings: text('findings'),
   recommendedAction: text('recommended_action'),
-  decision: varchar('decision', { length: 50 }), // confirm, reject, escalate
+  decision: fraudDetectionDecisionEnum('decision'),
   decisionDate: timestamp('decision_date'),
   decisionBy: integer('decision_by'),
   closureDate: timestamp('closure_date'),
@@ -90,9 +140,9 @@ export const fraudDetectionResults = pgTable('fraud_detection_results', {
   ruleId: integer('rule_id').references(() => fraudDetectionRules.id).notNull(),
   indicatorId: integer('indicator_id').references(() => fraudRiskIndicators.id),
   entityId: varchar('entity_id', { length: 100 }).notNull(),
-  entityType: varchar('entity_type', { length: 50 }).notNull(),
+  entityType: fraudDetectionRuleTypeEnum('entity_type').notNull(),
   riskScore: integer('risk_score').notNull(),
-  riskLevel: varchar('risk_level', { length: 20 }).notNull(),
+  riskLevel: fraudRiskLevelEnum('risk_level').notNull(),
   matchedExpression: text('matched_expression'),
   matchedData: jsonb('matched_data'),
   confidenceScore: decimal('confidence_score', { precision: 5, scale: 2 }),
@@ -116,11 +166,11 @@ export const fraudDetectionResults = pgTable('fraud_detection_results', {
 export const fraudWatchlist = pgTable('fraud_watchlist', {
   id: serial('id').primaryKey(),
   entityId: varchar('entity_id', { length: 100 }).notNull(),
-  entityType: varchar('entity_type', { length: 50 }).notNull(), // user, provider, member
+  entityType: fraudDetectionRuleTypeEnum('entity_type').notNull(),
   entityName: varchar('entity_name', { length: 255 }).notNull(),
   reason: text('reason').notNull(),
-  riskLevel: varchar('risk_level', { length: 20 }).notNull(), // low, medium, high, critical
-  status: varchar('status', { length: 20 }).notNull().default('active'), // active, inactive, resolved
+  riskLevel: fraudRiskLevelEnum('risk_level').notNull(),
+  status: fraudWatchlistStatusEnum('status').notNull().default('active'),
   addedBy: integer('added_by').notNull(),
   addedAt: timestamp('added_at').notNull().defaultNow(),
   reviewedBy: integer('reviewed_by'),
@@ -140,10 +190,10 @@ export const fraudPatterns = pgTable('fraud_patterns', {
   id: serial('id').primaryKey(),
   patternName: varchar('pattern_name', { length: 255 }).notNull(),
   description: text('description'),
-  patternType: varchar('pattern_type', { length: 50 }).notNull(), // claim, payment, user, provider
-  patternExpression: text('pattern_expression').notNull(), // Pattern matching expression
+  patternType: fraudPatternTypeEnum('pattern_type').notNull(),
+  patternExpression: text('pattern_expression').notNull(),
   riskScore: integer('risk_score').notNull(),
-  riskLevel: varchar('risk_level', { length: 20 }).notNull(),
+  riskLevel: fraudRiskLevelEnum('risk_level').notNull(),
   isActive: boolean('is_active').default(true),
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -157,10 +207,10 @@ export const fraudPatterns = pgTable('fraud_patterns', {
 
 export const fraudAnalytics = pgTable('fraud_analytics', {
   id: serial('id').primaryKey(),
-  metricType: varchar('metric_type', { length: 100 }).notNull(), // fraud_rate, detection_rate, etc.
+  metricType: varchar('metric_type', { length: 100 }).notNull(),
   metricValue: decimal('metric_value', { precision: 15, scale: 2 }).notNull(),
   metricUnit: varchar('metric_unit', { length: 50 }),
-  period: varchar('period', { length: 50 }).notNull(), // daily, weekly, monthly, yearly
+  period: varchar('period', { length: 50 }).notNull(),
   startDate: timestamp('start_date').notNull(),
   endDate: timestamp('end_date').notNull(),
   filters: jsonb('filters'),

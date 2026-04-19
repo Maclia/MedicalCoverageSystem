@@ -9,8 +9,83 @@ import {
   decimal,
   jsonb,
   index,
-  uuid
+  uuid,
+  pgEnum
 } from 'drizzle-orm/pg-core';
+
+// Enums
+export const hospitalTypeEnum = pgEnum('hospital_type', [
+  'general',
+  'specialty',
+  'teaching',
+  'research'
+]);
+
+export const hospitalCategoryEnum = pgEnum('hospital_category', [
+  'public',
+  'private',
+  'non-profit',
+  'military'
+]);
+
+export const hospitalDepartmentTypeEnum = pgEnum('hospital_department_type', [
+  'medical',
+  'surgical',
+  'diagnostic',
+  'support'
+]);
+
+export const hospitalStaffTypeEnum = pgEnum('hospital_staff_type', [
+  'doctor',
+  'nurse',
+  'technician',
+  'admin',
+  'support'
+]);
+
+export const hospitalAppointmentTypeEnum = pgEnum('hospital_appointment_type', [
+  'consultation',
+  'follow_up',
+  'emergency',
+  'procedure'
+]);
+
+export const hospitalAppointmentStatusEnum = pgEnum('hospital_appointment_status', [
+  'scheduled',
+  'confirmed',
+  'completed',
+  'cancelled',
+  'no_show'
+]);
+
+export const hospitalAppointmentPriorityEnum = pgEnum('hospital_appointment_priority', [
+  'normal',
+  'urgent',
+  'emergency'
+]);
+
+export const hospitalBedTypeEnum = pgEnum('hospital_bed_type', [
+  'general',
+  'semi_private',
+  'private',
+  'icu',
+  'nicu',
+  'pediatric'
+]);
+
+export const hospitalBedStatusEnum = pgEnum('hospital_bed_status', [
+  'available',
+  'occupied',
+  'maintenance',
+  'reserved'
+]);
+
+export const hospitalInventoryTypeEnum = pgEnum('hospital_inventory_type', [
+  'medical',
+  'consumable',
+  'equipment',
+  'furniture'
+]);
 
 // Hospital Management Tables
 export const hospitals = pgTable('hospitals', {
@@ -18,8 +93,8 @@ export const hospitals = pgTable('hospitals', {
   hospitalCode: varchar('hospital_code', { length: 50 }).notNull().unique(),
   name: varchar('name', { length: 255 }).notNull(),
   registrationNumber: varchar('registration_number', { length: 100 }).notNull().unique(),
-  type: varchar('type', { length: 50 }).notNull(), // general, specialty, teaching, research
-  category: varchar('category', { length: 100 }), // public, private, non-profit, military
+  type: hospitalTypeEnum('type').notNull(),
+  category: hospitalCategoryEnum('category'),
   bedCapacity: integer('bed_capacity').default(0),
   icuCapacity: integer('icu_capacity').default(0),
   emergencyCapacity: integer('emergency_capacity').default(0),
@@ -28,7 +103,7 @@ export const hospitals = pgTable('hospitals', {
   accreditationExpiry: timestamp('accreditation_expiry'),
   licenseNumber: varchar('license_number', { length: 100 }).notNull(),
   licenseExpiry: timestamp('license_expiry').notNull(),
-  regionId: integer('region_id').references(() => regions.id).notNull(),
+  regionId: integer('region_id').notNull(),
   address: text('address').notNull(),
   postalCode: varchar('postal_code', { length: 20 }),
   city: varchar('city', { length: 100 }).notNull(),
@@ -39,18 +114,18 @@ export const hospitals = pgTable('hospitals', {
   fax: varchar('fax', { length: 20 }),
   emergencyPhone: varchar('emergency_phone', { length: 20 }),
   is24Hour: boolean('is_24_hour').default(false),
-  operatingHours: jsonb('operating_hours'), // Weekly operating hours
-  services: jsonb('services'), // Array of services offered
-  specializations: jsonb('specializations'), // Medical specializations
-  equipment: jsonb('equipment'), // Medical equipment available
-  facilities: jsonb('facilities'), // Hospital facilities
+  operatingHours: jsonb('operating_hours'),
+  services: jsonb('services'),
+  specializations: jsonb('specializations'),
+  equipment: jsonb('equipment'),
+  facilities: jsonb('facilities'),
   qualityScore: decimal('quality_score', { precision: 3, scale: 2 }).default(0.0),
   rating: decimal('rating', { precision: 3, scale: 2 }).default(0.0),
   reviewCount: integer('review_count').default(0),
   isActive: boolean('is_active').default(true),
   isVerified: boolean('is_verified').default(false),
   verificationDate: timestamp('verification_date'),
-  approvedBy: integer('approved_by'),
+  approvedBy: varchar('approved_by', { length: 100 }),
   approvedAt: timestamp('approved_at'),
   notes: text('notes'),
   metadata: jsonb('metadata'),
@@ -73,16 +148,16 @@ export const hospitalDepartments = pgTable('hospital_departments', {
   id: serial('id').primaryKey(),
   hospitalId: integer('hospital_id').references(() => hospitals.id).notNull(),
   departmentName: varchar('department_name', { length: 255 }).notNull(),
-  departmentType: varchar('department_type', { length: 100 }).notNull(), // medical, surgical, diagnostic, support
+  departmentType: hospitalDepartmentTypeEnum('department_type').notNull(),
   headOfDepartment: varchar('head_of_department', { length: 255 }),
   contactPerson: varchar('contact_person', { length: 255 }),
   contactEmail: varchar('contact_email', { length: 255 }),
   contactPhone: varchar('contact_phone', { length: 20 }),
   extension: varchar('extension', { length: 20 }),
-  location: varchar('location', { length: 255 }), // Floor/wing information
+  location: varchar('location', { length: 255 }),
   description: text('description'),
-  services: jsonb('services'), // Services provided by this department
-  equipment: jsonb('equipment'), // Equipment available in this department
+  services: jsonb('services'),
+  equipment: jsonb('equipment'),
   operatingHours: jsonb('operating_hours'),
   isEmergency: boolean('is_emergency').default(false),
   isActive: boolean('is_active').default(true),
@@ -101,7 +176,7 @@ export const hospitalDepartments = pgTable('hospital_departments', {
 export const hospitalStaff = pgTable('hospital_staff', {
   id: serial('id').primaryKey(),
   hospitalId: integer('hospital_id').references(() => hospitals.id).notNull(),
-  staffType: varchar('staff_type', { length: 50 }).notNull(), // doctor, nurse, technician, admin, support
+  staffType: hospitalStaffTypeEnum('staff_type').notNull(),
   firstName: varchar('first_name', { length: 100 }).notNull(),
   lastName: varchar('last_name', { length: 100 }).notNull(),
   email: varchar('email', { length: 255 }).notNull(),
@@ -115,15 +190,15 @@ export const hospitalStaff = pgTable('hospital_staff', {
   yearsOfExperience: integer('years_of_experience').default(0),
   isConsultant: boolean('is_consultant').default(false),
   isAvailable: boolean('is_available').default(true),
-  availability: jsonb('availability'), // Weekly availability schedule
+  availability: jsonb('availability'),
   consultationFee: decimal('consultation_fee', { precision: 10, scale: 2 }),
-  consultationDuration: integer('consultation_duration').default(30), // in minutes
+  consultationDuration: integer('consultation_duration').default(30),
   rating: decimal('rating', { precision: 3, scale: 2 }).default(0.0),
   reviewCount: integer('review_count').default(0),
   isActive: boolean('is_active').default(true),
   isVerified: boolean('is_verified').default(false),
   verificationDate: timestamp('verification_date'),
-  approvedBy: integer('approved_by'),
+  approvedBy: varchar('approved_by', { length: 100 }),
   approvedAt: timestamp('approved_at'),
   notes: text('notes'),
   metadata: jsonb('metadata'),
@@ -150,12 +225,12 @@ export const hospitalAppointments = pgTable('hospital_appointments', {
   patientName: varchar('patient_name', { length: 255 }).notNull(),
   patientEmail: varchar('patient_email', { length: 255 }),
   patientPhone: varchar('patient_phone', { length: 20 }).notNull(),
-  appointmentType: varchar('appointment_type', { length: 50 }).notNull(), // consultation, follow_up, emergency, procedure
+  appointmentType: hospitalAppointmentTypeEnum('appointment_type').notNull(),
   appointmentDate: timestamp('appointment_date').notNull(),
   appointmentTime: timestamp('appointment_time').notNull(),
-  duration: integer('duration').default(30), // in minutes
-  status: varchar('status', { length: 20 }).notNull().default('scheduled'), // scheduled, confirmed, completed, cancelled, no_show
-  priority: varchar('priority', { length: 20 }).default('normal'), // normal, urgent, emergency
+  duration: integer('duration').default(30),
+  status: hospitalAppointmentStatusEnum('status').notNull().default('scheduled'),
+  priority: hospitalAppointmentPriorityEnum('priority').default('normal'),
   reason: text('reason'),
   symptoms: text('symptoms'),
   medicalHistory: text('medical_history'),
@@ -168,7 +243,7 @@ export const hospitalAppointments = pgTable('hospital_appointments', {
   isWalkIn: boolean('is_walk_in').default(false),
   isEmergency: boolean('is_emergency').default(false),
   emergencyType: varchar('emergency_type', { length: 100 }),
-  triageLevel: varchar('triage_level', { length: 20 }), // 1-5 emergency triage levels
+  triageLevel: varchar('triage_level', { length: 20 }),
   checkInTime: timestamp('check_in_time'),
   checkOutTime: timestamp('check_out_time'),
   consultationTime: timestamp('consultation_time'),
@@ -181,7 +256,7 @@ export const hospitalAppointments = pgTable('hospital_appointments', {
   followUpNotes: text('follow_up_notes'),
   billingAmount: decimal('billing_amount', { precision: 10, scale: 2 }),
   paidAmount: decimal('paid_amount', { precision: 10, scale: 2 }).default(0),
-  paymentStatus: varchar('payment_status', { length: 20 }).default('pending'), // pending, paid, partial
+  paymentStatus: varchar('payment_status', { length: 20 }).default('pending'),
   paymentMethod: varchar('payment_method', { length: 50 }),
   paymentReference: varchar('payment_reference', { length: 100 }),
   createdBy: integer('created_by').notNull(),
@@ -203,19 +278,19 @@ export const hospitalBeds = pgTable('hospital_beds', {
   id: serial('id').primaryKey(),
   hospitalId: integer('hospital_id').references(() => hospitals.id).notNull(),
   bedNumber: varchar('bed_number', { length: 50 }).notNull(),
-  bedType: varchar('bed_type', { length: 50 }).notNull(), // general, semi_private, private, icu, nicu, pediatric
+  bedType: hospitalBedTypeEnum('bed_type').notNull(),
   ward: varchar('ward', { length: 100 }),
   room: varchar('room', { length: 50 }),
   floor: varchar('floor', { length: 20 }),
-  status: varchar('status', { length: 20 }).notNull().default('available'), // available, occupied, maintenance, reserved
+  status: hospitalBedStatusEnum('status').notNull().default('available'),
   patientId: integer('patient_id'),
   patientName: varchar('patient_name', { length: 255 }),
   admissionDate: timestamp('admission_date'),
   expectedDischargeDate: timestamp('expected_discharge_date'),
   actualDischargeDate: timestamp('actual_discharge_date'),
   notes: text('notes'),
-  equipment: jsonb('equipment'), // Equipment attached to this bed
-  monitoring: jsonb('monitoring'), // Monitoring devices
+  equipment: jsonb('equipment'),
+  monitoring: jsonb('monitoring'),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -233,7 +308,7 @@ export const hospitalInventory = pgTable('hospital_inventory', {
   hospitalId: integer('hospital_id').references(() => hospitals.id).notNull(),
   itemId: varchar('item_id', { length: 100 }).notNull(),
   itemName: varchar('item_name', { length: 255 }).notNull(),
-  itemType: varchar('item_type', { length: 50 }).notNull(), // medical, consumable, equipment, furniture
+  itemType: hospitalInventoryTypeEnum('item_type').notNull(),
   category: varchar('category', { length: 100 }),
   brand: varchar('brand', { length: 100 }),
   model: varchar('model', { length: 100 }),
@@ -242,7 +317,7 @@ export const hospitalInventory = pgTable('hospital_inventory', {
   supplier: varchar('supplier', { length: 255 }),
   purchaseDate: timestamp('purchase_date'),
   expiryDate: timestamp('expiry_date'),
-  unit: varchar('unit', { length: 20 }), // each, box, pack, liter, etc.
+  unit: varchar('unit', { length: 20 }),
   quantity: integer('quantity').default(0),
   minQuantity: integer('min_quantity').default(0),
   maxQuantity: integer('max_quantity'),
