@@ -9,7 +9,7 @@ COPY package*.json ./
 COPY tsconfig.json ./
 
 # Install dependencies
-RUN npm ci --only=production --legacy-peer-deps && npm cache clean --force
+RUN npm install --only=production --legacy-peer-deps && npm cache clean --force
 
 # Build the application
 FROM base AS builder
@@ -21,7 +21,7 @@ COPY tsconfig.json ./
 COPY src ./src
 
 # Install all dependencies (including dev dependencies for build)
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Build TypeScript
 RUN npm run build

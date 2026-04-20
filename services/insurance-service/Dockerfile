@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies (prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev --legacy-peer-deps; else npm install --omit=dev --legacy-peer-deps; fi && npm cache clean --force
+RUN if [ -f package-lock.json ]; then npm install --omit=dev --legacy-peer-deps; else npm install --omit=dev --legacy-peer-deps; fi && npm cache clean --force
 
 # Build the application
 FROM base AS builder
@@ -20,7 +20,7 @@ COPY tsconfig.json ./
 COPY src ./src
 
 # Install all dependencies (including dev dependencies for build; prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
+RUN if [ -f package-lock.json ]; then npm install --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 # Build TypeScript
 RUN npm run build

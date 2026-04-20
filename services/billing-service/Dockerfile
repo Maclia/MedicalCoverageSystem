@@ -8,7 +8,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm ci --legacy-peer-deps; else npm install --legacy-peer-deps; fi
+RUN if [ -f package-lock.json ]; then npm install --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 # Copy source code
 COPY . .
@@ -33,7 +33,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install only production dependencies (prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm ci --omit=dev --legacy-peer-deps; else npm install --omit=dev --legacy-peer-deps; fi && npm cache clean --force
+RUN if [ -f package-lock.json ]; then npm install --omit=dev --legacy-peer-deps; else npm install --omit=dev --legacy-peer-deps; fi && npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
