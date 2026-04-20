@@ -7,7 +7,10 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including dev) for build
-RUN npm install --legacy-peer-deps && npm cache clean --force
+RUN npm config set cache /tmp/npm-cache \
+    && npm install --legacy-peer-deps \
+    && npm cache clean --force \
+    && rm -rf /tmp/npm-cache
 
 # Build stage
 FROM node:20-alpine AS builder
@@ -43,7 +46,10 @@ RUN addgroup -g 1001 -S nodejs && \
 COPY package*.json ./
 
 # Install production dependencies only
-RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
+RUN npm config set cache /tmp/npm-cache \
+    && npm install --omit=dev --legacy-peer-deps \
+    && npm cache clean --force \
+    && rm -rf /tmp/npm-cache
 
 # Copy built application from builder stage
 COPY --from=builder --chown=crm:nodejs /app/dist ./dist
