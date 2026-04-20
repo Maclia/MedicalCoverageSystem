@@ -10,7 +10,7 @@ import { RecoveryScheduler } from './jobs/RecoveryScheduler';
 // Load environment variables
 config();
 
-const PORT = process.env.PORT || 3007;
+const PORT = process.env.PORT || 3004;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 async function bootstrap() {

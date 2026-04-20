@@ -9,7 +9,7 @@ import { MetricsService } from './services/metrics.service';
 // Load environment variables
 config();
 
-const PORT = process.env.PORT || 3008;
+const PORT = process.env.PORT || 3009;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 async function bootstrap() {

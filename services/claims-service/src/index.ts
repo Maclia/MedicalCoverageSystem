@@ -77,7 +77,7 @@ export { app };
 export default app;
 
 // Start server
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3010;
 app.listen(PORT, () => {
   logger.info(`Claims service running on port ${PORT}`);
 });

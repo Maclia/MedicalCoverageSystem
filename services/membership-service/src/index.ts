@@ -13,7 +13,7 @@ import { responseMiddleware, errorHandler, notFoundHandler } from './middleware/
 // Load environment variables
 config();
 
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3006;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 function createApp() {

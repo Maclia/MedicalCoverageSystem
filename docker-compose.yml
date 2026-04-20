@@ -303,6 +303,24 @@ services:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:5009/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
 
+  claims-service:
+    <<: *service-defaults
+    build:
+      context: ./services/claims-service
+      dockerfile: Dockerfile
+    container_name: medical_claims_service
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      PORT: 3010
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_claims
+    ports:
+      - "3010:3010"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3010/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
   # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
