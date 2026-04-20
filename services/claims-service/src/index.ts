@@ -41,7 +41,7 @@ app.get('/health', async (req, res) => {
       },
       database: {
         connected: dbStatus,
-        schemaVersion: schema.claims.$name
+        schemaVersion: 'claims'
       }
     };
     res.json(health);

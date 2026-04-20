@@ -3,8 +3,8 @@ import type { Config } from 'drizzle-kit';
 export default {
   schema: './services/wellness-service/src/models/schema.ts',
   out: './services/wellness-service/drizzle',
-  driver: 'pg',
+  dialect: 'postgresql',
   dbCredentials: {
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/medical_coverage_wellness',
+    url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/wellness',
   },
 } satisfies Config;

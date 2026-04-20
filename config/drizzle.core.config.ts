@@ -3,8 +3,8 @@ import type { Config } from 'drizzle-kit';
 export default {
   schema: './services/core-service/src/models/schema.ts',
   out: './services/core-service/drizzle',
-  driver: 'pg',
+  dialect: 'postgresql',
   dbCredentials: {
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/medical_coverage_core',
+    url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/core',
   },
 } satisfies Config;

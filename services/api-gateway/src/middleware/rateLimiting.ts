@@ -44,7 +44,9 @@ class RedisStore {
           .expire(key, Math.ceil(windowMs / 1000))
           .exec();
 
-        const totalHits = result ? result[0][1] as number : 1;
+        const totalHits = result && Array.isArray(result[0]) && result[0].length >= 2 
+          ? (result[0][1] as number) 
+          : 1;
 
         return { totalHits, resetTime };
       } catch (error) {

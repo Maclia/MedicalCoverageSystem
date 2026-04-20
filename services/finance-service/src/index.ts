@@ -37,7 +37,7 @@ const logger = new WinstonLogger('FinanceService');
     logger.info('Audit service initialized');
 
     // Initialize metrics service
-    const metricsService = new MetricsService();
+    const metricsService = new MetricsService(logger);
     await metricsService.initialize();
     logger.info('Metrics service initialized');
 

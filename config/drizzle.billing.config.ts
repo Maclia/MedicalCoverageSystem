@@ -3,8 +3,8 @@ import type { Config } from 'drizzle-kit';
 export default {
   schema: './services/billing-service/src/models/schema.ts',
   out: './services/billing-service/drizzle',
-  driver: 'pg',
+  dialect: 'postgresql',
   dbCredentials: {
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/medical_coverage_billing',
+    url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/billing',
   },
 } satisfies Config;

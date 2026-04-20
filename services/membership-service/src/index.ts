@@ -17,8 +17,6 @@ const PORT = process.env.PORT || 3006;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 function createApp() {
-  const logger = new WinstonLogger('membership-service');
-
   const app = express();
 
   // Security middleware
@@ -63,7 +61,7 @@ function createApp() {
   app.use(responseMiddleware);
 
   // Health check endpoint
-  app.get('/health', async (req, res) => {
+  app.get('/health', async (_req, res) => {
     const db = Database.getInstance();
     const health = await db.healthCheck();
 
@@ -82,7 +80,7 @@ function createApp() {
   app.use('/api/members', membershipRoutes);
 
   // Root endpoint
-  app.get('/', (req, res) => {
+  app.get('/', (_req, res) => {
     res.json({
       service: 'membership-service',
       status: 'running',

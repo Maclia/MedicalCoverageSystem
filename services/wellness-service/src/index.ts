@@ -1,10 +1,8 @@
 import { config } from 'dotenv';
-import { createApp } from './app';
-import { Database } from './models/database';
-import { Logger } from './utils/logger';
-import { CacheService } from './services/cache.service';
-import { AuditService } from './services/audit.service';
-import { MetricsService } from './services/metrics.service';
+import express from 'express';
+import { Database } from './models/Database';
+import { WinstonLogger as Logger } from './utils/WinstonLogger';
+import { WellnessService } from './services/WellnessService';
 
 // Load environment variables
 config();
@@ -22,33 +20,37 @@ async function bootstrap() {
       nodeVersion: process.version
     });
 
-    // Initialize database connection
-    const database = new Database();
-    await database.connect();
-    logger.info('Database connected successfully');
+  // Initialize database connection
+  const database = Database.getInstance();
+  const isConnected = await database.testConnection();
+  
+  if (!isConnected) {
+    throw new Error('Failed to establish database connection');
+  }
+  
+  logger.info('Database connected successfully');
 
-    // Initialize cache service
-    const cacheService = new CacheService();
-    await cacheService.connect();
-    logger.info('Cache service connected successfully');
+  // Initialize wellness service
+  const wellnessService = new WellnessService();
+  logger.info('Wellness service initialized');
 
-    // Initialize audit service
-    const auditService = new AuditService(database, logger);
-    logger.info('Audit service initialized');
+  // Create Express app
+  const app = express();
+  
+  // Basic middleware
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true }));
 
-    // Initialize metrics service
-    const metricsService = new MetricsService();
-    await metricsService.initialize();
-    logger.info('Metrics service initialized');
-
-    // Create Express app
-    const app = createApp({
-      database,
-      cacheService,
-      auditService,
-      metricsService,
-      logger
+  // Health check endpoint
+  app.get('/health', async (req, res) => {
+    const healthStatus = await database.healthCheck();
+    res.json({
+      service: 'wellness-service',
+      status: healthStatus.status,
+      timestamp: new Date().toISOString(),
+      database: healthStatus
     });
+  });
 
     // Start server
     const server = app.listen(PORT, () => {
@@ -67,10 +69,7 @@ async function bootstrap() {
         logger.info('HTTP server closed');
 
         try {
-          await cacheService.disconnect();
-          await database.disconnect();
-          await metricsService.shutdown();
-
+          await database.close();
           logger.info('All services disconnected gracefully');
           process.exit(0);
         } catch (error) {
