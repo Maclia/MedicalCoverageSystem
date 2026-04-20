@@ -1,6 +1,8 @@
 # Medical Coverage System - Microservices Architecture
 
-A comprehensive medical coverage/insurance management system built with modern web technologies and a 9-service microservices architecture.
+> **📌 Single Source of Truth**: All documentation has been consolidated into **[DOCUMENTATION.md](./DOCUMENTATION.md)**. Please refer to that file for complete information.
+
+A comprehensive medical coverage/insurance management system built with modern web technologies and a microservices architecture.
 
 ## ⚡ 5-Minute Quick Start
 
@@ -9,8 +11,8 @@ A comprehensive medical coverage/insurance management system built with modern w
 git clone <repository-url>
 cd MedicalCoverageSystem && npm install
 
-# Start development environment
-./orchestrate.sh dev start full
+# Start with Docker (Recommended)
+docker-compose up -d --build
 
 # Access the system
 Frontend: http://localhost:3000
@@ -18,17 +20,15 @@ API: http://localhost:3001/health
 Docs: http://localhost:3001/api-docs
 ```
 
-## 📚 Documentation Hub
+## 📚 Documentation
 
-**5 Comprehensive Guides** (No Redundancy):
+**All documentation is now consolidated in one place:**
 
-| Document | Purpose | Read Time |
-|----------|---------|-----------|
-| **[SETUP_AND_DEPLOYMENT.md](./SETUP_AND_DEPLOYMENT.md)** | Local setup, Docker, Vercel deployment | 15 min |
-| **[SYSTEM_ARCHITECTURE.md](./SYSTEM_ARCHITECTURE.md)** | Complete system design & components | 20 min |
-| **[API_REFERENCE.md](./API_REFERENCE.md)** | API endpoints, authentication, integration | 20 min |
-| **[DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md)** | Code structure, modules, testing | 20 min |
-| **[CONTRIBUTING_AND_OPERATIONS.md](./CONTRIBUTING_AND_OPERATIONS.md)** | Contributing, monitoring, maintenance | 20 min |
+| Document | Purpose |
+|----------|---------|
+| **[DOCUMENTATION.md](./DOCUMENTATION.md)** | Complete system documentation - Quick Start, Architecture, API Reference, Development Guide, Deployment, Troubleshooting |
+
+For detailed information on any topic, please refer to the main documentation file.
 
 ## 🏗️ Architecture At a Glance
 
