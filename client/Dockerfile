@@ -11,7 +11,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies (including dev) for building
-RUN npm ci && npm cache clean --force
+RUN npm install --legacy-peer-deps && npm cache clean --force
 
 # Development stage
 FROM base AS development
@@ -22,7 +22,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install all dependencies for development
-RUN npm ci && npm cache clean --force
+RUN npm install --legacy-peer-deps && npm cache clean --force
 
 # Copy source code
 COPY . .
