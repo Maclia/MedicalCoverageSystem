@@ -1,34 +1,141 @@
-# Dependencies
+# ================================================
+# VERCEL DEPLOYMENT IGNORE FILE - MEDICAL COVERAGE SYSTEM
+# ================================================
+# This file properly excludes all backend files and keeps only client deployment assets
+# Optimized for Vercel static hosting of frontend application
+
+# ------------------------------
+# DEPENDENCIES
+# ------------------------------
 node_modules
 npm-debug.log
 yarn-error.log
+pnpm-lock.yaml
 
-# Build outputs (we'll build in deployment)
+# ------------------------------
+# BUILD OUTPUTS
+# (we build client during deployment, ignore any local builds)
+# ------------------------------
 dist
 client/dist
 build
+server/dist
+services/**/dist
+shared/dist
 
-# Environment files
+# ------------------------------
+# ENVIRONMENT FILES
+# ------------------------------
+.env
+.env.*
+!.env.example
 .env.local
 .env.*.local
 
-# Testing
+# ------------------------------
+# BACKEND SERVICES (FULLY EXCLUDE)
+# ------------------------------
+server/
+services/
+config/
+shared/
+database/
+deployment/
+scripts/
+nginx/
+tests/
+
+# ------------------------------
+# DATABASE & MIGRATIONS
+# ------------------------------
+migrations/
+drizzle/
+drizzle.config.ts
+config/drizzle.*.config.ts
+
+# ------------------------------
+# TESTING & COVERAGE
+# ------------------------------
 coverage
 .nyc_output
 .cypress
+jest.config.js
+jest.setup.js
+cypress.config.ts
+tsconfig.test.json
+**/test/
+**/tests/
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
 
-# Development
+# ------------------------------
+# DOCUMENTATION
+# ------------------------------
+*.md
+docs/
+**/*.md
+CONTRIBUTING.md
+CHANGELOG.md
+LICENSE
+
+# ------------------------------
+# DOCKER & DEPLOYMENT
+# ------------------------------
+docker-compose.yml
+docker-compose.*.yml
+docker-compose.*.sh
+Dockerfile
+.dockerignore
+**/Dockerfile
+
+# ------------------------------
+# VERSION CONTROL
+# ------------------------------
 .git
 .gitignore
-README.md
-*.md
+.gitattributes
+.github/
 
-# IDE
+# ------------------------------
+# IDE & EDITOR FILES
+# ------------------------------
 .vscode
 .idea
 *.swp
 *.swo
-
-# Misc
+*~
 .DS_Store
+Thumbs.db
+
+# ------------------------------
+# LOGS & TEMP FILES
+# ------------------------------
 *.log
+*.tmp
+*.temp
+.cache/
+.temp/
+.tmp/
+
+# ------------------------------
+# MISCELLANEOUS
+# ------------------------------
+.replit
+replit.nix
+vercel.json
+*.sh
+*.bat
+*.ps1
+
+# ------------------------------
+# EXCEPTIONS - FILES WE NEED TO KEEP
+# ------------------------------
+!client/
+!package.json
+!tsconfig.json
+!tsconfig.node.json
+!client/vite.config.ts
+!client/index.html
