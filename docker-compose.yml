@@ -342,9 +342,48 @@ services:
     profiles: []
 
 volumes:
+  # Infrastructure Volumes
   postgres_data:
+    name: medical_coverage_postgres_data
+    driver: local
   redis_data:
+    name: medical_coverage_redis_data
+    driver: local
   nginx_logs:
+    name: medical_coverage_nginx_logs
+    driver: local
+
+  # Service Specific Database Volumes
+  claims_service_db:
+    name: medical_coverage_claims_service_db
+    driver: local
+  billing_service_db:
+    name: medical_coverage_billing_service_db
+    driver: local
+  core_service_db:
+    name: medical_coverage_core_service_db
+    driver: local
+  finance_service_db:
+    name: medical_coverage_finance_service_db
+    driver: local
+  crm_service_db:
+    name: medical_coverage_crm_service_db
+    driver: local
+  membership_service_db:
+    name: medical_coverage_membership_service_db
+    driver: local
+  hospital_service_db:
+    name: medical_coverage_hospital_service_db
+    driver: local
+  insurance_service_db:
+    name: medical_coverage_insurance_service_db
+    driver: local
+  wellness_service_db:
+    name: medical_coverage_wellness_service_db
+    driver: local
+  fraud_detection_service_db:
+    name: medical_coverage_fraud_detection_service_db
+    driver: local
 
 networks:
   medical-services-network:
