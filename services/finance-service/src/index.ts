@@ -5,6 +5,7 @@ import { WinstonLogger } from './utils/WinstonLogger';
 import { CacheService } from './services/cache.service';
 import { AuditService } from './services/audit.service';
 import { MetricsService } from './services/metrics.service';
+import { RecoveryScheduler } from './jobs/RecoveryScheduler';
 
 // Load environment variables
 config();
@@ -49,6 +50,11 @@ const logger = new WinstonLogger('FinanceService');
       logger
     });
 
+    // Initialize recovery scheduler
+    const recoveryScheduler = new RecoveryScheduler();
+    recoveryScheduler.start();
+    logger.info('Recovery scheduler started');
+
     // Start server
     const server = app.listen(PORT, () => {
       logger.info('Finance Service started successfully', {
@@ -61,6 +67,9 @@ const logger = new WinstonLogger('FinanceService');
     // Graceful shutdown
     const gracefulShutdown = async (signal: string) => {
       logger.info(`Received ${signal}, starting graceful shutdown...`);
+
+      recoveryScheduler.stop();
+      logger.info('Recovery scheduler stopped');
 
       server.close(async () => {
         logger.info('HTTP server closed');

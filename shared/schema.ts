@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, json, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, json, jsonb, index, uniqueIndex, sql } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { AnyPgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
@@ -75,7 +75,12 @@ export const financialTransactionStatusEnum = pgEnum('financial_transaction_stat
 export const paymentTypeEnum = pgEnum('payment_type', ['premium', 'claim', 'disbursement']);
 export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'completed', 'failed', 'cancelled']);
 export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
+export const recoveryStatusEnum = pgEnum('recovery_status', ['pending', 'retry_1', 'retry_2', 'retry_3', 'escalated', 'recovered', 'failed']);
 export const procedureCategoryEnum = pgEnum('procedure_category', ['consultation', 'surgery', 'diagnostic', 'laboratory', 'imaging', 'dental', 'vision', 'medication', 'therapy', 'emergency', 'maternity', 'preventative', 'other']);
+
+// Saga Pattern Enums
+export const sagaStatusEnum = pgEnum('saga_status', ['pending', 'in_progress', 'completed', 'failed', 'compensating', 'compensated']);
+export const sagaStepStatusEnum = pgEnum('saga_step_status', ['pending', 'in_progress', 'completed', 'failed', 'compensated']);
 
 // Companies table
 export const companies = pgTable("companies", {
@@ -3713,6 +3718,26 @@ export const paymentNotificationTemplates = pgTable("payment_notification_templa
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Payment recovery table
+export const paymentRecovery = pgTable("payment_recovery", {
+  id: serial("id").primaryKey(),
+  paymentId: integer("payment_id").references(() => payments.id).notNull(),
+  claimId: integer("claim_id"),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  amount: real("amount").notNull(),
+  originalError: text("original_error").notNull(),
+  status: recoveryStatusEnum("status").default("pending").notNull(),
+  retryCount: integer("retry_count").default(0).notNull(),
+  nextRetryAt: timestamp("next_retry_at"),
+  escalatedAt: timestamp("escalated_at"),
+  recoveredAt: timestamp("recovered_at"),
+  failedAt: timestamp("failed_at"),
+  supportTicketId: text("support_ticket_id"),
+  auditTrail: jsonb("audit_trail").default(sql`'[]'::jsonb`).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Reconciliation exceptions table
 export const reconciliationExceptions = pgTable("reconciliation_exceptions", {
   id: serial("id").primaryKey(),
@@ -4564,6 +4589,73 @@ export type ClaimLossRatioAnalysis = {
   expenseRatio: number;
   combinedRatio: number;
 };
+
+// ============================================================================
+// SAGA PATTERN IMPLEMENTATION - DISTRIBUTED TRANSACTION MANAGEMENT
+// ============================================================================
+
+// Saga Transaction State Table
+export const saga = pgTable("saga", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  correlationId: uuid("correlation_id").notNull(),
+  status: sagaStatusEnum("status").default("pending").notNull(),
+  metadata: text("metadata"), // JSON string with saga metadata
+  auditTrail: text("audit_trail"), // JSON array of audit entries
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  compensatedAt: timestamp("compensated_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table: any) => ({
+  correlationIdx: index("saga_correlation_idx").on(table.correlationId),
+  statusIdx: index("saga_status_idx").on(table.status),
+  createdAtIdx: index("saga_created_idx").on(table.createdAt),
+}));
+
+// Saga Step State Table
+export const sagaStep = pgTable("saga_step", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sagaId: uuid("saga_id").references(() => saga.id).notNull(),
+  stepName: text("step_name").notNull(),
+  status: sagaStepStatusEnum("status").default("pending").notNull(),
+  input: text("input"), // JSON string with step input
+  output: text("output"), // JSON string with step output
+  error: text("error"),
+  compensationExecuted: boolean("compensation_executed").default(false),
+  compensationError: text("compensation_error"),
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  startedAt: timestamp("started_at").defaultNow().notNull(),
+  completedAt: timestamp("completed_at"),
+  compensatedAt: timestamp("compensated_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table: any) => ({
+  sagaIdIdx: index("saga_step_saga_idx").on(table.sagaId),
+  statusIdx: index("saga_step_status_idx").on(table.status),
+  stepNameIdx: index("saga_step_name_idx").on(table.stepName),
+}));
+
+// Saga Insert Schemas
+export const insertSagaSchema = createInsertSchema(saga).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSagaStepSchema = createInsertSchema(sagaStep).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Saga Types
+export type Saga = typeof saga.$inferSelect;
+export type InsertSaga = z.infer<typeof insertSagaSchema>;
+
+export type SagaStep = typeof sagaStep.$inferSelect;
+export type InsertSagaStep = z.infer<typeof insertSagaStepSchema>;
 
 
 

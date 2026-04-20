@@ -481,6 +481,9 @@ router.use('/api/programs', authenticateToken, dynamicProxyMiddleware('wellness'
 router.use('/api/activities', authenticateToken, dynamicProxyMiddleware('wellness'));
 router.use('/api/incentives', authenticateToken, dynamicProxyMiddleware('wellness'));
 
+// Fraud Detection service routes
+router.use('/api/fraud', authenticateToken, userRateLimit, dynamicProxyMiddleware('fraud'));
+
 // Admin routes (restricted access)
 router.use('/api/admin', authenticateToken, userRateLimit, (req, res, next) => {
   // Check if user is admin (insurance type user)

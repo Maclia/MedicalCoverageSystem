@@ -7,6 +7,7 @@ import { WinstonLogger } from './utils/WinstonLogger';
 import { CacheService } from './services/cache.service';
 import { AuditService } from './services/audit.service';
 import { MetricsService } from './services/metrics.service';
+import paymentRoutes from './routes/payments';
 
 interface AppDependencies {
   database: Database;
@@ -48,10 +49,13 @@ export function createApp(deps: AppDependencies) {
     });
   });
 
-  // API routes would go here
+  // API routes
   app.get('/api/finance', (req, res) => {
     res.json({ message: 'Finance service API' });
   });
+
+  // Payment routes with error recovery
+  app.use('/api/payments', paymentRoutes);
 
   // Error handling
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

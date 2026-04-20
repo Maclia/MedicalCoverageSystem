@@ -160,6 +160,13 @@ export const serviceProxies = {
       '^/api/refunds': '/refunds'
     }),
     paths: ['/api/payment', '/api/payments', '/api/commissions', '/api/refunds']
+  },
+
+  fraud: {
+    middleware: createServiceProxy('fraud', {
+      '^/api/fraud': ''
+    }),
+    paths: ['/api/fraud']
   }
 };
 

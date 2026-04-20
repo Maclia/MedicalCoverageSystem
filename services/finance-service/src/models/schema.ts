@@ -266,6 +266,36 @@ export const transactionLogs = pgTable('transaction_logs', {
   createdAtIdx: index('transaction_logs_created_at_idx').on(table.createdAt),
 }));
 
+// Payment Recovery for Error Recovery Workflow
+export const paymentRecovery = pgTable('payment_recovery', {
+  id: serial('id').primaryKey(),
+  recoveryId: varchar('recovery_id', { length: 100 }).notNull().unique(),
+  paymentId: integer('payment_id').notNull(),
+  claimId: varchar('claim_id', { length: 100 }).notNull(),
+  memberId: integer('member_id').notNull(),
+  amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
+  originalError: text('original_error').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, retry_1, retry_2, retry_3, escalated, recovered, failed
+  retryCount: integer('retry_count').default(0).notNull(),
+  nextRetryAt: timestamp('next_retry_at'),
+  escalatedAt: timestamp('escalated_at'),
+  recoveredAt: timestamp('recovered_at'),
+  failedAt: timestamp('failed_at'),
+  supportTicketId: varchar('support_ticket_id', { length: 100 }),
+  auditTrail: jsonb('audit_trail').notNull().default('[]'),
+  metadata: jsonb('metadata'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  recoveryIdIdx: index('payment_recovery_recovery_id_idx').on(table.recoveryId),
+  paymentIdIdx: index('payment_recovery_payment_id_idx').on(table.paymentId),
+  claimIdIdx: index('payment_recovery_claim_id_idx').on(table.claimId),
+  memberIdIdx: index('payment_recovery_member_id_idx').on(table.memberId),
+  statusIdx: index('payment_recovery_status_idx').on(table.status),
+  nextRetryAtIdx: index('payment_recovery_next_retry_at_idx').on(table.nextRetryAt),
+  createdAtIdx: index('payment_recovery_created_at_idx').on(table.createdAt),
+}));
+
 // Export all tables
 export type Invoice = typeof invoices.$inferSelect;
 export type NewInvoice = typeof invoices.$inferInsert;
@@ -281,3 +311,5 @@ export type FinancialReport = typeof financialReports.$inferSelect;
 export type NewFinancialReport = typeof financialReports.$inferInsert;
 export type TransactionLog = typeof transactionLogs.$inferSelect;
 export type NewTransactionLog = typeof transactionLogs.$inferInsert;
+export type PaymentRecovery = typeof paymentRecovery.$inferSelect;
+export type NewPaymentRecovery = typeof paymentRecovery.$inferInsert;

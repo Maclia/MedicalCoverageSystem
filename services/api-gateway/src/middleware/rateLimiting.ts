@@ -201,6 +201,18 @@ export const adminRateLimit = createRateLimiter({
   }
 });
 
+// Fraud detection rate limiter (50 req/min - more strict than standard)
+export const fraudRateLimit = createRateLimiter({
+  windowMs: 60000, // 1 minute
+  maxRequests: 50, // 50 requests per minute for fraud endpoints
+  message: 'Too many fraud assessment requests. Please try again later.',
+  keyGenerator: (req: Request) => {
+    const userId = (req as any).user?.userId;
+    const identifier = userId || req.ip || 'unknown';
+    return `fraud_rate_limit:${identifier}`;
+  }
+});
+
 // WebSocket rate limiter
 export const websocketRateLimit = createRateLimiter({
   windowMs: 60000, // 1 minute
