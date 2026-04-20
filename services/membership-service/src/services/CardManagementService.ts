@@ -5,7 +5,7 @@
 
 import crypto from 'crypto';
 import { eq, and } from 'drizzle-orm';
-import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../shared/schema.js';
+import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../../shared/schema';
 
 // Type for the database connection - flexible for any drizzle database instance
 type DatabaseConnection = any;
@@ -308,7 +308,7 @@ class CardManagementService {
   /**
    * Request card replacement
    */
-  async requestCardReplacement(cardId: number, reason: string, expedited: boolean = false) {
+  async requestCardReplacement(cardId: number, _reason: string, expedited: boolean = false) {
     try {
       // Get original card
       const originalCard = await this.getCard(cardId);
@@ -326,7 +326,6 @@ class CardManagementService {
       const newCard = await this.generateMemberCard({
         memberId: originalCard.memberId,
         cardType: originalCard.cardType as 'digital' | 'physical' | 'both',
-        templateId: undefined,
         expeditedShipping: expedited,
       });
 
