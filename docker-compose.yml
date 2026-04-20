@@ -104,6 +104,7 @@ services:
       MEMBERSHIP_SERVICE_URL: http://membership-service:3006
       WELLNESS_SERVICE_URL: http://wellness-service:3009
       FRAUD_DETECTION_SERVICE_URL: http://fraud-detection-service:5009
+      CLAIMS_SERVICE_URL: http://claims-service:3010
     ports:
       - "3001:3001"
     networks:
