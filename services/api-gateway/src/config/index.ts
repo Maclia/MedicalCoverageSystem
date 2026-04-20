@@ -64,12 +64,12 @@ export const config = {
       retries: parseInt(process.env.WELLNESS_SERVICE_RETRIES || '3', 10),
     },
     fraud: {
-      url: process.env.FRAUD_SERVICE_URL || 'http://localhost:3010',
+      url: process.env.FRAUD_SERVICE_URL || 'http://localhost:5009',
       timeout: parseInt(process.env.FRAUD_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.FRAUD_SERVICE_RETRIES || '3', 10),
     },
-    claims_adjudication: {
-      url: process.env.CLAIMS_SERVICE_URL || 'http://localhost:3005',
+    claims: {
+      url: process.env.CLAIMS_SERVICE_URL || 'http://localhost:3010',
       timeout: parseInt(process.env.CLAIMS_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.CLAIMS_SERVICE_RETRIES || '3', 10),
     },
