@@ -31,7 +31,7 @@
     "test:ci": "jest --ci --coverage --watchAll=false",
     "test:components": "jest client/src/components --testPathPattern=\\.(test|spec)\\.(ts|tsx)$",
     "test:server": "jest server --testPathPattern=\\.(test|spec)\\.(ts)$",
-    "test:integration": "jest --testPathPattern=integration --testTimeout=30000",
+    "test:integration": "jest --testPathPatterns=integration --testTimeout=30000",
     "test:e2e": "cypress run",
     "audit:all": "npm audit --workspaces",
     "update:all": "npm update --workspaces",
