@@ -1,4 +1,5 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
+import { sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import * as schema from './schema';
 
@@ -108,17 +109,6 @@ export class Database {
         status: 'unhealthy'
       };
     }
-  }
-
-  /**
-   * Begin database transaction with isolation level
-   */
-  public async beginTransaction(isolationLevel?: 'READ COMMITTED' | 'REPEATABLE READ' | 'SERIALIZABLE') {
-    const tx = await this.db.begin();
-    if (isolationLevel) {
-      await tx.execute(sql`SET TRANSACTION ISOLATION LEVEL ${sql.raw(isolationLevel)}`);
-    }
-    return tx;
   }
 
   /**
@@ -307,6 +297,7 @@ export class Database {
 
 // Export singleton instance
 export const database = Database.getInstance();
+export const db = database.getDb();
 
 // Export types
 export type DatabaseType = ReturnType<typeof Database.getInstance>;

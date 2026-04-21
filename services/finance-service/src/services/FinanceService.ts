@@ -39,17 +39,8 @@ import {
 import {
   eq,
   sql,
-  and,
-  or,
   desc,
-  asc,
-  inArray,
-  like,
-  gte,
-  lte,
-  ilike,
   count,
-  sum
 } from 'drizzle-orm';
 
 export class FinanceService {
@@ -68,7 +59,6 @@ export class FinanceService {
    */
   async createInvoice(invoiceData: NewInvoice, context: any): Promise<Invoice> {
     const db = this.db.getDb();
-    const transaction = await db.beginTransaction();
 
     try {
       this.logger.info('Creating new invoice', {
@@ -78,61 +68,57 @@ export class FinanceService {
         companyId: invoiceData.companyId
       });
 
-      // Validate business rules
       await this.validateInvoiceRules(invoiceData);
 
-      // Generate unique invoice number if not provided
-      if (!invoiceData.invoiceNumber) {
-        invoiceData.invoiceNumber = await this.generateInvoiceNumber(invoiceData.companyId);
-      }
+      const invoice = await db.transaction(async (tx) => {
+        if (!invoiceData.invoiceNumber) {
+          invoiceData.invoiceNumber = await this.generateInvoiceNumber(invoiceData.companyId);
+        }
 
-      // Check for duplicates
-      await this.checkForDuplicateInvoice(invoiceData);
+        await this.checkForDuplicateInvoice(invoiceData);
 
-      // Calculate totals
-      const totalAmount = parseFloat(invoiceData.amount.toString()) +
-                         parseFloat(invoiceData.taxAmount?.toString() || '0') +
-                         parseFloat(invoiceData.penaltyAmount?.toString() || '0') -
-                         parseFloat(invoiceData.discountAmount?.toString() || '0');
+        const totalAmount = parseFloat(invoiceData.amount.toString()) +
+          parseFloat(invoiceData.taxAmount?.toString() || '0') +
+          parseFloat(invoiceData.penaltyAmount?.toString() || '0') -
+          parseFloat(invoiceData.discountAmount?.toString() || '0');
 
-      const invoiceRecord = {
-        ...invoiceData,
-        totalAmount,
-        balanceAmount: totalAmount,
-        paidAmount: 0,
-        paymentStatus: 'unpaid',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+        const invoiceRecord = {
+          ...invoiceData,
+          totalAmount: totalAmount.toString(),
+          balanceAmount: totalAmount.toString(),
+          paidAmount: '0',
+          paymentStatus: 'unpaid' as const,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
 
-      const invoice = await transaction.insert(invoices).values(invoiceRecord).returning();
+        const createdInvoice = await tx.insert(invoices).values(invoiceRecord).returning();
 
-      // Log transaction for audit
-      await this.logTransaction({
-        transactionId: invoice[0].invoiceNumber,
-        transactionType: 'invoice',
-        entityId: invoice[0].id,
-        action: 'create',
-        newValues: invoice[0],
-        amount: invoice[0].amount.toString(),
-        userId: context.userId,
-        ipAddress: context.ipAddress,
-        userAgent: context.userAgent
-      }, transaction);
+        await this.logTransaction({
+          transactionId: createdInvoice[0].invoiceNumber,
+          transactionType: 'invoice',
+          entityId: createdInvoice[0].id,
+          action: 'create',
+          newValues: createdInvoice[0],
+          amount: createdInvoice[0].amount.toString(),
+          userId: context.userId,
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent
+        }, tx);
 
-      await transaction.commit();
+        return createdInvoice[0];
+      });
 
       this.logger.logInvoiceCreated(
-        invoice[0].id,
-        invoice[0].invoiceNumber,
-        parseFloat(invoice[0].amount.toString()),
-        invoice[0].memberId
+        invoice.id,
+        invoice.invoiceNumber,
+        parseFloat(invoice.amount.toString()),
+        invoice.memberId
       );
 
-      return invoice[0];
+      return invoice;
 
     } catch (error) {
-      await transaction.rollback();
       this.logger.error('Failed to create invoice', { error, invoiceData });
       throw error;
     }
@@ -168,39 +154,36 @@ export class FinanceService {
    */
   async updateInvoiceStatus(invoiceId: number, status: string, context: any): Promise<Invoice> {
     const db = this.db.getDb();
-    const transaction = await db.beginTransaction();
 
     try {
       const existingInvoice = await this.getInvoiceById(invoiceId);
-
-      // Validate status transition
       this.validateInvoiceStatusTransition(existingInvoice.status, status);
+      const updatedInvoice = await db.transaction(async (tx) => {
+        const updated = await tx
+          .update(invoices)
+          .set({
+            status,
+            updatedAt: new Date()
+          })
+          .where(eq(invoices.id, invoiceId))
+          .returning();
 
-      const updatedInvoice = await transaction
-        .update(invoices)
-        .set({
-          status,
-          updatedAt: new Date()
-        })
-        .where(eq(invoices.id, invoiceId))
-        .returning();
+        await this.logTransaction({
+          transactionId: updated[0].invoiceNumber,
+          transactionType: 'invoice',
+          entityId: invoiceId,
+          action: 'status_update',
+          oldValues: { status: existingInvoice.status },
+          newValues: { status },
+          amount: updated[0].amount.toString(),
+          userId: context.userId,
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent,
+          reason: context.reason
+        }, tx);
 
-      // Log transaction
-      await this.logTransaction({
-        transactionId: updatedInvoice[0].invoiceNumber,
-        transactionType: 'invoice',
-        entityId: invoiceId,
-        action: 'status_update',
-        oldValues: { status: existingInvoice.status },
-        newValues: { status },
-        amount: updatedInvoice[0].amount.toString(),
-        userId: context.userId,
-        ipAddress: context.ipAddress,
-        userAgent: context.userAgent,
-        reason: context.reason
-      }, transaction);
-
-      await transaction.commit();
+        return updated[0];
+      });
 
       this.logger.info('Invoice status updated', {
         invoiceId,
@@ -209,10 +192,9 @@ export class FinanceService {
         updatedBy: context.userId
       });
 
-      return updatedInvoice[0];
+      return updatedInvoice;
 
     } catch (error) {
-      await transaction.rollback();
       this.logger.error('Failed to update invoice status', { error, invoiceId, status });
       throw error;
     }
@@ -225,7 +207,6 @@ export class FinanceService {
    */
   async processPayment(paymentData: NewPayment, context: any): Promise<Payment> {
     const db = this.db.getDb();
-    const transaction = await db.beginTransaction();
 
     try {
       this.logger.info('Processing payment', {
@@ -234,18 +215,9 @@ export class FinanceService {
         paymentMethod: paymentData.paymentMethod
       });
 
-      // Validate payment rules
       await this.validatePaymentRules(paymentData);
 
-      // Generate unique payment number
-      if (!paymentData.paymentNumber) {
-        paymentData.paymentNumber = await this.generatePaymentNumber();
-      }
-
-      // Get invoice details
       const invoice = await this.getInvoiceById(paymentData.invoiceId);
-
-      // Check if payment amount exceeds balance
       const currentBalance = parseFloat(invoice.balanceAmount.toString());
       const paymentAmount = parseFloat(paymentData.amount.toString());
 
@@ -258,60 +230,67 @@ export class FinanceService {
       const taxAmount = parseFloat(paymentData.taxAmount?.toString() || '0');
       const netAmount = paymentAmount - processingFee - taxAmount;
 
-      const paymentRecord = {
-        ...paymentData,
-        netAmount,
-        status: 'pending',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+      const payment = await db.transaction(async (tx) => {
+        if (!paymentData.paymentNumber) {
+          paymentData.paymentNumber = await this.generatePaymentNumber();
+        }
 
-      const payment = await transaction.insert(payments).values(paymentRecord).returning();
-
-      // Update invoice balance and paid amount
-      const newPaidAmount = parseFloat(invoice.paidAmount.toString()) + paymentAmount;
-      const newBalanceAmount = currentBalance - paymentAmount;
-      const newPaymentStatus = newBalanceAmount === 0 ? 'paid' : newBalanceAmount < paymentAmount ? 'partially_paid' : 'unpaid';
-
-      await transaction
-        .update(invoices)
-        .set({
-          paidAmount: newPaidAmount,
-          balanceAmount: newBalanceAmount,
-          paymentStatus: newPaymentStatus,
+        const paymentRecord = {
+          ...paymentData,
+          netAmount: netAmount.toString(),
+          status: 'pending' as const,
+          createdAt: new Date(),
           updatedAt: new Date()
-        })
-        .where(eq(invoices.id, paymentData.invoiceId));
+        };
 
-      // Log transaction
-      await this.logTransaction({
-        transactionId: payment[0].paymentNumber,
-        transactionType: 'payment',
-        entityId: payment[0].id,
-        action: 'create',
-        newValues: payment[0],
-        amount: payment[0].amount.toString(),
-        userId: context.userId,
-        ipAddress: context.ipAddress,
-        userAgent: context.userAgent
-      }, transaction);
+        const createdPayment = await tx.insert(payments).values(paymentRecord).returning();
 
-      await transaction.commit();
+        const invoicePaidAmount = parseFloat((invoice.paidAmount ?? '0').toString());
+        const newPaidAmount = invoicePaidAmount + paymentAmount;
+        const newBalanceAmount = currentBalance - paymentAmount;
+        const newPaymentStatus = newBalanceAmount === 0
+          ? 'paid'
+          : newPaidAmount > 0
+            ? 'partially_paid'
+            : 'unpaid';
 
-      // Update payment status to completed
-      await this.updatePaymentStatus(payment[0].id, 'completed', context);
+        await tx
+          .update(invoices)
+          .set({
+            paidAmount: newPaidAmount.toString(),
+            balanceAmount: newBalanceAmount.toString(),
+            paymentStatus: newPaymentStatus,
+            updatedAt: new Date()
+          })
+          .where(eq(invoices.id, paymentData.invoiceId));
+
+        await this.logTransaction({
+          transactionId: createdPayment[0].paymentNumber,
+          transactionType: 'payment',
+          entityId: createdPayment[0].id,
+          action: 'create',
+          newValues: createdPayment[0],
+          amount: createdPayment[0].amount.toString(),
+          userId: context.userId,
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent
+        }, tx);
+
+        return createdPayment[0];
+      });
+
+      await this.updatePaymentStatus(payment.id, 'completed', context);
 
       this.logger.logInvoicePaid(
         invoice.id,
-        payment[0].id,
+        payment.id,
         paymentAmount,
         paymentData.paymentMethod
       );
 
-      return payment[0];
+      return payment;
 
     } catch (error) {
-      await transaction.rollback();
       this.logger.error('Failed to process payment', { error, paymentData });
       throw error;
     }
@@ -322,41 +301,38 @@ export class FinanceService {
    */
   async updatePaymentStatus(paymentId: number, status: string, context: any): Promise<Payment> {
     const db = this.db.getDb();
-    const transaction = await db.beginTransaction();
 
     try {
       const existingPayment = await this.getPaymentById(paymentId);
-
-      // Validate status transition
       this.validatePaymentStatusTransition(existingPayment.status, status);
+      const updatedPayment = await db.transaction(async (tx) => {
+        const updated = await tx
+          .update(payments)
+          .set({
+            status,
+            updatedAt: new Date(),
+            paymentDate: status === 'completed' ? new Date() : existingPayment.paymentDate,
+            failureReason: status === 'failed' ? context.failureReason : null
+          })
+          .where(eq(payments.id, paymentId))
+          .returning();
 
-      const updatedPayment = await transaction
-        .update(payments)
-        .set({
-          status,
-          updatedAt: new Date(),
-          paymentDate: status === 'completed' ? new Date() : existingPayment.paymentDate,
-          failureReason: status === 'failed' ? context.failureReason : null
-        })
-        .where(eq(payments.id, paymentId))
-        .returning();
+        await this.logTransaction({
+          transactionId: updated[0].paymentNumber,
+          transactionType: 'payment',
+          entityId: paymentId,
+          action: 'status_update',
+          oldValues: { status: existingPayment.status },
+          newValues: { status },
+          amount: updated[0].amount.toString(),
+          userId: context.userId,
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent,
+          reason: context.reason
+        }, tx);
 
-      // Log transaction
-      await this.logTransaction({
-        transactionId: updatedPayment[0].paymentNumber,
-        transactionType: 'payment',
-        entityId: paymentId,
-        action: 'status_update',
-        oldValues: { status: existingPayment.status },
-        newValues: { status },
-        amount: updatedPayment[0].amount.toString(),
-        userId: context.userId,
-        ipAddress: context.ipAddress,
-        userAgent: context.userAgent,
-        reason: context.reason
-      }, transaction);
-
-      await transaction.commit();
+        return updated[0];
+      });
 
       this.logger.info('Payment status updated', {
         paymentId,
@@ -365,10 +341,9 @@ export class FinanceService {
         updatedBy: context.userId
       });
 
-      return updatedPayment[0];
+      return updatedPayment;
 
     } catch (error) {
-      await transaction.rollback();
       this.logger.error('Failed to update payment status', { error, paymentId, status });
       throw error;
     }
@@ -406,7 +381,6 @@ export class FinanceService {
    */
   async calculateCommission(commissionData: NewCommission, context: any): Promise<Commission> {
     const db = this.db.getDb();
-    const transaction = await db.beginTransaction();
 
     try {
       this.logger.info('Calculating commission', {
@@ -416,56 +390,51 @@ export class FinanceService {
         percentage: commissionData.percentage.toString()
       });
 
-      // Validate commission rules
       await this.validateCommissionRules(commissionData);
-
-      // Generate unique commission number
-      if (!commissionData.commissionNumber) {
-        commissionData.commissionNumber = await this.generateCommissionNumber();
-      }
-
-      // Calculate commission amount
       const baseAmount = parseFloat(commissionData.baseAmount.toString());
       const percentage = parseFloat(commissionData.percentage.toString());
       const commissionAmount = baseAmount * (percentage / 100);
+      const commission = await db.transaction(async (tx) => {
+        if (!commissionData.commissionNumber) {
+          commissionData.commissionNumber = await this.generateCommissionNumber();
+        }
 
-      const commissionRecord = {
-        ...commissionData,
-        amount: commissionAmount,
-        status: 'calculated',
-        calculationDate: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+        const commissionRecord = {
+          ...commissionData,
+          amount: commissionAmount.toString(),
+          status: 'calculated' as const,
+          calculationDate: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
 
-      const commission = await transaction.insert(commissions).values(commissionRecord).returning();
+        const createdCommission = await tx.insert(commissions).values(commissionRecord).returning();
 
-      // Log transaction
-      await this.logTransaction({
-        transactionId: commission[0].commissionNumber,
-        transactionType: 'commission',
-        entityId: commission[0].id,
-        action: 'calculate',
-        newValues: commission[0],
-        amount: commission[0].amount.toString(),
-        userId: context.userId,
-        ipAddress: context.ipAddress,
-        userAgent: context.userAgent
-      }, transaction);
+        await this.logTransaction({
+          transactionId: createdCommission[0].commissionNumber,
+          transactionType: 'commission',
+          entityId: createdCommission[0].id,
+          action: 'calculate',
+          newValues: createdCommission[0],
+          amount: createdCommission[0].amount.toString(),
+          userId: context.userId,
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent
+        }, tx);
 
-      await transaction.commit();
+        return createdCommission[0];
+      });
 
       this.logger.logCommissionCalculated(
-        commission[0].id,
-        commission[0].agentId,
+        commission.id,
+        commission.agentId,
         commissionAmount,
-        commission[0].transactionType
+        commission.transactionType ?? 'unknown'
       );
 
-      return commission[0];
+      return commission;
 
     } catch (error) {
-      await transaction.rollback();
       this.logger.error('Failed to calculate commission', { error, commissionData });
       throw error;
     }
@@ -608,7 +577,7 @@ export class FinanceService {
 
     // Validate currency
     const validCurrencies = ['KES', 'USD', 'EUR', 'GBP'];
-    if (!validCurrencies.includes(invoiceData.currency)) {
+    if (!invoiceData.currency || !validCurrencies.includes(invoiceData.currency)) {
       throw new ValidationError('Invalid currency');
     }
   }
@@ -621,13 +590,13 @@ export class FinanceService {
 
     // Validate payment method
     const validPaymentMethods = ['mpesa', 'card', 'bank', 'cash', 'mobile'];
-    if (!validPaymentMethods.includes(paymentData.paymentMethod)) {
+    if (!paymentData.paymentMethod || !validPaymentMethods.includes(paymentData.paymentMethod)) {
       throw new ValidationError('Invalid payment method');
     }
 
     // Validate currency
     const validCurrencies = ['KES', 'USD', 'EUR', 'GBP'];
-    if (!validCurrencies.includes(paymentData.currency)) {
+    if (!paymentData.currency || !validCurrencies.includes(paymentData.currency)) {
       throw new ValidationError('Invalid currency');
     }
   }
@@ -767,7 +736,7 @@ export class FinanceService {
       action: transactionData.action,
       oldValues: transactionData.oldValues,
       newValues: transactionData.newValues,
-      amount: transactionData.amount ? parseFloat(transactionData.amount) : undefined,
+      amount: transactionData.amount ? String(transactionData.amount) : undefined,
       currency: transactionData.currency || 'KES',
       userId: transactionData.userId,
       ipAddress: transactionData.ipAddress,

@@ -29,6 +29,7 @@ export class WinstonLogger {
       winston.format.json(),
       winston.format.printf((info) => {
         const { timestamp, level, message, service: logService, correlationId, transactionId, amount, currency, ...meta } = info;
+        const formattedAmount = this.formatAmount(amount);
 
         const logEntry = {
           timestamp,
@@ -36,7 +37,7 @@ export class WinstonLogger {
           service: logService || service,
           correlationId,
           transactionId,
-          amount: amount ? parseFloat(amount).toFixed(2) : undefined,
+          amount: formattedAmount,
           currency,
           message,
           ...meta
@@ -55,7 +56,8 @@ export class WinstonLogger {
         const { timestamp, level, message, service: logService, correlationId, transactionId, amount, currency, ...meta } = info;
         const correlationStr = correlationId ? ` [${correlationId}]` : '';
         const transactionStr = transactionId ? ` [TX:${transactionId}]` : '';
-        const amountStr = amount ? ` [${currency || 'KES'} ${parseFloat(amount).toFixed(2)}]` : '';
+        const formattedAmount = this.formatAmount(amount);
+        const amountStr = formattedAmount ? ` [${currency || 'KES'} ${formattedAmount}]` : '';
         const metaStr = Object.keys(meta).length > 0 ? ` ${JSON.stringify(meta)}` : '';
         return `${timestamp} [${logService || service}]${correlationStr}${transactionStr}${amountStr} ${level}: ${message}${metaStr}`;
       })
@@ -162,6 +164,15 @@ export class WinstonLogger {
         })
       ]
     });
+  }
+
+  private formatAmount(amount: unknown): string | undefined {
+    if (amount === undefined || amount === null || amount === '') {
+      return undefined;
+    }
+
+    const numericAmount = typeof amount === 'number' ? amount : Number(amount);
+    return Number.isFinite(numericAmount) ? numericAmount.toFixed(2) : undefined;
   }
 
   /**
@@ -452,6 +463,10 @@ export class WinstonLogger {
     });
   }
 
+  logRegulatoryViolation(regulation: string, message: string, severity: 'high' | 'critical' = 'high', meta?: any): void {
+    this.logFinancialAlert('regulatory_violation', severity, `Regulatory violation (${regulation}): ${message}`, undefined, undefined, meta);
+  }
+
   /**
    * Log data integrity check
    */
@@ -463,6 +478,15 @@ export class WinstonLogger {
       details,
       compliance: true,
       ...meta
+    });
+  }
+
+  logPaymentGatewayError(gateway: string, message: string, transactionId?: string, meta?: any): void {
+    this.error(`Payment gateway error: ${gateway} - ${message}`, {
+      gateway,
+      transactionId,
+      compliance: true,
+      ...meta,
     });
   }
 

@@ -6,9 +6,9 @@
 
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '../models/database';
+import { db } from '../models/Database';
 import { saga, sagaStep } from '../models/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 export type SagaStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'compensating' | 'compensated';
 export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'compensated';
@@ -490,25 +490,28 @@ export class SagaOrchestrator extends EventEmitter {
    * Get saga status with all details
    */
   async getSagaStatus(sagaId: string): Promise<SagaTransaction | null> {
-    const sagaRecord = await db.query.saga.findFirst({
-      where: eq(saga.id, sagaId),
-    });
+    const [sagaRecord] = await db
+      .select()
+      .from(saga)
+      .where(eq(saga.id, sagaId))
+      .limit(1);
 
     if (!sagaRecord) {
       return null;
     }
 
-    const steps = await db.query.sagaStep.findMany({
-      where: eq(sagaStep.sagaId, sagaId),
-    });
+    const steps = await db
+      .select()
+      .from(sagaStep)
+      .where(eq(sagaStep.sagaId, sagaId));
 
     return {
       id: sagaRecord.id,
       correlationId: sagaRecord.correlationId,
       sagaName: sagaRecord.name,
       status: sagaRecord.status as SagaStatus,
-      steps: steps.map(s => ({
-        id: s.id!,
+      steps: steps.map((s: typeof steps[number]) => ({
+        id: String(s.id),
         stepName: s.stepName as StepAction,
         status: s.status as StepStatus,
         input: s.input ? JSON.parse(s.input) : {},
@@ -549,9 +552,11 @@ export class SagaOrchestrator extends EventEmitter {
     action: string,
     details: Record<string, any>
   ): Promise<void> {
-    const sagaRecord = await db.query.saga.findFirst({
-      where: eq(saga.id, sagaId),
-    });
+    const [sagaRecord] = await db
+      .select()
+      .from(saga)
+      .where(eq(saga.id, sagaId))
+      .limit(1);
 
     if (sagaRecord) {
       const trail = sagaRecord.auditTrail ? JSON.parse(sagaRecord.auditTrail) : [];

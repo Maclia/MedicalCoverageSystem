@@ -19,7 +19,7 @@ export const invoices = pgTable('invoices', {
   companyId: integer('company_id').notNull(),
   invoiceType: varchar('invoice_type', { length: 50 }).notNull(), // medical, insurance, subscription, penalty
   amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
-  taxAmount: decimal('tax_amount', { precision: 15, scale: 2 }).default(0),
+  taxAmount: decimal('tax_amount', { precision: 15, scale: 2 }).default('0'),
   totalAmount: decimal('total_amount', { precision: 15, scale: 2 }).notNull(),
   currency: varchar('currency', { length: 10 }).notNull().default('KES'),
   issueDate: timestamp('issue_date').notNull(),
@@ -28,11 +28,11 @@ export const invoices = pgTable('invoices', {
   paymentTerms: varchar('payment_terms', { length: 100 }),
   description: text('description'),
   items: jsonb('items'), // Array of invoice items
-  discountAmount: decimal('discount_amount', { length: 15, scale: 2 }).default(0),
-  discountPercentage: decimal('discount_percentage', { precision: 5, scale: 2 }).default(0),
-  penaltyAmount: decimal('penalty_amount', { precision: 15, scale: 2 }).default(0),
-  lateFeeAmount: decimal('late_fee_amount', { precision: 15, scale: 2 }).default(0),
-  paidAmount: decimal('paid_amount', { precision: 15, scale: 2 }).default(0),
+  discountAmount: decimal('discount_amount', { precision: 15, scale: 2 }).default('0'),
+  discountPercentage: decimal('discount_percentage', { precision: 5, scale: 2 }).default('0'),
+  penaltyAmount: decimal('penalty_amount', { precision: 15, scale: 2 }).default('0'),
+  lateFeeAmount: decimal('late_fee_amount', { precision: 15, scale: 2 }).default('0'),
+  paidAmount: decimal('paid_amount', { precision: 15, scale: 2 }).default('0'),
   balanceAmount: decimal('balance_amount', { precision: 15, scale: 2 }).notNull(),
   paymentStatus: varchar('payment_status', { length: 20 }).notNull().default('unpaid'), // unpaid, partially_paid, paid
   billingAddress: jsonb('billing_address'),
@@ -69,10 +69,10 @@ export const payments = pgTable('payments', {
   gateway: varchar('gateway', { length: 50 }), // stripe, paypal, mpesa, etc.
   gatewayResponse: jsonb('gateway_response'), // Response from payment gateway
   gatewayTransactionId: varchar('gateway_transaction_id', { length: 200 }),
-  processingFee: decimal('processing_fee', { precision: 10, scale: 2 }).default(0),
-  taxAmount: decimal('tax_amount', { precision: 10, scale: 2 }).default(0),
+  processingFee: decimal('processing_fee', { precision: 10, scale: 2 }).default('0'),
+  taxAmount: decimal('tax_amount', { precision: 10, scale: 2 }).default('0'),
   netAmount: decimal('net_amount', { precision: 15, scale: 2 }).notNull(),
-  refundAmount: decimal('refund_amount', { precision: 15, scale: 2 }).default(0),
+  refundAmount: decimal('refund_amount', { precision: 15, scale: 2 }).default('0'),
   refundReason: varchar('refund_reason', { length: 255 }),
   refundDate: timestamp('refund_date'),
   failureReason: varchar('failure_reason', { length: 255 }),
@@ -147,11 +147,11 @@ export const expenses = pgTable('expenses', {
   paidDate: timestamp('paid_date'),
   receiptNumber: varchar('receipt_number', { length: 100 }),
   invoiceNumber: varchar('invoice_number', { length: 100 }),
-  taxAmount: decimal('tax_amount', { precision: 10, scale: 2 }).default(0),
+  taxAmount: decimal('tax_amount', { precision: 10, scale: 2 }).default('0'),
   totalAmount: decimal('total_amount', { precision: 15, scale: 2 }).notNull(),
   reimbursable: boolean('reimbursable').default(false),
   reimbursed: boolean('reimbursed').default(false),
-  reimbursedAmount: decimal('reimbursed_amount', { precision: 15, scale: 2 }).default(0),
+  reimbursedAmount: decimal('reimbursed_amount', { precision: 15, scale: 2 }).default('0'),
   reimbursedDate: timestamp('reimbursed_date'),
   approvedBy: integer('approved_by'),
   approvedAt: timestamp('approved_at'),
@@ -183,11 +183,11 @@ export const budgets = pgTable('budgets', {
   currency: varchar('currency', { length: 10 }).notNull().default('KES'),
   startDate: timestamp('start_date').notNull(),
   endDate: timestamp('end_date').notNull(),
-  spentAmount: decimal('spent_amount', { precision: 15, scale: 2 }).default(0),
+  spentAmount: decimal('spent_amount', { precision: 15, scale: 2 }).default('0'),
   remainingAmount: decimal('remaining_amount', { precision: 15, scale: 2 }).notNull(),
-  percentageUsed: decimal('percentage_used', { precision: 5, scale: 2 }).default(0),
+  percentageUsed: decimal('percentage_used', { precision: 5, scale: 2 }).default('0'),
   status: varchar('status', { length: 20 }).notNull().default('active'), // active, completed, cancelled
-  allocatedAmount: decimal('allocated_amount', { precision: 15, scale: 2 }).default(0),
+  allocatedAmount: decimal('allocated_amount', { precision: 15, scale: 2 }).default('0'),
   unallocatedAmount: decimal('unallocated_amount', { precision: 15, scale: 2 }).notNull(),
   alerts: jsonb('alerts'), // Budget alert settings
   metadata: jsonb('metadata'),
@@ -282,7 +282,7 @@ export const paymentRecovery = pgTable('payment_recovery', {
   recoveredAt: timestamp('recovered_at'),
   failedAt: timestamp('failed_at'),
   supportTicketId: varchar('support_ticket_id', { length: 100 }),
-  auditTrail: jsonb('audit_trail').notNull().default('[]'),
+  auditTrail: jsonb('audit_trail').notNull().default([]),
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -294,6 +294,41 @@ export const paymentRecovery = pgTable('payment_recovery', {
   statusIdx: index('payment_recovery_status_idx').on(table.status),
   nextRetryAtIdx: index('payment_recovery_next_retry_at_idx').on(table.nextRetryAt),
   createdAtIdx: index('payment_recovery_created_at_idx').on(table.createdAt),
+}));
+
+export const saga = pgTable('saga', {
+  id: varchar('id', { length: 100 }).primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(),
+  correlationId: varchar('correlation_id', { length: 100 }).notNull(),
+  status: varchar('status', { length: 30 }).notNull().default('pending'),
+  metadata: text('metadata'),
+  auditTrail: text('audit_trail'),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+  compensatedAt: timestamp('compensated_at'),
+}, (table) => ({
+  correlationIdIdx: index('saga_correlation_id_idx').on(table.correlationId),
+  statusIdx: index('saga_status_idx').on(table.status),
+}));
+
+export const sagaStep = pgTable('saga_step', {
+  id: serial('id').primaryKey(),
+  sagaId: varchar('saga_id', { length: 100 }).notNull(),
+  stepName: varchar('step_name', { length: 100 }).notNull(),
+  status: varchar('status', { length: 30 }).notNull().default('pending'),
+  input: text('input'),
+  output: text('output'),
+  error: text('error'),
+  compensationExecuted: boolean('compensation_executed').notNull().default(false),
+  compensationError: text('compensation_error'),
+  retryCount: integer('retry_count').notNull().default(0),
+  maxRetries: integer('max_retries').notNull().default(3),
+  startedAt: timestamp('started_at').defaultNow().notNull(),
+  completedAt: timestamp('completed_at'),
+  compensatedAt: timestamp('compensated_at'),
+}, (table) => ({
+  sagaIdIdx: index('saga_step_saga_id_idx').on(table.sagaId),
+  statusIdx: index('saga_step_status_idx').on(table.status),
 }));
 
 // Export all tables
@@ -313,3 +348,7 @@ export type TransactionLog = typeof transactionLogs.$inferSelect;
 export type NewTransactionLog = typeof transactionLogs.$inferInsert;
 export type PaymentRecovery = typeof paymentRecovery.$inferSelect;
 export type NewPaymentRecovery = typeof paymentRecovery.$inferInsert;
+export type Saga = typeof saga.$inferSelect;
+export type NewSaga = typeof saga.$inferInsert;
+export type SagaStepRecord = typeof sagaStep.$inferSelect;
+export type NewSagaStepRecord = typeof sagaStep.$inferInsert;

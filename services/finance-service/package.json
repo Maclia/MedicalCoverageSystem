@@ -50,7 +50,7 @@
     "node-cron": "^3.0.2",
     "nodemailer": "^8.0.5",
     "passport-apple": "2.0.2",
-    "paypal-rest-sdk": "^1.8.1",
+    "@paypal/paypal-server-sdk": "^1.1.0",
     "pdfkit": "^0.13.0",
     "pg": "^8.13.1",
     "postgres": "^3.4.3",

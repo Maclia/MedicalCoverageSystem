@@ -1,6 +1,6 @@
 import { config } from 'dotenv';
 import { createApp } from './app';
-import { Database } from './models/database';
+import { Database } from './models/Database';
 import { WinstonLogger } from './utils/WinstonLogger';
 import { CacheService } from './services/cache.service';
 import { AuditService } from './services/audit.service';

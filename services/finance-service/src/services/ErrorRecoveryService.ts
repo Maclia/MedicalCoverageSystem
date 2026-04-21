@@ -347,7 +347,7 @@ ${recovery.auditTrail.map(entry => `  [${entry.timestamp.toISOString()}] ${entry
     try {
       // Call finance service to retry payment (would be actual payment processing)
       const response = await axios.post(
-        `${process.env.FINANCE_SERVICE_URL || 'http://finance-service:3007'}/api/payments/retry`,
+        `${process.env.FINANCE_SERVICE_URL || 'http://finance-service:3004'}/api/payments/retry`,
         {
           paymentId: recovery.paymentId,
           claimId: recovery.claimId,

@@ -28,12 +28,30 @@ export interface ApiResponse<T = any> {
     invoiceId?: number;
     paymentId?: number;
     commissionId?: number;
+    refundId?: number;
+    agentId?: number;
+    paymentMethod?: string;
     transactionId?: string;
     amount?: number;
+    totalAmount?: number;
     currency?: string;
     financialEvent?: string;
     auditTrail?: boolean;
     complianceLevel?: string;
+    recordCount?: number;
+    requiresAudit?: boolean;
+    reportType?: string;
+    exportType?: string;
+    operationType?: string;
+    period?: string;
+    checkType?: string;
+    complianceType?: string;
+    severity?: string;
+    gateway?: string;
+    entityType?: string;
+    entityId?: number;
+    operation?: string;
+    rule?: string;
   };
 }
 

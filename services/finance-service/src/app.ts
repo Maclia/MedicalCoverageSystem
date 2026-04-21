@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import { Database } from './models/database';
+import { Database } from './models/Database';
 import { WinstonLogger } from './utils/WinstonLogger';
 import { CacheService } from './services/cache.service';
 import { AuditService } from './services/audit.service';
