@@ -112,7 +112,7 @@ export const config = {
 
   // API Gateway
   apiGateway: {
-    url: process.env.API_GATEWAY_URL || 'http://localhost:5000',
+    url: process.env.API_GATEWAY_URL || 'http://localhost:3001',
     timeout: 30000,
   },
 

@@ -375,8 +375,8 @@ export class SagaOrchestrator extends EventEmitter {
     data?: Record<string, any>
   ): Promise<Record<string, any>> {
     const serviceUrls: Record<string, string> = {
-      'claims-service': process.env.CLAIMS_SERVICE_URL || 'http://claims-service:3006',
-      'finance-service': process.env.FINANCE_SERVICE_URL || 'http://finance-service:3007',
+      'claims-service': process.env.CLAIMS_SERVICE_URL || 'http://claims-service:3010',
+      'finance-service': process.env.FINANCE_SERVICE_URL || 'http://finance-service:3004',
       'notification-service': process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3009',
     };
 
