@@ -1,5 +1,8 @@
-import { logger } from '../utils/logger';
-import { Investigation, InvestigationStatus, InvestigationConclusion } from '../types';
+import logger from '../utils/logger';
+
+type Investigation = any;
+type InvestigationStatus = any;
+type InvestigationConclusion = any;
 
 export class InvestigationService {
   private investigations: Map<string, Investigation> = new Map();
