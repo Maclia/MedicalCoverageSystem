@@ -361,3 +361,8 @@ export type Communication = typeof communications.$inferSelect;
 export type NewCommunication = typeof communications.$inferInsert;
 export type Eligibility = typeof eligibility.$inferSelect;
 export type NewEligibility = typeof eligibility.$inferInsert;
+
+// Backwards-compatible aliases for older service code.
+export const memberLifeEvents = lifeEvents;
+export const memberDocuments = documents;
+export const memberConsents = consents;

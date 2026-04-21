@@ -1,11 +1,6 @@
 import { Database } from '../models/Database';
 import { WinstonLogger } from '../utils/WinstonLogger';
-import {
-  members,
-  memberLifeEvents,
-  memberDocuments,
-  memberConsents
-} from '../models/schema';
+import { members, lifeEvents, documents, consents } from '../models/schema';
 import {
   CreateMemberRequest,
   UpdateMemberRequest,
@@ -14,25 +9,10 @@ import {
   DocumentUploadRequest,
   MemberNotificationRequest,
   MemberStatsRequest,
-  MemberEligibilityRequest
+  MemberEligibilityRequest,
 } from '../types/MembershipTypes';
-import {
-  ValidationError,
-  NotFoundError,
-  BusinessRuleError
-} from '../utils/CustomErrors';
-import {
-  eq,
-  sql,
-  and,
-  or,
-  desc,
-  asc,
-  inArray,
-  like,
-  gte,
-  lte
-} from 'drizzle-orm';
+import { ValidationError, NotFoundError, BusinessRuleError } from '../utils/CustomErrors';
+import { eq, and, or, desc, inArray, like, gte, lte } from 'drizzle-orm';
 
 export class MembershipServiceSimplified {
   private readonly db: Database;
@@ -43,723 +23,483 @@ export class MembershipServiceSimplified {
     this.logger = new WinstonLogger('membership-service');
   }
 
-  /**
-   * Create a new member
-   */
   async createMember(request: CreateMemberRequest, context: any): Promise<any> {
-    const db = this.db.getDb();
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
 
-    try {
-      this.logger.info('Creating new member', {
+    await this.validateBusinessRules(request);
+    await this.checkForExistingMember(request);
+
+    const memberNumber = await this.generateMemberNumber(request.companyId);
+    const now = new Date();
+
+    const created = await db
+      .insert(memberTable)
+      .values({
+        memberNumber,
+        companyId: request.companyId,
+        principalId: request.principalId ?? null,
+        firstName: request.firstName,
+        lastName: request.lastName,
+        middleName: request.secondName ?? null,
+        dateOfBirth: new Date(request.dateOfBirth).toISOString().slice(0, 10),
+        gender: request.gender ?? 'other',
+        maritalStatus: request.maritalStatus ?? 'single',
+        nationalId: request.nationalId ?? null,
+        passportNumber: request.passportNumber ?? null,
+        phoneNumber: request.phone,
         email: request.email,
-        companyId: request.companyId
-      });
-
-      // Validate business rules
-      await this.validateBusinessRules(request);
-
-      // Check for duplicates
-      await this.checkForExistingMember(request);
-
-      // Generate member ID
-      const memberId = await this.generateMemberId(request.companyId);
-
-      // Create member record
-      const memberData = {
-        ...request,
-        memberId,
+        physicalAddress: request.address ?? null,
+        city: request.city ?? null,
+        postalCode: request.postalCode ?? null,
+        country: request.country ?? 'Kenya',
         membershipStatus: 'pending',
-        enrollmentDate: new Date(),
-        dateOfBirth: new Date(request.dateOfBirth),
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+        membershipType: request.memberType,
+        dependentType: request.dependentType ?? null,
+        enrollmentDate: now.toISOString().slice(0, 10),
+        effectiveDate: now.toISOString().slice(0, 10),
+        isPrimary: request.memberType === 'principal',
+        isDependent: request.memberType === 'dependent',
+        isPrincipal: request.memberType === 'principal',
+        isDisabled: request.hasDisability ?? false,
+        notes: request.disabilityDetails ?? null,
+        metadata: {
+          employeeId: request.employeeId,
+          communicationPreferences: request.communicationPreferences,
+          source: request.source ?? 'manual',
+          createdBy: context?.userId ?? null,
+        },
+        createdAt: now,
+        updatedAt: now,
+      })
+      .returning();
 
-      const member = await db.insert(members).values(memberData).returning();
-
-      // Create enrollment life event
-      await this.createLifeEvent(member[0].id, {
-        eventType: 'enrollment',
-        eventDate: new Date(),
+    const member = created[0];
+    await this.createLifeEvent(member.id, member.companyId, {
+      eventType: 'enrollment',
+      eventDate: now,
+      effectiveDate: now,
+      reason: 'New member enrollment',
+      description: 'Member created',
+      metadata: {
         previousStatus: null,
         newStatus: 'pending',
-        reason: 'New member enrollment',
-        processedBy: context.userId,
-        metadata: { enrollmentSource: request.source || 'manual' }
-      });
+        processedBy: context?.userId ?? null,
+      },
+    });
 
-      this.logger.info('Member created successfully', {
-        memberId: member[0].id,
-        enrollmentId: memberId
-      });
-
-      return member[0];
-
-    } catch (error) {
-      this.logger.error('Failed to create member', { error, request });
-      throw error;
-    }
+    return member;
   }
 
-  /**
-   * Update member information
-   */
-  async updateMember(memberId: number, request: UpdateMemberRequest, context: any): Promise<any> {
-    const db = this.db.getDb();
+  async updateMember(memberId: number, request: UpdateMemberRequest, _context?: any): Promise<any> {
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
+    const member = await this.getMemberById(memberId);
 
-    try {
-      const member = await this.getMemberById(memberId);
-      if (!member) {
-        throw new NotFoundError('Member not found');
-      }
-
-      const updateData = {
-        ...request,
-        updatedAt: new Date()
-      };
-
-      const updatedMember = await db
-        .update(members)
-        .set(updateData)
-        .where(eq(members.id, memberId))
-        .returning();
-
-      return updatedMember[0];
-
-    } catch (error) {
-      this.logger.error('Failed to update member', { error, memberId });
-      throw error;
+    if (!member) {
+      throw new NotFoundError('Member not found');
     }
+
+    const updated = await db
+      .update(memberTable)
+      .set({
+        firstName: request.firstName ?? member.firstName,
+        lastName: request.lastName ?? member.lastName,
+        middleName: request.secondName ?? member.middleName ?? null,
+        phoneNumber: request.phone ?? member.phoneNumber,
+        physicalAddress: request.address ?? member.physicalAddress ?? null,
+        city: request.city ?? member.city ?? null,
+        postalCode: request.postalCode ?? member.postalCode ?? null,
+        country: request.country ?? member.country ?? 'Kenya',
+        isDisabled: request.hasDisability ?? member.isDisabled ?? false,
+        notes: request.disabilityDetails ?? member.notes ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(memberTable.id, memberId))
+      .returning();
+
+    return updated[0];
   }
 
-  /**
-   * Get member by ID
-   */
   async getMemberById(memberId: number): Promise<any> {
-    const db = this.db.getDb();
-
-    try {
-      const member = await db
-        .select()
-        .from(members)
-        .where(eq(members.id, memberId))
-        .limit(1);
-
-      return member.length > 0 ? member[0] : null;
-
-    } catch (error) {
-      this.logger.error('Failed to get member by ID', { error, memberId });
-      throw error;
-    }
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
+    const result = await db.select().from(memberTable).where(eq(memberTable.id, memberId)).limit(1);
+    return result[0] ?? null;
   }
 
-  /**
-   * Activate a member
-   */
   async activateMember(memberId: number, data: any, context: any): Promise<any> {
-    const db = this.db.getDb();
-
-    try {
-      const member = await this.getMemberById(memberId);
-      if (!member) {
-        throw new NotFoundError('Member not found');
-      }
-
-      if (member.membershipStatus === 'active') {
-        throw new BusinessRuleError('Member is already active');
-      }
-
-      // Update member status
-      const updatedMember = await db
-        .update(members)
-        .set({
-          membershipStatus: 'active',
-          activationDate: new Date(),
-          updatedAt: new Date()
-        })
-        .where(eq(members.id, memberId))
-        .returning();
-
-      // Create activation life event
-      await this.createLifeEvent(memberId, {
-        eventType: 'activation',
-        eventDate: new Date(),
-        previousStatus: member.membershipStatus,
-        newStatus: 'active',
-        reason: data.reason || 'Member activation',
-        processedBy: context.userId,
-        notes: data.notes
-      });
-
-      return updatedMember[0];
-
-    } catch (error) {
-      this.logger.error('Failed to activate member', { error, memberId });
-      throw error;
-    }
+    return this.updateMemberStatus(memberId, 'active', data?.reason ?? 'Member activation', context, {
+      effectiveDate: new Date().toISOString().slice(0, 10),
+      suspensionDate: null,
+      suspensionReason: null,
+      terminationDate: null,
+    });
   }
 
-  /**
-   * Suspend a member
-   */
   async suspendMember(memberId: number, data: any, context: any): Promise<any> {
-    const db = this.db.getDb();
-
-    try {
-      const member = await this.getMemberById(memberId);
-      if (!member) {
-        throw new NotFoundError('Member not found');
-      }
-
-      if (member.membershipStatus !== 'active') {
-        throw new BusinessRuleError('Only active members can be suspended');
-      }
-
-      // Update member status
-      const updatedMember = await db
-        .update(members)
-        .set({
-          membershipStatus: 'suspended',
-          suspendedAt: new Date(),
-          suspendedReason: data.reason,
-          updatedAt: new Date()
-        })
-        .where(eq(members.id, memberId))
-        .returning();
-
-      // Create suspension life event
-      await this.createLifeEvent(memberId, {
-        eventType: 'suspension',
-        eventDate: new Date(),
-        previousStatus: 'active',
-        newStatus: 'suspended',
-        reason: data.reason,
-        notes: data.notes,
-        processedBy: context.userId
-      });
-
-      return updatedMember[0];
-
-    } catch (error) {
-      this.logger.error('Failed to suspend member', { error, memberId });
-      throw error;
-    }
+    return this.updateMemberStatus(memberId, 'suspended', data?.reason, context, {
+      suspensionDate: new Date().toISOString().slice(0, 10),
+      suspensionReason: data?.reason ?? null,
+    });
   }
 
-  /**
-   * Terminate a member
-   */
   async terminateMember(memberId: number, data: any, context: any): Promise<any> {
-    const db = this.db.getDb();
-
-    try {
-      const member = await this.getMemberById(memberId);
-      if (!member) {
-        throw new NotFoundError('Member not found');
-      }
-
-      // Update member status
-      const updatedMember = await db
-        .update(members)
-        .set({
-          membershipStatus: 'terminated',
-          terminatedAt: new Date(),
-          terminationReason: data.reason,
-          updatedAt: new Date()
-        })
-        .where(eq(members.id, memberId))
-        .returning();
-
-      // Create termination life event
-      await this.createLifeEvent(memberId, {
-        eventType: 'termination',
-        eventDate: new Date(),
-        previousStatus: member.membershipStatus,
-        newStatus: 'terminated',
-        reason: data.reason,
-        notes: data.notes,
-        processedBy: context.userId
-      });
-
-      return updatedMember[0];
-
-    } catch (error) {
-      this.logger.error('Failed to terminate member', { error, memberId });
-      throw error;
-    }
+    return this.updateMemberStatus(memberId, 'terminated', data?.reason, context, {
+      terminationDate: new Date().toISOString().slice(0, 10),
+      terminationReason: data?.reason ?? null,
+    });
   }
 
-  /**
-   * Renew a member
-   */
   async renewMember(memberId: number, data: any, context: any): Promise<any> {
-    const db = this.db.getDb();
-
-    try {
-      const member = await this.getMemberById(memberId);
-      if (!member) {
-        throw new NotFoundError('Member not found');
-      }
-
-      const renewalDate = new Date(data.renewalDate);
-
-      // Update member renewal
-      const updatedMember = await db
-        .update(members)
-        .set({
-          membershipStatus: 'active',
-          renewalDate,
-          expiresAt: renewalDate,
-          updatedAt: new Date()
-        })
-        .where(eq(members.id, memberId))
-        .returning();
-
-      // Create renewal life event
-      await this.createLifeEvent(memberId, {
-        eventType: 'renewal',
-        eventDate: new Date(),
-        previousStatus: member.membershipStatus,
-        newStatus: 'active',
-        reason: 'Membership renewal',
-        notes: data.notes,
-        processedBy: context.userId
-      });
-
-      return updatedMember[0];
-
-    } catch (error) {
-      this.logger.error('Failed to renew member', { error, memberId });
-      throw error;
-    }
+    const renewalDate = new Date(data.renewalDate);
+    return this.updateMemberStatus(memberId, 'active', 'Membership renewal', context, {
+      effectiveDate: renewalDate.toISOString().slice(0, 10),
+      terminationDate: null,
+      terminationReason: null,
+      suspensionDate: null,
+      suspensionReason: null,
+      metadata: {
+        renewalDate: renewalDate.toISOString(),
+        notes: data?.notes ?? null,
+      },
+    });
   }
 
-  /**
-   * Search members
-   */
   async searchMembers(request: MemberSearchRequest): Promise<any> {
-    const db = this.db.getDb();
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
+    let query: any = db.select().from(memberTable);
 
-    try {
-      let query = db.select().from(members);
-
-      // Apply filters
-      if (request.filters) {
-        const { filters } = request;
-
-        if (filters.companyId) {
-          query = query.where(eq(members.companyId, filters.companyId));
-        }
-
-        if (filters.membershipStatus) {
-          query = query.where(eq(members.membershipStatus, filters.membershipStatus));
-        }
-
-        if (filters.memberType) {
-          query = query.where(eq(members.memberType, filters.memberType));
-        }
-
-        if (filters.dateOfBirth) {
-          query = query.where(eq(members.dateOfBirth, new Date(filters.dateOfBirth)));
-        }
-
-        if (filters.gender) {
-          query = query.where(eq(members.gender, filters.gender));
-        }
-      }
-
-      // Apply text search
-      if (request.query) {
-        query = query.where(
-          or(
-            like(members.firstName, `%${request.query}%`),
-            like(members.lastName, `%${request.query}%`),
-            like(members.email, `%${request.query}%`),
-            like(members.phone, `%${request.query}%`),
-            like(members.memberId, `%${request.query}%`)
-          )
-        );
-      }
-
-      // Apply pagination
-      const { page = 1, limit = 20 } = request.pagination || {};
-      const offset = (page - 1) * limit;
-
-      const membersResult = await query
-        .limit(limit)
-        .offset(offset)
-        .orderBy(desc(members.createdAt));
-
-      return {
-        members: membersResult,
-        pagination: {
-          page,
-          limit,
-          total: membersResult.length,
-          totalPages: Math.ceil(membersResult.length / limit)
-        }
-      };
-
-    } catch (error) {
-      this.logger.error('Failed to search members', { error, request });
-      throw error;
+    if (request.filters?.companyId) {
+      query = query.where(eq(memberTable.companyId, request.filters.companyId));
     }
+
+    if (request.filters?.membershipStatus) {
+      query = query.where(eq(memberTable.membershipStatus, request.filters.membershipStatus));
+    }
+
+    if (request.filters?.memberType) {
+      query = query.where(eq(memberTable.membershipType, request.filters.memberType));
+    }
+
+    if (request.filters?.dateOfBirth) {
+      query = query.where(eq(memberTable.dateOfBirth, request.filters.dateOfBirth));
+    }
+
+    if (request.filters?.gender) {
+      query = query.where(eq(memberTable.gender, request.filters.gender));
+    }
+
+    if (request.query) {
+      query = query.where(
+        or(
+          like(memberTable.firstName, `%${request.query}%`),
+          like(memberTable.lastName, `%${request.query}%`),
+          like(memberTable.email, `%${request.query}%`),
+          like(memberTable.phoneNumber, `%${request.query}%`),
+          like(memberTable.memberNumber, `%${request.query}%`)
+        )
+      );
+    }
+
+    const page = request.pagination?.page ?? 1;
+    const limit = request.pagination?.limit ?? 20;
+    const offset = (page - 1) * limit;
+
+    const result = await query.limit(limit).offset(offset).orderBy(desc(memberTable.createdAt));
+
+    return {
+      members: result,
+      pagination: {
+        page,
+        limit,
+        total: result.length,
+        totalPages: Math.ceil(result.length / limit) || 1,
+      },
+    };
   }
 
-  /**
-   * Get member lifecycle events
-   */
   async getMemberLifecycleEvents(memberId: number): Promise<any[]> {
-    const db = this.db.getDb();
-
-    try {
-      const events = await db
-        .select()
-        .from(memberLifeEvents)
-        .where(eq(memberLifeEvents.memberId, memberId))
-        .orderBy(desc(memberLifeEvents.eventDate));
-
-      return events;
-
-    } catch (error) {
-      this.logger.error('Failed to get member lifecycle events', { error, memberId });
-      throw error;
-    }
+    const db: any = this.db.getDb();
+    const table: any = lifeEvents;
+    return db.select().from(table).where(eq(table.memberId, memberId)).orderBy(desc(table.eventDate));
   }
 
-  /**
-   * Get member documents
-   */
   async getMemberDocuments(memberId: number): Promise<any[]> {
-    const db = this.db.getDb();
-
-    try {
-      const documents = await db
-        .select()
-        .from(memberDocuments)
-        .where(eq(memberDocuments.memberId, memberId))
-        .orderBy(desc(memberDocuments.createdAt));
-
-      return documents;
-
-    } catch (error) {
-      this.logger.error('Failed to get member documents', { error, memberId });
-      throw error;
-    }
+    const db: any = this.db.getDb();
+    const table: any = documents;
+    return db.select().from(table).where(eq(table.memberId, memberId)).orderBy(desc(table.createdAt));
   }
 
-  /**
-   * Upload member document
-   */
   async uploadDocument(memberId: number, documentData: DocumentUploadRequest, context: any): Promise<any> {
-    const db = this.db.getDb();
+    const db: any = this.db.getDb();
+    const table: any = documents;
+    const member = await this.getMemberById(memberId);
 
-    try {
-      const document = await db.insert(memberDocuments).values({
+    if (!member) {
+      throw new NotFoundError('Member not found');
+    }
+
+    const created = await db
+      .insert(table)
+      .values({
         memberId,
+        companyId: member.companyId,
         documentType: documentData.documentType,
-        documentName: documentData.documentName,
-        fileName: documentData.fileName,
-        filePath: documentData.filePath,
-        fileSize: documentData.fileSize,
-        mimeType: documentData.mimeType,
-        expiresAt: documentData.expiresAt ? new Date(documentData.expiresAt) : null,
-        uploadedBy: context.userId,
+        documentNumber: documentData.fileName,
+        documentUrl: documentData.filePath,
+        documentData: {
+          originalName: documentData.documentName,
+          fileName: documentData.fileName,
+          fileSize: documentData.fileSize,
+          mimeType: documentData.mimeType,
+          uploadedBy: context?.userId ?? null,
+          expiresAt: documentData.expiresAt ?? null,
+        },
+        notes: documentData.documentName,
         createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
+        updatedAt: new Date(),
+      })
+      .returning();
 
-      return document[0];
-
-    } catch (error) {
-      this.logger.error('Failed to upload document', { error, memberId });
-      throw error;
-    }
+    return created[0];
   }
 
-  /**
-   * Delete member document
-   */
-  async deleteDocument(memberId: number, documentId: number, context: any): Promise<void> {
-    const db = this.db.getDb();
+  async deleteDocument(memberId: number, documentId: number, _context?: any): Promise<void> {
+    const db: any = this.db.getDb();
+    const table: any = documents;
+    const existing = await db
+      .select()
+      .from(table)
+      .where(and(eq(table.id, documentId), eq(table.memberId, memberId)))
+      .limit(1);
 
-    try {
-      const result = await db
-        .delete(memberDocuments)
-        .where(
-          and(
-            eq(memberDocuments.id, documentId),
-            eq(memberDocuments.memberId, memberId)
-          )
-        );
-
-      if (result.rowCount === 0) {
-        throw new NotFoundError('Document not found or access denied');
-      }
-
-    } catch (error) {
-      this.logger.error('Failed to delete document', { error, memberId, documentId });
-      throw error;
+    if (existing.length === 0) {
+      throw new NotFoundError('Document not found or access denied');
     }
+
+    await db.delete(table).where(and(eq(table.id, documentId), eq(table.memberId, memberId)));
   }
 
-  /**
-   * Get membership statistics
-   */
   async getMembershipStats(filters: MemberStatsRequest): Promise<any> {
-    const db = this.db.getDb();
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
+    let query: any = db.select().from(memberTable);
 
-    try {
-      let query = db.select().from(members);
-
-      if (filters.companyId) {
-        query = query.where(eq(members.companyId, filters.companyId));
-      }
-
-      if (filters.membershipStatus) {
-        query = query.where(eq(members.membershipStatus, filters.membershipStatus));
-      }
-
-      if (filters.dateFrom && filters.dateTo) {
-        query = query.where(
-          and(
-            gte(members.createdAt, new Date(filters.dateFrom)),
-            lte(members.createdAt, new Date(filters.dateTo))
-          )
-        );
-      }
-
-      const allMembers = await query;
-
-      const stats = {
-        total: allMembers.length,
-        active: allMembers.filter(m => m.membershipStatus === 'active').length,
-        pending: allMembers.filter(m => m.membershipStatus === 'pending').length,
-        suspended: allMembers.filter(m => m.membershipStatus === 'suspended').length,
-        terminated: allMembers.filter(m => m.membershipStatus === 'terminated').length,
-        expired: allMembers.filter(m => m.membershipStatus === 'expired').length,
-        principal: allMembers.filter(m => m.memberType === 'principal').length,
-        dependent: allMembers.filter(m => m.memberType === 'dependent').length
-      };
-
-      return stats;
-
-    } catch (error) {
-      this.logger.error('Failed to get membership stats', { error, filters });
-      throw error;
+    if (filters.companyId) {
+      query = query.where(eq(memberTable.companyId, filters.companyId));
     }
+
+    if (filters.membershipStatus) {
+      query = query.where(eq(memberTable.membershipStatus, filters.membershipStatus));
+    }
+
+    if (filters.dateFrom && filters.dateTo) {
+      query = query.where(
+        and(
+          gte(memberTable.createdAt, new Date(filters.dateFrom)),
+          lte(memberTable.createdAt, new Date(filters.dateTo))
+        )
+      );
+    }
+
+    const allMembers = await query;
+    return {
+      total: allMembers.length,
+      active: allMembers.filter((member: any) => member.membershipStatus === 'active').length,
+      pending: allMembers.filter((member: any) => member.membershipStatus === 'pending').length,
+      suspended: allMembers.filter((member: any) => member.membershipStatus === 'suspended').length,
+      terminated: allMembers.filter((member: any) => member.membershipStatus === 'terminated').length,
+      expired: allMembers.filter((member: any) => member.membershipStatus === 'expired').length,
+      principal: allMembers.filter((member: any) => member.membershipType === 'principal').length,
+      dependent: allMembers.filter((member: any) => member.membershipType === 'dependent').length,
+    };
   }
 
-  /**
-   * Bulk update members
-   */
-  async bulkUpdateMembers(bulkData: BulkMemberUpdateRequest, context: any): Promise<any> {
-    const db = this.db.getDb();
+  async bulkUpdateMembers(bulkData: BulkMemberUpdateRequest, _context?: any): Promise<any> {
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
 
-    try {
-      const { memberIds, updateType, updateData } = bulkData;
-
-      if (!memberIds || memberIds.length === 0) {
-        throw new ValidationError('At least one member ID is required');
-      }
-
-      let updateResult: any;
-
-      switch (updateType) {
-        case 'suspend':
-          updateResult = await db
-            .update(members)
-            .set({
-              membershipStatus: 'suspended',
-              suspendedAt: new Date(),
-              suspendedReason: updateData.reason,
-              updatedAt: new Date()
-            })
-            .where(inArray(members.id, memberIds));
-          break;
-
-        case 'activate':
-          updateResult = await db
-            .update(members)
-            .set({
-              membershipStatus: 'active',
-              activatedAt: new Date(),
-              suspendedAt: null,
-              suspendedReason: null,
-              updatedAt: new Date()
-            })
-            .where(inArray(members.id, memberIds));
-          break;
-
-        case 'terminate':
-          updateResult = await db
-            .update(members)
-            .set({
-              membershipStatus: 'terminated',
-              terminatedAt: new Date(),
-              terminationReason: updateData.reason,
-              updatedAt: new Date()
-            })
-            .where(inArray(members.id, memberIds));
-          break;
-
-        case 'renew':
-          updateResult = await db
-            .update(members)
-            .set({
-              membershipStatus: 'active',
-              renewalDate: new Date(updateData.renewalDate),
-              expiresAt: new Date(updateData.renewalDate),
-              updatedAt: new Date()
-            })
-            .where(inArray(members.id, memberIds));
-          break;
-
-        default:
-          throw new ValidationError('Invalid update type');
-      }
-
-      return {
-        updatedCount: updateResult.rowCount || 0,
-        updateType,
-        updateData
-      };
-
-    } catch (error) {
-      this.logger.error('Failed to bulk update members', { error, bulkData });
-      throw error;
+    if (!bulkData.memberIds?.length) {
+      throw new ValidationError('At least one member ID is required');
     }
+
+    const updates: Record<string, unknown> = { updatedAt: new Date() };
+    if (bulkData.updateType === 'suspend') {
+      updates.membershipStatus = 'suspended';
+      updates.suspensionDate = new Date().toISOString().slice(0, 10);
+      updates.suspensionReason = bulkData.updateData.reason ?? null;
+    } else if (bulkData.updateType === 'activate') {
+      updates.membershipStatus = 'active';
+      updates.suspensionDate = null;
+      updates.suspensionReason = null;
+      updates.terminationDate = null;
+      updates.terminationReason = null;
+    } else if (bulkData.updateType === 'terminate') {
+      updates.membershipStatus = 'terminated';
+      updates.terminationDate = new Date().toISOString().slice(0, 10);
+      updates.terminationReason = bulkData.updateData.reason ?? null;
+    } else if (bulkData.updateType === 'renew') {
+      if (!bulkData.updateData.renewalDate) {
+        throw new ValidationError('renewalDate is required for renew operations');
+      }
+      updates.membershipStatus = 'active';
+      updates.effectiveDate = new Date(bulkData.updateData.renewalDate).toISOString().slice(0, 10);
+      updates.terminationDate = null;
+      updates.terminationReason = null;
+    } else {
+      throw new ValidationError('Invalid update type');
+    }
+
+    await db.update(memberTable).set(updates).where(inArray(memberTable.id, bulkData.memberIds));
+
+    return {
+      updatedCount: bulkData.memberIds.length,
+      updateType: bulkData.updateType,
+      updateData: bulkData.updateData,
+    };
   }
 
-  /**
-   * Check member eligibility
-   */
   async checkEligibility(memberId: number, eligibilityData: MemberEligibilityRequest): Promise<any> {
-    const db = this.db.getDb();
-
-    try {
-      const member = await this.getMemberById(memberId);
-      if (!member) {
-        throw new NotFoundError('Member not found');
-      }
-
-      const isEligible = member.membershipStatus === 'active' &&
-                        member.expiresAt &&
-                        member.expiresAt > new Date();
-
-      return {
-        memberId,
-        eligible: isEligible,
-        membershipStatus: member.membershipStatus,
-        expiresAt: member.expiresAt,
-        benefitId: eligibilityData.benefitId,
-        coverageType: eligibilityData.coverageType,
-        serviceType: eligibilityData.serviceType,
-        checkedAt: new Date()
-      };
-
-    } catch (error) {
-      this.logger.error('Failed to check eligibility', { error, memberId });
-      throw error;
+    const member = await this.getMemberById(memberId);
+    if (!member) {
+      throw new NotFoundError('Member not found');
     }
+
+    const eligible = member.membershipStatus === 'active' && !member.terminationDate;
+
+    return {
+      memberId,
+      eligible,
+      membershipStatus: member.membershipStatus,
+      effectiveDate: member.effectiveDate,
+      terminationDate: member.terminationDate,
+      benefitId: eligibilityData.benefitId,
+      coverageType: eligibilityData.coverageType,
+      serviceType: eligibilityData.serviceType,
+      checkedAt: new Date(),
+    };
   }
 
-  /**
-   * Send notification to member
-   */
   async sendNotification(memberId: number, notificationData: MemberNotificationRequest, context: any): Promise<any> {
-    try {
-      const member = await this.getMemberById(memberId);
-      if (!member) {
-        throw new NotFoundError('Member not found');
-      }
-
-      // In a real implementation, this would integrate with email/SMS services
-      const notification = {
-        id: Math.random().toString(36).substr(2, 9),
-        memberId,
-        type: notificationData.communicationType,
-        channel: notificationData.channel || 'email',
-        subject: notificationData.subject,
-        content: notificationData.content,
-        recipient: notificationData.recipient || member.email,
-        sentAt: new Date(),
-        sentBy: context.userId
-      };
-
-      this.logger.info('Notification sent', { memberId, notification });
-
-      return notification;
-
-    } catch (error) {
-      this.logger.error('Failed to send notification', { error, memberId });
-      throw error;
+    const member = await this.getMemberById(memberId);
+    if (!member) {
+      throw new NotFoundError('Member not found');
     }
+
+    const notification = {
+      id: Math.random().toString(36).slice(2, 11),
+      memberId,
+      type: notificationData.communicationType,
+      channel: notificationData.channel || 'email',
+      subject: notificationData.subject,
+      content: notificationData.content,
+      recipient: notificationData.recipient || member.email,
+      sentAt: new Date(),
+      sentBy: context?.userId ?? null,
+    };
+
+    this.logger.info('Notification sent', { memberId, notification });
+    return notification;
   }
 
-  /**
-   * Get member consents
-   */
   async getMemberConsents(memberId: number): Promise<any[]> {
-    const db = this.db.getDb();
-
-    try {
-      const consents = await db
-        .select()
-        .from(memberConsents)
-        .where(eq(memberConsents.memberId, memberId))
-        .orderBy(desc(memberConsents.createdAt));
-
-      return consents;
-
-    } catch (error) {
-      this.logger.error('Failed to get member consents', { error, memberId });
-      throw error;
-    }
+    const db: any = this.db.getDb();
+    const table: any = consents;
+    return db.select().from(table).where(eq(table.memberId, memberId)).orderBy(desc(table.createdAt));
   }
 
-  /**
-   * Update member consent
-   */
   async updateConsent(memberId: number, consentData: any, context: any): Promise<any> {
-    const db = this.db.getDb();
+    const db: any = this.db.getDb();
+    const table: any = consents;
+    const member = await this.getMemberById(memberId);
 
-    try {
-      const consent = await db.insert(memberConsents).values({
-        memberId,
-        consentType: consentData.consentType,
-        granted: consentData.granted,
-        grantedAt: consentData.granted ? new Date() : null,
-        ipAddress: context.ipAddress,
-        userAgent: context.userAgent,
-        version: consentData.version || '1.0',
-        createdAt: new Date(),
-        updatedAt: new Date()
-      }).returning();
-
-      return consent[0];
-
-    } catch (error) {
-      this.logger.error('Failed to update consent', { error, memberId });
-      throw error;
+    if (!member) {
+      throw new NotFoundError('Member not found');
     }
+
+    const created = await db
+      .insert(table)
+      .values({
+        memberId,
+        companyId: member.companyId,
+        consentType: consentData.consentType,
+        consentGiven: Boolean(consentData.granted),
+        consentDate: new Date().toISOString().slice(0, 10),
+        consentIpAddress: context?.ipAddress ?? null,
+        consentUserAgent: context?.userAgent ?? null,
+        consentVersion: consentData.version || '1.0',
+        metadata: {
+          granted: Boolean(consentData.granted),
+          source: 'api',
+        },
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .returning();
+
+    return created[0];
   }
 
-  // Private helper methods
+  private async updateMemberStatus(
+    memberId: number,
+    status: 'active' | 'suspended' | 'terminated',
+    reason: string,
+    context: any,
+    extraFields: Record<string, unknown>
+  ): Promise<any> {
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
+    const member = await this.getMemberById(memberId);
+
+    if (!member) {
+      throw new NotFoundError('Member not found');
+    }
+
+    if (status === 'suspended' && member.membershipStatus !== 'active') {
+      throw new BusinessRuleError('Only active members can be suspended');
+    }
+
+    const updated = await db
+      .update(memberTable)
+      .set({
+        membershipStatus: status,
+        updatedAt: new Date(),
+        ...extraFields,
+      })
+      .where(eq(memberTable.id, memberId))
+      .returning();
+
+    await this.createLifeEvent(memberId, member.companyId, {
+      eventType:
+        status === 'active' ? 'activation' : status === 'suspended' ? 'suspension' : 'termination',
+      eventDate: new Date(),
+      effectiveDate: new Date(),
+      reason,
+      description: reason,
+      metadata: {
+        previousStatus: member.membershipStatus,
+        newStatus: status,
+        notes: extraFields,
+        processedBy: context?.userId ?? null,
+      },
+    });
+
+    return updated[0];
+  }
+
   private async validateBusinessRules(request: CreateMemberRequest): Promise<void> {
-    // Validate Kenyan phone number
     const phoneRegex = /^254[7]\d{8}$/;
     if (!phoneRegex.test(request.phone)) {
       throw new ValidationError('Invalid Kenyan phone number format');
     }
 
-    // Validate age
     const age = this.calculateAge(new Date(request.dateOfBirth));
     if (request.memberType === 'principal' && age < 18) {
       throw new ValidationError('Principal members must be at least 18 years old');
     }
 
-    // Validate email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(request.email)) {
       throw new ValidationError('Invalid email format');
@@ -767,55 +507,54 @@ export class MembershipServiceSimplified {
   }
 
   private async checkForExistingMember(request: CreateMemberRequest): Promise<void> {
-    const db = this.db.getDb();
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
 
-    const existingMember = await db
+    const existing = await db
       .select()
-      .from(members)
-      .where(
-        or(
-          eq(members.email, request.email),
-          eq(members.phone, request.phone)
-        )
-      )
+      .from(memberTable)
+      .where(or(eq(memberTable.email, request.email), eq(memberTable.phoneNumber, request.phone)))
       .limit(1);
 
-    if (existingMember.length > 0) {
+    if (existing.length > 0) {
       throw new BusinessRuleError('Member with this email or phone already exists');
     }
   }
 
-  private async generateMemberId(companyId: number): Promise<string> {
-    const db = this.db.getDb();
+  private async generateMemberNumber(companyId: number): Promise<string> {
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
     const prefix = `MC${companyId.toString().padStart(3, '0')}`;
-
-    const lastMember = await db
-      .select({ memberId: members.memberId })
-      .from(members)
-      .where(sql`${members.memberId} LIKE ${prefix + '%'}`)
-      .orderBy(desc(members.memberId))
+    const existing = await db
+      .select()
+      .from(memberTable)
+      .where(like(memberTable.memberNumber, `${prefix}%`))
+      .orderBy(desc(memberTable.memberNumber))
       .limit(1);
 
-    let nextNumber = 1;
-    if (lastMember.length > 0) {
-      const lastMemberId = lastMember[0].memberId;
-      const lastNumber = parseInt(lastMemberId.replace(prefix, '')) || 0;
-      nextNumber = lastNumber + 1;
-    }
+    const lastNumber =
+      existing.length > 0 ? parseInt(String(existing[0].memberNumber).replace(prefix, ''), 10) || 0 : 0;
 
-    return `${prefix}${nextNumber.toString().padStart(6, '0')}`;
+    return `${prefix}${String(lastNumber + 1).padStart(6, '0')}`;
   }
 
-  private async createLifeEvent(memberId: number, event: any): Promise<void> {
-    const db = this.db.getDb();
+  private async createLifeEvent(memberId: number, companyId: number, event: any): Promise<void> {
+    const db: any = this.db.getDb();
+    const table: any = lifeEvents;
 
-    const eventData = {
+    await db.insert(table).values({
       memberId,
-      ...event,
-      createdAt: new Date()
-    };
-
-    await db.insert(memberLifeEvents).values(eventData);
+      companyId,
+      eventType: event.eventType,
+      eventDate: event.eventDate instanceof Date ? event.eventDate.toISOString().slice(0, 10) : event.eventDate,
+      effectiveDate:
+        event.effectiveDate instanceof Date ? event.effectiveDate.toISOString().slice(0, 10) : event.effectiveDate,
+      description: event.description ?? null,
+      reason: event.reason ?? null,
+      metadata: event.metadata ?? null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
   }
 
   private calculateAge(birthDate: Date): number {
@@ -824,7 +563,7 @@ export class MembershipServiceSimplified {
     const monthDiff = today.getMonth() - birthDate.getMonth();
 
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+      age -= 1;
     }
 
     return age;

@@ -1,7 +1,10 @@
 export class MembershipError extends Error {
-  constructor(message: string, public cause?: Error) {
+  public cause?: Error;
+
+  constructor(message: string, cause?: Error) {
     super(message);
     this.name = 'MembershipError';
+    this.cause = cause;
   }
 }
 
@@ -23,6 +26,13 @@ export class MemberNotFoundError extends MembershipError {
   constructor(memberId: number) {
     super(`Member with ID ${memberId} not found`);
     this.name = 'MemberNotFoundError';
+  }
+}
+
+export class NotFoundError extends MembershipError {
+  constructor(message: string) {
+    super(message);
+    this.name = 'NotFoundError';
   }
 }
 

@@ -148,7 +148,7 @@ export class Database {
    * Begin database transaction
    */
   public async beginTransaction() {
-    return this.db.begin();
+    return this.client.begin(async (transaction) => transaction);
   }
 
   /**

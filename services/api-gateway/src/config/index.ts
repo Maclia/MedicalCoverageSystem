@@ -64,7 +64,7 @@ export const config = {
       retries: parseInt(process.env.WELLNESS_SERVICE_RETRIES || '3', 10),
     },
     fraud: {
-      url: process.env.FRAUD_SERVICE_URL || 'http://localhost:5009',
+      url: process.env.FRAUD_DETECTION_SERVICE_URL || process.env.FRAUD_SERVICE_URL || 'http://localhost:5009',
       timeout: parseInt(process.env.FRAUD_SERVICE_TIMEOUT || '5000', 10),
       retries: parseInt(process.env.FRAUD_SERVICE_RETRIES || '3', 10),
     },

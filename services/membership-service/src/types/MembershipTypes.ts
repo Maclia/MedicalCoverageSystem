@@ -193,7 +193,7 @@ export interface MemberStatsRequest {
 }
 
 export interface MemberEligibilityRequest {
-  memberId: number;
+  memberId?: number;
   benefitId?: number;
   coverageType?: string;
   serviceType?: string;

@@ -21,6 +21,8 @@ export const config = {
     billing: process.env.BILLING_SERVICE_URL || 'http://localhost:3004',
     claims: process.env.CLAIMS_SERVICE_URL || 'http://localhost:3005',
     payment: process.env.PAYMENT_SERVICE_URL || 'http://localhost:3006',
+    authService: process.env.AUTH_SERVICE_URL || process.env.CORE_SERVICE_URL || 'http://localhost:3001',
+    insuranceService: process.env.INSURANCE_SERVICE_URL || 'http://localhost:3002',
   },
 
   business: {
@@ -60,8 +62,24 @@ export const config = {
     enabled: process.env.LOGGING_ENABLED !== 'false',
   },
 
+  cors: {
+    allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  },
+
+  auth: {
+    jwtSecret: process.env.JWT_SECRET || 'change-me',
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN || '15m',
+  },
+
   pagination: {
     defaultLimit: parseInt(process.env.DEFAULT_PAGE_LIMIT || '20', 10),
     maxLimit: parseInt(process.env.MAX_PAGE_LIMIT || '100', 10),
-  }
+  },
+
+  server: {
+    port: parseInt(process.env.PORT || '3003', 10),
+    host: process.env.SERVER_HOST || '0.0.0.0',
+    timeout: parseInt(process.env.SERVER_TIMEOUT || '30000', 10),
+    environment: process.env.NODE_ENV || 'development',
+  },
 };

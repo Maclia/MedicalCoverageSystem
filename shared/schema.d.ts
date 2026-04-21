@@ -49806,7 +49806,7 @@ export declare const notifications: import("drizzle-orm/pg-core").PgTableWithCol
             tableName: "notifications";
             dataType: "string";
             columnType: "PgEnumColumn";
-            data: "sms" | "email" | "webhook" | "push" | "in_app";
+            data: "push" | "sms" | "email" | "webhook" | "in_app";
             driverParam: string;
             notNull: true;
             hasDefault: false;
@@ -50129,7 +50129,7 @@ export declare const notificationTemplates: import("drizzle-orm/pg-core").PgTabl
             tableName: "notification_templates";
             dataType: "string";
             columnType: "PgEnumColumn";
-            data: "sms" | "email" | "webhook" | "push" | "in_app";
+            data: "push" | "sms" | "email" | "webhook" | "in_app";
             driverParam: string;
             notNull: true;
             hasDefault: false;
@@ -54125,7 +54125,7 @@ export declare const insertNotificationSchema: import("drizzle-zod").BuildSchema
         tableName: "notifications";
         dataType: "string";
         columnType: "PgEnumColumn";
-        data: "sms" | "email" | "webhook" | "push" | "in_app";
+        data: "push" | "sms" | "email" | "webhook" | "in_app";
         driverParam: string;
         notNull: true;
         hasDefault: false;
@@ -54443,7 +54443,7 @@ export declare const insertNotificationTemplateSchema: import("drizzle-zod").Bui
         tableName: "notification_templates";
         dataType: "string";
         columnType: "PgEnumColumn";
-        data: "sms" | "email" | "webhook" | "push" | "in_app";
+        data: "push" | "sms" | "email" | "webhook" | "in_app";
         driverParam: string;
         notNull: true;
         hasDefault: false;
