@@ -26,6 +26,7 @@
     "noImplicitAny": false,
     "strictNullChecks": false,
     "allowJs": true,
+    "noEmitOnError": false,
     "noFallthroughCasesInSwitch": true,
 
     /* Path aliases */
