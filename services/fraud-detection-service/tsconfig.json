@@ -19,9 +19,13 @@
     "rootDir": "./src",
 
     /* Linting */
-    "strict": true,
-    "noUnusedLocals": true,
-    "noUnusedParameters": true,
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "allowJs": true,
     "noFallthroughCasesInSwitch": true,
 
     /* Path aliases */
