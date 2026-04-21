@@ -563,4 +563,25 @@ export const baseClaimsApi = {
       method: 'DELETE',
     });
   },
+
+  // Update claim status
+  async updateClaimStatus(claimId: number, statusData: {
+    status: string;
+    reviewerNotes?: string;
+  }) {
+    return apiRequest(`/claims/${claimId}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(statusData),
+    });
+  },
+
+  // Process claim payment
+  async processClaimPayment(claimId: number, paymentData: {
+    paymentReference: string;
+  }) {
+    return apiRequest(`/claims/${claimId}/payment`, {
+      method: 'PATCH',
+      body: JSON.stringify(paymentData),
+    });
+  },
 };

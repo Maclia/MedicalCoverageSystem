@@ -1,5 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { baseClaimsApi } from "@/services/claimsApi";
+import { hospitalApi } from "@/services/hospitalApi";
+import { membershipApi } from "@/services/membershipApi";
+import { insuranceApi } from "@/services/insuranceApi";
 import { 
   Card, 
   CardContent, 
@@ -44,6 +48,7 @@ interface MedicalInstitution {
   name: string;
   type: string;
   city: string;
+  approvalStatus: string;
 }
 
 interface MedicalPersonnel {
@@ -52,6 +57,15 @@ interface MedicalPersonnel {
   lastName: string;
   type: string;
   institutionId: number;
+  approvalStatus: string;
+}
+
+interface Premium {
+  id: number;
+  companyId: number;
+  periodId: number;
+  status: string;
+  amount: number;
 }
 
 interface Member {
@@ -122,24 +136,44 @@ export default function Claims() {
   });
 
   // Queries
-  const { data: claims, isLoading } = useQuery<Claim[]>({
-    queryKey: ['/api/claims'],
+  const { data: claims = [], isLoading } = useQuery<Claim[]>({
+    queryKey: ['claims'],
+    queryFn: async () => {
+      const response = await baseClaimsApi.getClaims();
+      return response.data as Claim[];
+    }
   });
 
-  const { data: institutions } = useQuery<MedicalInstitution[]>({
-    queryKey: ['/api/medical-institutions'],
+  const { data: institutions = [] } = useQuery<MedicalInstitution[]>({
+    queryKey: ['medical-institutions'],
+    queryFn: async () => {
+      const response = await hospitalApi.getHospitals();
+      return response.data as MedicalInstitution[];
+    }
   });
 
-  const { data: personnel } = useQuery<MedicalPersonnel[]>({
-    queryKey: ['/api/medical-personnel'],
+  const { data: personnel = [] } = useQuery<MedicalPersonnel[]>({
+    queryKey: ['medical-personnel'],
+    queryFn: async () => {
+      const response = await hospitalApi.getMedicalPersonnel();
+      return response.data as MedicalPersonnel[];
+    }
   });
   
-  const { data: members } = useQuery<Member[]>({
-    queryKey: ['/api/members'],
+  const { data: members = [] } = useQuery<Member[]>({
+    queryKey: ['members'],
+    queryFn: async () => {
+      const response = await membershipApi.getMembers();
+      return response.data as Member[];
+    }
   });
   
-  const { data: benefits } = useQuery<Benefit[]>({
-    queryKey: ['/api/benefits'],
+  const { data: benefits = [] } = useQuery<Benefit[]>({
+    queryKey: ['benefits'],
+    queryFn: async () => {
+      const response = await insuranceApi.getBenefitPlans();
+      return response.data as Benefit[];
+    }
   });
 
   // Form handlers
@@ -151,7 +185,7 @@ export default function Claims() {
     try {
       // This is a simplified check - in a real implementation we would call an API endpoint
       // that checks eligibility against the current period and premium
-      const { data: member } = await queryClient.fetchQuery({
+      const member = await queryClient.fetchQuery({
         queryKey: [`/api/members/${memberId}`],
         queryFn: (): Promise<Member> => 
           fetch(`/api/members/${memberId}`).then(res => {
@@ -161,7 +195,7 @@ export default function Claims() {
       });
       
       // Find active premium for the member's company
-      const { data: activePeriod } = await queryClient.fetchQuery({
+      const activePeriod = await queryClient.fetchQuery({
         queryKey: ['/api/periods/active'],
         queryFn: () => 
           fetch('/api/periods/active').then(res => {
@@ -171,7 +205,7 @@ export default function Claims() {
       });
       
       // Get company premiums
-      const { data: premiums } = await queryClient.fetchQuery({
+      const premiums = await queryClient.fetchQuery({
         queryKey: [`/api/premiums?companyId=${member.companyId}`],
         queryFn: (): Promise<Premium[]> => 
           fetch(`/api/premiums?companyId=${member.companyId}`).then(res => {
@@ -181,7 +215,7 @@ export default function Claims() {
       });
       
       // Find active premium
-      const activePremium = premiums.find(p => p.periodId === activePeriod.id);
+      const activePremium = premiums.find((p: Premium) => p.periodId === activePeriod.id);
       if (!activePremium) {
         setClaimError("Member's company does not have an active premium for the current period");
         return false;
@@ -283,18 +317,10 @@ export default function Claims() {
         amount: parseFloat(claimForm.amount)
       };
       
-      const response = await fetch('/api/claims', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const response = await baseClaimsApi.createClaim(formData);
       
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(responseData.error || 'Failed to create claim');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to create claim');
       }
       
       // Clear form and close dialog
@@ -336,20 +362,13 @@ export default function Claims() {
     if (!selectedClaim) return;
     
     try {
-      const response = await fetch(`/api/claims/${selectedClaim.id}/status`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          status: reviewForm.status,
-          reviewerNotes: reviewForm.reviewerNotes
-        }),
+      const response = await baseClaimsApi.updateClaimStatus(selectedClaim.id, {
+        status: reviewForm.status,
+        reviewerNotes: reviewForm.reviewerNotes
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to update claim status');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to update claim status');
       }
       
       // Reset form and close dialog
@@ -382,19 +401,12 @@ export default function Claims() {
     if (!selectedClaim) return;
     
     try {
-      const response = await fetch(`/api/claims/${selectedClaim.id}/payment`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          paymentReference: paymentForm.paymentReference
-        }),
+      const response = await baseClaimsApi.processClaimPayment(selectedClaim.id, {
+        paymentReference: paymentForm.paymentReference
       });
       
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to process payment');
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to process payment');
       }
       
       // Reset form and close dialog
