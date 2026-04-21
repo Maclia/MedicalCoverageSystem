@@ -91,34 +91,80 @@ export const ClaimsManagement: React.FC<ClaimsManagementProps> = ({
   const renderQuickStats = () => {
     const stats = getDashboardStats();
 
-    const statCards = {
-      admin: [
-        { label: 'Total Claims', value: stats.totalClaims, icon: <FileText className="h-5 w-5" /> },
-        { label: 'Processed Today', value: stats.processedToday, icon: <Clock className="h-5 w-5" /> },
-        { label: 'Pending Review', value: stats.pendingReview, icon: <Eye className="h-5 w-5" /> },
-        { label: 'Fraud Alerts', value: stats.fraudAlerts, icon: <Shield className="h-5 w-5" /> }
-      ],
-      member: [
-        { label: 'Total Claims', value: stats.totalClaims, icon: <FileText className="h-5 w-5" /> },
-        { label: 'Approved Claims', value: stats.approvedClaims, icon: <TrendingUp className="h-5 w-5" /> },
-        { label: 'Your Responsibility', value: `$${stats.totalResponsibility}`, icon: <Users className="h-5 w-5" /> },
-        { label: 'Amount Saved', value: `$${stats.savedAmount}`, icon: <BarChart3 className="h-5 w-5" /> }
-      ],
-      provider: [
-        { label: 'Total Claims', value: stats.totalClaims, icon: <FileText className="h-5 w-5" /> },
-        { label: 'Pending Payment', value: `$${stats.pendingPayment.toLocaleString()}`, icon: <TrendingUp className="h-5 w-5" /> },
-        { label: 'Monthly Submissions', value: stats.monthlySubmissions, icon: <Clock className="h-5 w-5" /> },
-        { label: 'Approval Rate', value: `${stats.approvalRate}%`, icon: <BarChart3 className="h-5 w-5" /> }
-      ],
-      adjuster: [
-        { label: 'Claims Assigned', value: stats.claimsAssigned, icon: <FileText className="h-5 w-5" /> },
-        { label: 'Claims Reviewed', value: stats.claimsReviewed, icon: <Eye className="h-5 w-5" /> },
-        { label: 'Avg Review Time', value: `${stats.averageReviewTime}m`, icon: <Clock className="h-5 w-5" /> },
-        { label: 'Accuracy Rate', value: `${stats.accuracyRate}%`, icon: <BarChart3 className="h-5 w-5" /> }
-      ]
-    };
-
-    const roleStats = statCards[userRole] || statCards.admin;
+    // Extract stats directly with type narrowing at extraction time
+    let roleStats: { label: string; value: string | number; icon: React.ReactNode }[] = [];
+    
+    // Extract admin properties only when role is admin
+    if (userRole === 'admin') {
+      const adminStats = stats as {
+        totalClaims: number;
+        processedToday: number;
+        pendingReview: number;
+        averageProcessingTime: number;
+        approvalRate: number;
+        fraudAlerts: number;
+      };
+      
+      roleStats = [
+        { label: 'Total Claims', value: adminStats.totalClaims, icon: <FileText className="h-5 w-5" /> },
+        { label: 'Processed Today', value: adminStats.processedToday, icon: <Clock className="h-5 w-5" /> },
+        { label: 'Pending Review', value: adminStats.pendingReview, icon: <Eye className="h-5 w-5" /> },
+        { label: 'Fraud Alerts', value: adminStats.fraudAlerts, icon: <Shield className="h-5 w-5" /> }
+      ];
+    } else if (userRole === 'member') {
+      const memberStats = stats as {
+        totalClaims: number;
+        approvedClaims: number;
+        pendingClaims: number;
+        totalResponsibility: number;
+        savedAmount: number;
+      };
+      
+      roleStats = [
+        { label: 'Total Claims', value: memberStats.totalClaims, icon: <FileText className="h-5 w-5" /> },
+        { label: 'Approved Claims', value: memberStats.approvedClaims, icon: <TrendingUp className="h-5 w-5" /> },
+        { label: 'Your Responsibility', value: `$${memberStats.totalResponsibility}`, icon: <Users className="h-5 w-5" /> },
+        { label: 'Amount Saved', value: `$${memberStats.savedAmount}`, icon: <BarChart3 className="h-5 w-5" /> }
+      ];
+    } else if (userRole === 'provider') {
+      const providerStats = stats as {
+        totalClaims: number;
+        pendingPayment: number;
+        averageProcessingTime: number;
+        approvalRate: number;
+        monthlySubmissions: number;
+      };
+      
+      roleStats = [
+        { label: 'Total Claims', value: providerStats.totalClaims, icon: <FileText className="h-5 w-5" /> },
+        { label: 'Pending Payment', value: `$${providerStats.pendingPayment.toLocaleString()}`, icon: <TrendingUp className="h-5 w-5" /> },
+        { label: 'Monthly Submissions', value: providerStats.monthlySubmissions, icon: <Clock className="h-5 w-5" /> },
+        { label: 'Approval Rate', value: `${providerStats.approvalRate}%`, icon: <BarChart3 className="h-5 w-5" /> }
+      ];
+    } else if (userRole === 'adjuster') {
+      const adjusterStats = stats as {
+        claimsAssigned: number;
+        claimsReviewed: number;
+        averageReviewTime: number;
+        complexCases: number;
+        accuracyRate: number;
+      };
+      
+      roleStats = [
+        { label: 'Claims Assigned', value: adjusterStats.claimsAssigned, icon: <FileText className="h-5 w-5" /> },
+        { label: 'Claims Reviewed', value: adjusterStats.claimsReviewed, icon: <Eye className="h-5 w-5" /> },
+        { label: 'Avg Review Time', value: `${adjusterStats.averageReviewTime}m`, icon: <Clock className="h-5 w-5" /> },
+        { label: 'Accuracy Rate', value: `${adjusterStats.accuracyRate}%`, icon: <BarChart3 className="h-5 w-5" /> }
+      ];
+    } else {
+      // Default fallback
+      roleStats = [
+        { label: 'Total Claims', value: 0, icon: <FileText className="h-5 w-5" /> },
+        { label: 'Processed Today', value: 0, icon: <Clock className="h-5 w-5" /> },
+        { label: 'Pending Review', value: 0, icon: <Eye className="h-5 w-5" /> },
+        { label: 'Fraud Alerts', value: 0, icon: <Shield className="h-5 w-5" /> }
+      ];
+    }
 
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
