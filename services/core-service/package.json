@@ -27,7 +27,6 @@
     "jsonwebtoken": "^9.0.2",
     "postgres": "^3.4.3",
     "redis": "^4.6.10",
-    "vite": "8.0.8",
     "winston": "^3.11.0",
     "zod": "^3.23.8"
   },
@@ -44,7 +43,8 @@
     "jest": "^30.2.0",
     "ts-jest": "^29.4.5",
     "tsx": "^4.19.1",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vite": "8.0.8"
   },
   "engines": {
     "node": ">=20.0.0"
