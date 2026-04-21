@@ -22,7 +22,6 @@
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "skipLibCheck": true,
     "noImplicitAny": false,
     "strictNullChecks": false,
     "allowJs": true,
