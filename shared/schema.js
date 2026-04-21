@@ -1,6 +1,5 @@
+import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, json, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
-import { boolean, date, decimal, integer, pgEnum, pgTable, serial, text, timestamp, uuid, varchar } from "drizzle-orm/pg-core";
-import { index } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 // Enums
@@ -37,6 +36,40 @@ export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'sent', 
 export const consentTypeEnum = pgEnum('consent_type', ['data_processing', 'marketing_communications', 'data_sharing_providers', 'data_sharing_partners', 'wellness_programs']);
 export const auditActionEnum = pgEnum('audit_action', ['create', 'read', 'update', 'delete', 'view']);
 export const auditEntityTypeEnum = pgEnum('audit_entity_type', ['member', 'company', 'benefit', 'claim', 'document']);
+// CRM Lead Management Enums (moved up to prevent "used before declaration")
+export const leadSourceEnum = pgEnum('lead_source', ['website', 'referral', 'campaign', 'cold_call', 'partner', 'event', 'social_media', 'email_marketing', 'third_party', 'manual']);
+export const leadStatusEnum = pgEnum('lead_status', ['new', 'contacted', 'qualified', 'nurturing', 'converted', 'lost', 'duplicate']);
+export const leadPriorityEnum = pgEnum('priority', ['low', 'medium', 'high', 'urgent']);
+export const opportunityStageEnum = pgEnum('opportunity_stage', ['lead', 'qualified', 'quotation', 'underwriting', 'issuance', 'closed_won', 'closed_lost']);
+export const activityTypeEnum = pgEnum('activity_type', ['call', 'email', 'meeting', 'sms', 'whatsapp', 'note', 'task', 'demo', 'proposal']);
+export const territoryTypeEnum = pgEnum('territory_type', ['geographic', 'industry', 'company_size', 'product_line', 'mixed']);
+// Agent Management Enums (moved up to prevent "used before declaration")
+export const agentTypeEnum = pgEnum('agent_type', ['internal_agent', 'external_broker', 'independent_agent', 'captive_agent', 'agency']);
+export const licenseStatusEnum = pgEnum('license_status', ['active', 'expired', 'suspended', 'pending', 'revoked']);
+export const commissionTransactionTypeEnum = pgEnum('commission_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
+// Workflow Automation Enums (moved up to prevent "used before declaration")
+export const triggerTypeEnum = pgEnum('trigger_type', ['lead_created', 'lead_status_changed', 'opportunity_stage_changed', 'date_based', 'manual', 'webhook', 'email_opened', 'link_clicked']);
+export const workflowExecutionStatusEnum = pgEnum('workflow_execution_status', ['running', 'completed', 'failed', 'cancelled', 'paused']);
+export const campaignStatusEnum = pgEnum('campaign_status', ['draft', 'scheduled', 'running', 'completed', 'paused', 'cancelled']);
+// Communication Status Enum (moved up and added - was missing)
+export const communicationStatusEnum = pgEnum('communication_status', ['scheduled', 'sent', 'delivered', 'read', 'failed', 'bounced']);
+// Claim Reserve & Payment Enums (moved up to prevent "used before declaration")
+export const claimReserveTypeEnum = pgEnum('claim_reserve_type', ['loss', 'expense', 'ihc']);
+export const claimReserveStatusEnum = pgEnum('claim_reserve_status', ['initial', 'intermediate', 'final', 'reopened']);
+export const claimPaymentTypeEnum = pgEnum('claim_payment_type', ['full', 'partial', 'denial']);
+export const claimPaymentStatusEnum = pgEnum('claim_payment_status', ['pending', 'approved', 'paid', 'reversed']);
+export const claimApprovalStatusEnum = pgEnum('claim_approval_status', ['submitted', 'under_review', 'approved', 'rejected', 'appealed']);
+export const financialTransactionTypeEnum = pgEnum('financial_transaction_type', ['premium_collection', 'claim_payment', 'commission', 'refund', 'adjustment']);
+export const financialTransactionStatusEnum = pgEnum('financial_transaction_status', ['pending', 'completed', 'failed', 'reversed']);
+// Payment & Transaction Enums (moved up to prevent "used before declaration")
+export const paymentTypeEnum = pgEnum('payment_type', ['premium', 'claim', 'disbursement']);
+export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'completed', 'failed', 'cancelled']);
+export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
+export const recoveryStatusEnum = pgEnum('recovery_status', ['pending', 'retry_1', 'retry_2', 'retry_3', 'escalated', 'recovered', 'failed']);
+export const procedureCategoryEnum = pgEnum('procedure_category', ['consultation', 'surgery', 'diagnostic', 'laboratory', 'imaging', 'dental', 'vision', 'medication', 'therapy', 'emergency', 'maternity', 'preventative', 'other']);
+// Saga Pattern Enums
+export const sagaStatusEnum = pgEnum('saga_status', ['pending', 'in_progress', 'completed', 'failed', 'compensating', 'compensated']);
+export const sagaStepStatusEnum = pgEnum('saga_step_status', ['pending', 'in_progress', 'completed', 'failed', 'compensated']);
 // Companies table
 export const companies = pgTable("companies", {
     id: serial("id").primaryKey(),
@@ -64,12 +97,13 @@ export const members = pgTable("members", {
     companyId: integer("company_id").references(() => companies.id).notNull(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
+    secondName: text("second_name"),
     email: text("email").notNull(),
     phone: text("phone").notNull(),
     dateOfBirth: date("date_of_birth").notNull(),
     employeeId: text("employee_id").notNull(),
     memberType: memberTypeEnum("member_type").notNull(),
-    principalId: integer("principal_id").references(() => members.id),
+    principalId: integer("principal_id").references(() => members.id).notNull(),
     dependentType: dependentTypeEnum("dependent_type"),
     hasDisability: boolean("has_disability").default(false),
     disabilityDetails: text("disability_details"),
@@ -252,13 +286,6 @@ export const companyBenefits = pgTable("company_benefits", {
 // CRM MODULE TABLES
 // ===================
 // Lead Management Tables
-// CRM Lead Management Enums (declared before usage)
-export const leadSourceEnum = pgEnum('lead_source', ['website', 'referral', 'campaign', 'cold_call', 'partner', 'event', 'social_media', 'email_marketing', 'third_party', 'manual']);
-export const leadStatusEnum = pgEnum('lead_status', ['new', 'contacted', 'qualified', 'nurturing', 'converted', 'lost', 'duplicate']);
-export const leadPriorityEnum = pgEnum('priority', ['low', 'medium', 'high', 'urgent']);
-export const opportunityStageEnum = pgEnum('opportunity_stage', ['lead', 'qualified', 'quotation', 'underwriting', 'issuance', 'closed_won', 'closed_lost']);
-export const activityTypeEnum = pgEnum('activity_type', ['call', 'email', 'meeting', 'sms', 'whatsapp', 'note', 'task', 'demo', 'proposal']);
-export const territoryTypeEnum = pgEnum('territory_type', ['geographic', 'industry', 'company_size', 'product_line', 'mixed']);
 export const leads = pgTable('leads', {
     id: uuid('id').primaryKey().defaultRandom(),
     // Basic Information
@@ -412,7 +439,6 @@ export const commissionTiers = pgTable('commission_tiers', {
     isActive: boolean('is_active').default(true),
     createdAt: timestamp('created_at').defaultNow(),
 });
-export const commissionTransactionTypeEnum = pgEnum('commission_transaction_type', ['new_business', 'renewal', 'bonus', 'override', 'adjustment', 'clawback']);
 export const commissionTransactions = pgTable('commission_transactions', {
     id: uuid('id').primaryKey().defaultRandom(),
     agentId: uuid('agent_id').references(() => agents.id).notNull(),
@@ -448,7 +474,7 @@ export const agentPerformance = pgTable('agent_performance', {
     policiesSold: integer('policies_sold').default(0),
     totalPremium: integer('total_premium').default(0),
     totalCommission: integer('total_commission').default(0),
-    conversionRate: decimal('conversion_rate', { precision: 5, scale: 2 }).default(0),
+    conversionRate: decimal('conversion_rate', { precision: 5, scale: 2 }).default('0'),
     averageDealSize: integer('average_deal_size').default(0),
     // Rankings
     teamRank: integer('team_rank'),
@@ -457,10 +483,6 @@ export const agentPerformance = pgTable('agent_performance', {
     updatedAt: timestamp('updated_at').defaultNow(),
 });
 // Workflow Automation Tables
-// Workflow Automation Enums (declared before usage)
-export const triggerTypeEnum = pgEnum('trigger_type', ['lead_created', 'lead_status_changed', 'opportunity_stage_changed', 'date_based', 'manual', 'webhook', 'email_opened', 'link_clicked']);
-export const workflowExecutionStatusEnum = pgEnum('workflow_execution_status', ['running', 'completed', 'failed', 'cancelled', 'paused']);
-export const campaignStatusEnum = pgEnum('campaign_status', ['draft', 'scheduled', 'running', 'completed', 'paused', 'cancelled']);
 export const workflowDefinitions = pgTable('workflow_definitions', {
     id: uuid('id').primaryKey().defaultRandom(),
     workflowName: varchar('workflow_name', { length: 100 }).notNull(),
@@ -723,9 +745,9 @@ export const claims = pgTable("claims", {
     claimNumber: text("claim_number").unique().notNull(), // Unique claim identifier
     institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
     personnelId: integer("personnel_id").references(() => medicalPersonnel.id),
-    providerId: integer("provider_id"), // External provider reference (no FK across services)
+    providerId: integer("provider_id").references(() => providers.id), // Link to providers table
     memberId: integer("member_id").references(() => members.id).notNull(),
-    schemeId: integer("scheme_id"), // External scheme reference (no FK across services)
+    schemeId: integer("scheme_id").references(() => schemes.id), // Link to schemes table
     benefitId: integer("benefit_id").references(() => benefits.id).notNull(),
     claimDate: timestamp("claim_date").defaultNow().notNull(),
     serviceDate: timestamp("service_date").notNull(),
@@ -765,93 +787,18 @@ export const claims = pgTable("claims", {
     fraudReviewerId: integer("fraud_reviewer_id"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-// Insert schemas for new entities
-// // export const insertDiagnosisCodeSchema = createInsertSchema(diagnosisCodes).omit({
-//   id: true,
-//   createdAt: true,
-// });
-// // export const insertRegionSchema = createInsertSchema(regions).omit({
-//   id: true,
-//   createdAt: true,
-// });
-// // export const insertMedicalInstitutionSchema = createInsertSchema(medicalInstitutions).omit({
-//   id: true,
-//   approvalDate: true,
-//   createdAt: true,
-// });
-// // export const insertMedicalPersonnelSchema = createInsertSchema(medicalPersonnel).omit({
-//   id: true,
-//   approvalDate: true,
-//   createdAt: true,
-// });
-// // export const insertPanelDocumentationSchema = createInsertSchema(panelDocumentation).omit({
-//   id: true,
-//   verificationDate: true,
-//   createdAt: true,
-// });
-// // export const insertClaimSchema = createInsertSchema(claims).omit({
-//   id: true,
-//   reviewDate: true,
-//   paymentDate: true,
-//   createdAt: true,
-//   // Admin approval fields
-//   adminApprovalDate: true,
-//   fraudReviewDate: true,
-// }).extend({
-//   diagnosisCode: z.string().min(3, "Diagnosis code must be at least 3 characters").max(50, "Diagnosis code is too long"),
-//   diagnosisCodeType: z.enum(["ICD-10", "ICD-11"], {
-//     required_error: "Diagnosis code type is required (ICD-10 or ICD-11)",
-//     invalid_type_error: "Diagnosis code type must be either ICD-10 or ICD-11",
-//   }),
-//   // Provider verification and fraud risk are set by the system, not provided by user
-//   providerVerified: z.boolean().optional().default(false),
-//   requiresHigherApproval: z.boolean().optional().default(false),
-//   approvedByAdmin: z.boolean().optional().default(false),
-//   adminReviewNotes: z.string().optional(),
-//   fraudRiskLevel: z.enum(["none", "low", "medium", "high", "confirmed"]).optional().default("none"),
-//   fraudRiskFactors: z.string().optional(),
-//   fraudReviewerId: z.number().optional(),
-// });
-// Insert schemas required by the types below
-export const insertCompanyBenefitSchema = createInsertSchema(companyBenefits);
-export const insertRegionSchema = createInsertSchema(regions);
-export const insertMedicalInstitutionSchema = createInsertSchema(medicalInstitutions);
-export const insertMedicalPersonnelSchema = createInsertSchema(medicalPersonnel);
-export const insertPanelDocumentationSchema = createInsertSchema(panelDocumentation);
-export const insertClaimSchema = createInsertSchema(claims);
-export const insertCompanyPeriodSchema = createInsertSchema(companyPeriods);
-export const insertAgeBandedRateSchema = createInsertSchema(ageBandedRates);
-export const insertFamilyRateSchema = createInsertSchema(familyRates);
-export const insertDiagnosisCodeSchema = createInsertSchema(diagnosisCodes);
-// Payment types enum
-export const paymentTypeEnum = pgEnum('payment_type', ['premium', 'claim', 'disbursement']);
-export const paymentStatusEnum = pgEnum('payment_status', ['pending', 'processing', 'completed', 'failed', 'cancelled']);
-export const paymentMethodEnum = pgEnum('payment_method', ['credit_card', 'bank_transfer', 'check', 'cash', 'online']);
-export const procedureCategoryEnum = pgEnum('procedure_category', ['consultation', 'surgery', 'diagnostic', 'laboratory', 'imaging', 'dental', 'vision', 'medication', 'therapy', 'emergency', 'maternity', 'preventative', 'other']);
-// CRM Lead Management Enums (moved above)
-// Agent Management Enums
-export const agentTypeEnum = pgEnum('agent_type', ['internal_agent', 'external_broker', 'independent_agent', 'captive_agent', 'agency']);
-export const licenseStatusEnum = pgEnum('license_status', ['active', 'expired', 'suspended', 'pending', 'revoked']);
-/* commissionTransactionTypeEnum moved above commissionTransactions */
-// Workflow Automation Enums (moved above)
 // User type enum for authentication
 export const userTypeEnum = pgEnum('user_type', ['insurance', 'institution', 'provider', 'sales_admin', 'sales_manager', 'team_lead', 'sales_agent', 'broker', 'underwriter']);
-// Token System Enums
-export const tokenPurchaseTypeEnum = pgEnum('token_purchase_type', ['one_time', 'subscription', 'auto_topup']);
-export const tokenPurchaseStatusEnum = pgEnum('token_purchase_status', ['pending', 'processing', 'completed', 'failed', 'cancelled', 'refunded']);
-export const subscriptionStatusEnum = pgEnum('subscription_status', ['active', 'paused', 'payment_failed', 'cancelled', 'expired']);
-export const subscriptionFrequencyEnum = pgEnum('subscription_frequency', ['monthly', 'quarterly', 'annual']);
-export const autoTopupTriggerTypeEnum = pgEnum('auto_topup_trigger_type', ['threshold', 'scheduled', 'both']);
-export const autoTopupScheduleFrequencyEnum = pgEnum('auto_topup_schedule_frequency', ['daily', 'weekly', 'monthly']);
-export const notificationThresholdTypeEnum = pgEnum('notification_threshold_type', ['percentage', 'absolute']);
 // Users table for authentication
 export const users = pgTable("users", {
     id: serial("id").primaryKey(),
     email: text("email").notNull().unique(),
     passwordHash: text("password_hash").notNull(),
+    username: text("username").unique(),
+    fullName: text("full_name"),
+    role: text("role"),
     userType: userTypeEnum("user_type").notNull(),
     entityId: integer("entity_id").notNull(), // References company, institution, or personnel ID
-    permissions: text("permissions").array().default(sql `'{}'::text[]`), // Array of permission strings like 'tokens.purchase', 'tokens.view', 'tokens.configure'
     isActive: boolean("is_active").default(true),
     lastLogin: timestamp("last_login"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -878,154 +825,24 @@ export const auditLogs = pgTable("audit_logs", {
     userAgent: text("user_agent"),
     timestamp: timestamp("timestamp").defaultNow().notNull(),
 });
-// Token System Tables
-// Organization Token Wallets - Store token balance and configuration for each organization
-export const organizationTokenWallets = pgTable("organization_token_wallets", {
+// System logs for application-level logging
+export const systemLogs = pgTable("system_logs", {
     id: serial("id").primaryKey(),
-    organizationId: integer("organization_id").references(() => companies.id).notNull().unique(),
-    currentBalance: decimal("current_balance", { precision: 15, scale: 2 }).notNull().default("0"),
-    totalPurchased: decimal("total_purchased", { precision: 15, scale: 2 }).notNull().default("0"),
-    totalConsumed: decimal("total_consumed", { precision: 15, scale: 2 }).notNull().default("0"),
-    pricePerToken: decimal("price_per_token", { precision: 10, scale: 4 }).notNull(),
-    expirationEnabled: boolean("expiration_enabled").default(false),
-    expirationDays: integer("expiration_days"),
-    currency: text("currency").notNull().default("USD"),
-    isActive: boolean("is_active").default(true),
-    suspendedAt: timestamp("suspended_at"),
-    suspensionReason: text("suspension_reason"),
+    level: text("level").notNull(),
+    message: text("message").notNull(),
+    metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
-// Token Packages - Define predefined token package quantities
-export const tokenPackages = pgTable("token_packages", {
+// System settings for application configuration
+export const systemSettings = pgTable("system_settings", {
     id: serial("id").primaryKey(),
-    name: text("name").notNull(),
-    tokenQuantity: decimal("token_quantity", { precision: 15, scale: 2 }).notNull(),
+    key: text("key").notNull().unique(),
+    value: text("value").notNull(),
     description: text("description"),
-    isActive: boolean("is_active").default(true),
-    displayOrder: integer("display_order").default(0),
-    isCustom: boolean("is_custom").default(false),
+    category: text("category"),
+    isPublic: boolean("is_public").default(false),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-// Token Purchases - Immutable ledger of all token purchases
-export const tokenPurchases = pgTable("token_purchases", {
-    id: serial("id").primaryKey(),
-    purchaseReferenceId: text("purchase_reference_id").notNull().unique(),
-    organizationId: integer("organization_id").references(() => companies.id).notNull(),
-    purchasedBy: integer("purchased_by").references(() => users.id).notNull(),
-    purchaseType: tokenPurchaseTypeEnum("purchase_type").notNull(),
-    tokenQuantity: decimal("token_quantity", { precision: 15, scale: 2 }).notNull(),
-    pricePerToken: decimal("price_per_token", { precision: 10, scale: 4 }).notNull(),
-    totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
-    currency: text("currency").notNull().default("USD"),
-    packageId: integer("package_id").references(() => tokenPackages.id),
-    status: tokenPurchaseStatusEnum("status").notNull(),
-    paymentMethodId: integer("payment_method_id").references(() => paymentMethods.id),
-    gatewayProvider: text("gateway_provider"),
-    gatewayTransactionId: text("gateway_transaction_id"),
-    invoiceId: integer("invoice_id"),
-    subscriptionId: integer("subscription_id"),
-    autoTopupPolicyId: integer("auto_topup_policy_id"),
-    tokenExpirationDate: timestamp("token_expiration_date"),
-    paymentInitiatedAt: timestamp("payment_initiated_at"),
-    paymentCompletedAt: timestamp("payment_completed_at"),
-    tokensAllocatedAt: timestamp("tokens_allocated_at"),
-    failureReason: text("failure_reason"),
-    refundedAt: timestamp("refunded_at"),
-    refundAmount: decimal("refund_amount", { precision: 15, scale: 2 }),
-    metadata: text("metadata"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-// Token Subscriptions - Recurring subscription-based token purchases
-export const tokenSubscriptions = pgTable("token_subscriptions", {
-    id: serial("id").primaryKey(),
-    organizationId: integer("organization_id").references(() => companies.id).notNull(),
-    packageId: integer("package_id").references(() => tokenPackages.id).notNull(),
-    tokenQuantity: decimal("token_quantity", { precision: 15, scale: 2 }).notNull(),
-    pricePerToken: decimal("price_per_token", { precision: 10, scale: 4 }).notNull(),
-    totalAmount: decimal("total_amount", { precision: 15, scale: 2 }).notNull(),
-    currency: text("currency").notNull().default("USD"),
-    frequency: subscriptionFrequencyEnum("frequency").notNull(),
-    status: subscriptionStatusEnum("status").notNull().default("active"),
-    paymentMethodId: integer("payment_method_id").references(() => paymentMethods.id).notNull(),
-    nextBillingDate: date("next_billing_date").notNull(),
-    lastBillingDate: date("last_billing_date"),
-    lastSuccessfulPayment: timestamp("last_successful_payment"),
-    failedPaymentCount: integer("failed_payment_count").default(0),
-    gracePeriodEnds: timestamp("grace_period_ends"),
-    cancelledAt: timestamp("cancelled_at"),
-    cancelledBy: integer("cancelled_by").references(() => users.id),
-    cancellationReason: text("cancellation_reason"),
-    startedAt: timestamp("started_at").notNull(),
-    metadata: text("metadata"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-// Auto Top-Up Policies - Auto top-up configuration per organization
-export const autoTopupPolicies = pgTable("auto_topup_policies", {
-    id: serial("id").primaryKey(),
-    organizationId: integer("organization_id").references(() => companies.id).notNull().unique(),
-    isEnabled: boolean("is_enabled").default(false),
-    triggerType: autoTopupTriggerTypeEnum("trigger_type").notNull(),
-    thresholdPercentage: decimal("threshold_percentage", { precision: 5, scale: 2 }),
-    scheduleFrequency: autoTopupScheduleFrequencyEnum("schedule_frequency"),
-    nextScheduledRun: timestamp("next_scheduled_run"),
-    topupPackageId: integer("topup_package_id").references(() => tokenPackages.id),
-    topupTokenQuantity: decimal("topup_token_quantity", { precision: 15, scale: 2 }),
-    paymentMethodId: integer("payment_method_id").references(() => paymentMethods.id).notNull(),
-    maxSpendingLimitPerMonth: decimal("max_spending_limit_per_month", { precision: 15, scale: 2 }),
-    currentMonthSpending: decimal("current_month_spending", { precision: 15, scale: 2 }).default("0"),
-    spendingResetDate: date("spending_reset_date"),
-    lastTriggeredAt: timestamp("last_triggered_at"),
-    lastPurchaseId: integer("last_purchase_id").references(() => tokenPurchases.id),
-    failureCount: integer("failure_count").default(0),
-    pausedAt: timestamp("paused_at"),
-    pauseReason: text("pause_reason"),
-    invoiceEnabled: boolean("invoice_enabled").default(false),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-// Token Balance History - Track token balance changes over time
-export const tokenBalanceHistory = pgTable("token_balance_history", {
-    id: serial("id").primaryKey(),
-    organizationId: integer("organization_id").references(() => companies.id).notNull(),
-    changeAmount: decimal("change_amount", { precision: 15, scale: 2 }).notNull(),
-    balanceBefore: decimal("balance_before", { precision: 15, scale: 2 }).notNull(),
-    balanceAfter: decimal("balance_after", { precision: 15, scale: 2 }).notNull(),
-    changeType: text("change_type").notNull(),
-    referenceType: text("reference_type"),
-    referenceId: integer("reference_id"),
-    description: text("description"),
-    performedBy: integer("performed_by").references(() => users.id),
-    timestamp: timestamp("timestamp").defaultNow().notNull(),
-    metadata: text("metadata"),
-});
-// Low Balance Notifications - Track low balance notification thresholds
-export const lowBalanceNotifications = pgTable("low_balance_notifications", {
-    id: serial("id").primaryKey(),
-    organizationId: integer("organization_id").references(() => companies.id).notNull(),
-    thresholdType: notificationThresholdTypeEnum("threshold_type").notNull(),
-    thresholdValue: decimal("threshold_value", { precision: 15, scale: 2 }).notNull(),
-    isActive: boolean("is_active").default(true),
-    lastTriggeredAt: timestamp("last_triggered_at"),
-    lastNotifiedBalance: decimal("last_notified_balance", { precision: 15, scale: 2 }),
-    notificationsSentCount: integer("notifications_sent_count").default(0),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-// Token Usage Forecasts - Store usage forecasts and analytics data
-export const tokenUsageForecasts = pgTable("token_usage_forecasts", {
-    id: serial("id").primaryKey(),
-    organizationId: integer("organization_id").references(() => companies.id).notNull(),
-    periodStart: date("period_start").notNull(),
-    periodEnd: date("period_end").notNull(),
-    tokensConsumed: decimal("tokens_consumed", { precision: 15, scale: 2 }).notNull(),
-    averageDailyConsumption: decimal("average_daily_consumption", { precision: 15, scale: 2 }),
-    projectedDaysRemaining: integer("projected_days_remaining"),
-    projectedDepletionDate: date("projected_depletion_date"),
-    calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
 });
 // Premium Payments table
 export const premiumPayments = pgTable("premium_payments", {
@@ -1173,60 +990,6 @@ export const actuarialRateTables = pgTable("actuarial_rate_tables", {
     isActive: boolean("is_active").default(true).notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-// Insert schemas for payment tables
-// // export const insertPremiumPaymentSchema = createInsertSchema(premiumPayments).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-// // export const insertClaimPaymentSchema = createInsertSchema(claimPayments).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-// // export const insertProviderDisbursementSchema = createInsertSchema(providerDisbursements).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-// // export const insertDisbursementItemSchema = createInsertSchema(disbursementItems).omit({
-//   id: true,
-//   createdAt: true,
-// });
-// // export const insertInsuranceBalanceSchema = createInsertSchema(insuranceBalances).omit({
-//   id: true,
-//   createdAt: true,
-// });
-// Insert schemas for enhanced premium calculation tables
-// // export const insertEnhancedPremiumCalculationSchema = createInsertSchema(enhancedPremiumCalculations).omit({
-//   id: true,
-//   createdAt: true,
-// });
-// // export const insertRiskAdjustmentFactorSchema = createInsertSchema(riskAdjustmentFactors).omit({
-//   id: true,
-//   createdAt: true,
-// });
-// // export const insertHealthcareInflationRateSchema = createInsertSchema(healthcareInflationRates).omit({
-//   id: true,
-//   createdAt: true,
-// });
-// // export const insertActuarialRateTableSchema = createInsertSchema(actuarialRateTables).omit({
-//   id: true,
-//   createdAt: true,
-// });
-// Types for payment entities
-// Insert schemas for payment tables (needed by types below)
-export const insertPremiumPaymentSchema = createInsertSchema(premiumPayments);
-export const insertClaimPaymentSchema = createInsertSchema(claimPayments);
-export const insertProviderDisbursementSchema = createInsertSchema(providerDisbursements);
-export const insertDisbursementItemSchema = createInsertSchema(disbursementItems);
-export const insertInsuranceBalanceSchema = createInsertSchema(insuranceBalances);
-// Types for enhanced premium calculation entities
-// Insert schemas for enhanced premium calculation tables
-export const insertEnhancedPremiumCalculationSchema = createInsertSchema(enhancedPremiumCalculations);
-export const insertRiskAdjustmentFactorSchema = createInsertSchema(riskAdjustmentFactors);
-export const insertHealthcareInflationRateSchema = createInsertSchema(healthcareInflationRates);
-export const insertActuarialRateTableSchema = createInsertSchema(actuarialRateTables);
 // Medical Procedures/Items tables for claim processing
 export const medicalProcedures = pgTable("medical_procedures", {
     id: serial("id").primaryKey(),
@@ -1376,26 +1139,6 @@ export const claimProcedureItems = pgTable("claim_procedure_items", {
     notes: text("notes"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
 });
-// Insert schemas for medical procedures tables
-// // export const insertMedicalProcedureSchema = createInsertSchema(medicalProcedures).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-// // export const insertProviderProcedureRateSchema = createInsertSchema(providerProcedureRates).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-// // export const insertClaimProcedureItemSchema = createInsertSchema(claimProcedureItems).omit({
-//   id: true,
-//   createdAt: true,
-// });
-// Types for medical procedures entities
-// Insert schemas for medical procedures tables
-export const insertMedicalProcedureSchema = createInsertSchema(medicalProcedures);
-export const insertProviderProcedureRateSchema = createInsertSchema(providerProcedureRates);
-export const insertClaimProcedureItemSchema = createInsertSchema(claimProcedureItems);
 // Member Engagement Hub - Onboarding System
 export const onboardingStatusEnum = pgEnum('onboarding_status', ['pending', 'active', 'completed', 'paused', 'cancelled']);
 export const taskTypeEnum = pgEnum('task_type', ['profile_completion', 'document_upload', 'benefits_education', 'dependent_registration', 'wellness_setup', 'emergency_setup', 'completion']);
@@ -2403,28 +2146,28 @@ export const providers = pgTable("providers", {
 });
 // Basic Insert Schemas for Core Tables
 // Basic Insert Schemas will be declared before usage
-// export const insertCompanyBenefitSchema = createInsertSchema(companyBenefits);
-// export const insertRegionSchema = createInsertSchema(regions);
-// export const insertMedicalInstitutionSchema = createInsertSchema(medicalInstitutions);
-// export const insertMedicalPersonnelSchema = createInsertSchema(medicalPersonnel);
-// export const insertPanelDocumentationSchema = createInsertSchema(panelDocumentation);
-// export const insertClaimSchema = createInsertSchema(claims);
-// export const insertCompanyPeriodSchema = createInsertSchema(companyPeriods);
-// export const insertAgeBandedRateSchema = createInsertSchema(ageBandedRates);
-// export const insertFamilyRateSchema = createInsertSchema(familyRates);
-// export const insertDiagnosisCodeSchema = createInsertSchema(diagnosisCodes);
-// export const insertPremiumPaymentSchema = createInsertSchema(premiumPayments);
-// export const insertClaimPaymentSchema = createInsertSchema(claimPayments);
-// export const insertProviderDisbursementSchema = createInsertSchema(providerDisbursements);
-// export const insertDisbursementItemSchema = createInsertSchema(disbursementItems);
-// export const insertInsuranceBalanceSchema = createInsertSchema(insuranceBalances);
-// export const insertEnhancedPremiumCalculationSchema = createInsertSchema(enhancedPremiumCalculations);
-// export const insertRiskAdjustmentFactorSchema = createInsertSchema(riskAdjustmentFactors);
-// export const insertHealthcareInflationRateSchema = createInsertSchema(healthcareInflationRates);
-// export const insertActuarialRateTableSchema = createInsertSchema(actuarialRateTables);
-// export const insertMedicalProcedureSchema = createInsertSchema(medicalProcedures);
-// export const insertProviderProcedureRateSchema = createInsertSchema(providerProcedureRates);
-// export const insertClaimProcedureItemSchema = createInsertSchema(claimProcedureItems);
+export const insertCompanyBenefitSchema = createInsertSchema(companyBenefits);
+export const insertRegionSchema = createInsertSchema(regions);
+export const insertMedicalInstitutionSchema = createInsertSchema(medicalInstitutions);
+export const insertMedicalPersonnelSchema = createInsertSchema(medicalPersonnel);
+export const insertPanelDocumentationSchema = createInsertSchema(panelDocumentation);
+export const insertClaimSchema = createInsertSchema(claims);
+export const insertCompanyPeriodSchema = createInsertSchema(companyPeriods);
+export const insertAgeBandedRateSchema = createInsertSchema(ageBandedRates);
+export const insertFamilyRateSchema = createInsertSchema(familyRates);
+export const insertDiagnosisCodeSchema = createInsertSchema(diagnosisCodes);
+export const insertPremiumPaymentSchema = createInsertSchema(premiumPayments);
+export const insertClaimPaymentSchema = createInsertSchema(claimPayments);
+export const insertProviderDisbursementSchema = createInsertSchema(providerDisbursements);
+export const insertDisbursementItemSchema = createInsertSchema(disbursementItems);
+export const insertInsuranceBalanceSchema = createInsertSchema(insuranceBalances);
+export const insertEnhancedPremiumCalculationSchema = createInsertSchema(enhancedPremiumCalculations);
+export const insertRiskAdjustmentFactorSchema = createInsertSchema(riskAdjustmentFactors);
+export const insertHealthcareInflationRateSchema = createInsertSchema(healthcareInflationRates);
+export const insertActuarialRateTableSchema = createInsertSchema(actuarialRateTables);
+export const insertMedicalProcedureSchema = createInsertSchema(medicalProcedures);
+export const insertProviderProcedureRateSchema = createInsertSchema(providerProcedureRates);
+export const insertClaimProcedureItemSchema = createInsertSchema(claimProcedureItems);
 export const insertUserSchema = createInsertSchema(users);
 export const insertUserSessionSchema = createInsertSchema(userSessions);
 export const insertAuditLogSchema = createInsertSchema(auditLogs);
@@ -3031,6 +2774,25 @@ export const paymentNotificationTemplates = pgTable("payment_notification_templa
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
+// Payment recovery table
+export const paymentRecovery = pgTable("payment_recovery", {
+    id: serial("id").primaryKey(),
+    paymentId: integer("payment_id").references(() => payments.id).notNull(),
+    claimId: integer("claim_id"),
+    memberId: integer("member_id").references(() => members.id).notNull(),
+    amount: real("amount").notNull(),
+    originalError: text("original_error").notNull(),
+    status: recoveryStatusEnum("status").default("pending").notNull(),
+    retryCount: integer("retry_count").default(0).notNull(),
+    nextRetryAt: timestamp("next_retry_at"),
+    escalatedAt: timestamp("escalated_at"),
+    recoveredAt: timestamp("recovered_at"),
+    failedAt: timestamp("failed_at"),
+    supportTicketId: text("support_ticket_id"),
+    auditTrail: jsonb("audit_trail").default(sql `'[]'::jsonb`).notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
 // Reconciliation exceptions table
 export const reconciliationExceptions = pgTable("reconciliation_exceptions", {
     id: serial("id").primaryKey(),
@@ -3428,17 +3190,14 @@ export const insertAuditFindingSchema = createInsertSchema(auditFindings).omit({
 export const insertAgentPerformanceMetricSchema = createInsertSchema(agentPerformanceMetrics).omit({
     id: true,
     createdAt: true,
-    updatedAt: true,
 });
 export const insertAgentLeaderboardSchema = createInsertSchema(agentLeaderboards).omit({
     id: true,
     createdAt: true,
-    updatedAt: true,
 });
 export const insertCommissionReportSchema = createInsertSchema(commissionReports).omit({
     id: true,
     createdAt: true,
-    updatedAt: true,
 });
 export const insertPolicySchema = createInsertSchema(policies).omit({
     id: true,
@@ -3449,65 +3208,13 @@ export const insertPolicySchema = createInsertSchema(policies).omit({
 // FINANCE MANAGEMENT MODULE 4: CLAIMS FINANCIAL MANAGEMENT
 // ========================================
 // Enums for Claims Financial Management
-export var ClaimReserveType;
-(function (ClaimReserveType) {
-    ClaimReserveType["INCURRED_LOSS"] = "INCURRED_LOSS";
-    ClaimReserveType["EXPENSE"] = "EXPENSE";
-    ClaimReserveType["SALVAGE_RECOVERY"] = "SALVAGE_RECOVERY";
-    ClaimReserveType["LEGAL_EXPENSES"] = "LEGAL_EXPENSES";
-})(ClaimReserveType || (ClaimReserveType = {}));
-export var ClaimReserveStatus;
-(function (ClaimReserveStatus) {
-    ClaimReserveStatus["ACTIVE"] = "ACTIVE";
-    ClaimReserveStatus["CLOSED"] = "CLOSED";
-    ClaimReserveStatus["EXHAUSTED"] = "EXHAUSTED";
-    ClaimReserveStatus["SUPERSEDED"] = "SUPERSEDED";
-})(ClaimReserveStatus || (ClaimReserveStatus = {}));
-export var ClaimPaymentType;
-(function (ClaimPaymentType) {
-    ClaimPaymentType["INDEMNITY"] = "INDEMNITY";
-    ClaimPaymentType["EXPENSE"] = "EXPENSE";
-    ClaimPaymentType["LEGAL"] = "LEGAL";
-    ClaimPaymentType["MEDICAL"] = "MEDICAL";
-    ClaimPaymentType["REHABILITATION"] = "REHABILITATION";
-    ClaimPaymentType["LOSS_OF_EARNINGS"] = "LOSS_OF_EARNINGS";
-})(ClaimPaymentType || (ClaimPaymentType = {}));
-export var ClaimPaymentStatus;
-(function (ClaimPaymentStatus) {
-    ClaimPaymentStatus["PENDING"] = "PENDING";
-    ClaimPaymentStatus["APPROVED"] = "APPROVED";
-    ClaimPaymentStatus["PROCESSING"] = "PROCESSING";
-    ClaimPaymentStatus["COMPLETED"] = "COMPLETED";
-    ClaimPaymentStatus["FAILED"] = "FAILED";
-    ClaimPaymentStatus["REJECTED"] = "REJECTED";
-    ClaimPaymentStatus["CANCELLED"] = "CANCELLED";
-    ClaimPaymentStatus["ESCALATED"] = "ESCALATED";
-})(ClaimPaymentStatus || (ClaimPaymentStatus = {}));
-export var ClaimApprovalStatus;
-(function (ClaimApprovalStatus) {
-    ClaimApprovalStatus["PENDING"] = "PENDING";
-    ClaimApprovalStatus["APPROVED"] = "APPROVED";
-    ClaimApprovalStatus["REJECTED"] = "REJECTED";
-    ClaimApprovalStatus["CANCELLED"] = "CANCELLED";
-    ClaimApprovalStatus["COMPLETED"] = "COMPLETED";
-})(ClaimApprovalStatus || (ClaimApprovalStatus = {}));
-export var FinancialTransactionType;
-(function (FinancialTransactionType) {
-    FinancialTransactionType["PAYMENT_REQUEST"] = "PAYMENT_REQUEST";
-    FinancialTransactionType["PAYMENT_EXECUTION"] = "PAYMENT_EXECUTION";
-    FinancialTransactionType["RESERVE_INCREASE"] = "RESERVE_INCREASE";
-    FinancialTransactionType["RESERVE_DECREASE"] = "RESERVE_DECREASE";
-    FinancialTransactionType["RECOVERY_RECEIVED"] = "RECOVERY_RECEIVED";
-    FinancialTransactionType["EXPENSE_ALLOCATION"] = "EXPENSE_ALLOCATION";
-})(FinancialTransactionType || (FinancialTransactionType = {}));
-export var FinancialTransactionStatus;
-(function (FinancialTransactionStatus) {
-    FinancialTransactionStatus["PENDING"] = "PENDING";
-    FinancialTransactionStatus["APPROVED"] = "APPROVED";
-    FinancialTransactionStatus["POSTED"] = "POSTED";
-    FinancialTransactionStatus["REJECTED"] = "REJECTED";
-    FinancialTransactionStatus["FAILED"] = "FAILED";
-})(FinancialTransactionStatus || (FinancialTransactionStatus = {}));
+export const ClaimReserveType = pgEnum('claim_reserve_type', ['INCURRED_LOSS', 'EXPENSE', 'SALVAGE_RECOVERY', 'LEGAL_EXPENSES']);
+export const ClaimReserveStatus = pgEnum('claim_reserve_status', ['ACTIVE', 'CLOSED', 'EXHAUSTED', 'SUPERSEDED']);
+export const ClaimPaymentType = pgEnum('claim_payment_type', ['INDEMNITY', 'EXPENSE', 'LEGAL', 'MEDICAL', 'REHABILITATION', 'LOSS_OF_EARNINGS']);
+export const ClaimPaymentStatus = pgEnum('claim_payment_status', ['PENDING', 'APPROVED', 'PROCESSING', 'COMPLETED', 'FAILED', 'REJECTED', 'CANCELLED', 'ESCALATED']);
+export const ClaimApprovalStatus = pgEnum('claim_approval_status', ['PENDING', 'APPROVED', 'REJECTED', 'CANCELLED', 'COMPLETED']);
+export const FinancialTransactionType = pgEnum('financial_TransactionType', ['PAYMENT_REQUEST', 'PAYMENT_EXECUTION', 'RESERVE_INCREASE', 'RESERVE_DECREASE', 'RECOVERY_RECEIVED', 'EXPENSE_ALLOCATION']);
+export const FinancialTransactionStatus = pgEnum('financial_TransactionStatus', ['PENDING', 'APPROVED', 'POSTED', 'REJECTED', 'FAILED']);
 // Claim Reserves Table - Financial reserves set aside for claims
 export const claimReserves = pgTable('claim_reserves', {
     id: serial('id').primaryKey(),
@@ -3515,7 +3222,7 @@ export const claimReserves = pgTable('claim_reserves', {
     reserveType: claimReserveTypeEnum('reserve_type').notNull(),
     amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
     currency: varchar('currency', { length: 3 }).notNull().default('USD'),
-    status: claimReserveStatusEnum('status').notNull().default(ClaimReserveStatus.ACTIVE),
+    status: claimReserveStatusEnum('status').notNull().default('initial'),
     notes: text('notes'),
     reservedAt: timestamp('reserved_at').notNull().defaultNow(),
     lastAdjustmentAt: timestamp('last_adjustment_at'),
@@ -3548,7 +3255,7 @@ export const claimReserveTransactions = pgTable('claim_reserve_transactions', {
 export const claimFinancePayments = pgTable('claim_finance_payments', {
     id: serial('id').primaryKey(),
     claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull(),
-    paymentType: claimPaymentTypeEnum('claim_payment_type').notNull(),
+    paymentType: claimPaymentTypeEnum('payment_type').notNull(),
     amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
     currency: varchar('currency', { length: 3 }).notNull().default('USD'),
     description: text('description').notNull(),
@@ -3557,7 +3264,7 @@ export const claimFinancePayments = pgTable('claim_finance_payments', {
     payeeReference: varchar('payee_reference', { length: 100 }),
     paymentMethod: varchar('payment_method', { length: 50 }), // BANK_TRANSFER, CHECK, MOBILE_MONEY, CREDIT_CARD
     paymentReference: varchar('payment_reference', { length: 100 }),
-    status: claimPaymentStatusEnum('claim_payment_status').notNull().default(ClaimPaymentStatus.PENDING),
+    status: claimPaymentStatusEnum('status').notNull().default('pending'),
     dueDate: timestamp('due_date').notNull(),
     requestedBy: integer('requested_by').references(() => users.id),
     approvedBy: integer('approved_by').references(() => users.id),
@@ -3583,11 +3290,11 @@ export const claimFinancePayments = pgTable('claim_finance_payments', {
 export const claimApprovalWorkflows = pgTable('claim_approval_workflows', {
     id: serial('id').primaryKey(),
     claimId: integer('claim_id').references(() => claims.id, { onDelete: 'cascade' }).notNull(),
-    paymentId: integer('payment_id').references(() => claimFinancePayments.id, { onDelete: 'cascade' }),
+    paymentId: integer('payment_id').references(() => claimPayments.id, { onDelete: 'cascade' }),
     workflowType: varchar('workflow_type', { length: 50 }).notNull(), // CLAIM_APPROVAL, PAYMENT_APPROVAL, RESERVE_APPROVAL
     currentStep: integer('current_step').notNull().default(1),
     totalSteps: integer('total_steps'),
-    status: claimApprovalStatusEnum('claim_approval_status').notNull().default(ClaimApprovalStatus.PENDING),
+    status: claimApprovalStatusEnum('status').notNull().default('submitted'),
     initiatorId: integer('initiator_id').references(() => users.id).notNull(),
     currentAssigneeId: integer('current_assignee_id').references(() => users.id),
     priority: varchar('priority', { length: 20 }).default('NORMAL'), // LOW, NORMAL, HIGH, URGENT
@@ -3633,7 +3340,7 @@ export const claimFinancialTransactions = pgTable('claim_financial_transactions'
     transactionType: financialTransactionTypeEnum('transaction_type').notNull(),
     amount: decimal('amount', { precision: 15, scale: 2 }).notNull(),
     currency: varchar('currency', { length: 3 }).notNull().default('USD'),
-    status: financialTransactionStatusEnum('status').notNull().default(FinancialTransactionStatus.PENDING),
+    status: financialTransactionStatusEnum('status').notNull().default('pending'),
     description: text('description').notNull(),
     referenceId: integer('reference_id'), // References payment_id, reserve_id, or other entity
     paymentReference: varchar('payment_reference', { length: 100 }),
@@ -3678,7 +3385,7 @@ export const claimAnalytics = pgTable('claim_analytics', {
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow()
 }, (table) => ({
-    claimIdx: index('claim_analytics_claim_idx').on(table.claimId).unique(),
+    claimIdx: uniqueIndex('claim_analytics_claim_idx').on(table.claimId),
     lastCalculatedIdx: index('claim_analytics_last_calculated_idx').on(table.lastCalculatedAt),
     riskScoreIdx: index('claim_analytics_risk_score_idx').on(table.riskScore)
 }));
@@ -3707,18 +3414,10 @@ export const claimFinancialMetrics = pgTable('claim_financial_metrics', {
     createdAt: timestamp('created_at').notNull().defaultNow(),
     updatedAt: timestamp('updated_at').notNull().defaultNow()
 }, (table) => ({
-    claimPeriodIdx: index('claim_financial_metrics_claim_period_idx').on(table.claimId, table.metricPeriod).unique(),
+    claimPeriodIdx: uniqueIndex('claim_financial_metrics_claim_period_idx').on(table.claimId, table.metricPeriod),
     metricDateIdx: index('claim_financial_metrics_date_idx').on(table.metricDate),
     lossRatioIdx: index('claim_financial_metrics_loss_ratio_idx').on(table.lossRatio)
 }));
-// Schema Validation
-export const claimReserveTypeEnum = pgEnum('reserve_type', Object.values(ClaimReserveType));
-export const claimReserveStatusEnum = pgEnum('reserve_status', Object.values(ClaimReserveStatus));
-export const claimPaymentTypeEnum = pgEnum('claim_payment_type', Object.values(ClaimPaymentType));
-export const claimPaymentStatusEnum = pgEnum('claim_payment_status', Object.values(ClaimPaymentStatus));
-export const claimApprovalStatusEnum = pgEnum('claim_approval_status', Object.values(ClaimApprovalStatus));
-export const financialTransactionTypeEnum = pgEnum('financial_transaction_type', Object.values(FinancialTransactionType));
-export const financialTransactionStatusEnum = pgEnum('financial_transaction_status', Object.values(FinancialTransactionStatus));
 // Zod schemas for validation
 export const insertClaimReserveSchema = createInsertSchema(claimReserves).omit({
     id: true,
@@ -3760,235 +3459,57 @@ export const insertClaimFinancialMetricsSchema = createInsertSchema(claimFinanci
     updatedAt: true,
 });
 // ============================================================================
-// FRAUD DETECTION MODULE TABLES
+// SAGA PATTERN IMPLEMENTATION - DISTRIBUTED TRANSACTION MANAGEMENT
 // ============================================================================
-// Fraud Detection Enums
-export const fraudAlertSeverityEnum = pgEnum('fraud_alert_severity', ['low', 'medium', 'high', 'critical']);
-export const fraudAlertStatusEnum = pgEnum('fraud_alert_status', ['open', 'investigating', 'resolved', 'dismissed', 'escalated']);
-export const fraudRuleTypeEnum = pgEnum('fraud_rule_type', ['pattern', 'threshold', 'behavioral', 'statistical', 'network']);
-export const fraudRuleStatusEnum = pgEnum('fraud_rule_status', ['active', 'inactive', 'draft', 'testing']);
-export const fraudInvestigationStatusEnum = pgEnum('fraud_investigation_status', ['open', 'in_progress', 'completed', 'closed', 'escalated']);
-export const fraudInvestigationPriorityEnum = pgEnum('fraud_investigation_priority', ['low', 'medium', 'high', 'urgent']);
-export const mlModelTypeEnum = pgEnum('ml_model_type', ['supervised', 'unsupervised', 'semi_supervised', 'reinforcement']);
-export const mlModelStatusEnum = pgEnum('ml_model_status', ['training', 'active', 'inactive', 'deprecated', 'failed']);
-export const behavioralPatternTypeEnum = pgEnum('behavioral_pattern_type', ['frequency', 'amount', 'timing', 'provider', 'diagnosis', 'geographic']);
-export const networkAnalysisTypeEnum = pgEnum('network_analysis_type', ['social', 'provider', 'billing', 'geographic', 'temporal']);
-export const riskScoreLevelEnum = pgEnum('risk_score_level', ['very_low', 'low', 'medium', 'high', 'very_high', 'critical']);
-export const fraudAnalyticsPeriodEnum = pgEnum('fraud_analytics_period', ['daily', 'weekly', 'monthly', 'quarterly', 'yearly']);
-// Fraud Alerts Table
-export const fraudAlerts = pgTable("fraud_alerts", {
-    id: serial("id").primaryKey(),
-    alertId: text("alert_id").notNull().unique(),
-    claimId: integer("claim_id").references(() => claims.id),
-    memberId: integer("member_id").references(() => members.id),
-    providerId: integer("provider_id").references(() => providers.id),
-    severity: fraudAlertSeverityEnum("severity").notNull(),
-    status: fraudAlertStatusEnum("status").notNull().default("open"),
-    title: text("title").notNull(),
-    description: text("description").notNull(),
-    riskScore: real("risk_score").notNull(),
-    confidence: real("confidence").notNull(),
-    triggeredRules: text("triggered_rules").notNull(), // JSON array of rule IDs
-    indicators: text("indicators").notNull(), // JSON array of fraud indicators
-    evidence: text("evidence"), // JSON object with supporting evidence
-    recommendedActions: text("recommended_actions"), // JSON array of recommended actions
-    assignedTo: integer("assigned_to").references(() => users.id),
-    priority: integer("priority").notNull().default(1),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-    resolvedAt: timestamp("resolved_at"),
-    resolutionNotes: text("resolution_notes"),
-});
-// Fraud Rules Table
-export const fraudRules = pgTable("fraud_rules", {
-    id: serial("id").primaryKey(),
-    ruleId: text("rule_id").notNull().unique(),
+// Saga Transaction State Table
+export const saga = pgTable("saga", {
+    id: uuid("id").primaryKey().defaultRandom(),
     name: text("name").notNull(),
-    description: text("description").notNull(),
-    type: fraudRuleTypeEnum("type").notNull(),
-    status: fraudRuleStatusEnum("status").notNull().default("draft"),
-    conditions: text("conditions").notNull(), // JSON object defining rule conditions
-    actions: text("actions").notNull(), // JSON object defining rule actions
-    severity: fraudAlertSeverityEnum("severity").notNull(),
-    threshold: real("threshold"),
-    weight: real("weight").notNull().default(1.0),
-    falsePositiveRate: real("false_positive_rate"),
-    truePositiveRate: real("true_positive_rate"),
-    createdBy: integer("created_by").references(() => users.id),
-    approvedBy: integer("approved_by").references(() => users.id),
-    version: text("version").notNull().default("1.0"),
-    effectiveDate: timestamp("effective_date").notNull(),
-    expiryDate: timestamp("expiry_date"),
-    testResults: text("test_results"), // JSON object with testing results
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-// Fraud Investigations Table
-export const fraudInvestigations = pgTable("fraud_investigations", {
-    id: serial("id").primaryKey(),
-    investigationId: text("investigation_id").notNull().unique(),
-    alertId: integer("alert_id").references(() => fraudAlerts.id),
-    title: text("title").notNull(),
-    description: text("description").notNull(),
-    status: fraudInvestigationStatusEnum("status").notNull().default("open"),
-    priority: fraudInvestigationPriorityEnum("priority").notNull().default("medium"),
-    assignedTo: integer("assigned_to").references(() => users.id),
-    supervisorId: integer("supervisor_id").references(() => users.id),
-    riskAmount: real("risk_amount"),
-    potentialSavings: real("potential_savings"),
-    investigationSteps: text("investigation_steps"), // JSON array of investigation steps
-    findings: text("findings"), // JSON object with investigation findings
-    evidence: text("evidence"), // JSON array of evidence files/documents
-    recommendations: text("recommendations"), // JSON array of recommendations
-    outcome: text("outcome"),
-    fraudConfirmed: boolean("fraud_confirmed"),
-    fraudType: text("fraud_type"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    correlationId: uuid("correlation_id").notNull(),
+    status: sagaStatusEnum("status").default("pending").notNull(),
+    metadata: text("metadata"), // JSON string with saga metadata
+    auditTrail: text("audit_trail"), // JSON array of audit entries
+    startedAt: timestamp("started_at").defaultNow().notNull(),
     completedAt: timestamp("completed_at"),
-    closedAt: timestamp("closed_at"),
-});
-// ML Models Table
-export const mlModels = pgTable("ml_models", {
-    id: serial("id").primaryKey(),
-    modelId: text("model_id").notNull().unique(),
-    name: text("name").notNull(),
-    description: text("description").notNull(),
-    type: mlModelTypeEnum("type").notNull(),
-    status: mlModelStatusEnum("status").notNull().default("training"),
-    algorithm: text("algorithm").notNull(),
-    features: text("features").notNull(), // JSON array of feature names
-    target: text("target").notNull(),
-    hyperparameters: text("hyperparameters"), // JSON object with model hyperparameters
-    trainingData: text("training_data"), // JSON object with training data info
-    performanceMetrics: text("performance_metrics"), // JSON object with accuracy, precision, recall, etc.
-    accuracy: real("accuracy"),
-    precision: real("precision"),
-    recall: real("recall"),
-    f1Score: real("f1_score"),
-    auc: real("auc"),
-    modelPath: text("model_path").notNull(),
-    version: text("version").notNull(),
-    trainedAt: timestamp("trained_at"),
-    deployedAt: timestamp("deployed_at"),
-    lastUsed: timestamp("last_used"),
-    createdBy: integer("created_by").references(() => users.id),
+    compensatedAt: timestamp("compensated_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-// Behavioral Profiles Table
-export const behavioralProfiles = pgTable("behavioral_profiles", {
-    id: serial("id").primaryKey(),
-    memberId: integer("member_id").references(() => members.id).notNull(),
-    profileId: text("profile_id").notNull().unique(),
-    patternType: behavioralPatternTypeEnum("pattern_type").notNull(),
-    baselineMetrics: text("baseline_metrics").notNull(), // JSON object with baseline behavior
-    currentMetrics: text("current_metrics").notNull(), // JSON object with current behavior
-    deviations: text("deviations"), // JSON object with statistical deviations
-    riskScore: real("risk_score").notNull(),
-    confidence: real("confidence").notNull(),
-    lastUpdated: timestamp("last_updated").defaultNow().notNull(),
-    nextReview: timestamp("next_review"),
-    alertsTriggered: integer("alerts_triggered").default(0),
-    investigationsCount: integer("investigations_count").default(0),
+}, (table) => ({
+    correlationIdx: index("saga_correlation_idx").on(table.correlationId),
+    statusIdx: index("saga_status_idx").on(table.status),
+    createdAtIdx: index("saga_created_idx").on(table.createdAt),
+}));
+// Saga Step State Table
+export const sagaStep = pgTable("saga_step", {
+    id: uuid("id").primaryKey().defaultRandom(),
+    sagaId: uuid("saga_id").references(() => saga.id).notNull(),
+    stepName: text("step_name").notNull(),
+    status: sagaStepStatusEnum("status").default("pending").notNull(),
+    input: text("input"), // JSON string with step input
+    output: text("output"), // JSON string with step output
+    error: text("error"),
+    compensationExecuted: boolean("compensation_executed").default(false),
+    compensationError: text("compensation_error"),
+    retryCount: integer("retry_count").default(0),
+    maxRetries: integer("max_retries").default(3),
+    startedAt: timestamp("started_at").defaultNow().notNull(),
+    completedAt: timestamp("completed_at"),
+    compensatedAt: timestamp("compensated_at"),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-// Network Analysis Table
-export const networkAnalysis = pgTable("network_analysis", {
-    id: serial("id").primaryKey(),
-    analysisId: text("analysis_id").notNull().unique(),
-    analysisType: networkAnalysisTypeEnum("analysis_type").notNull(),
-    entityType: text("entity_type").notNull(), // 'member', 'provider', 'diagnosis', 'location'
-    entityId: text("entity_id").notNull(),
-    connections: text("connections").notNull(), // JSON array of network connections
-    centrality: real("centrality"),
-    clusteringCoefficient: real("clustering_coefficient"),
-    degree: integer("degree"),
-    betweenness: real("betweenness"),
-    riskScore: real("risk_score"),
-    anomalies: text("anomalies"), // JSON array of detected anomalies
-    patterns: text("patterns"), // JSON object with identified patterns
-    analysisDate: timestamp("analysis_date").defaultNow().notNull(),
-    dataPeriod: text("data_period"), // Date range analyzed
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-// Risk Scores Table
-export const riskScores = pgTable("risk_scores", {
-    id: serial("id").primaryKey(),
-    entityType: text("entity_type").notNull(), // 'member', 'provider', 'claim', 'diagnosis'
-    entityId: text("entity_id").notNull(),
-    scoreId: text("score_id").notNull().unique(),
-    overallScore: real("overall_score").notNull(),
-    scoreLevel: riskScoreLevelEnum("score_level").notNull(),
-    componentScores: text("component_scores").notNull(), // JSON object with individual component scores
-    factors: text("factors").notNull(), // JSON array of risk factors
-    confidence: real("confidence").notNull(),
-    modelVersion: text("model_version"),
-    calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
-    validUntil: timestamp("valid_until"),
-    lastUpdated: timestamp("last_updated").defaultNow().notNull(),
-    alertsCount: integer("alerts_count").default(0),
-    investigationsCount: integer("investigations_count").default(0),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-// Fraud Analytics Table
-export const fraudAnalytics = pgTable("fraud_analytics", {
-    id: serial("id").primaryKey(),
-    period: fraudAnalyticsPeriodEnum("period").notNull(),
-    periodStart: date("period_start").notNull(),
-    periodEnd: date("period_end").notNull(),
-    totalClaims: integer("total_claims").notNull(),
-    fraudulentClaims: integer("fraudulent_claims").notNull(),
-    fraudRate: real("fraud_rate").notNull(),
-    totalLoss: real("total_loss").notNull(),
-    preventedLoss: real("prevented_loss").notNull(),
-    investigationCount: integer("investigation_count").notNull(),
-    resolutionRate: real("resolution_rate").notNull(),
-    averageDetectionTime: integer("average_detection_time"), // in days
-    falsePositiveRate: real("false_positive_rate"),
-    truePositiveRate: real("true_positive_rate"),
-    topFraudTypes: text("top_fraud_types"), // JSON array of fraud types
-    riskDistribution: text("risk_distribution"), // JSON object with risk score distribution
-    geographicHotspots: text("geographic_hotspots"), // JSON array of high-risk locations
-    providerRiskProfile: text("provider_risk_profile"), // JSON object with provider risk metrics
-    memberRiskProfile: text("member_risk_profile"), // JSON object with member risk metrics
-    modelPerformance: text("model_performance"), // JSON object with ML model performance
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-// Insert Schemas for Fraud Detection Module
-export const insertFraudAlertSchema = createInsertSchema(fraudAlerts).omit({
+    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+    sagaIdIdx: index("saga_step_saga_idx").on(table.sagaId),
+    statusIdx: index("saga_step_status_idx").on(table.status),
+    stepNameIdx: index("saga_step_name_idx").on(table.stepName),
+}));
+// Saga Insert Schemas
+export const insertSagaSchema = createInsertSchema(saga).omit({
     id: true,
     createdAt: true,
     updatedAt: true,
 });
-export const insertFraudRuleSchema = createInsertSchema(fraudRules).omit({
+export const insertSagaStepSchema = createInsertSchema(sagaStep).omit({
     id: true,
     createdAt: true,
     updatedAt: true,
-});
-export const insertFraudInvestigationSchema = createInsertSchema(fraudInvestigations).omit({
-    id: true,
-    createdAt: true,
-    updatedAt: true,
-});
-export const insertMlModelSchema = createInsertSchema(mlModels).omit({
-    id: true,
-    createdAt: true,
-    updatedAt: true,
-});
-export const insertBehavioralProfileSchema = createInsertSchema(behavioralProfiles).omit({
-    id: true,
-    createdAt: true,
-});
-export const insertNetworkAnalysisSchema = createInsertSchema(networkAnalysis).omit({
-    id: true,
-    createdAt: true,
-});
-export const insertRiskScoreSchema = createInsertSchema(riskScores).omit({
-    id: true,
-    createdAt: true,
-});
-export const insertFraudAnalyticsSchema = createInsertSchema(fraudAnalytics).omit({
-    id: true,
-    createdAt: true,
 });

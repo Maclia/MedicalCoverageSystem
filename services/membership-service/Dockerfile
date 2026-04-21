@@ -1,10 +1,10 @@
 # Multi-stage build for Membership Service
 FROM node:20-alpine AS dependencies
 
-WORKDIR /app
+WORKDIR /app/services/membership-service
 
 # Copy package files first (for layer caching optimization)
-COPY package*.json ./
+COPY services/membership-service/package*.json ./
 
 # Install all dependencies (including dev) for build
 RUN npm install --legacy-peer-deps && npm cache clean --force
@@ -12,17 +12,18 @@ RUN npm install --legacy-peer-deps && npm cache clean --force
 # Build stage
 FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /app/services/membership-service
 
 # Install system dependencies
 RUN apk add --no-cache dumb-init
 
 # Copy from dependencies stage
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY package*.json tsconfig.json ./
+COPY --from=dependencies /app/services/membership-service/node_modules ./node_modules
+COPY services/membership-service/package*.json services/membership-service/tsconfig.json ./
 
 # Copy source code
-COPY src/ ./src/
+COPY services/membership-service/src/ ./src/
+COPY shared/ /app/shared/
 
 # Build the application
 RUN npm run build
@@ -30,7 +31,7 @@ RUN npm run build
 # Production stage
 FROM node:20-alpine AS production
 
-WORKDIR /app
+WORKDIR /app/services/membership-service
 
 # Install dumb-init for signal handling
 RUN apk add --no-cache dumb-init
@@ -40,13 +41,14 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S membership -u 1001 -G nodejs
 
 # Copy package files
-COPY package*.json ./
+COPY services/membership-service/package*.json ./
 
 # Install production dependencies only
 RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Copy built application from builder stage
-COPY --from=builder --chown=membership:nodejs /app/dist ./dist
+COPY --from=builder --chown=membership:nodejs /app/services/membership-service/dist ./dist
+COPY --chown=membership:nodejs shared/ /app/shared/
 
 # Create logs directory with proper permissions
 RUN mkdir -p /app/logs && chown -R membership:nodejs /app

@@ -2,16 +2,17 @@
 FROM node:20-alpine AS builder
 
 # Set working directory
-WORKDIR /app
+WORKDIR /app/services/hospital-service
 
 # Copy package files
-COPY package*.json ./
+COPY services/hospital-service/package*.json ./
 
 # Install all dependencies (prefer lockfile if present)
 RUN if [ -f package-lock.json ]; then npm install --legacy-peer-deps; else npm install --legacy-peer-deps; fi
 
 # Copy source code
-COPY . .
+COPY services/hospital-service/ ./
+COPY shared/ /app/shared/
 
 # Build the application
 RUN npm run build
@@ -27,16 +28,17 @@ RUN addgroup -g 1001 -S nodejs && \
     adduser -S nodejs -u 1001
 
 # Set working directory
-WORKDIR /app
+WORKDIR /app/services/hospital-service
 
 # Copy package files
-COPY package*.json ./
+COPY services/hospital-service/package*.json ./
 
 # Install only production dependencies (prefer lockfile if present)
 RUN if [ -f package-lock.json ]; then npm install --omit=dev --legacy-peer-deps; else npm install --omit=dev --legacy-peer-deps; fi && npm cache clean --force
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/services/hospital-service/dist ./dist
+COPY --chown=nodejs:nodejs shared/ /app/shared/
 
 # Create logs directory
 RUN mkdir -p logs && chown nodejs:nodejs logs

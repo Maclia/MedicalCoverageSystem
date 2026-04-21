@@ -197,8 +197,8 @@ services:
   membership-service:
     <<: *service-defaults
     build:
-      context: ./services/membership-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/membership-service/Dockerfile
     container_name: medical_membership_service
     environment:
       NODE_ENV: ${NODE_ENV:-production}
@@ -215,8 +215,8 @@ services:
   hospital-service:
     <<: *service-defaults
     build:
-      context: ./services/hospital-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: services/hospital-service/Dockerfile
     container_name: medical_hospital_service
     environment:
       NODE_ENV: ${NODE_ENV:-production}
