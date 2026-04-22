@@ -7,7 +7,6 @@ declare global {
   namespace Express {
     interface Request {
       correlationId?: string;
-      user?: any;
     }
   }
 }
@@ -32,12 +31,12 @@ export const correlationIdMiddleware = (req: Request, res: Response, next: NextF
 
   // Log response when it finishes
   res.on('finish', () => {
-    logger.info('Request completed', {
-      method: req.method,
-      url: req.url,
-      statusCode: res.statusCode,
-      responseTime: Date.now() - req.startTime
-    });
+      logger.info('Request completed', {
+        method: req.method,
+        url: req.url,
+        statusCode: res.statusCode,
+        responseTime: req.startTime ? Date.now() - req.startTime : undefined
+      });
   });
 
   next();

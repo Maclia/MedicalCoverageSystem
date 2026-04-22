@@ -3,7 +3,9 @@
     "ignoreDeprecations": "5.0",
     "target": "ES2020",
     "module": "ESNext",
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
+    "rewriteRelativeImportExtensions": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "strict": true,
@@ -14,9 +16,8 @@
     "rootDir": "../../",
     "typeRoots": ["../../node_modules/@types"],
     "resolveJsonModule": true,
-    "baseUrl": ".",
     "paths": {
-      "@shared/*": ["../../shared/*"],
+      "@shared/*": ["../shared/*"],
       "@/*": ["./src/*"]
     }
   },

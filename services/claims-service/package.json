@@ -3,6 +3,7 @@
   "name": "claims-service",
   "version": "1.0.0",
   "description": "Claims processing microservice for Medical Coverage System",
+  "type": "module",
   "main": "dist/index.js",
   "scripts": {
     "start": "node dist/index.js",

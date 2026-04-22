@@ -5,17 +5,23 @@ import { createLogger } from '../utils/logger';
 
 const logger = createLogger();
 
+import { UserRole } from '../services/AuthService';
+
 // Extend Request interface to include user information
 declare global {
   namespace Express {
     interface Request {
       user?: {
+        id: number;
         userId: number;
-        userType: 'insurance' | 'institution' | 'provider';
+        userType: UserRole;
         entityId: number;
         email: string;
+        role: string;
+        permissions: string[];
       };
       correlationId?: string;
+      startTime?: number;
     }
   }
 }
@@ -36,15 +42,20 @@ export const authenticateToken = async (
     const payload = await authService.validateAccessToken(token);
 
     req.user = {
+      id: payload.userId,
       userId: payload.userId,
       userType: payload.userType,
       entityId: payload.entityId,
-      email: payload.email
+      email: payload.email,
+      role: payload.role,
+      permissions: payload.permissions || []
     };
 
     logger.debug('Token authentication successful', {
       userId: payload.userId,
       userType: payload.userType,
+      role: payload.role,
+      permissions: payload.permissions || [],
       correlationId: req.correlationId
     });
 
@@ -58,7 +69,7 @@ export const authenticateToken = async (
   }
 };
 
-export const requireUserType = (allowedTypes: ('insurance' | 'institution' | 'provider')[]) => {
+export const requireUserType = (allowedTypes: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AuthenticationError('Authentication required');
@@ -85,6 +96,106 @@ export const requireInsuranceUser = requireUserType(['insurance']);
 export const requireInstitutionUser = requireUserType(['institution']);
 export const requireProviderUser = requireUserType(['provider']);
 export const requireMedicalUser = requireUserType(['institution', 'provider']);
+
+// Role-based access control middleware
+export const requireRole = (allowedRoles: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      throw new AuthenticationError('Authentication required');
+    }
+
+    if (!allowedRoles.includes(req.user.role)) {
+      logger.warn('Access denied - insufficient role', {
+        userId: req.user.userId,
+        userRole: req.user.role,
+        requiredRoles: allowedRoles,
+        correlationId: req.correlationId
+      });
+
+      throw new AuthorizationError(
+        `Access denied. Required roles: ${allowedRoles.join(', ')}`
+      );
+    }
+
+    logger.debug('Role authorization successful', {
+      userId: req.user.userId,
+      role: req.user.role,
+      allowedRoles,
+      correlationId: req.correlationId
+    });
+
+    next();
+  };
+};
+
+// Permission-based access control middleware
+export const requirePermission = (requiredPermissions: string[]) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      throw new AuthenticationError('Authentication required');
+    }
+
+    const userPermissions = req.user.permissions || [];
+    const hasRequiredPermissions = requiredPermissions.every(permission =>
+      userPermissions.includes(permission)
+    );
+
+    if (!hasRequiredPermissions) {
+      logger.warn('Access denied - insufficient permissions', {
+        userId: req.user.userId,
+        userPermissions,
+        requiredPermissions,
+        correlationId: req.correlationId
+      });
+
+      throw new AuthorizationError(
+        `Access denied. Required permissions: ${requiredPermissions.join(', ')}`
+      );
+    }
+
+    logger.debug('Permission authorization successful', {
+      userId: req.user.userId,
+      permissions: userPermissions,
+      requiredPermissions,
+      correlationId: req.correlationId
+    });
+
+    next();
+  };
+};
+
+// Module access restriction middleware
+export const requireModuleAccess = (moduleName: string) => {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    if (!req.user) {
+      throw new AuthenticationError('Authentication required');
+    }
+
+    const modulePermission = `module:${moduleName}`;
+    const userPermissions = req.user.permissions || [];
+
+    if (!userPermissions.includes(modulePermission) && req.user.role !== 'admin') {
+      logger.warn('Access denied - module access restricted', {
+        userId: req.user.userId,
+        module: moduleName,
+        userPermissions,
+        correlationId: req.correlationId
+      });
+
+      throw new AuthorizationError(
+        `Access denied. You do not have rights to access the ${moduleName} module`
+      );
+    }
+
+    logger.debug('Module access authorized', {
+      userId: req.user.userId,
+      module: moduleName,
+      correlationId: req.correlationId
+    });
+
+    next();
+  };
+};
 
 export const requireEntityAccess = (entityType: 'company' | 'institution' | 'personnel') => {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -137,10 +248,13 @@ export const optionalAuth = async (
     if (token) {
       const payload = await authService.validateAccessToken(token);
       req.user = {
+        id: payload.userId,
         userId: payload.userId,
         userType: payload.userType,
         entityId: payload.entityId,
-        email: payload.email
+        email: payload.email,
+        role: payload.role,
+        permissions: payload.permissions || []
       };
 
       logger.debug('Optional authentication successful', {

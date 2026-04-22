@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { createLogger } from '../utils/logger';
-import { schema } from '../models/schema';
-import { validateClaim, validateClaimId } from '../middleware/claimValidation';
-import { ClaimsService } from '../services/ClaimsService';
-import healthRouter from './health';
+import { createLogger } from '../utils/logger.js';
+import { schema } from '../models/schema.js';
+import { validateClaim, validateClaimId } from '../middleware/claimValidation.js';
+import { ClaimsService } from '../services/ClaimsService.js';
+import healthRouter from './health.js';
+import { authenticateToken, requireModuleAccess, requirePermission, requireMedicalUser } from '@core/middleware/auth.js';
 
 const router = Router();
 const logger = createLogger('claims-routes');
@@ -11,22 +12,26 @@ const logger = createLogger('claims-routes');
 // Health check endpoint for claims service
 router.use('/health', healthRouter);
 
+// Apply authentication and module access to all claim routes
+router.use(authenticateToken);
+router.use(requireModuleAccess('claims'));
+
 // Create a new claim
-router.post('/', validateClaim, async (req, res) => {
+router.post('/', validateClaim, requirePermission(['claim:create']), async (req, res) => {
   try {
     const claimData = {
       ...req.validatedClaim,
       createdAt: new Date()
     };
     const createdClaim = await ClaimsService.createClaim(claimData);
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       data: createdClaim,
       message: 'Claim created successfully'
     });
   } catch (error) {
     logger.error('Error creating claim:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to create claim',
       error: process.env.NODE_ENV === 'development' ? (error as any).message : undefined
@@ -35,7 +40,7 @@ router.post('/', validateClaim, async (req, res) => {
 });
 
 // Get all claims with pagination
-router.get('/', async (req, res) => {
+router.get('/', requirePermission(['claim:read']), async (req, res) => {
   try {
     const { page = 1, limit = 10, status, memberId, institutionId } = req.query;
     const filters: any = {};
@@ -49,14 +54,14 @@ router.get('/', async (req, res) => {
       filters
     );
 
-    res.json({
+    return res.json({
       success: true,
       data: result.claims,
       pagination: result.pagination
     });
   } catch (error) {
     logger.error('Error getting claims:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to get claims',
       error: process.env.NODE_ENV === 'development' ? (error as any).message : undefined
@@ -65,7 +70,7 @@ router.get('/', async (req, res) => {
 });
 
 // Get claim by ID
-router.get('/:claimId', validateClaimId, async (req, res) => {
+router.get('/:claimId', validateClaimId, requirePermission(['claim:read']), async (req, res) => {
   try {
     if (!req.claimId) {
       return res.status(400).json({
@@ -80,13 +85,13 @@ router.get('/:claimId', validateClaimId, async (req, res) => {
         message: 'Claim not found'
       });
     }
-    res.json({
+    return res.json({
       success: true,
       data: claim
     });
   } catch (error) {
     logger.error('Error getting claim:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to get claim',
       error: process.env.NODE_ENV === 'development' ? (error as any).message : undefined
@@ -95,7 +100,7 @@ router.get('/:claimId', validateClaimId, async (req, res) => {
 });
 
 // Update claim status
-router.patch('/:claimId/status', validateClaimId, async (req, res) => {
+router.patch('/:claimId/status', validateClaimId, requirePermission(['claim:update']), async (req, res) => {
   try {
     if (!req.claimId) {
       return res.status(400).json({
@@ -124,14 +129,14 @@ router.patch('/:claimId/status', validateClaimId, async (req, res) => {
       });
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: updatedClaim,
       message: 'Claim status updated successfully'
     });
   } catch (error) {
     logger.error('Error updating claim status:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to update claim status',
       error: process.env.NODE_ENV === 'development' ? (error as any).message : undefined
@@ -140,7 +145,7 @@ router.patch('/:claimId/status', validateClaimId, async (req, res) => {
 });
 
 // Delete claim
-router.delete('/:claimId', validateClaimId, async (req, res) => {
+router.delete('/:claimId', validateClaimId, requirePermission(['claim:delete']), async (req, res) => {
   try {
     if (!req.claimId) {
       return res.status(400).json({
@@ -155,13 +160,13 @@ router.delete('/:claimId', validateClaimId, async (req, res) => {
         message: 'Claim not found'
       });
     }
-    res.json({
+    return res.json({
       success: true,
       message: 'Claim deleted successfully'
     });
   } catch (error) {
     logger.error('Error deleting claim:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: 'Failed to delete claim',
       error: process.env.NODE_ENV === 'development' ? (error as any).message : undefined

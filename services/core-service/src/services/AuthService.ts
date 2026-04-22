@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { eq, lte } from 'drizzle-orm';
 import { db } from '../config/database';
@@ -22,6 +22,8 @@ export interface JWTPayload {
   userType: UserRole;
   entityId: number;
   email: string;
+  role: string;
+  permissions: string[];
 }
 
 export interface AuthTokens {
@@ -73,11 +75,15 @@ export class AuthService {
   }
 
   private generateAccessToken(payload: JWTPayload): string {
-    return jwt.sign(payload, config.jwt.secret!, { expiresIn: config.jwt.expiresIn });
+    return jwt.sign(payload, config.jwt.secret as string, {
+      expiresIn: config.jwt.expiresIn
+    } as SignOptions);
   }
 
   private generateRefreshToken(payload: Omit<JWTPayload, 'email'>): string {
-    return jwt.sign(payload, config.jwt.refreshSecret!, { expiresIn: config.jwt.refreshExpiresIn });
+    return jwt.sign(payload, config.jwt.refreshSecret as string, {
+      expiresIn: config.jwt.refreshExpiresIn
+    } as SignOptions);
   }
 
   private async getEntityData(userType: string, entityId: number): Promise<any> {
@@ -255,14 +261,18 @@ export class AuthService {
         userId: user.id,
         userType: user.userType as UserRole,
         entityId: user.entityId,
-        email: user.email
+        email: user.email,
+        role: user.role || user.userType,
+        permissions: []
       };
 
       const accessToken = this.generateAccessToken(payload);
       const refreshToken = this.generateRefreshToken({
         userId: user.id,
         userType: user.userType as UserRole,
-        entityId: user.entityId
+        entityId: user.entityId,
+        role: user.role || user.userType,
+        permissions: []
       });
 
       // Store refresh token session
@@ -362,14 +372,18 @@ export class AuthService {
         userId: user.id,
         userType: user.userType as UserRole,
         entityId: user.entityId,
-        email: user.email
+        email: user.email,
+        role: user.role || user.userType,
+        permissions: []
       };
 
       const newAccessToken = this.generateAccessToken(newPayload);
       const newRefreshToken = this.generateRefreshToken({
         userId: user.id,
         userType: user.userType as UserRole,
-        entityId: user.entityId
+        entityId: user.entityId,
+        role: user.role || user.userType,
+        permissions: []
       });
 
       // Delete old refresh token
