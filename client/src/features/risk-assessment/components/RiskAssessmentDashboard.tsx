@@ -87,7 +87,7 @@ export const RiskAssessmentDashboard: React.FC<RiskAssessmentDashboardProps> = (
       ].filter((alert, index, self) => 
         index === self.findIndex(a => a.id === alert.id)
       ).sort((a, b) => {
-        const severityOrder = { emergency: -1, critical: 0, warning: 1, info: 2 };
+        const severityOrder: Record<string, number> = { emergency: -1, critical: 0, warning: 1, info: 2 };
         return (severityOrder[a.severity] ?? 999) - (severityOrder[b.severity] ?? 999);
       });
 
