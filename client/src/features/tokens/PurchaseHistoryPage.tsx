@@ -15,8 +15,8 @@ import {
   TableRow,
 } from "@/ui/table";
 import { FileText, Download, ChevronLeft, ChevronRight } from "lucide-react";
-import { tokensAPI } from "@/api/tokens";
-import type { TokenPurchase } from "@/api/tokens";
+import { tokensAPI } from "@/services/api/tokensApi";
+import type { TokenPurchase } from "@/services/api/tokensApi";
 
 export default function PurchaseHistoryPage() {
   const search = useSearch();

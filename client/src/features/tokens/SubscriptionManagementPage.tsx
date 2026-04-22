@@ -8,7 +8,7 @@ import { Label } from "@/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Calendar, Pause, Play, XCircle, CheckCircle, AlertTriangle } from "lucide-react";
-import { tokensAPI } from "@/api/tokens";
+import { tokensAPI } from "@/services/api/tokensApi";
 
 export default function SubscriptionManagementPage() {
   const search = useSearch();

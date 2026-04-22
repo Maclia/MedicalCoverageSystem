@@ -11,7 +11,7 @@ import { Badge } from "@/ui/badge";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Zap, Bell, Settings, Trash2, Plus } from "lucide-react";
-import { tokensAPI } from "@/api/tokens";
+import { tokensAPI } from "@/services/api/tokensApi";
 
 export default function TokenSettingsPage() {
   const search = useSearch();

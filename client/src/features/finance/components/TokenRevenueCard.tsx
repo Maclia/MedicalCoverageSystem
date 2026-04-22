@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { Badge } from "@/ui/badge";
 import { Coins, TrendingUp, TrendingDown } from "lucide-react";
-import { tokensAPI } from "@/api/tokens";
+import { tokensAPI } from "@/services/api/tokensApi";
 
 interface TokenRevenueCardProps {
   organizationId?: number;

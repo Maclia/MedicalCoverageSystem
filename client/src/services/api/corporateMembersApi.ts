@@ -227,7 +227,7 @@ class CorporateMembersAPI {
    * Get all dependent rules for a company
    */
   async getDependentRules(companyId: number): Promise<any[]> {
-    const response = await apiRequest("GET", `${this.BASE_URL}/companies/${request.companyId}/dependent-rules`);
+    const response = await apiRequest("GET", `${this.BASE_URL}/companies/${companyId}/dependent-rules`);
     const result = await response.json();
     return result.data;
   }

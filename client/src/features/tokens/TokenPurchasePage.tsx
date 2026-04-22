@@ -9,8 +9,8 @@ import { RadioGroup, RadioGroupItem } from "@/ui/radio-group";
 import { Badge } from "@/ui/badge";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { Coins, CreditCard, CheckCircle, XCircle, Loader2 } from "lucide-react";
-import { tokensAPI } from "@/api/tokens";
-import type { TokenPackage } from "@/api/tokens";
+import { tokensAPI } from "@/services/api/tokensApi";
+import type { TokenPackage } from "@/services/api/tokensApi";
 
 export default function TokenPurchasePage() {
   const search = useSearch();
