@@ -18,7 +18,8 @@ import {
   Globe,
   Filter
 } from 'lucide-react';
-import { PieChart as RechartsPieChart, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
+import { providersApi } from '@/services/api/providersApi';
 
 interface NetworkAnalysis {
   totalProviders: number;
@@ -63,9 +64,19 @@ interface NetworkAnalysis {
   }>;
 }
 
+const regionMap: Record<string, string | undefined> = {
+  all: undefined,
+  northeast: 'northeast',
+  southeast: 'southeast',
+  midwest: 'midwest',
+  southwest: 'southwest',
+  west: 'west',
+};
+
 const NetworkAnalyzer: React.FC = () => {
   const [analysis, setAnalysis] = useState<NetworkAnalysis | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedView, setSelectedView] = useState<'overview' | 'specialties' | 'locations' | 'performance'>('overview');
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
 
@@ -76,75 +87,13 @@ const NetworkAnalyzer: React.FC = () => {
   const fetchNetworkAnalysis = async () => {
     try {
       setLoading(true);
-      // Mock data for now - in real implementation, this would fetch from API
-      const mockData: NetworkAnalysis = {
-        totalProviders: 1247,
-        activeProviders: 1089,
-        pendingProviders: 89,
-        inactiveProviders: 69,
-        providersByTier: {
-          tier1: 523,
-          tier2: 412,
-          tier3: 312
-        },
-        providersBySpecialty: [
-          { specialty: 'Family Medicine', count: 342, percentage: 27.4 },
-          { specialty: 'Internal Medicine', count: 276, percentage: 22.1 },
-          { specialty: 'Pediatrics', count: 198, percentage: 15.9 },
-          { specialty: 'Cardiology', count: 145, percentage: 11.6 },
-          { specialty: 'Dermatology', count: 89, percentage: 7.1 },
-          { specialty: 'Psychiatry', count: 76, percentage: 6.1 },
-          { specialty: 'Surgery', count: 65, percentage: 5.2 },
-          { specialty: 'Other', count: 56, percentage: 4.5 }
-        ],
-        providersByLocation: [
-          { state: 'CA', city: 'Los Angeles', count: 234 },
-          { state: 'CA', city: 'San Francisco', count: 187 },
-          { state: 'NY', city: 'New York', count: 298 },
-          { state: 'TX', city: 'Houston', count: 145 },
-          { state: 'FL', city: 'Miami', count: 167 },
-          { state: 'IL', city: 'Chicago', count: 128 }
-        ],
-        networkUtilization: {
-          averageClaimsPerProvider: 45.6,
-          topPerformingProviders: [
-            { id: 1, name: 'Dr. Sarah Johnson', claims: 234, satisfaction: 4.8 },
-            { id: 2, name: 'Dr. Michael Chen', claims: 198, satisfaction: 4.7 },
-            { id: 3, name: 'Dr. Emily Davis', claims: 187, satisfaction: 4.9 },
-            { id: 4, name: 'Dr. James Wilson', claims: 176, satisfaction: 4.6 },
-            { id: 5, name: 'Dr. Maria Garcia', claims: 165, satisfaction: 4.8 }
-          ],
-          underutilizedProviders: [
-            { id: 6, name: 'Dr. Robert Taylor', claims: 8, potential: 45 },
-            { id: 7, name: 'Dr. Lisa Anderson', claims: 12, potential: 38 },
-            { id: 8, name: 'Dr. David Brown', claims: 15, potential: 42 }
-          ]
-        },
-        networkGaps: [
-          {
-            specialty: 'Pediatrics',
-            location: 'Rural Areas',
-            severity: 'high',
-            recommendation: 'Recruit 15-20 pediatricians for underserved rural communities'
-          },
-          {
-            specialty: 'Mental Health',
-            location: 'All Regions',
-            severity: 'high',
-            recommendation: 'Expand mental health network by 25% to meet growing demand'
-          },
-          {
-            specialty: 'Cardiology',
-            location: 'Northern Region',
-            severity: 'medium',
-            recommendation: 'Add 5-8 cardiologists in northern metropolitan areas'
-          }
-        ]
-      };
-
-      setAnalysis(mockData);
+      setError(null);
+      const data = await providersApi.getNetworkAnalysis(regionMap[selectedRegion]);
+      setAnalysis(data);
     } catch (error) {
       console.error('Failed to fetch network analysis:', error);
+      setAnalysis(null);
+      setError(error instanceof Error ? error.message : 'Failed to fetch network analysis');
     } finally {
       setLoading(false);
     }
@@ -192,7 +141,7 @@ const NetworkAnalyzer: React.FC = () => {
           <Network className="h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No Network Data Available</h3>
           <p className="text-gray-600 text-center">
-            Network analysis will be available once provider data is populated.
+            {error || 'Network analysis will be available once provider data is populated.'}
           </p>
         </CardContent>
       </Card>

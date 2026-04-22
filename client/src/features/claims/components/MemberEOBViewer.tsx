@@ -52,11 +52,11 @@ interface EOBDocument {
   claimId: number;
   memberId: number;
   memberName: string;
-  memberAddress: string;
-  memberPhoneNumber: string;
-  institutionId: number;
+  memberAddress?: string;
+  memberPhoneNumber?: string;
+  institutionId?: number;
   institutionName: string;
-  institutionAddress: string;
+  institutionAddress?: string;
   serviceDate: string;
   claimAmount: number;
   approvedAmount: number;
@@ -97,6 +97,18 @@ interface Claim {
   amount: number;
   status: string;
   processedDate?: string;
+  memberId?: number;
+  memberName?: string;
+  institutionId?: number;
+  institutionName?: string;
+  institutionAddress?: string;
+  approvedAmount?: number;
+  patientResponsibility?: number;
+  memberResponsibility?: number;
+  coveredAmount?: number;
+  insurerResponsibility?: number;
+  description?: string;
+  paymentDate?: string;
 }
 
 export const MemberEOBViewer: React.FC = () => {
@@ -124,39 +136,23 @@ export const MemberEOBViewer: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // Load member claims
-      const claimsResponse = await claimsApi.getClaimAnalytics(memberId);
-      // In a real implementation, you'd have a specific API for member claims
-      // For now, we'll use mock data
-      const mockClaims: Claim[] = [
-        {
-          id: 1,
-          submissionDate: '2024-01-15',
-          serviceDate: '2024-01-10',
-          amount: 2500,
-          status: 'approved',
-          processedDate: '2024-01-18'
-        },
-        {
-          id: 2,
-          submissionDate: '2024-01-22',
-          serviceDate: '2024-01-20',
-          amount: 850,
-          status: 'partially_approved',
-          processedDate: '2024-01-25'
-        },
-        {
-          id: 3,
-          submissionDate: '2024-02-05',
-          serviceDate: '2024-02-01',
-          amount: 1200,
-          status: 'approved',
-          processedDate: '2024-02-08'
-        }
-      ];
+      const claimsResponse = await fetch(`/api/claims?memberId=${memberId}`, {
+        credentials: 'include',
+      });
+
+      if (!claimsResponse.ok) {
+        throw new Error('Failed to load member claims');
+      }
+
+      const claimsPayload = await claimsResponse.json();
+      const backendClaims: Claim[] = Array.isArray(claimsPayload)
+        ? claimsPayload
+        : Array.isArray(claimsPayload?.data)
+          ? claimsPayload.data
+          : [];
 
       // Filter claims by date range
-      const filteredClaims = mockClaims.filter(claim => {
+      const filteredClaims = backendClaims.filter(claim => {
         const serviceDate = new Date(claim.serviceDate);
         const start = new Date(dateRange.start);
         const end = new Date(dateRange.end);
@@ -165,99 +161,73 @@ export const MemberEOBViewer: React.FC = () => {
 
       setClaims(filteredClaims);
 
-      // Load EOBs for approved/processed claims
-      const mockEOBs: EOBDocument[] = [
-        {
-          id: 'eob_1',
-          claimId: 1,
-          memberId: 1,
-          memberName: 'John Doe',
-          memberAddress: '123 Main St, Anytown, ST 12345',
-          memberPhoneNumber: '(555) 123-4567',
-          institutionId: 1,
-          institutionName: 'City Medical Center',
-          institutionAddress: '456 Health Ave, Anytown, ST 12345',
-          serviceDate: '2024-01-10',
-          claimAmount: 2500,
-          approvedAmount: 2500,
-          memberResponsibility: 250,
-          insurerResponsibility: 2250,
-          status: 'approved',
-          explanationText: 'Your claim has been approved and processed according to your health plan benefits.',
-          appealRights: {
-            canAppeal: false,
-            appealDeadline: '',
-            appealInstructions: ''
-          },
-          services: [
-            {
-              description: 'Office Visit - Specialist',
-              date: '2024-01-10',
-              billedAmount: 2500,
-              allowedAmount: 2500,
-              memberResponsibility: 250,
-              insurerResponsibility: 2250
-            }
-          ],
-          financialBreakdown: {
-            deductible: 200,
-            copay: 50,
-            coinsurance: 0,
-            networkDiscounts: 0,
-            nonCoveredCharges: 0,
-            totalMemberResponsibility: 250,
-            totalInsurerResponsibility: 2250
-          },
-          generatedDate: '2024-01-18',
-          format: 'html'
-        },
-        {
-          id: 'eob_2',
-          claimId: 2,
-          memberId: 1,
-          memberName: 'John Doe',
-          memberAddress: '123 Main St, Anytown, ST 12345',
-          memberPhoneNumber: '(555) 123-4567',
-          institutionId: 1,
-          institutionName: 'City Medical Center',
-          institutionAddress: '456 Health Ave, Anytown, ST 12345',
-          serviceDate: '2024-01-20',
-          claimAmount: 850,
-          approvedAmount: 600,
-          memberResponsibility: 250,
-          insurerResponsibility: 600,
-          status: 'partially_approved',
-          explanationText: 'Your claim has been partially approved. Some services were not covered under your plan benefits.',
-          appealRights: {
-            canAppeal: true,
-            appealDeadline: '2024-02-25',
-            appealInstructions: 'You have the right to appeal this decision within 180 days of receiving this notice. Please submit a written appeal with supporting documentation.'
-          },
-          services: [
-            {
-              description: 'Laboratory Tests',
-              date: '2024-01-20',
-              billedAmount: 850,
-              allowedAmount: 600,
-              memberResponsibility: 250,
-              insurerResponsibility: 600
-            }
-          ],
-          financialBreakdown: {
-            deductible: 150,
-            copay: 100,
-            coinsurance: 0,
-            networkDiscounts: 0,
-            nonCoveredCharges: 250,
-            totalMemberResponsibility: 250,
-            totalInsurerResponsibility: 600
-          },
-          generatedDate: '2024-01-25',
-          format: 'html'
-        }
-      ];
+      const generatedEobs: EOBDocument[] = filteredClaims
+        .filter((claim) =>
+          ['approved', 'partially_approved', 'paid', 'completed'].includes(claim.status.toLowerCase())
+        )
+        .map((claim) => {
+          const approvedAmount = claim.approvedAmount ?? claim.coveredAmount ?? claim.amount;
+          const memberResponsibility =
+            claim.memberResponsibility ?? claim.patientResponsibility ?? Math.max(claim.amount - approvedAmount, 0);
+          const insurerResponsibility =
+            claim.insurerResponsibility ?? claim.coveredAmount ?? Math.max(approvedAmount - memberResponsibility, 0);
 
-      setEobs(mockEOBs);
+          return {
+            id: `eob_${claim.id}`,
+            claimId: claim.id,
+            memberId: claim.memberId ?? memberId,
+            memberName: claim.memberName ?? `Member #${memberId}`,
+            memberAddress: undefined,
+            memberPhoneNumber: undefined,
+            institutionId: claim.institutionId,
+            institutionName: claim.institutionName ?? 'Provider not specified',
+            institutionAddress: claim.institutionAddress,
+            serviceDate: claim.serviceDate,
+            claimAmount: claim.amount,
+            approvedAmount,
+            memberResponsibility,
+            insurerResponsibility,
+            status:
+              claim.status.toLowerCase() === 'approved'
+                ? 'approved'
+                : claim.status.toLowerCase() === 'partially_approved'
+                  ? 'partially_approved'
+                  : 'approved',
+            explanationText:
+              claim.status.toLowerCase() === 'partially_approved'
+                ? 'This claim was partially approved based on your current plan benefits.'
+                : 'This claim was processed based on your current plan benefits.',
+            appealRights: {
+              canAppeal: claim.status.toLowerCase() === 'partially_approved' || claim.status.toLowerCase() === 'denied',
+              appealDeadline: '',
+              appealInstructions:
+                'Contact support or submit an appeal with supporting documentation if you believe this claim was processed incorrectly.',
+            },
+            services: [
+              {
+                description: claim.description ?? 'Claimed service',
+                date: claim.serviceDate,
+                billedAmount: claim.amount,
+                allowedAmount: approvedAmount,
+                memberResponsibility,
+                insurerResponsibility,
+              },
+            ],
+            financialBreakdown: {
+              deductible: 0,
+              copay: 0,
+              coinsurance: 0,
+              networkDiscounts: 0,
+              nonCoveredCharges: Math.max(claim.amount - approvedAmount, 0),
+              totalMemberResponsibility: memberResponsibility,
+              totalInsurerResponsibility: insurerResponsibility,
+            },
+            generatedDate: claim.processedDate ?? claim.paymentDate ?? claim.submissionDate,
+            format: 'html',
+          };
+        });
+
+      setEobs(generatedEobs);
     } catch (err) {
       setError('Failed to load EOB documents');
       console.error('EOB loading error:', err);
@@ -291,9 +261,13 @@ export const MemberEOBViewer: React.FC = () => {
   // Handle EOB email
   const handleEmailEOB = async (eob: EOBDocument) => {
     try {
+      if (!eob.memberId) {
+        throw new Error('Missing member information for EOB email');
+      }
+
       await notificationApi.sendTemplateNotification({
         templateId: 'eob_delivery',
-        recipient: 'john.doe@email.com', // Would come from member data
+        recipient: String(eob.memberId),
         recipientType: 'member',
         variables: {
           memberName: eob.memberName,
@@ -302,7 +276,6 @@ export const MemberEOBViewer: React.FC = () => {
           downloadLink: `${window.location.origin}/api/claims/${eob.claimId}/eob?format=pdf`
         }
       });
-      // Show success message
       alert('EOB has been sent to your email');
     } catch (err) {
       setError('Failed to email EOB');
@@ -500,11 +473,11 @@ export const MemberEOBViewer: React.FC = () => {
                                       </div>
                                       <div>
                                         <span className="text-gray-600">Address:</span>
-                                        <p className="font-medium">{selectedEOB.memberAddress}</p>
+                                        <p className="font-medium">{selectedEOB.memberAddress || 'Not available'}</p>
                                       </div>
                                       <div>
                                         <span className="text-gray-600">Phone:</span>
-                                        <p className="font-medium">{selectedEOB.memberPhoneNumber}</p>
+                                        <p className="font-medium">{selectedEOB.memberPhoneNumber || 'Not available'}</p>
                                       </div>
                                       <div>
                                         <span className="text-gray-600">Member ID:</span>
@@ -526,7 +499,7 @@ export const MemberEOBViewer: React.FC = () => {
                                       </div>
                                       <div>
                                         <span className="text-gray-600">Address:</span>
-                                        <p className="font-medium">{selectedEOB.institutionAddress}</p>
+                                        <p className="font-medium">{selectedEOB.institutionAddress || 'Not available'}</p>
                                       </div>
                                     </div>
                                   </div>

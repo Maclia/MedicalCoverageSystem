@@ -15,7 +15,7 @@ import financeApi from './financeApi';
 import { fraudApi } from './fraudApi';
 import { hospitalApi } from './hospitalApi';
 import { insuranceApi } from './insuranceApi';
-import { membershipApi } from './memberApi';
+import * as membershipApi from './memberApi';
 import { membersAPI as membersApi } from './membersApi';
 import { providersApi } from './providersApi';
 import { riskApi } from './riskApi';
