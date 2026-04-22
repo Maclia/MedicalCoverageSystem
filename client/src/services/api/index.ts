@@ -3,25 +3,49 @@
  * Centralized export for all API service clients
  */
 
-export { adminApi } from './adminApi';
-export { analyticsApi } from './analyticsApi';
-export { benefitsApi } from './benefitsApi';
-export { billingApi } from './billingApi';
-export { claimsApi } from './claimsApi';
-export { communicationApi } from './communicationApi';
-export { corporateMembersApi } from './corporateMembersApi';
-export { crmApi } from './crmApi';
-export { financeApi } from './financeApi';
-export { fraudApi } from './fraudApi';
-export { hospitalApi } from './hospitalApi';
-export { insuranceApi } from './insuranceApi';
-export { membersApi } from './membersApi';
-export { providersApi } from './providersApi';
-export { riskApi } from './riskApi';
-export { schemesApi } from './schemesApi';
-export { systemIntegrationApi } from './systemIntegrationApi';
-export { tokensApi } from './tokensApi';
-export { wellnessApi } from './wellnessApi';
+import * as adminApi from './adminApi';
+import { analyticsApi } from './analyticsApi';
+import * as benefitsApi from './benefitsApi';
+import { billingApi } from './billingApi';
+import { claimsApi } from './claimsApi';
+import { communicationApi } from './communicationApi';
+import { corporateMembersAPI as corporateMembersApi } from './corporateMembersApi';
+import { crmApi } from './crmApi';
+import financeApi from './financeApi';
+import { fraudApi } from './fraudApi';
+import { hospitalApi } from './hospitalApi';
+import { insuranceApi } from './insuranceApi';
+import { membershipApi } from './memberApi';
+import { membersAPI as membersApi } from './membersApi';
+import { providersApi } from './providersApi';
+import { riskApi } from './riskApi';
+import { schemesAPI as schemesApi } from './schemesApi';
+import { systemIntegrationAPI as systemIntegrationApi } from './systemIntegrationApi';
+import { tokensAPI as tokensApi } from './tokensApi';
+import { wellnessApi } from './wellnessApi';
+
+export {
+  adminApi,
+  analyticsApi,
+  benefitsApi,
+  billingApi,
+  claimsApi,
+  communicationApi,
+  corporateMembersApi,
+  crmApi,
+  financeApi,
+  fraudApi,
+  hospitalApi,
+  insuranceApi,
+  membershipApi,
+  membersApi,
+  providersApi,
+  riskApi,
+  schemesApi,
+  systemIntegrationApi,
+  tokensApi,
+  wellnessApi,
+};
 
 // Default export object with all API clients
 export const api = {
@@ -37,6 +61,7 @@ export const api = {
   fraud: fraudApi,
   hospital: hospitalApi,
   insurance: insuranceApi,
+  membership: membershipApi,
   members: membersApi,
   providers: providersApi,
   risk: riskApi,

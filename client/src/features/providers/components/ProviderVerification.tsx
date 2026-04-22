@@ -4,7 +4,7 @@ import { claimsApi } from '@/services/api/claimsApi';
 import { billingApi } from '@/services/api/billingApi';
 import { fraudApi } from '@/services/api/fraudApi';
 import { crmApi } from '@/services/api/crmApi';
-import { membershipApi } from '@/services/membershipApi';
+import { membershipApi } from '@/services/api/memberApi';
 import { insuranceApi } from '@/services/api/insuranceApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
 import { Button } from '@/ui/button';

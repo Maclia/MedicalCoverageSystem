@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { hospitalApi } from '@/services/api/hospitalApi';
 import { insuranceApi } from '@/services/api/insuranceApi';
-import { membershipApi } from '@/services/membershipApi';
+import { membershipApi } from '@/services/api/memberApi';
 import { analyticsApi } from '@/services/api/analyticsApi';
 import { claimsApi } from '@/services/api/claimsApi';
 import { billingApi } from '@/services/api/billingApi';

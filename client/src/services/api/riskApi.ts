@@ -12,7 +12,7 @@ import {
   RiskAssessmentHistory,
   RiskDashboard,
   RiskInsight
-} from '../../../../shared/types/riskAssessment';
+} from '@/shared/types/riskAssessment';
 
 const API_BASE = '/api/risk';
 
@@ -135,21 +135,39 @@ class RiskApiService {
     return this.request(endpoint);
   }
 
+  async getPredictions(memberId: string, options: {
+    type?: string;
+    limit?: number;
+  } = {}): Promise<RiskPrediction[]> {
+    return this.getRiskPredictions(memberId, options);
+  }
+
   // Risk Benchmarks
   async getRiskBenchmarks(options: {
     category?: string;
     metric?: string;
     population?: string;
+    limit?: number;
   } = {}): Promise<RiskBenchmark[]> {
     const params = new URLSearchParams();
     if (options.category) params.append('category', options.category);
     if (options.metric) params.append('metric', options.metric);
     if (options.population) params.append('population', options.population);
+    if (options.limit) params.append('limit', options.limit.toString());
 
     const queryString = params.toString();
     const endpoint = `/benchmarks${queryString ? `?${queryString}` : ''}`;
 
     return this.request(endpoint);
+  }
+
+  async getBenchmarks(options: {
+    category?: string;
+    metric?: string;
+    population?: string;
+    limit?: number;
+  } = {}): Promise<RiskBenchmark[]> {
+    return this.getRiskBenchmarks(options);
   }
 
   // Risk Action Items

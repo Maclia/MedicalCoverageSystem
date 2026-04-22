@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { baseClaimsApi } from "@/services/api/claimsApi";
 import { hospitalApi } from "@/services/api/hospitalApi";
-import { membershipApi } from "@/services/membershipApi";
+import { membershipApi } from "@/services/api/memberApi";
 import { insuranceApi } from "@/services/api/insuranceApi";
 import { 
   Card, 

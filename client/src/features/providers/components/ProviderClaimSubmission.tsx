@@ -30,7 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { hospitalApi } from '@/services/api/hospitalApi';
-import { membershipApi } from '@/services/membershipApi';
+import { membershipApi } from '@/services/api/memberApi';
 import { insuranceApi } from '@/services/api/insuranceApi';
 
 interface ProcedureItem {

@@ -30,7 +30,7 @@ import { Progress } from "@/ui/progress";
 import { AvatarWithInitials } from "@/ui/avatar-with-initials";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { membershipApi } from "@/services/membershipApi";
+import { membershipApi } from "@/services/api/memberApi";
 import { billingApi } from "@/services/api/billingApi";
 import { baseClaimsApi } from "@/services/api/claimsApi";
 import { insuranceApi } from "@/services/api/insuranceApi";

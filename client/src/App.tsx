@@ -31,7 +31,7 @@ import MemberDashboard from "@/features/members/MemberDashboard";
 import ProviderClaimSubmission from "@/features/providers/components/ProviderClaimSubmission";
 import Communication from "@/features/companies/components/Communication";
 import Wellness from "@/features/wellness/components/Wellness";
-import RiskAssessment from "@/features/risk-assessment/components/RiskAssessment";
+import RiskAssessment from "@/features/riskAssessment/components/RiskAssessment";
 import { ClaimsManagement } from "@/features/claims-management/components/ClaimsManagement";
 import SchemesManagement from "@/features/schemes/components/SchemesManagement";
 import ProviderSchemesManagement from "@/features/providers/components/ProviderSchemesManagement";

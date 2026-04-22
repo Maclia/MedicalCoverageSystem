@@ -42,7 +42,7 @@ import { Progress } from "@/ui/progress";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { membershipApi } from "@/services/membershipApi";
+import { membershipApi } from "@/services/api/memberApi";
 import { insuranceApi } from "@/services/api/insuranceApi";
 import { claimsApi } from "@/services/api/claimsApi";
 import { billingApi } from "@/services/api/billingApi";

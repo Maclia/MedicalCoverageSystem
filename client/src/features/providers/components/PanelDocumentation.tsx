@@ -15,7 +15,7 @@ import { insuranceApi } from "@/services/api/insuranceApi";
 import { billingApi } from "@/services/api/billingApi";
 import { claimsApi } from "@/services/api/claimsApi";
 import financeApi from "@/services/api/financeApi";
-import { membershipApi } from "@/services/membershipApi";
+import { membershipApi } from "@/services/api/memberApi";
 import { Button } from "@/ui/button";
 import { Badge } from "@/ui/badge";
 import {
