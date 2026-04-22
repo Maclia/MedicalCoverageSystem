@@ -2,20 +2,20 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format, differenceInYears } from "date-fns";
 import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/features/ui/dialog";
+import { Button } from "@/features/ui/button";
+import { Input } from "@/features/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
+} from "@/features/ui/select";
+import { StatusBadge } from "@/features/ui/status-badge";
+import { Skeleton } from "@/features/ui/skeleton";
+import { AvatarWithInitials } from "@/features/ui/avatar-with-initials";
 import DependentForm from "./DependentForm";
 
 export default function DependentList() {

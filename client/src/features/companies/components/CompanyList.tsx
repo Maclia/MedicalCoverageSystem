@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Skeleton } from "@/components/ui/skeleton";
-import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
+import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/features/ui/dialog";
+import { Button } from "@/features/ui/button";
+import { Input } from "@/features/ui/input";
+import { Skeleton } from "@/features/ui/skeleton";
+import { AvatarWithInitials } from "@/features/ui/avatar-with-initials";
 import CompanyForm from "./CompanyForm";
 
 export default function CompanyList() {

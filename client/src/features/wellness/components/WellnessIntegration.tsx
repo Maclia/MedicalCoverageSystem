@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
-import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
+import { Button } from '@/features/ui/button';
+import { Badge } from '@/features/ui/badge';
+import { Progress } from '@/features/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/features/ui/dialog';
+import { Switch } from '@/features/ui/switch';
+import { Slider } from '@/features/ui/slider';
+import { Input } from '@/features/ui/input';
+import { Label } from '@/features/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/ui/select';
+import { Textarea } from '@/features/ui/textarea';
 import {
   Heart,
   Activity,
@@ -49,7 +49,7 @@ import {
   Plus,
   Droplet
 } from 'lucide-react';
-import { wellnessApi } from '@/services/wellnessApi';
+import { wellnessApi } from '@/services/api/wellnessApi';
 import {
   WellnessIntegration as IWellnessIntegration,
   HealthData as IHealthData,

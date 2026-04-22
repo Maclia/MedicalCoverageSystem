@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
+import { Badge } from "@/features/ui/badge";
+import { Button } from "@/features/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
+import { Input } from "@/features/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/features/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/features/ui/alert";
+import { Progress } from "@/features/ui/progress";
 import {
   Shield,
   AlertTriangle,
@@ -19,7 +19,7 @@ import {
   Activity,
   FileText,
 } from "lucide-react";
-import { useAdminDashboardSummary, useAdminDocumentQueue, useAdminServicesHealth } from "./adminApi";
+import { useAdminDashboardSummary, useAdminDocumentQueue, useAdminServicesHealth } from "../../../services/api/adminApi";
 
 export default function ComplianceDashboard() {
   const [searchTerm, setSearchTerm] = useState("");

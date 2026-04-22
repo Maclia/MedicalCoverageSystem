@@ -1,41 +1,41 @@
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
-import { Toaster } from "@/components/ui/toaster";
-import { AuthProvider } from "@/contexts/AuthContext";
-import { FinanceProvider } from "@/contexts/FinanceContext";
-import ProtectedRoute from "@/components/auth/ProtectedRoute";
-import Login from "@/components/auth/Login";
-import AppLayout from "@/components/layout/AppLayout";
+import { Toaster } from "@/features/ui/toaster";
+import { AuthProvider } from "@/features/actions/contexts/AuthContext";
+import { FinanceProvider } from "@/features/actions/contexts/FinanceContext";
+import ProtectedRoute from "@/features/auth/ProtectedRoute";
+import Login from "@/pages/Login";
+import AppLayout from "@/features/layout/AppLayout";
 
 // Dashboard Components
-import InsuranceDashboard from "@/components/dashboards/InsuranceDashboard";
-import InstitutionDashboard from "@/components/dashboards/InstitutionDashboard";
-import ProviderDashboard from "@/components/dashboards/ProviderDashboard";
+import InsuranceDashboard from "@/features/dashboards/InsuranceDashboard";
+import InstitutionDashboard from "@/features/dashboards/InstitutionDashboard";
+import ProviderDashboard from "@/features/dashboards/ProviderDashboard";
 
 // Existing Pages
-import Dashboard from "@/pages/Dashboard";
-import Companies from "@/pages/Companies";
-import CompanyDetail from "@/pages/CompanyDetail";
-import Members from "@/pages/Members";
-import Dependents from "@/pages/Dependents";
-import Premiums from "@/pages/Premiums";
-import Periods from "@/pages/Periods";
-import Benefits from "@/pages/Benefits";
-import Regions from "@/pages/Regions";
-import MedicalInstitutions from "@/pages/MedicalInstitutions";
-import MedicalPersonnel from "@/pages/MedicalPersonnel";
-import PanelDocumentation from "@/pages/PanelDocumentation";
-import Claims from "@/pages/Claims";
-import MemberDashboard from "@/pages/MemberDashboard";
-import ProviderClaimSubmission from "@/pages/ProviderClaimSubmission";
-import Communication from "@/pages/Communication";
-import Wellness from "@/pages/Wellness";
-import RiskAssessment from "@/pages/RiskAssessment";
-import { ClaimsManagement } from "@/pages/ClaimsManagement";
-import SchemesManagement from "@/pages/SchemesManagement";
-import ProviderSchemesManagement from "@/pages/ProviderSchemesManagement";
-import Finance from "@/pages/Finance";
+import Dashboard from "@/features/dashboards/Dashboard";
+import Companies from "@/features/companies/components/Companies";
+import CompanyDetail from "@/features/companies/components/CompanyDetail";
+import Members from "@/features/members/Members";
+import Dependents from "@/features/members/Dependents";
+import Premiums from "@/features/premiums/components/Premiums";
+import Periods from "@/features/periods/components/Periods";
+import Benefits from "@/features/companies/components/Benefits";
+import Regions from "@/features/regions/components/Regions";
+import MedicalInstitutions from "@/features/companies/components/MedicalInstitutions";
+import MedicalPersonnel from "@/features/providers/components/MedicalPersonnel";
+import PanelDocumentation from "@/features/providers/components/PanelDocumentation";
+import Claims from "@/features/claims/components/Claims";
+import MemberDashboard from "@/features/members/MemberDashboard";
+import ProviderClaimSubmission from "@/features/providers/components/ProviderClaimSubmission";
+import Communication from "@/features/companies/components/Communication";
+import Wellness from "@/features/wellness/components/Wellness";
+import RiskAssessment from "@/features/risk-assessment/components/RiskAssessment";
+import { ClaimsManagement } from "@/features/claims-management/components/ClaimsManagement";
+import SchemesManagement from "@/features/schemes/components/SchemesManagement";
+import ProviderSchemesManagement from "@/features/providers/components/ProviderSchemesManagement";
+import Finance from "@/features/finance/components/Finance";
 import NotFound from "@/pages/not-found";
 
 function Router() {

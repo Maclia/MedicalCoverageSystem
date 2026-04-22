@@ -28,19 +28,19 @@ import {
   FormItem,
   FormLabel,
   FormMessage
-} from "@/components/ui/form";
+} from "@/features/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+} from "@/features/ui/select";
+import { Input } from "@/features/ui/input";
+import { Textarea } from "@/features/ui/textarea";
+import { Button } from "@/features/ui/button";
+import { Calendar } from "@/features/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/features/ui/popover";
 import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 

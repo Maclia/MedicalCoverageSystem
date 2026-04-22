@@ -4,4 +4,4 @@ export { default as ComplianceDashboard } from './ComplianceDashboard';
 export { EmailManagement } from './EmailManagement';
 export { OnboardingManagement } from './OnboardingManagement';
 export { DocumentReviewQueue } from './DocumentReviewQueue';
-export * from './adminApi';
+export * from '../../../services/api/adminApi';

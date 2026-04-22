@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
+import { Button } from '@/features/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
+import { Badge } from '@/features/ui/badge';
+import { Progress } from '@/features/ui/progress';
+import { Alert, AlertDescription } from '@/features/ui/alert';
 import {
   Table,
   TableBody,
@@ -12,16 +12,16 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/features/ui/table';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+} from '@/features/ui/select';
+import { Input } from '@/features/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/features/ui/dialog';
 import {
   FileText,
   Clock,
@@ -44,7 +44,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { claimsApi, workflowApi, batchApi, analyticsApi, baseClaimsApi } from '@/services/claimsApi';
+import { claimsApi, workflowApi, batchApi, analyticsApi, baseClaimsApi } from '@/services/api/claimsApi';
 
 interface Claim {
   id: number;

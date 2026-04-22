@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/features/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
+import { Button } from '@/features/ui/button';
+import { Badge } from '@/features/ui/badge';
 import { formatCurrency } from '@/utils/format';
 import { useQuery } from '@tanstack/react-query';
-import financeApi, { billingApi, paymentsApi, commissionsApi, claimsFinancialApi } from '@/services/financeApi';
+import financeApi, { billingApi, paymentsApi, commissionsApi, claimsFinancialApi } from '@/services/api/financeApi';
 import type { DashboardAnalytics, MetricCard } from '@/types/finance';
 
 // Import module components

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { StatusBadge } from "@/components/ui/status-badge";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/features/ui/dialog";
+import { Button } from "@/features/ui/button";
+import { StatusBadge } from "@/features/ui/status-badge";
+import { Skeleton } from "@/features/ui/skeleton";
 import PeriodForm from "./PeriodForm";
 
 export default function PeriodList() {

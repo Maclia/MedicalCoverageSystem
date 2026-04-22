@@ -1,12 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
+import { Button } from '@/features/ui/button';
+import { Badge } from '@/features/ui/badge';
+import { Input } from '@/features/ui/input';
+import { Label } from '@/features/ui/label';
+import { Textarea } from '@/features/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/features/ui/dialog';
 import {
   Table,
   TableBody,
@@ -14,7 +14,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/features/ui/table';
 import {
   FileText,
   Download,
@@ -31,7 +31,7 @@ import {
   MessageSquare,
   TrendingUp,
 } from 'lucide-react';
-import { AdminDocumentRecord, useAdminDocumentQueue, useReviewDocumentMutation } from './adminApi';
+import { AdminDocumentRecord, useAdminDocumentQueue, useReviewDocumentMutation } from '../../../services/api/adminApi';
 
 interface DocumentReviewQueueProps {
   userRole?: string;

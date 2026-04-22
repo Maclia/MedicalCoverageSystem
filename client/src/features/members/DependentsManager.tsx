@@ -8,21 +8,21 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@/features/ui/card";
 import {
   Button,
-} from "@/components/ui/button";
+} from "@/features/ui/button";
 import {
   Badge,
   badgeVariants,
-} from "@/components/ui/badge";
+} from "@/features/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/features/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -31,20 +31,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/features/ui/dialog";
 import {
   Input,
-} from "@/components/ui/input";
+} from "@/features/ui/input";
 import {
   Label,
-} from "@/components/ui/label";
+} from "@/features/ui/label";
 import {
   Textarea,
-} from "@/components/ui/textarea";
+} from "@/features/ui/textarea";
 import {
   Alert,
   AlertDescription,
-} from "@/components/ui/alert";
+} from "@/features/ui/alert";
 import {
   Table,
   TableBody,
@@ -52,14 +52,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@/features/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/features/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,13 +70,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
+} from "@/features/ui/alert-dialog";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/components/ui/tabs";
+} from "@/features/ui/tabs";
 import {
   Users,
   Plus,

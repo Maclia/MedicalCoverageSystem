@@ -12,16 +12,16 @@ import {
   FormItem, 
   FormLabel, 
   FormMessage 
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+} from "@/features/ui/form";
+import { Input } from "@/features/ui/input";
+import { Button } from "@/features/ui/button";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@/features/ui/select";
 
 // Extend schema with validation rules
 const periodFormSchema = insertPeriodSchema.extend({

@@ -8,4 +8,4 @@ export { default as DependentsManager } from './DependentsManager'
 export { default as DocumentUpload } from './DocumentUpload'
 export { default as CommunicationsCenter } from './CommunicationsCenter'
 
-export * from './api'
+export * from '../../services/api/memberApi'

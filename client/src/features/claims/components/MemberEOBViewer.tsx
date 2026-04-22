@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
+import { Button } from '@/features/ui/button';
+import { Badge } from '@/features/ui/badge';
+import { Alert, AlertDescription } from '@/features/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
+} from '@/features/ui/select';
+import { Input } from '@/features/ui/input';
 import {
   Table,
   TableBody,
@@ -19,14 +19,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/features/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
+} from '@/features/ui/dialog';
 import {
   FileText,
   Download,
@@ -45,7 +45,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { claimsApi, notificationApi } from '@/services/claimsApi';
+import { claimsApi, notificationApi } from '@/services/api/claimsApi';
 
 interface EOBDocument {
   id: string;

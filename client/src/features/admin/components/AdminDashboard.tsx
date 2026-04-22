@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { useLocation } from 'wouter';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
+import { Button } from '@/features/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
+import { Badge } from '@/features/ui/badge';
 import {
   Users,
   FileText,
@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { DocumentReviewQueue } from './DocumentReviewQueue';
 import ComplianceDashboard from './ComplianceDashboard';
-import { useAdminDashboardSummary, useAdminServicesHealth } from './adminApi';
+import { useAdminDashboardSummary, useAdminServicesHealth } from '../../../services/api/adminApi';
 
 interface AdminDashboardProps {
   userRole: string;

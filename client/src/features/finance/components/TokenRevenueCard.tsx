@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
+import { Badge } from "@/features/ui/badge";
 import { Coins, TrendingUp, TrendingDown } from "lucide-react";
 import { tokensAPI } from "@/api/tokens";
 
