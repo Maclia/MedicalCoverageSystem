@@ -196,4 +196,18 @@ export const billingApi = {
   async getPremiumSchedule(memberId: number) {
     return apiRequest(`/billing/premiums/schedule/${memberId}`);
   },
+
+  // Premium History
+  async getPremiums(params: {
+    companyId?: number;
+    periodId?: number;
+    page?: number;
+    limit?: number;
+  } = {}) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.append(key, value.toString());
+    });
+    return apiRequest(`/billing/premiums?${searchParams}`);
+  },
 };

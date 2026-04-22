@@ -223,4 +223,64 @@ export const hospitalApi = {
     });
     return apiRequest(`/hospital/procedures?${searchParams}`);
   },
+
+  // Provider Networks Management
+  async getProviderNetworks(params: {
+    page?: number;
+    limit?: number;
+    tier?: string;
+    activeOnly?: boolean;
+  } = {}) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.append(key, value.toString());
+    });
+    return apiRequest(`/hospital/provider-networks?${searchParams}`);
+  },
+
+  async getProviderNetwork(networkId: number) {
+    return apiRequest(`/hospital/provider-networks/${networkId}`);
+  },
+
+  async createProviderNetwork(networkData: any) {
+    return apiRequest('/hospital/provider-networks', {
+      method: 'POST',
+      body: JSON.stringify(networkData),
+    });
+  },
+
+  async updateProviderNetwork(networkId: number, networkData: any) {
+    return apiRequest(`/hospital/provider-networks/${networkId}`, {
+      method: 'PUT',
+      body: JSON.stringify(networkData),
+    });
+  },
+
+  async deleteProviderNetwork(networkId: number) {
+    return apiRequest(`/hospital/provider-networks/${networkId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async getNetworkProviders(networkId: number) {
+    return apiRequest(`/hospital/provider-networks/${networkId}/providers`);
+  },
+
+  async assignProviderToNetwork(networkId: number, assignmentData: any) {
+    return apiRequest(`/hospital/provider-networks/${networkId}/providers`, {
+      method: 'POST',
+      body: JSON.stringify(assignmentData),
+    });
+  },
+
+  async removeProviderFromNetwork(networkId: number, institutionId: number) {
+    return apiRequest(`/hospital/provider-networks/${networkId}/providers/${institutionId}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Current Provider Session
+  async getCurrentProvider() {
+    return apiRequest('/hospital/providers/current');
+  },
 };

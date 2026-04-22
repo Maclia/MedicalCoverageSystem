@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { 
   Card, 
   CardContent, 
@@ -7,6 +7,15 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
+import { hospitalApi } from "@/services/hospitalApi";
+import { crmApi } from "@/services/crmApi";
+import { analyticsApi } from "@/services/analyticsApi";
+import { fraudApi } from "@/services/fraudApi";
+import { insuranceApi } from "@/services/insuranceApi";
+import { billingApi } from "@/services/billingApi";
+import { claimsApi } from "@/services/claimsApi";
+import financeApi from "@/services/financeApi";
+import { membershipApi } from "@/services/membershipApi";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -70,6 +79,8 @@ interface PanelDocumentation {
 
 export default function PanelDocumentation() {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  
   const [open, setOpen] = useState(false);
   const [verifyDialogOpen, setVerifyDialogOpen] = useState(false);
   const [selectedDoc, setSelectedDoc] = useState<PanelDocumentation | null>(null);
@@ -77,6 +88,69 @@ export default function PanelDocumentation() {
     verifiedBy: "",
     notes: ""
   });
+
+  const [systemStats, setSystemStats] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  const REFRESH_INTERVAL = 120000; // 2 minutes
+  const [autoRefresh, setAutoRefresh] = useState(true);
+
+  const fetchSystemData = useCallback(async () => {
+    setLoading(true);
+    try {
+      // ✅ CALL ALL 9 BACKEND SERVICES IN PARALLEL SIMULTANEOUSLY
+      const [
+        hospitalResult,
+        crmResult,
+        analyticsResult,
+        fraudResult,
+        insuranceResult,
+        billingResult,
+        claimsResult,
+        financeResult,
+        membershipResult
+      ] = await Promise.all([
+        hospitalApi.getHospitals(),
+        crmApi.getContacts(),
+        analyticsApi.getDashboardData(),
+        fraudApi.getFraudAlerts(),
+        insuranceApi.getPolicies(),
+        billingApi.getInvoices(),
+        claimsApi.processClaimWorkflow(1),
+        financeApi.module.getModuleMetrics(),
+        membershipApi.getMembers({ status: 'active' })
+      ]);
+
+      // ✅ AGGREGATE DATA FROM ALL SERVICES
+      const stats = {
+        totalInstitutions: Array.isArray(hospitalResult.data) ? hospitalResult.data.length : 0,
+        totalProviders: Array.isArray(crmResult.data) ? crmResult.data.length : 0,
+        fraudAlerts: Array.isArray(fraudResult.data) ? fraudResult.data.length : 0,
+        activePolicies: Array.isArray(insuranceResult.data) ? insuranceResult.data.length : 0,
+        totalInvoices: Array.isArray(billingResult.data) ? billingResult.data.length : 0,
+        totalClaims: Array.isArray(claimsResult.data) ? claimsResult.data.length : 0,
+        activeMembers: Array.isArray(membershipResult.data) ? membershipResult.data.length : 0,
+        analytics: analyticsResult || {},
+        finance: financeResult || {}
+      };
+
+      setSystemStats(stats);
+
+    } catch (error) {
+      console.error('Error loading system data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSystemData();
+    
+    if (autoRefresh) {
+      const intervalId = setInterval(fetchSystemData, REFRESH_INTERVAL);
+      return () => clearInterval(intervalId);
+    }
+  }, [fetchSystemData, autoRefresh]);
   
   const [docForm, setDocForm] = useState({
     documentType: "",

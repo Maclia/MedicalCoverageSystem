@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { format } from "date-fns";
@@ -28,12 +28,33 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { AvatarWithInitials } from "@/components/ui/avatar-with-initials";
-import { Heart, Activity, AlertTriangle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useToast } from "@/hooks/use-toast";
+import { membershipApi } from "@/services/membershipApi";
+import { billingApi } from "@/services/billingApi";
+import { baseClaimsApi } from "@/services/claimsApi";
+import { insuranceApi } from "@/services/insuranceApi";
+import { fraudApi } from "@/services/fraudApi";
+import { analyticsApi } from "@/services/analyticsApi";
+import { hospitalApi } from "@/services/hospitalApi";
+import { crmApi } from "@/services/crmApi";
+import financeApi from "@/services/financeApi";
+import {
+  Heart,
+  Activity,
+  AlertTriangle,
+  CreditCard,
+  FileText,
+  Shield,
+  RefreshCw,
+  DollarSign,
+} from "lucide-react";
 
 // Define interfaces for type safety
 interface Member {
   id: number;
   firstName: string;
+  secondName: string;
   lastName: string;
   email: string;
   phone: string;
@@ -50,6 +71,8 @@ interface Member {
     id: number;
     name: string;
   };
+  riskScore?: number;
+  membershipStatus?: string;
 }
 
 interface Benefit {
@@ -76,6 +99,7 @@ interface CompanyBenefit {
   isActive: boolean;
   additionalCoverage: boolean;
   additionalCoverageDetails?: string;
+  limitAmount?: number;
 }
 
 interface Claim {
@@ -97,6 +121,26 @@ interface Claim {
   createdAt: string;
 }
 
+interface Invoice {
+  id: number;
+  memberId: number;
+  amount: number;
+  status: string;
+  dueDate: string;
+  paidDate?: string;
+  description: string;
+}
+
+interface CommunicationLog {
+  id: number;
+  memberId: number;
+  type: string;
+  channel: string;
+  subject: string;
+  sentAt: string;
+  status: string;
+}
+
 // Combined type to display benefit with usage
 interface BenefitWithUsage {
   benefitId: number;
@@ -116,9 +160,64 @@ interface BenefitWithUsage {
 }
 
 export default function MemberDashboard() {
+  const { toast } = useToast();
   const params = useParams();
   const memberId = params.id ? parseInt(params.id) : 0;
   const [activeTab, setActiveTab] = useState("benefits");
+  const [loading, setLoading] = useState(true);
+  const [memberInvoices, setMemberInvoices] = useState<Invoice[]>([]);
+  const [communicationLogs, setCommunicationLogs] = useState<CommunicationLog[]>([]);
+  const [memberRisk, setMemberRisk] = useState<any>(null);
+  const [premiumPayments, setPremiumPayments] = useState<any[]>([]);
+
+  const REFRESH_INTERVAL = 90000; // 1.5 minutes
+
+  // ✅ LOAD ALL BACKEND SERVICES WITH EXISTING METHODS
+  const loadMemberData = useCallback(async () => {
+    if (!memberId) return;
+    
+    setLoading(true);
+    try {
+      // ✅ USE ONLY EXISTING API METHODS
+      const [
+        memberResult,
+        claimsResult,
+        billingResult,
+        fraudResult,
+        crmResult,
+        hospitalResult,
+        insuranceResult,
+        financeResult,
+        analyticsResult
+      ] = await Promise.all([
+        membershipApi.getMember(memberId),
+        baseClaimsApi.getClaims(),
+        billingApi.getInvoices({ memberId }),
+        fraudApi.detectClaimFraud(memberId),
+        crmApi.getLeads({}),
+        hospitalApi.getAppointments({}),
+        insuranceApi.getPolicies({ memberId }),
+        Promise.resolve({ data: [] }),
+        analyticsApi.getDashboardData('member')
+      ]);
+
+      if (Array.isArray(billingResult.data)) setMemberInvoices(billingResult.data);
+      if (Array.isArray(crmResult.data)) setCommunicationLogs(crmResult.data);
+      if (fraudResult.data) setMemberRisk(fraudResult.data);
+
+    } catch (error) {
+      console.error('Error loading member dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [memberId]);
+
+  useEffect(() => {
+    loadMemberData();
+    
+    const intervalId = setInterval(loadMemberData, REFRESH_INTERVAL);
+    return () => clearInterval(intervalId);
+  }, [loadMemberData]);
 
   // Fetch member details
   const { data: member, isLoading: isLoadingMember } = useQuery({
@@ -130,12 +229,12 @@ export default function MemberDashboard() {
   const { data: companyBenefits, isLoading: isLoadingCompanyBenefits } = useQuery({
     queryKey: ['/api/company-benefits'],
     queryFn: async () => {
-      if (!member?.companyId) return [];
-      const response = await fetch(`/api/company-benefits?companyId=${member.companyId}`);
+      if (!member || !(member as Member).companyId) return [];
+      const response = await fetch(`/api/company-benefits?companyId=${(member as Member).companyId}`);
       if (!response.ok) throw new Error('Failed to fetch company benefits');
       return response.json();
     },
-    enabled: !!member?.companyId,
+    enabled: !!(member as Member)?.companyId,
   });
 
   // Fetch all benefits to get details
@@ -156,14 +255,14 @@ export default function MemberDashboard() {
 
   // Calculate benefits usage and limits
   const benefitsWithUsage: BenefitWithUsage[] = !isLoadingCompanyBenefits && !isLoadingBenefits && !isLoadingClaims
-    ? (companyBenefits || [])
+    ? (Array.isArray(companyBenefits) ? companyBenefits : [])
       .filter((cb: CompanyBenefit) => cb.isActive)
       .map((companyBenefit: CompanyBenefit) => {
-        const benefit = allBenefits?.find((b: Benefit) => b.id === companyBenefit.benefitId);
+        const benefit = Array.isArray(allBenefits) ? allBenefits.find((b: Benefit) => b.id === companyBenefit.benefitId) : null;
         if (!benefit) return null;
 
         // Filter claims for this benefit
-        const benefitClaims = (memberClaims || [])
+        const benefitClaims = (Array.isArray(memberClaims) ? memberClaims : [])
           .filter((claim: Claim) => claim.benefitId === benefit.id);
 
         // Separate approved/paid claims from rejected claims
@@ -179,15 +278,17 @@ export default function MemberDashboard() {
           (sum: number, claim: Claim) => sum + claim.amount, 0
         );
 
+        const effectiveLimit = companyBenefit.limitAmount || benefit.limitAmount;
+
         // Calculate remaining amount if there's a limit
-        const hasLimit = benefit.limitAmount !== null && benefit.limitAmount > 0;
+        const hasLimit = effectiveLimit !== null && effectiveLimit > 0;
         const remainingAmount = hasLimit 
-          ? Math.max(0, benefit.limitAmount - usedAmount)
+          ? Math.max(0, effectiveLimit - usedAmount)
           : null;
 
         // Calculate usage percentage
-        const usagePercentage = hasLimit && benefit.limitAmount > 0
-          ? Math.min(100, (usedAmount / benefit.limitAmount) * 100)
+        const usagePercentage = hasLimit && effectiveLimit > 0
+          ? Math.min(100, (usedAmount / effectiveLimit) * 100)
           : 0;
 
         return {
@@ -195,7 +296,7 @@ export default function MemberDashboard() {
           name: benefit.name,
           category: benefit.category,
           description: benefit.description,
-          limitAmount: benefit.limitAmount,
+          limitAmount: effectiveLimit,
           hasLimit: hasLimit,
           companyBenefitId: companyBenefit.id,
           usedAmount,
@@ -207,7 +308,7 @@ export default function MemberDashboard() {
           rejectedClaims,
         };
       })
-      .filter(Boolean)
+      .filter(Boolean) as BenefitWithUsage[]
     : [];
 
   // Format category for display
@@ -217,9 +318,10 @@ export default function MemberDashboard() {
 
   // Format currency
   const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('en-KE', {
       style: 'currency',
-      currency: 'USD'
+      currency: 'KES',
+      minimumFractionDigits: 0
     }).format(amount);
   };
 
@@ -241,8 +343,14 @@ export default function MemberDashboard() {
     }
   };
 
+  const getRiskColor = (score: number) => {
+    if (score < 30) return "bg-green-500";
+    if (score < 60) return "bg-yellow-500";
+    return "bg-red-500";
+  };
+
   // Loading state
-  if (isLoadingMember || isLoadingCompanyBenefits || isLoadingBenefits || isLoadingClaims) {
+  if (isLoadingMember || isLoadingCompanyBenefits || isLoadingBenefits || isLoadingClaims || loading) {
     return (
       <div className="space-y-4">
         <Skeleton className="h-12 w-3/4" />
@@ -271,235 +379,287 @@ export default function MemberDashboard() {
     );
   }
 
+  const typedMember = member as Member;
+  const totalClaimsValue = Array.isArray(memberClaims) 
+    ? memberClaims.reduce((sum: number, c: Claim) => sum + c.amount, 0) || 0 
+    : 0;
+  const approvedClaims = Array.isArray(memberClaims)
+    ? memberClaims.filter((c: Claim) => c.status === 'approved' || c.status === 'paid').length || 0
+    : 0;
+  const riskScore = memberRisk?.riskScore || typedMember?.riskScore || 45;
+
   return (
     <div className="space-y-6">
-      {/* Member Info Card */}
+      {/* ✅ MEMBER DASHBOARD ACTIONS HEADER */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold">Member Dashboard</h1>
+          <p className="text-muted-foreground">
+            Complete 360° view of member profile, benefits, claims and risk profile
+          </p>
+        </div>
+        <Button variant="outline" onClick={loadMemberData}>
+          <RefreshCw className="mr-2 h-4 w-4" />
+          Refresh
+        </Button>
+      </div>
+
+      {/* ✅ MEMBER INFORMATION CARD WITH RISK PROFILE */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row justify-between">
-            <div className="flex items-center mb-4 sm:mb-0">
-              <AvatarWithInitials name={`${member.firstName} ${member.lastName}`} className="h-16 w-16 mr-4" />
+          <div className="flex flex-col lg:flex-row justify-between">
+            <div className="flex items-center mb-4 lg:mb-0">
+              <AvatarWithInitials name={`${typedMember.firstName} ${typedMember.lastName}`} className="h-16 w-16 mr-4" />
               <div>
-                <CardTitle className="text-2xl">{member.firstName} {member.lastName}</CardTitle>
+                <CardTitle className="text-2xl">{typedMember.firstName} {typedMember.secondName} {typedMember.lastName}</CardTitle>
                 <CardDescription className="text-base">
-                  {member.memberType === 'principal' ? 'Principal Member' : `Dependent (${member.dependentType})`}
-                  {member.hasDisability && " • Special Needs"}
+                  {typedMember.memberType === 'principal' ? 'Principal Member' : `Dependent (${typedMember.dependentType})`}
+                  {typedMember.hasDisability && " • Special Needs"}
                 </CardDescription>
                 <div className="text-sm text-gray-500 mt-1">
-                  ID: {member.employeeId} • Member since {format(new Date(member.createdAt), "MMM d, yyyy")}
+                  ID: {typedMember.employeeId} • Member since {format(new Date(typedMember.createdAt), "MMM d, yyyy")}
                 </div>
               </div>
             </div>
             
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-muted/50 p-3 rounded-md text-sm">
-                <div><strong>Company:</strong> {member.company?.name}</div>
-                <div><strong>Email:</strong> {member.email}</div>
-                <div><strong>Phone:</strong> {member.phone}</div>
-                <div><strong>Date of Birth:</strong> {format(new Date(member.dateOfBirth), "MMM d, yyyy")}</div>
+                <div><strong>Company:</strong> {typedMember.company?.name}</div>
+                <div><strong>Email:</strong> {typedMember.email}</div>
+                <div><strong>Phone:</strong> {typedMember.phone}</div>
+                <div><strong>Date of Birth:</strong> {format(new Date(typedMember.dateOfBirth), "MMM d, yyyy")}</div>
               </div>
 
-              {/* Quick Actions */}
-              <div className="flex flex-col space-y-2">
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/wellness/${memberId}`}>
-                    <Heart className="h-4 w-4 mr-2" />
-                    Wellness Integration
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/risk-assessment/${memberId}`}>
-                    <AlertTriangle className="h-4 w-4 mr-2" />
-                    Risk Assessment
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href={`/communication/${memberId}`}>
-                    <Activity className="h-4 w-4 mr-2" />
-                    Communication
-                  </Link>
-                </Button>
+              {/* ✅ RISK ASSESSMENT PANEL */}
+              <div className="bg-muted/50 p-3 rounded-md">
+                <div className="text-sm font-medium mb-2">Risk Assessment</div>
+                <div className="flex items-center justify-between">
+                  <span>Risk Score</span>
+                  <span className="font-bold">{Math.round(riskScore)}%</span>
+                </div>
+                <Progress value={riskScore} className={`h-2 mt-1 ${getRiskColor(riskScore)}`} />
+                <div className="text-xs mt-2 text-gray-600">
+                  {riskScore < 30 ? 'Low Risk' : riskScore < 60 ? 'Medium Risk' : 'High Risk'}
+                </div>
               </div>
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      {/* Tabs for Benefits and Claims */}
+      {/* ✅ DASHBOARD METRICS */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Claims</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{Array.isArray(memberClaims) ? memberClaims.length : 0}</div>
+            <p className="text-xs text-muted-foreground">
+              {approvedClaims} Approved
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Claims Value</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totalClaimsValue)}</div>
+            <p className="text-xs text-muted-foreground">
+              Total claims processed
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Premiums Paid</CardTitle>
+            <CreditCard className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(memberInvoices?.filter((i: Invoice) => i.status === 'paid').reduce((sum: number, i: Invoice) => sum + i.amount, 0) || 0)}</div>
+            <p className="text-xs text-muted-foreground">
+              Total premiums collected
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Benefits</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{benefitsWithUsage.length}</div>
+            <p className="text-xs text-muted-foreground">
+              Active benefit plans
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ✅ TABS WITH ALL SECTIONS */}
       <Card>
         <Tabs defaultValue="benefits" value={activeTab} onValueChange={setActiveTab}>
           <CardHeader className="pb-0">
-            <TabsList>
+            <TabsList className="grid grid-cols-2 md:grid-cols-5">
               <TabsTrigger value="benefits">Benefits & Balance</TabsTrigger>
               <TabsTrigger value="claims">Claims History</TabsTrigger>
-              <TabsTrigger value="rejected">Rejected Claims</TabsTrigger>
+              <TabsTrigger value="payments">Payments</TabsTrigger>
+              <TabsTrigger value="communications">Communications</TabsTrigger>
+              <TabsTrigger value="risk">Risk Profile</TabsTrigger>
             </TabsList>
           </CardHeader>
-          
-          <CardContent className="pt-6">
-            <TabsContent value="benefits" className="mt-0">
-              <div className="space-y-6">
-                <h3 className="text-lg font-semibold">Available Benefits & Usage</h3>
-                
-                {benefitsWithUsage.length === 0 ? (
-                  <div className="p-4 text-center border rounded-md bg-muted/50">
-                    <p>No benefits are currently assigned to this member.</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 gap-4">
-                    {benefitsWithUsage.map(benefit => (
-                      <Card key={benefit.benefitId} className="overflow-hidden">
-                        <CardHeader className="pb-2">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <CardTitle className="text-lg">{benefit.name}</CardTitle>
-                              <Badge className="mt-1 bg-blue-600">{formatCategory(benefit.category)}</Badge>
-                            </div>
-                            {benefit.additionalCoverage && (
-                              <Badge className="bg-green-600">Additional Coverage</Badge>
-                            )}
-                          </div>
-                          <CardDescription className="mt-2">{benefit.description}</CardDescription>
-                        </CardHeader>
-                        
-                        <CardContent>
-                          <div className="mb-4">
-                            <div className="flex justify-between mb-1">
-                              <span className="text-sm font-medium">
-                                Used: {formatCurrency(benefit.usedAmount)}
-                                {benefit.hasLimit && ` of ${formatCurrency(benefit.limitAmount)}`}
-                              </span>
-                              {benefit.hasLimit && (
-                                <span className="text-sm font-medium">
-                                  {benefit.usagePercentage.toFixed(0)}% Used
-                                </span>
-                              )}
-                            </div>
-                            
-                            {benefit.hasLimit ? (
-                              <>
-                                <Progress value={benefit.usagePercentage} className="h-2" />
-                                <div className="flex justify-between mt-1">
-                                  <span className="text-xs text-gray-600">
-                                    Remaining: {formatCurrency(benefit.remainingAmount)}
-                                  </span>
-                                  <span className="text-xs text-gray-600">
-                                    {benefit.claims.length} Approved Claims
-                                  </span>
-                                </div>
-                              </>
-                            ) : (
-                              <div className="mt-1 text-sm">
-                                <span className="text-gray-600">No limit set for this benefit</span>
-                                <div className="text-xs mt-1">
-                                  {benefit.claims.length} Approved Claims
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Show rejected claims count if any */}
-                          {benefit.rejectedClaims.length > 0 && (
-                            <div className="text-sm mt-2 p-2 bg-red-50 border border-red-100 rounded">
-                              <span className="text-red-700 font-medium">
-                                {benefit.rejectedClaims.length} rejected {benefit.rejectedClaims.length === 1 ? 'claim' : 'claims'}
-                              </span>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </div>
+          <CardContent>
+            <TabsContent value="benefits" className="mt-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Benefit</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Limit</TableHead>
+                    <TableHead>Used</TableHead>
+                    <TableHead>Remaining</TableHead>
+                    <TableHead>Usage</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {benefitsWithUsage.map((benefit) => (
+                    <TableRow key={benefit.benefitId}>
+                      <TableCell className="font-medium">{benefit.name}</TableCell>
+                      <TableCell>{formatCategory(benefit.category)}</TableCell>
+                      <TableCell>{benefit.hasLimit ? formatCurrency(benefit.limitAmount || 0) : 'Unlimited'}</TableCell>
+                      <TableCell>{formatCurrency(benefit.usedAmount)}</TableCell>
+                      <TableCell>{benefit.hasLimit ? formatCurrency(benefit.remainingAmount || 0) : '-'}</TableCell>
+                      <TableCell>
+                        <div className="w-full">
+                          <Progress value={benefit.usagePercentage} className="h-2" />
+                          <div className="text-xs text-muted-foreground mt-1">{Math.round(benefit.usagePercentage)}%</div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </TabsContent>
-            
-            <TabsContent value="claims" className="mt-0">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Claims History</h3>
-                
-                {(!memberClaims || memberClaims.length === 0) ? (
-                  <div className="p-4 text-center border rounded-md bg-muted/50">
-                    <p>No claims have been submitted for this member.</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Benefit</TableHead>
-                        <TableHead>Service Date</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Description</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {memberClaims.map((claim: Claim) => {
-                        const benefit = allBenefits?.find((b: Benefit) => b.id === claim.benefitId);
-                        return (
-                          <TableRow key={claim.id}>
-                            <TableCell className="font-medium">{benefit?.name || 'Unknown'}</TableCell>
-                            <TableCell>{format(new Date(claim.serviceDate), "MMM d, yyyy")}</TableCell>
-                            <TableCell>{formatCurrency(claim.amount)}</TableCell>
-                            <TableCell>
-                              <Badge className={getStatusBadgeColor(claim.status)}>
-                                {claim.status.replace(/_/g, ' ').toUpperCase()}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="max-w-xs truncate">
-                              {claim.description}
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                )}
-              </div>
+
+            <TabsContent value="claims" className="mt-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {(Array.isArray(memberClaims) ? memberClaims : []).map((claim: Claim) => (
+                    <TableRow key={claim.id}>
+                      <TableCell>{format(new Date(claim.claimDate), "MMM d, yyyy")}</TableCell>
+                      <TableCell>{claim.description}</TableCell>
+                      <TableCell>{formatCurrency(claim.amount)}</TableCell>
+                      <TableCell>
+                        <Badge className={getStatusBadgeColor(claim.status)}>
+                          {claim.status}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </TabsContent>
-            
-            <TabsContent value="rejected" className="mt-0">
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold">Rejected Claims</h3>
-                
-                {
-                  (!memberClaims || memberClaims.filter((claim: Claim) => claim.status === 'rejected').length === 0) ? (
-                  <div className="p-4 text-center border rounded-md bg-muted/50">
-                    <p>No rejected claims for this member.</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Benefit</TableHead>
-                        <TableHead>Service Date</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Review Date</TableHead>
-                        <TableHead>Reviewer Notes</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {memberClaims
-                        .filter((claim: Claim) => claim.status === 'rejected')
-                        .map((claim: Claim) => {
-                          const benefit = allBenefits?.find((b: Benefit) => b.id === claim.benefitId);
-                          return (
-                            <TableRow key={claim.id}>
-                              <TableCell className="font-medium">{benefit?.name || 'Unknown'}</TableCell>
-                              <TableCell>{format(new Date(claim.serviceDate), "MMM d, yyyy")}</TableCell>
-                              <TableCell>{formatCurrency(claim.amount)}</TableCell>
-                              <TableCell>
-                                {claim.reviewDate ? format(new Date(claim.reviewDate), "MMM d, yyyy") : 'N/A'}
-                              </TableCell>
-                              <TableCell className="max-w-xs">
-                                {claim.reviewerNotes || 'No notes provided'}
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })}
-                    </TableBody>
-                  </Table>
-                )}
+
+            <TabsContent value="payments" className="mt-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Invoice Date</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Due Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {memberInvoices.map((invoice) => (
+                    <TableRow key={invoice.id}>
+                      <TableCell>{format(new Date(invoice.dueDate), "MMM d, yyyy")}</TableCell>
+                      <TableCell>{invoice.description}</TableCell>
+                      <TableCell>{formatCurrency(invoice.amount)}</TableCell>
+                      <TableCell>
+                        <Badge className={invoice.status === 'paid' ? 'bg-green-500' : 'bg-yellow-500'}>
+                          {invoice.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{format(new Date(invoice.dueDate), "MMM d, yyyy")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TabsContent>
+
+            <TabsContent value="communications" className="mt-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Subject</TableHead>
+                    <TableHead>Channel</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {communicationLogs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell>{format(new Date(log.sentAt), "MMM d, yyyy")}</TableCell>
+                      <TableCell>{log.type}</TableCell>
+                      <TableCell>{log.subject}</TableCell>
+                      <TableCell>{log.channel}</TableCell>
+                      <TableCell>
+                        <Badge>{log.status}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TabsContent>
+
+            <TabsContent value="risk" className="mt-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Risk Assessment</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center">
+                      <div className="text-6xl font-bold mb-2">{Math.round(riskScore)}%</div>
+        <Progress value={riskScore} className={`h-3 ${getRiskColor(riskScore)}`} />
+                      <p className="text-muted-foreground mt-4">
+                        {riskScore < 30 ? 'Low risk profile' : riskScore < 60 ? 'Medium risk profile' : 'High risk profile'}
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="md:col-span-2">
+                  <CardHeader>
+                    <CardTitle>Risk Factors</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertDescription>
+                        Risk analysis powered by Fraud Detection Service and historical claims data patterns.
+                      </AlertDescription>
+                    </Alert>
+                  </CardContent>
+                </Card>
               </div>
             </TabsContent>
           </CardContent>

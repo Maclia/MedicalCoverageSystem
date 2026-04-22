@@ -216,4 +216,23 @@ export const insuranceApi = {
     const params = benefitId ? `?benefitId=${benefitId}` : '';
     return apiRequest(`/insurance/members/${memberId}/waiting-periods${params}`);
   },
+
+  // Benefits
+  async getBenefits(params: {
+    page?: number;
+    limit?: number;
+    category?: string;
+    planId?: number;
+    activeOnly?: boolean;
+  } = {}) {
+    const searchParams = new URLSearchParams();
+    Object.entries(params).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.append(key, value.toString());
+    });
+    return apiRequest(`/insurance/benefits?${searchParams}`);
+  },
+
+  async getBenefit(benefitId: number) {
+    return apiRequest(`/insurance/benefits/${benefitId}`);
+  }
 };

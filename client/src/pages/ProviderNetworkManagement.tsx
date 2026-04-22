@@ -37,6 +37,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Users, MapPin, TrendingUp, Search, Filter } from "lucide-react";
+import { hospitalApi } from '@/services/hospitalApi';
 
 interface ProviderNetwork {
   id: number;
@@ -104,11 +105,9 @@ export default function ProviderNetworkManagement() {
 
   const fetchNetworks = async () => {
     try {
-      const response = await fetch('/api/provider-networks');
-      const result = await response.json();
-
-      if (result.success) {
-        setNetworks(result.data);
+      const response = await hospitalApi.getProviderNetworks();
+      if (response.success) {
+        setNetworks(response.data as ProviderNetwork[]);
       } else {
         toast.error('Failed to fetch provider networks');
       }
@@ -121,11 +120,9 @@ export default function ProviderNetworkManagement() {
 
   const fetchNetworkAssignments = async (networkId: number) => {
     try {
-      const response = await fetch(`/api/provider-networks/${networkId}/providers`);
-      const result = await response.json();
-
-      if (result.success) {
-        setAssignments(result.data);
+      const response = await hospitalApi.getNetworkProviders(networkId);
+      if (response.success) {
+        setAssignments(response.data as NetworkAssignment[]);
       } else {
         toast.error('Failed to fetch network providers');
       }
@@ -138,15 +135,7 @@ export default function ProviderNetworkManagement() {
     e.preventDefault();
 
     try {
-      const response = await fetch('/api/provider-networks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      const result = await response.json();
+      const result = await hospitalApi.createProviderNetwork(formData);
 
       if (result.success) {
         toast.success('Provider network created successfully');

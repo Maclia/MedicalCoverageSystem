@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { hospitalApi } from '@/services/hospitalApi';
+import { claimsApi, baseClaimsApi } from '@/services/claimsApi';
+import { analyticsApi } from '@/services/analyticsApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -113,23 +116,10 @@ const ProviderPortal: React.FC = () => {
 
   const fetchProviderData = async () => {
     try {
-      // Mock API call - replace with actual API call
-      const mockData: ProviderData = {
-        id: 1,
-        name: 'City General Hospital',
-        type: 'Hospital',
-        registrationNumber: 'MGH-2024-001',
-        status: 'active',
-        qualityScore: 87,
-        performanceTier: 'good',
-        totalClaims: 1250,
-        totalRevenue: 2500000,
-        approvalRate: 92,
-        averageResponseTime: 24,
-        networkMemberships: ['Premium National Network', 'Standard Regional Network'],
-        lastUpdated: new Date().toISOString()
-      };
-      setProviderData(mockData);
+      const response = await hospitalApi.getCurrentProvider();
+      if (response.success) {
+        setProviderData(response.data as ProviderData);
+      }
     } catch (error) {
       console.error('Error fetching provider data:', error);
     } finally {
@@ -139,42 +129,12 @@ const ProviderPortal: React.FC = () => {
 
   const fetchPerformanceMetrics = async () => {
     try {
-      // Mock data - replace with actual API call
-      const mockMetrics: PerformanceMetric[] = [
-        {
-          category: 'Quality',
-          name: 'Clinical Quality Score',
-          current: 87,
-          target: 90,
-          trend: 'up',
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          category: 'Quality',
-          name: 'Patient Satisfaction',
-          current: 92,
-          target: 85,
-          trend: 'up',
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          category: 'Efficiency',
-          name: 'Average Processing Time',
-          current: 24,
-          target: 48,
-          trend: 'up',
-          lastUpdated: new Date().toISOString()
-        },
-        {
-          category: 'Financial',
-          name: 'Revenue Growth',
-          current: 12.5,
-          target: 10,
-          trend: 'up',
-          lastUpdated: new Date().toISOString()
-        }
-      ];
-      setPerformanceMetrics(mockMetrics);
+      // Use providerId from current provider data or default to 1 for demo
+      const providerId = providerData?.id || 1;
+      const response = await analyticsApi.getProviderPerformance(providerId);
+      if (response.success) {
+        setPerformanceMetrics(response.data as PerformanceMetric[]);
+      }
     } catch (error) {
       console.error('Error fetching performance metrics:', error);
     }
@@ -182,28 +142,11 @@ const ProviderPortal: React.FC = () => {
 
   const fetchRecentClaims = async () => {
     try {
-      // Mock data - replace with actual API call
-      const mockClaims: ClaimData[] = [
-        {
-          id: 1,
-          claimNumber: 'CLM-2024-0001',
-          memberName: 'John Doe',
-          serviceDate: '2024-01-15',
-          amount: 5000,
-          status: 'approved',
-          processingTime: 12
-        },
-        {
-          id: 2,
-          claimNumber: 'CLM-2024-0002',
-          memberName: 'Jane Smith',
-          serviceDate: '2024-01-16',
-          amount: 3500,
-          status: 'pending',
-          processingTime: 24
-        }
-      ];
-      setRecentClaims(mockClaims);
+      // Use baseClaimsApi.getClaims() with institution filtering
+      const response = await baseClaimsApi.getClaims();
+      if (response.success) {
+        setRecentClaims((response.data || []) as ClaimData[]);
+      }
     } catch (error) {
       console.error('Error fetching recent claims:', error);
     }

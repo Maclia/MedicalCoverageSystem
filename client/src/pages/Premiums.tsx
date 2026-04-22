@@ -14,21 +14,52 @@ import {
 } from "@/components/ui/select";
 import PremiumCalculator from "@/components/premiums/PremiumCalculator";
 import { formatCurrency } from "@/utils/format";
+import { billingApi } from '@/services/billingApi';
 
 export default function Premiums() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [companyFilter, setCompanyFilter] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   
-  const { data: premiums, isLoading: isLoadingPremiums } = useQuery({
-    queryKey: ['/api/premiums'],
+  // Define interfaces for type safety
+  interface Premium {
+    id: number;
+    companyId: number;
+    periodId: number;
+    principalCount: number;
+    spouseCount: number;
+    childCount: number;
+    specialNeedsCount: number;
+    total: number;
+    tax: number;
+    createdAt: string;
+  }
+
+  interface Company {
+    id: number;
+    name: string;
+  }
+
+  interface Period {
+    id: number;
+    name: string;
+    startDate: string;
+    endDate: string;
+  }
+
+  const { data: premiums = [], isLoading: isLoadingPremiums } = useQuery({
+    queryKey: ['premiums'],
+    queryFn: async () => {
+      const response = await billingApi.getPremiums();
+      return response.data as Premium[];
+    }
   });
 
-  const { data: companies, isLoading: isLoadingCompanies } = useQuery({
+  const { data: companies = [], isLoading: isLoadingCompanies } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
   });
 
-  const { data: periods, isLoading: isLoadingPeriods } = useQuery({
+  const { data: periods = [], isLoading: isLoadingPeriods } = useQuery<Period[]>({
     queryKey: ['/api/periods'],
   });
   

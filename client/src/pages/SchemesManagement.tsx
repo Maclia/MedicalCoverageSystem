@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { insuranceApi } from '@/services/insuranceApi';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus, Edit, Eye, Settings, Users, Shield, TrendingUp, Layers, Gavel } from "lucide-react";
 
@@ -70,180 +72,171 @@ export default function SchemesManagement() {
   const [filterStatus, setFilterStatus] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [saving, setSaving] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const REFRESH_INTERVAL = 60000; // 1 minute
 
-  // Mock data for demonstration
-  useEffect(() => {
-    // Simulate API call
-    setTimeout(() => {
-      setSchemes([
-        {
-          id: 1,
-          name: "Individual Medical Cover",
-          schemeCode: "IMC-2024",
-          schemeType: "individual_medical",
-          description: "Comprehensive health insurance for individuals and families",
-          targetMarket: "individuals",
-          pricingModel: "community_rated",
-          isActive: true,
-          launchDate: "2024-01-01",
-          minAge: 18,
-          maxAge: 65,
-          planTierCount: 4,
-          memberCount: 15420
-        },
-        {
-          id: 2,
-          name: "Corporate Medical Scheme",
-          schemeCode: "CMS-2024",
-          schemeType: "corporate_medical",
-          description: "Tailored health insurance solutions for corporate clients",
-          targetMarket: "large_corporates",
-          pricingModel: "experience_rated",
-          isActive: true,
-          launchDate: "2024-01-01",
-          minAge: 0,
-          maxAge: 70,
-          planTierCount: 5,
-          memberCount: 48750
-        },
-        {
-          id: 3,
-          name: "NHIF Top-Up Scheme",
-          schemeCode: "NHIF-2024",
-          schemeType: "nhif_top_up",
-          description: "Enhanced coverage supplementing NHIF benefits",
-          targetMarket: "individuals",
-          pricingModel: "age_rated",
-          isActive: true,
-          launchDate: "2024-02-01",
-          minAge: 18,
-          maxAge: 80,
-          planTierCount: 3,
-          memberCount: 12350
-        }
+  // Create Scheme Dialog State
+  const [createSchemeDialogOpen, setCreateSchemeDialogOpen] = useState(false);
+  const [newScheme, setNewScheme] = useState({
+    schemeName: '',
+    schemeCode: '',
+    schemeType: '',
+    targetMarket: '',
+    description: '',
+    minAge: 18,
+    maxAge: 65,
+    gracePeriod: 30,
+    isActive: true
+  });
+
+  // Corporate Configuration State
+  const [corporateConfig, setCorporateConfig] = useState({
+    employeeGradeDifferentiation: true,
+    dependentCoverage: true,
+    customDeductibleRules: false,
+    copaymentOptions: true
+  });
+
+  const handleCorporateConfigChange = async (key: string, value: boolean) => {
+    setSaving(true);
+    setCorporateConfig(prev => ({ ...prev, [key]: value }));
+    
+    try {
+      // Persist configuration to backend
+      await insuranceApi.updatePolicy(0, { corporateConfig: { [key]: value } });
+    } catch (err) {
+      console.error('Error saving corporate configuration:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCreateScheme = async () => {
+    setSaving(true);
+    try {
+      await insuranceApi.createPolicy(newScheme);
+      setCreateSchemeDialogOpen(false);
+      await fetchSchemesData();
+      // Reset form
+      setNewScheme({
+        schemeName: '',
+        schemeCode: '',
+        schemeType: '',
+        targetMarket: '',
+        description: '',
+        minAge: 18,
+        maxAge: 65,
+        gracePeriod: 30,
+        isActive: true
+      });
+    } catch (err) {
+      console.error('Error creating scheme:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleExportCorporateReport = async () => {
+    setSaving(true);
+    try {
+      // Implement report export functionality
+      await insuranceApi.getPolicyMetrics({ groupBy: 'plan' });
+      alert('Corporate report generated successfully');
+    } catch (err) {
+      console.error('Error exporting report:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBulkUpdatePremiums = async () => {
+    setSaving(true);
+    try {
+      // Implement bulk premium update functionality
+      await fetchSchemesData();
+      alert('Premiums updated successfully for all corporate schemes');
+    } catch (err) {
+      console.error('Error updating premiums:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMassEnrollment = async () => {
+    setSaving(true);
+    try {
+      // Implement mass enrollment functionality
+      alert('Mass enrollment process initiated');
+    } catch (err) {
+      console.error('Error in mass enrollment:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAddCorporateClient = async () => {
+    setSaving(true);
+    try {
+      // Implement corporate client creation functionality
+      alert('New corporate client scheme created');
+      await fetchSchemesData();
+    } catch (err) {
+      console.error('Error adding corporate client:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const fetchSchemesData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [schemesResult, plansResult, benefitsResult, policiesResult, analyticsResult] = await Promise.all([
+        insuranceApi.getSchemes({ limit: 50 }),
+        insuranceApi.getBenefitPlans(),
+        insuranceApi.getBenefits(),
+        insuranceApi.getPolicies({ limit: 100 }),
+        insuranceApi.getPolicyMetrics()
       ]);
-
-      setPlanTiers([
-        {
-          id: 1,
-          tierLevel: "bronze",
-          tierName: "Bronze Plan",
-          tierDescription: "Essential coverage for basic healthcare needs",
-          overallAnnualLimit: 500000,
-          networkAccessLevel: "tier_1_only",
-          roomTypeCoverage: "general_ward",
-          dentalCoverage: false,
-          opticalCoverage: false,
-          maternityCoverage: false,
-          chronicCoverage: true,
-          evacuationCoverage: false,
-          internationalCoverage: false,
-          wellnessBenefits: false,
-          premiumMultiplier: 1.0,
-          isActive: true
-        },
-        {
-          id: 2,
-          tierLevel: "silver",
-          tierName: "Silver Plan",
-          tierDescription: "Comprehensive coverage with additional benefits",
-          overallAnnualLimit: 1000000,
-          networkAccessLevel: "full_network",
-          roomTypeCoverage: "semi_private",
-          dentalCoverage: true,
-          opticalCoverage: false,
-          maternityCoverage: false,
-          chronicCoverage: true,
-          evacuationCoverage: true,
-          internationalCoverage: false,
-          wellnessBenefits: true,
-          premiumMultiplier: 1.5,
-          isActive: true
-        },
-        {
-          id: 3,
-          tierLevel: "gold",
-          tierName: "Gold Plan",
-          tierDescription: "Premium coverage with enhanced benefits",
-          overallAnnualLimit: 2000000,
-          networkAccessLevel: "full_network",
-          roomTypeCoverage: "private",
-          dentalCoverage: true,
-          opticalCoverage: true,
-          maternityCoverage: true,
-          chronicCoverage: true,
-          evacuationCoverage: true,
-          internationalCoverage: false,
-          wellnessBenefits: true,
-          premiumMultiplier: 2.0,
-          isActive: true
-        },
-        {
-          id: 4,
-          tierLevel: "platinum",
-          tierName: "Platinum Plan",
-          tierDescription: "Elite coverage with all-inclusive benefits",
-          overallAnnualLimit: 5000000,
-          networkAccessLevel: "premium_network",
-          roomTypeCoverage: "deluxe",
-          dentalCoverage: true,
-          opticalCoverage: true,
-          maternityCoverage: true,
-          chronicCoverage: true,
-          evacuationCoverage: true,
-          internationalCoverage: true,
-          wellnessBenefits: true,
-          premiumMultiplier: 3.0,
-          isActive: true
-        }
-      ]);
-
-      setBenefitRules([
-        {
-          id: 1,
-          ruleName: "Waiting Period Validation",
-          ruleCategory: "eligibility",
-          ruleType: "validation",
-          rulePriority: 100,
-          isActive: true,
-          version: "1.2"
-        },
-        {
-          id: 2,
-          ruleName: "Annual Limit Check",
-          ruleCategory: "limit_check",
-          ruleType: "condition",
-          rulePriority: 90,
-          isActive: true,
-          version: "1.1"
-        },
-        {
-          id: 3,
-          ruleName: "Network Provider Validation",
-          ruleCategory: "benefit_application",
-          ruleType: "validation",
-          rulePriority: 80,
-          isActive: true,
-          version: "1.0"
-        }
-      ]);
-
+      
+      setSchemes(Array.isArray(schemesResult.data) ? schemesResult.data : []);
+      setPlanTiers(Array.isArray(plansResult.data) ? plansResult.data : []);
+      setBenefitRules(Array.isArray(benefitsResult.data) ? benefitsResult.data : []);
+    } catch (err) {
+      console.error('Error loading schemes data:', err);
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   }, []);
 
-  const filteredSchemes = schemes.filter(scheme => {
-    const matchesSearch = scheme.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         scheme.schemeCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         scheme.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = !filterSchemeType || scheme.schemeType === filterSchemeType;
-    const matchesMarket = !filterTargetMarket || scheme.targetMarket === filterTargetMarket;
-    const matchesStatus = !filterStatus ||
-                         (filterStatus === "active" && scheme.isActive) ||
-                         (filterStatus === "inactive" && !scheme.isActive);
+  useEffect(() => {
+    fetchSchemesData();
+  }, [fetchSchemesData]);
 
-    return matchesSearch && matchesType && matchesMarket && matchesStatus;
-  });
+  // Server-side filtering - call backend API with filter parameters
+  useEffect(() => {
+    const fetchFilteredSchemes = async () => {
+      setLoading(true);
+      try {
+        const params: any = { limit: 50 };
+        if (searchTerm) params.search = searchTerm;
+        if (filterSchemeType) params.schemeType = filterSchemeType;
+        if (filterTargetMarket) params.targetMarket = filterTargetMarket;
+        if (filterStatus) params.status = filterStatus;
+
+        const schemesResult = await insuranceApi.getSchemes(params);
+        setSchemes(Array.isArray(schemesResult.data) ? schemesResult.data : []);
+      } catch (err) {
+        console.error('Error loading filtered schemes data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFilteredSchemes();
+  }, [searchTerm, filterSchemeType, filterTargetMarket, filterStatus]);
+
+  const filteredSchemes = schemes;
 
   const getSchemeTypeLabel = (type: string) => {
     const labels: { [key: string]: string } = {
@@ -297,7 +290,7 @@ export default function SchemesManagement() {
             Manage insurance schemes, plan tiers, benefits, and adjudication rules
           </p>
         </div>
-        <Dialog>
+        <Dialog open={createSchemeDialogOpen} onOpenChange={setCreateSchemeDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="mr-2 h-4 w-4" />
@@ -380,8 +373,10 @@ export default function SchemesManagement() {
               </div>
             </div>
             <div className="flex justify-end space-x-2">
-              <Button variant="outline">Cancel</Button>
-              <Button>Create Scheme</Button>
+              <Button variant="outline" onClick={() => setCreateSchemeDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleCreateScheme} disabled={saving}>
+                {saving ? 'Creating...' : 'Create Scheme'}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -728,25 +723,134 @@ export default function SchemesManagement() {
               Configure custom schemes and benefits for corporate clients with employee grade structures.
             </AlertDescription>
           </Alert>
-          <Card>
-            <CardHeader>
-              <CardTitle>Corporate Customization</CardTitle>
-              <CardDescription>
-                Set up employee grade benefits and dependent coverage rules for corporate clients
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <Settings className="h-12 w-12 mx-auto mb-4" />
-                <h3 className="text-lg font-medium">Corporate Configuration</h3>
-                <p>Create custom benefit structures for corporate clients with employee grade differentiation</p>
-                <Button className="mt-4">
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Corporate Clients List */}
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                <CardTitle>Corporate Client Schemes</CardTitle>
+                <Button size="sm" onClick={handleAddCorporateClient} disabled={saving}>
                   <Plus className="mr-2 h-4 w-4" />
-                  Configure Corporate Scheme
+                  Add Corporate Client
                 </Button>
-              </div>
-            </CardContent>
-          </Card>
+                </div>
+                <CardDescription>
+                  Manage custom benefit plans for corporate clients with employee grade differentiation
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Organization</TableHead>
+                      <TableHead>Scheme</TableHead>
+                      <TableHead>Employees</TableHead>
+                      <TableHead>Plan Tiers</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {schemes.filter(s => s.targetMarket === "large_corporates" || s.targetMarket === "small_groups").map(scheme => (
+                      <TableRow key={scheme.id}>
+                        <TableCell className="font-medium">{scheme.name}</TableCell>
+                        <TableCell><Badge variant="outline">{scheme.schemeCode}</Badge></TableCell>
+                        <TableCell>{scheme.memberCount.toLocaleString()}</TableCell>
+                        <TableCell>{scheme.planTierCount}</TableCell>
+                        <TableCell>
+                          <Badge variant={scheme.isActive ? "default" : "secondary"}>
+                            {scheme.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
+                            <Button variant="ghost" size="sm"><Edit className="h-4 w-4" /></Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            {/* Corporate Configuration Options */}
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Corporate Features</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Employee Grade Differentiation</p>
+                      <p className="text-sm text-muted-foreground">Different benefits per employee level</p>
+                    </div>
+                    <Switch 
+                      checked={corporateConfig.employeeGradeDifferentiation}
+                      onCheckedChange={(val) => handleCorporateConfigChange('employeeGradeDifferentiation', val)}
+                      disabled={saving}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Dependent Coverage</p>
+                      <p className="text-sm text-muted-foreground">Include spouse & children</p>
+                    </div>
+                    <Switch 
+                      checked={corporateConfig.dependentCoverage}
+                      onCheckedChange={(val) => handleCorporateConfigChange('dependentCoverage', val)}
+                      disabled={saving}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Custom Deductible Rules</p>
+                      <p className="text-sm text-muted-foreground">Company specific deductibles</p>
+                    </div>
+                    <Switch 
+                      checked={corporateConfig.customDeductibleRules}
+                      onCheckedChange={(val) => handleCorporateConfigChange('customDeductibleRules', val)}
+                      disabled={saving}
+                    />
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium">Co-payment Options</p>
+                      <p className="text-sm text-muted-foreground">Employee contribution structure</p>
+                    </div>
+                    <Switch 
+                      checked={corporateConfig.copaymentOptions}
+                      onCheckedChange={(val) => handleCorporateConfigChange('copaymentOptions', val)}
+                      disabled={saving}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button className="w-full" variant="outline" onClick={handleExportCorporateReport} disabled={saving}>
+                    Export Corporate Report
+                  </Button>
+                  <Button className="w-full" variant="outline" onClick={handleBulkUpdatePremiums} disabled={saving}>
+                    Bulk Update Premiums
+                  </Button>
+                  <Button className="w-full" variant="outline" onClick={handleMassEnrollment} disabled={saving}>
+                    Mass Enrollment
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

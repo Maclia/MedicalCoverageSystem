@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,13 +6,16 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   RiskAssessment,
   RiskRecommendation,
   RiskAlert,
   RiskActionItem,
   RiskFactor,
-  RiskPrediction
+  RiskPrediction,
+  RiskDashboard
 } from '../../../../shared/types/riskAssessment';
 import { riskApi } from '@/services/riskApi';
 import {
@@ -52,29 +55,147 @@ export const RiskAssessmentDashboard: React.FC<RiskAssessmentDashboardProps> = (
   memberId,
   memberName
 }) => {
-  const [dashboard, setDashboard] = useState<any>(null);
+  const [dashboard, setDashboard] = useState<RiskDashboard | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedRecommendation, setSelectedRecommendation] = useState<RiskRecommendation | null>(null);
   const [selectedAlert, setSelectedAlert] = useState<RiskAlert | null>(null);
   const [showRecommendationDialog, setShowRecommendationDialog] = useState(false);
   const [showAlertDialog, setShowAlertDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
+  const REFRESH_INTERVAL = 300000; // 5 minutes
 
-  useEffect(() => {
-    loadRiskDashboard();
-  }, [memberId]);
 
-  const loadRiskDashboard = async () => {
+  const loadRiskDashboard = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const dashboardData = await riskApi.getRiskDashboard(memberId);
-      setDashboard(dashboardData);
-    } catch (error) {
-      console.error('Error loading risk dashboard:', error);
+      // Parallel API calls for all alert sources
+      const [dashboardData, riskAlerts, predictions] = await Promise.all([
+        riskApi.getRiskDashboard(memberId),
+        riskApi.getRiskAlerts(memberId, { acknowledged: false }),
+        riskApi.getRiskPredictions(memberId)
+      ]);
+
+      // Merge alerts from all sources with proper priority
+      const mergedAlerts = [
+        ...(dashboardData.alerts || []),
+        ...(riskAlerts || [])
+      ].filter((alert, index, self) => 
+        index === self.findIndex(a => a.id === alert.id)
+      ).sort((a, b) => {
+        const severityOrder = { emergency: -1, critical: 0, warning: 1, info: 2 };
+        return (severityOrder[a.severity] ?? 999) - (severityOrder[b.severity] ?? 999);
+      });
+
+      setDashboard({
+        ...dashboardData,
+        alerts: mergedAlerts,
+        predictions: predictions || dashboardData.predictions || []
+      });
+      
+      setLastUpdated(new Date());
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load risk assessment data';
+      setError(errorMessage);
+      console.error('Error loading risk dashboard:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [memberId]);
+
+  useEffect(() => {
+    loadRiskDashboard();
+    
+    if (autoRefresh && memberId) {
+      const intervalId = setInterval(loadRiskDashboard, REFRESH_INTERVAL);
+      return () => clearInterval(intervalId);
+    }
+  }, [memberId, loadRiskDashboard, autoRefresh]);
+
+  // Data Formulation for each service integration
+  const formulatedData = useMemo(() => {
+    if (!dashboard) return null;
+    const { currentAssessment, historicalData, alerts, recommendations, predictions, insights } = dashboard;
+
+    // Formulate Claims Service Data
+    const claimsRiskData = {
+      claimsCount: historicalData?.length || 0,
+      averageClaimRisk: historicalData?.reduce((sum, h) => sum + h.overallRiskScore, 0) / (historicalData?.length || 1),
+      riskChangeLast30Days: historicalData?.length >= 2 
+        ? historicalData[0].overallRiskScore - historicalData[historicalData.length -1].overallRiskScore 
+        : 0
+    };
+
+    // Formulate Membership Service Data
+    const memberRiskProfile = {
+      complianceScore: currentAssessment.complianceLevel,
+      actionItemCompletion: currentAssessment.actionItems?.filter(a => a.status === 'completed').length / 
+                           Math.max(currentAssessment.actionItems?.length || 1, 1) * 100,
+      riskTier: currentAssessment.riskLevel
+    };
+
+    // Formulate Hospital Service Data
+    const clinicalRiskFactors = {
+      totalRiskFactors: currentAssessment.topRiskFactors?.length || 0,
+      criticalFactors: currentAssessment.topRiskFactors?.filter(f => f.riskLevel === 'critical').length || 0,
+      categoryBreakdown: Object.entries(currentAssessment.categoryScores).map(([key, cat]: [string, any]) => ({
+        category: cat.category,
+        score: cat.score,
+        level: cat.level
+      }))
+    };
+
+    // Formulate Wellness Service Data
+    const wellnessRecommendations = {
+      total: recommendations?.length || 0,
+      pending: recommendations?.filter(r => r.status === 'pending').length || 0,
+      inProgress: recommendations?.filter(r => r.status === 'in_progress').length || 0,
+      completed: recommendations?.filter(r => r.status === 'completed').length || 0,
+      priorityBreakdown: {
+        urgent: recommendations?.filter(r => r.priority === 'urgent').length || 0,
+        high: recommendations?.filter(r => r.priority === 'high').length || 0,
+        medium: recommendations?.filter(r => r.priority === 'medium').length || 0,
+        low: recommendations?.filter(r => r.priority === 'low').length || 0
+      }
+    };
+
+    // Formulate Fraud Detection Service Data
+    const fraudRiskIndicators = {
+      alertCount: alerts?.length || 0,
+      criticalAlerts: alerts?.filter(a => a.severity === 'critical').length || 0,
+      activePredictions: predictions?.length || 0,
+      averagePredictionConfidence: predictions?.reduce((sum, p) => sum + p.confidence, 0) / (predictions?.length || 1)
+    };
+
+    return {
+      claimsRiskData,
+      memberRiskProfile,
+      clinicalRiskFactors,
+      wellnessRecommendations,
+      fraudRiskIndicators,
+      lastCalculated: new Date()
+    };
+  }, [dashboard]);
+
+  const riskSummary = useMemo(() => {
+    if (!dashboard) return null;
+    
+    const { currentAssessment } = dashboard;
+    const criticalAlerts = dashboard.alerts?.filter(a => a.severity === 'critical' && !a.acknowledged).length || 0;
+    const pendingRecommendations = dashboard.recommendations?.filter(r => r.status === 'pending').length || 0;
+    const overdueItems = dashboard.currentAssessment?.actionItems?.filter(a => a.status === 'overdue').length || 0;
+    
+    return {
+      criticalAlerts,
+      pendingRecommendations,
+      overdueItems,
+      totalActionRequired: criticalAlerts > 0 || pendingRecommendations > 3 || overdueItems > 0
+    };
+  }, [dashboard]);
 
   const getRiskLevelColor = (level: string) => {
     switch (level) {
@@ -127,12 +248,50 @@ export const RiskAssessmentDashboard: React.FC<RiskAssessmentDashboardProps> = (
   };
 
   const handleAlertAcknowledge = async (alertId: string) => {
+    setSaving(true);
     try {
       await riskApi.acknowledgeRiskAlert(alertId);
-      await loadRiskDashboard(); // Refresh data
+      
+      // Optimistic UI update
+      if (dashboard) {
+        setDashboard({
+          ...dashboard,
+          alerts: dashboard.alerts.map(a => 
+            a.id === alertId 
+              ? { ...a, acknowledged: true, acknowledgedAt: new Date() } 
+              : a
+          )
+        });
+      }
+      
       setShowAlertDialog(false);
+      
+      // Background refresh
+      loadRiskDashboard();
     } catch (error) {
       console.error('Error acknowledging alert:', error);
+      // Revert on failure
+      loadRiskDashboard();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMarkAllAlertsRead = async () => {
+    setSaving(true);
+    try {
+      const unacknowledgedIds = dashboard?.alerts
+        ?.filter(a => !a.acknowledged)
+        .map(a => a.id) || [];
+        
+      if (unacknowledgedIds.length > 0) {
+        await riskApi.batchAcknowledgeAlerts(unacknowledgedIds);
+        loadRiskDashboard();
+      }
+    } catch (error) {
+      console.error('Error acknowledging all alerts:', error);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -152,16 +311,60 @@ export const RiskAssessmentDashboard: React.FC<RiskAssessmentDashboardProps> = (
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-32 bg-gray-200 rounded"></div>
-            ))}
+      <div className="space-y-6 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <Skeleton className="h-8 w-64" />
+          <div className="flex space-x-2">
+            <Skeleton className="h-10 w-24" />
+            <Skeleton className="h-10 w-32" />
           </div>
         </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-10 w-24 mb-2" />
+                <Skeleton className="h-2 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Skeleton className="h-12 w-full mb-6" />
+        
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[...Array(2)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader>
+                <Skeleton className="h-6 w-48" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-64 w-full" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert variant="destructive" className="m-6">
+        <AlertTriangle className="h-4 w-4" />
+        <AlertTitle>Error Loading Risk Assessment</AlertTitle>
+        <AlertDescription className="space-y-4">
+          <p>{error}</p>
+          <Button onClick={loadRiskDashboard} variant="destructive">
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Retry Loading
+          </Button>
+        </AlertDescription>
+      </Alert>
     );
   }
 
@@ -554,8 +757,19 @@ export const RiskAssessmentDashboard: React.FC<RiskAssessmentDashboardProps> = (
         {/* Alerts Tab */}
         <TabsContent value="alerts" className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">Risk Alerts</h2>
-            <Button variant="outline" size="sm">
+            <div>
+              <h2 className="text-xl font-semibold">Risk Alerts</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {formulatedData?.fraudRiskIndicators.alertCount} total alerts • 
+                {formulatedData?.fraudRiskIndicators.criticalAlerts} critical
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleMarkAllAlertsRead}
+              disabled={saving || !dashboard?.alerts?.some(a => !a.acknowledged)}
+            >
               <Bell className="h-4 w-4 mr-2" />
               Mark All Read
             </Button>
@@ -594,16 +808,26 @@ export const RiskAssessmentDashboard: React.FC<RiskAssessmentDashboardProps> = (
                     </div>
                     <div className="flex space-x-2 ml-4">
                       {!alert.acknowledged && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setSelectedAlert(alert);
-                            setShowAlertDialog(true);
-                          }}
-                        >
-                          Acknowledge
-                        </Button>
+                        <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            onClick={() => handleAlertAcknowledge(alert.id)}
+                            disabled={saving}
+                          >
+                            Acknowledge
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedAlert(alert);
+                              setShowAlertDialog(true);
+                            }}
+                          >
+                            View Details
+                          </Button>
+                        </div>
                       )}
                       {alert.acknowledged && (
                         <CheckCircle className="h-5 w-5 text-green-500" />

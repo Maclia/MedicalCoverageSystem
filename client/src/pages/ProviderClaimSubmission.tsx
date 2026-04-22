@@ -29,6 +29,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { hospitalApi } from '@/services/hospitalApi';
+import { membershipApi } from '@/services/membershipApi';
+import { insuranceApi } from '@/services/insuranceApi';
 
 interface ProcedureItem {
   id?: number;
@@ -67,44 +70,56 @@ export default function ProviderClaimSubmission() {
   const [claimResult, setClaimResult] = useState<any>(null);
   
   // Fetch data
-  const { data: institutions } = useQuery({
-    queryKey: ['/api/medical-institutions'],
-    enabled: true,
+  const { data: institutions = [] } = useQuery({
+    queryKey: ['medical-institutions'],
+    queryFn: async () => {
+      const response = await hospitalApi.getHospitals();
+      return response.data as any[];
+    }
   });
   
-  const { data: benefits } = useQuery({
-    queryKey: ['/api/benefits'],
-    enabled: true,
+  const { data: benefits = [] } = useQuery({
+    queryKey: ['benefits'],
+    queryFn: async () => {
+      const response = await insuranceApi.getBenefits();
+      return response.data as any[];
+    }
   });
   
-  const { data: members } = useQuery({
-    queryKey: ['/api/members'],
-    enabled: true,
+  const { data: members = [] } = useQuery({
+    queryKey: ['members'],
+    queryFn: async () => {
+      const response = await membershipApi.getMembers();
+      return response.data as any[];
+    }
   });
   
-  const { data: personnel, refetch: refetchPersonnel } = useQuery({
-    queryKey: ['/api/medical-personnel', institutionId],
+  const { data: personnel = [], refetch: refetchPersonnel } = useQuery({
+    queryKey: ['medical-personnel', institutionId],
     queryFn: async () => {
       if (!institutionId) return [];
-      const response = await fetch(`/api/medical-personnel?institutionId=${institutionId}`);
-      if (!response.ok) throw new Error('Failed to fetch personnel');
-      return response.json();
+      const response = await hospitalApi.getMedicalPersonnel({ institutionId });
+      return response.data as any[];
     },
     enabled: !!institutionId,
   });
   
-  const { data: procedures } = useQuery({
-    queryKey: ['/api/medical-procedures'],
-    enabled: true,
+  const { data: procedures = [] } = useQuery({
+    queryKey: ['medical-procedures'],
+    queryFn: async () => {
+      const response = await hospitalApi.getMedicalProcedures();
+      return response.data as any[];
+    }
   });
   
-  const { data: providerRates, refetch: refetchRates } = useQuery({
-    queryKey: ['/api/provider-procedure-rates', institutionId],
+  const { data: providerRates = [], refetch: refetchRates } = useQuery({
+    queryKey: ['provider-procedure-rates', institutionId],
     queryFn: async () => {
       if (!institutionId) return [];
-      const response = await fetch(`/api/provider-procedure-rates?institutionId=${institutionId}`);
+      // TODO: Implement in hospitalApi - temporary direct fetch
+      const response = await fetch(`/api/hospital/provider-rates?institutionId=${institutionId}`);
       if (!response.ok) throw new Error('Failed to fetch provider rates');
-      return response.json();
+      return (await response.json()) as any[];
     },
     enabled: !!institutionId,
   });
