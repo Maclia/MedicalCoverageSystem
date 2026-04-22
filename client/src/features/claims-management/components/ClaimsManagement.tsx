@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
-import { Badge } from '@/features/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { Badge } from '@/ui/badge';
 import { ClaimsProcessingDashboard } from '@/components/claims/ClaimsProcessingDashboard';
 import { MemberEOBViewer } from '@/components/claims/MemberEOBViewer';
 import {

@@ -14,20 +14,20 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/features/ui/form";
+} from "@/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Input } from "@/features/ui/input";
-import { Button } from "@/features/ui/button";
-import { Checkbox } from "@/features/ui/checkbox";
-import { Separator } from "@/features/ui/separator";
-import { Slider } from "@/features/ui/slider";
-import { Textarea } from "@/features/ui/textarea";
+} from "@/ui/select";
+import { Input } from "@/ui/input";
+import { Button } from "@/ui/button";
+import { Checkbox } from "@/ui/checkbox";
+import { Separator } from "@/ui/separator";
+import { Slider } from "@/ui/slider";
+import { Textarea } from "@/ui/textarea";
 
 // Extend the schema with any additional validation
 const formSchema = insertCompanyBenefitSchema.extend({

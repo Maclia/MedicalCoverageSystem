@@ -7,17 +7,17 @@ import { claimsApi } from '@/services/api/claimsApi';
 import { billingApi } from '@/services/api/billingApi';
 import { wellnessApi } from '@/services/api/wellnessApi';
 
-import { Button } from "@/features/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
-import { Badge } from "@/features/ui/badge";
-import { Input } from "@/features/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/features/ui/table";
-import { Alert, AlertDescription } from "@/features/ui/alert";
-import { Progress } from "@/features/ui/progress";
-import { Separator } from "@/features/ui/separator";
-import { Avatar } from "@/features/ui/avatar";
+import { Button } from "@/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Badge } from "@/ui/badge";
+import { Input } from "@/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Progress } from "@/ui/progress";
+import { Separator } from "@/ui/separator";
+import { Avatar } from "@/ui/avatar";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, LineChart, Line } from 'recharts';
 import { 
   AlertTriangle, Shield, Target, TrendingUp, ShieldCheck, User, Clock, Activity, FileText, Users, Eye, Search, Filter, RefreshCw, ChevronRight, CheckCircle, XCircle, AlertCircle, BarChart3, DollarSign, Heart, FileSpreadsheet, FileCheck } from "lucide-react";

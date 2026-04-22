@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Input } from '@/features/ui/input';
-import { Label } from '@/features/ui/label';
-import { Textarea } from '@/features/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/ui/select';
-import { Checkbox } from '@/features/ui/checkbox';
-import { Progress } from '@/features/ui/progress';
-import { Alert, AlertDescription } from '@/features/ui/alert';
-import { Badge } from '@/features/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
+import { Textarea } from '@/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { Checkbox } from '@/ui/checkbox';
+import { Progress } from '@/ui/progress';
+import { Alert, AlertDescription } from '@/ui/alert';
+import { Badge } from '@/ui/badge';
 import {
   User,
   Phone,

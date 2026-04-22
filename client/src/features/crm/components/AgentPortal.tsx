@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
-import { Button } from "@/features/ui/button";
-import { Badge } from "@/features/ui/badge";
-import { Progress } from "@/features/ui/progress";
-import { Avatar, AvatarFallback } from "@/features/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
+import { Progress } from "@/ui/progress";
+import { Avatar, AvatarFallback } from "@/ui/avatar";
 import {
   TrendingUp,
   DollarSign,

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/features/actions/contexts/AuthContext';
 import { getRoleColorClasses, roleLabels } from '@/config/navigation';
-import { Button } from '@/features/ui/button';
+import { Button } from '@/ui/button';
 import {
   UserCircleIcon,
   ArrowRightOnRectangleIcon,

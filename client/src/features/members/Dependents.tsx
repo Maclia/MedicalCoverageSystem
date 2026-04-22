@@ -7,10 +7,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/features/ui/card";
-import { Button } from "@/features/ui/button";
-import { Badge } from "@/features/ui/badge";
-import { Skeleton } from "@/features/ui/skeleton";
+} from "@/ui/card";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
+import { Skeleton } from "@/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -18,7 +18,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -27,19 +27,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/features/ui/dialog";
+} from "@/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Input } from "@/features/ui/input";
-import { Label } from "@/features/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
-import { Progress } from "@/features/ui/progress";
-import { Alert, AlertDescription } from "@/features/ui/alert";
+} from "@/ui/select";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Progress } from "@/ui/progress";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { membershipApi } from "@/services/membershipApi";

@@ -7,7 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/features/ui/card";
+} from "@/ui/card";
 import {
   Table,
   TableBody,
@@ -15,7 +15,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -23,20 +23,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/features/ui/dialog";
+} from "@/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Badge } from "@/features/ui/badge";
-import { Button } from "@/features/ui/button";
-import { Input } from "@/features/ui/input";
-import { Label } from "@/features/ui/label";
-import { Skeleton } from "@/features/ui/skeleton";
-import { Alert, AlertDescription } from "@/features/ui/alert";
+} from "@/ui/select";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Skeleton } from "@/ui/skeleton";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { hospitalApi } from "@/services/api/hospitalApi";

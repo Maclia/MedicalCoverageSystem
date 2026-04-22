@@ -6,8 +6,8 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/features/ui/card";
-import { membershipApi } from "@/services/membershipApi";
+} from "@/ui/card";
+import { membershipApi } from "@/services/api/memberApi";
 import { billingApi } from "@/services/api/billingApi";
 import { baseClaimsApi as claimsApi } from "@/services/api/claimsApi";
 import { insuranceApi } from "@/services/api/insuranceApi";
@@ -16,8 +16,8 @@ import { analyticsApi } from "@/services/api/analyticsApi";
 import { hospitalApi } from "@/services/api/hospitalApi";
 import { crmApi } from "@/services/api/crmApi";
 import financeApi from "@/services/api/financeApi";
-import { Button } from "@/features/ui/button";
-import { Badge } from "@/features/ui/badge";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +26,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter
-} from "@/features/ui/dialog";
+} from "@/ui/dialog";
 import {
   Table,
   TableBody,
@@ -34,23 +34,23 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Input } from "@/features/ui/input";
-import { Textarea } from "@/features/ui/textarea";
-import { Label } from "@/features/ui/label";
+} from "@/ui/select";
+import { Input } from "@/ui/input";
+import { Textarea } from "@/ui/textarea";
+import { Label } from "@/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
-import { Progress } from "@/features/ui/progress";
-import { Alert, AlertDescription } from "@/features/ui/alert";
-import { Skeleton } from "@/features/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/features/ui/avatar";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Progress } from "@/ui/progress";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Skeleton } from "@/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@/ui/avatar";
 import {
   User,
   Users,

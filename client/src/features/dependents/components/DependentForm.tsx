@@ -15,18 +15,18 @@ import {
   FormLabel, 
   FormMessage,
   FormDescription
-} from "@/features/ui/form";
+} from "@/ui/form";
 import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Input } from "@/features/ui/input";
-import { Button } from "@/features/ui/button";
-import { Checkbox } from "@/features/ui/checkbox";
-import { Textarea } from "@/features/ui/textarea";
+} from "@/ui/select";
+import { Input } from "@/ui/input";
+import { Button } from "@/ui/button";
+import { Checkbox } from "@/ui/checkbox";
+import { Textarea } from "@/ui/textarea";
 
 // Enhanced schema with validation rules for the new dependent fields
 const formSchema = insertDependentMemberSchema.extend({

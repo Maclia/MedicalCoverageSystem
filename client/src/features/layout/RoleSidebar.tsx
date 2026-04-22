@@ -2,7 +2,7 @@ import { Link, useLocation } from 'wouter';
 import { useAuth } from '@/features/actions/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { getGroupedNavigation, getRoleColorClasses, roleLabels } from '@/config/navigation';
-import { Divider } from '@/features/ui/divider';
+import { Divider } from '@/ui/divider';
 
 /**
  * Role-aware Navigation Sidebar

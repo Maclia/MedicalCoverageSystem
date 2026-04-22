@@ -1,11 +1,11 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/select";
-import { Button } from "@/features/ui/button";
-import { Badge } from "@/features/ui/badge";
-import { Progress } from "@/features/ui/progress";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
+import { Progress } from "@/ui/progress";
 import {
   LineChart,
   Line,

@@ -6,20 +6,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import {
   Card,
   CardContent,
-} from "@/features/ui/card";
+} from "@/ui/card";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Badge } from "@/features/ui/badge";
-import { Label } from "@/features/ui/label";
+} from "@/ui/select";
+import { Badge } from "@/ui/badge";
+import { Label } from "@/ui/label";
 import { formatCurrency } from "@/utils/format";
 import { useBenefits } from "../../services/api/benefitsApi";
 

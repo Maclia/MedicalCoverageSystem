@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
-import { Switch } from '@/features/ui/switch';
-import { Slider } from '@/features/ui/slider';
-import { Input } from '@/features/ui/input';
-import { Label } from '@/features/ui/label';
-import { Textarea } from '@/features/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/features/ui/dialog';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Switch } from '@/ui/switch';
+import { Slider } from '@/ui/slider';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
+import { Textarea } from '@/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/dialog';
 import {
   Settings,
   Brain,

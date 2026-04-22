@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { StatCard } from "@/features/ui/stat-card";
+import { StatCard } from "@/ui/stat-card";
 import { formatCurrency } from "@/utils/format";
 
 export default function StatCards() {

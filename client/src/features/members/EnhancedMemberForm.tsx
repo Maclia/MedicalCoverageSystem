@@ -13,23 +13,23 @@ import {
   FormLabel,
   FormMessage,
   FormDescription
-} from "@/features/ui/form";
+} from "@/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Input } from "@/features/ui/input";
-import { Button } from "@/features/ui/button";
-import { Checkbox } from "@/features/ui/checkbox";
-import { Textarea } from "@/features/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Badge } from "@/features/ui/badge";
-import { Alert, AlertDescription } from "@/features/ui/alert";
-import { Separator } from "@/features/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
+} from "@/ui/select";
+import { Input } from "@/ui/input";
+import { Button } from "@/ui/button";
+import { Checkbox } from "@/ui/checkbox";
+import { Textarea } from "@/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Badge } from "@/ui/badge";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Separator } from "@/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { CalendarIcon, Upload, User, MapPin, FileText, Users, Info } from "lucide-react";
 
 // Enhanced validation schema for comprehensive member enrollment

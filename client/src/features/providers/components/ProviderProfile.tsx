@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
-import { Avatar, AvatarFallback } from '@/features/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/features/ui/dialog';
-import { Label } from '@/features/ui/label';
-import { Input } from '@/features/ui/input';
-import { Textarea } from '@/features/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Avatar, AvatarFallback } from '@/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/dialog';
+import { Label } from '@/ui/label';
+import { Input } from '@/ui/input';
+import { Textarea } from '@/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
 import {
   User,
   MapPin,

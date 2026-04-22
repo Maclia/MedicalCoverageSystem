@@ -1,7 +1,7 @@
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
-import { Toaster } from "@/features/ui/toaster";
+import { Toaster } from "@/ui/toaster";
 import { AuthProvider } from "@/features/actions/contexts/AuthContext";
 import { FinanceProvider } from "@/features/actions/contexts/FinanceContext";
 import ProtectedRoute from "@/features/auth/ProtectedRoute";
@@ -101,7 +101,7 @@ function Router() {
               )} />
               <Route path="/claims-management" component={() => (
                 <ProtectedRoute allowedRoles={['insurance']}>
-                  <ClaimsManagement />
+                  <ClaimsManagement userRole="admin" />
                 </ProtectedRoute>
               )} />
               <Route path="/schemes-management" component={() => (

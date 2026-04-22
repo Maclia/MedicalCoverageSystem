@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
-import { Progress } from '@/features/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/features/ui/dialog';
-import { Alert, AlertDescription, AlertTitle } from '@/features/ui/alert';
-import { Skeleton } from '@/features/ui/skeleton';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/features/ui/tooltip';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Progress } from '@/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
+import { Skeleton } from '@/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/ui/tooltip';
 import {
   RiskAssessment,
   RiskRecommendation,

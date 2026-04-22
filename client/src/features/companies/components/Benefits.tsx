@@ -5,25 +5,25 @@ import {
   TabsContent, 
   TabsList, 
   TabsTrigger 
-} from "@/features/ui/tabs";
+} from "@/ui/tabs";
 import BenefitList from "@/features/benefits/BenefitList";
 import BenefitForm from "@/features/benefits/BenefitForm";
 import CompanyBenefitList from "@/features/benefits/CompanyBenefitList";
 import CompanyBenefitForm from "@/features/benefits/CompanyBenefitForm";
-import { Button } from "@/features/ui/button";
+import { Button } from "@/ui/button";
 import { 
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/features/ui/accordion";
+} from "@/ui/accordion";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/features/ui/card";
+} from "@/ui/card";
 
 export default function Benefits() {
   const [showBenefitForm, setShowBenefitForm] = useState(false);

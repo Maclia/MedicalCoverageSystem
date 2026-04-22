@@ -13,18 +13,18 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/features/ui/form";
+} from "@/ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Input } from "@/features/ui/input";
-import { Button } from "@/features/ui/button";
-import { Textarea } from "@/features/ui/textarea";
-import { Switch } from "@/features/ui/switch";
+} from "@/ui/select";
+import { Input } from "@/ui/input";
+import { Button } from "@/ui/button";
+import { Textarea } from "@/ui/textarea";
+import { Switch } from "@/ui/switch";
 
 // Extend the schema with any additional validation
 const formSchema = insertBenefitSchema.extend({

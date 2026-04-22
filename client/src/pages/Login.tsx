@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Input } from '@/features/ui/input';
-import { Label } from '@/features/ui/label';
-import { Alert, AlertDescription } from '@/features/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
-import { Badge } from '@/features/ui/badge';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
+import { Alert, AlertDescription } from '@/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { Badge } from '@/ui/badge';
 import { useAuth } from '@/features/actions/contexts/AuthContext';
 import {
   BuildingOfficeIcon,

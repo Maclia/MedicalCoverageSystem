@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Progress } from '@/features/ui/progress';
-import { Badge } from '@/features/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
-import { Alert, AlertDescription } from '@/features/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Progress } from '@/ui/progress';
+import { Badge } from '@/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { Alert, AlertDescription } from '@/ui/alert';
 import {
   Calendar,
   CheckCircle2,

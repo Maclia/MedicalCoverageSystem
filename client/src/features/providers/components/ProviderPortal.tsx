@@ -2,12 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { hospitalApi } from '@/services/api/hospitalApi';
 import { claimsApi, baseClaimsApi } from '@/services/api/claimsApi';
 import { analyticsApi } from '@/services/api/analyticsApi';
-import { Card, CardContent, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
-import { Progress } from '@/features/ui/progress';
-import { Alert, AlertDescription } from '@/features/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { Progress } from '@/ui/progress';
+import { Alert, AlertDescription } from '@/ui/alert';
 import {
   LineChart,
   Line,

@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Label } from "@/features/ui/label";
+import { Label } from "@/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Badge } from "@/features/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Button } from "@/features/ui/button";
-import { Input } from "@/features/ui/input";
-import { Textarea } from "@/features/ui/textarea";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/features/ui/dialog";
+} from "@/ui/select";
+import { Badge } from "@/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Textarea } from "@/ui/textarea";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/ui/dialog";
 import { toast } from "sonner";
 import { Network, Plus, Search, MapPin, Users, Star } from "lucide-react";
 

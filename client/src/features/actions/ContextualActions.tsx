@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import {
   FileText,
   Calendar,

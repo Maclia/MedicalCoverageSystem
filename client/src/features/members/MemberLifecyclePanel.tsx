@@ -8,22 +8,22 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/features/ui/card";
+} from "@/ui/card";
 import {
   Button,
   buttonVariants,
-} from "@/features/ui/button";
+} from "@/ui/button";
 import {
   Badge,
   badgeVariants,
-} from "@/features/ui/badge";
+} from "@/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
+} from "@/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/features/ui/dialog";
+} from "@/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,16 +43,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/features/ui/alert-dialog";
+} from "@/ui/alert-dialog";
 import {
   Textarea,
-} from "@/features/ui/textarea";
+} from "@/ui/textarea";
 import {
   Input,
-} from "@/features/ui/input";
+} from "@/ui/input";
 import {
   Label,
-} from "@/features/ui/label";
+} from "@/ui/label";
 import { CalendarIcon, User, Clock, AlertCircle, CheckCircle, XCircle, PauseCircle, PlayCircle, FileText, MessageSquare } from "lucide-react";
 import { format } from "date-fns";
 

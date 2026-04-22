@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Button } from "@/features/ui/button";
-import { Badge } from "@/features/ui/badge";
-import { Progress } from "@/features/ui/progress";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
+import { Progress } from "@/ui/progress";
 import { Coins, TrendingDown, Clock, AlertTriangle } from "lucide-react";
 import { tokensAPI } from "@/api/tokens";
 import { Link } from "wouter";

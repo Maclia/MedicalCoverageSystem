@@ -1,17 +1,17 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/features/ui/button";
-import { Input } from "@/features/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/features/ui/table";
-import { Badge } from "@/features/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/features/ui/dialog";
-import { Label } from "@/features/ui/label";
-import { Textarea } from "@/features/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
+import { Badge } from "@/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/ui/dialog";
+import { Label } from "@/ui/label";
+import { Textarea } from "@/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Search, Plus, Filter, MoreHorizontal, User, Mail, Phone, Building, Calendar } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/features/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/ui/dropdown-menu";
 import { format } from "date-fns";
 
 interface Lead {

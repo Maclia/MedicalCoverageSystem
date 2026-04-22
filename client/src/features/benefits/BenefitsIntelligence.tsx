@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
-import { Progress } from '@/features/ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Progress } from '@/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import { useBenefits, useCompanyBenefits } from '../../services/api/benefitsApi';
 import {
   Brain,

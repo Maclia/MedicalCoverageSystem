@@ -8,21 +8,21 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/features/ui/card";
+} from "@/ui/card";
 import {
   Button,
-} from "@/features/ui/button";
+} from "@/ui/button";
 import {
   Badge,
   badgeVariants,
-} from "@/features/ui/badge";
+} from "@/ui/badge";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
+} from "@/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -31,16 +31,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/features/ui/dialog";
+} from "@/ui/dialog";
 import {
   Input,
-} from "@/features/ui/input";
+} from "@/ui/input";
 import {
   Label,
-} from "@/features/ui/label";
+} from "@/ui/label";
 import {
   Textarea,
-} from "@/features/ui/textarea";
+} from "@/ui/textarea";
 import {
   Table,
   TableBody,
@@ -48,14 +48,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/features/ui/dropdown-menu";
+} from "@/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,20 +66,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/features/ui/alert-dialog";
+} from "@/ui/alert-dialog";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/features/ui/tabs";
+} from "@/ui/tabs";
 import {
   Progress,
-} from "@/features/ui/progress";
+} from "@/ui/progress";
 import {
   Alert,
   AlertDescription,
-} from "@/features/ui/alert";
+} from "@/ui/alert";
 import {
   Users,
   Plus,

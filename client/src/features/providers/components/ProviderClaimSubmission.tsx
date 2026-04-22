@@ -1,32 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useToast } from '@/hooks/use-toast';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Input } from '@/features/ui/input';
-import { Label } from '@/features/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/ui/select';
-import { Textarea } from '@/features/ui/textarea';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { Textarea } from '@/ui/textarea';
 import { 
   Table, TableBody, TableCaption, TableCell, 
   TableHead, TableHeader, TableRow 
-} from '@/features/ui/table';
+} from '@/ui/table';
 import { 
   Dialog, DialogContent, DialogDescription, 
   DialogFooter, DialogHeader, DialogTitle, DialogTrigger 
-} from '@/features/ui/dialog';
+} from '@/ui/dialog';
 import { 
   Form, FormControl, FormDescription, 
   FormField, FormItem, FormLabel, FormMessage 
-} from '@/features/ui/form';
+} from '@/ui/form';
 import { 
   AlertDialog, AlertDialogAction, AlertDialogCancel, 
   AlertDialogContent, AlertDialogDescription, AlertDialogFooter, 
   AlertDialogHeader, AlertDialogTitle 
-} from '@/features/ui/alert-dialog';
+} from '@/ui/alert-dialog';
 import { CalendarIcon, Plus, Trash2, FileText } from 'lucide-react';
-import { Calendar } from '@/features/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/features/ui/popover';
+import { Calendar } from '@/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { hospitalApi } from '@/services/api/hospitalApi';

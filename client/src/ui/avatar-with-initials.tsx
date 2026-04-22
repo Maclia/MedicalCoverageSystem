@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback } from "@/features/ui/avatar";
+import { Avatar, AvatarFallback } from "@/ui/avatar";
 
 interface AvatarWithInitialsProps {
   name: string;

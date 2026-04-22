@@ -8,7 +8,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/features/ui/card";
+} from "@/ui/card";
 import {
   Table,
   TableBody,
@@ -16,19 +16,19 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/features/ui/tabs";
-import { Badge } from "@/features/ui/badge";
-import { Button } from "@/features/ui/button";
-import { Skeleton } from "@/features/ui/skeleton";
-import { Progress } from "@/features/ui/progress";
-import { AvatarWithInitials } from "@/features/ui/avatar-with-initials";
-import { Alert, AlertDescription } from "@/features/ui/alert";
+} from "@/ui/tabs";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Skeleton } from "@/ui/skeleton";
+import { Progress } from "@/ui/progress";
+import { AvatarWithInitials } from "@/ui/avatar-with-initials";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { membershipApi } from "@/services/membershipApi";
 import { billingApi } from "@/services/api/billingApi";

@@ -7,11 +7,11 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/features/ui/card";
-import { Button } from "@/features/ui/button";
-import { Badge } from "@/features/ui/badge";
-import { Skeleton } from "@/features/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
+} from "@/ui/card";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
+import { Skeleton } from "@/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
   Table,
   TableBody,
@@ -19,17 +19,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Input } from "@/features/ui/input";
-import { Label } from "@/features/ui/label";
-import { Progress } from "@/features/ui/progress";
+} from "@/ui/select";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Progress } from "@/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 import { billingApi } from "@/services/api/billingApi";

@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Button } from "@/features/ui/button";
-import { Badge } from "@/features/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
 import {
   Table,
   TableBody,
@@ -11,7 +11,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import { TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { tokensAPI } from "@/api/tokens";
 import type { BalanceHistory } from "@/api/tokens";

@@ -1,8 +1,8 @@
 import React, { ReactNode, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/features/actions/contexts/AuthContext';
-import { Button } from '@/features/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
+import { Button } from '@/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
 import { LockClosedIcon, HomeIcon } from '@heroicons/react/24/outline';
 
 interface ProtectedRouteProps {

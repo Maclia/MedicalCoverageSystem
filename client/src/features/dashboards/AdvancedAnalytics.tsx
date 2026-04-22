@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Badge } from "@/features/ui/badge";
-import { Button } from "@/features/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { formatCurrency } from "@/utils/format";
 
 interface KPIData {

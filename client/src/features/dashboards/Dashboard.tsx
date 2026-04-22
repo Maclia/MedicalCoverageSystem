@@ -5,10 +5,10 @@ import RecentRegistrations from "@/features/dashboard/RecentRegistrations";
 import QuickActions from "@/features/dashboard/QuickActions";
 import PremiumPeriodCard from "@/features/dashboard/PremiumPeriodCard";
 import AdvancedAnalytics from "@/features/dashboard/AdvancedAnalytics";
-import { Button } from "@/features/ui/button";
-import { Switch } from "@/features/ui/switch";
-import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
+import { Button } from "@/ui/button";
+import { Switch } from "@/ui/switch";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 
 export default function Dashboard() {
   const [viewMode, setViewMode] = useState<'overview' | 'analytics'>('overview');

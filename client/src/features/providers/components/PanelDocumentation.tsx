@@ -6,7 +6,7 @@ import {
   CardDescription, 
   CardHeader, 
   CardTitle 
-} from "@/features/ui/card";
+} from "@/ui/card";
 import { hospitalApi } from "@/services/api/hospitalApi";
 import { crmApi } from "@/services/api/crmApi";
 import { analyticsApi } from "@/services/api/analyticsApi";
@@ -16,8 +16,8 @@ import { billingApi } from "@/services/api/billingApi";
 import { claimsApi } from "@/services/api/claimsApi";
 import financeApi from "@/services/api/financeApi";
 import { membershipApi } from "@/services/membershipApi";
-import { Button } from "@/features/ui/button";
-import { Badge } from "@/features/ui/badge";
+import { Button } from "@/ui/button";
+import { Badge } from "@/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -25,7 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/features/ui/dialog";
+} from "@/ui/dialog";
 import {
   Table,
   TableBody,
@@ -33,17 +33,17 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Input } from "@/features/ui/input";
-import { Textarea } from "@/features/ui/textarea";
-import { Label } from "@/features/ui/label";
+} from "@/ui/select";
+import { Input } from "@/ui/input";
+import { Textarea } from "@/ui/textarea";
+import { Label } from "@/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
 

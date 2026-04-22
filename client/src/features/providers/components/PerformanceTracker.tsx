@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/ui/select';
-import { Label } from '@/features/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { Label } from '@/ui/label';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import {
   TrendingUp,
   TrendingDown,

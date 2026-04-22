@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from "wouter";
 import { wellnessApi } from '@/services/api/wellnessApi';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
-import { Progress } from '@/features/ui/progress';
-import { Separator } from '@/features/ui/separator';
-import { Avatar } from '@/features/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/features/ui/dialog';
-import { Alert, AlertTitle, AlertDescription } from '@/features/ui/alert';
-import { Skeleton } from '@/features/ui/skeleton';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { Progress } from '@/ui/progress';
+import { Separator } from '@/ui/separator';
+import { Avatar } from '@/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/ui/dialog';
+import { Alert, AlertTitle, AlertDescription } from '@/ui/alert';
+import { Skeleton } from '@/ui/skeleton';
 import {
   LineChart,
   Line,

@@ -6,17 +6,17 @@ import { membershipApi } from '@/services/membershipApi';
 import { analyticsApi } from '@/services/api/analyticsApi';
 import { fraudApi } from '@/services/api/fraudApi';
 import { insuranceApi } from '@/services/api/insuranceApi';
-import { Button } from "@/features/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Badge } from "@/features/ui/badge";
-import { Input } from "@/features/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/features/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/features/ui/dialog";
-import { Label } from "@/features/ui/label";
-import { Alert, AlertDescription } from "@/features/ui/alert";
-import { Progress } from "@/features/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
+import { Button } from "@/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Badge } from "@/ui/badge";
+import { Input } from "@/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/ui/dialog";
+import { Label } from "@/ui/label";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Progress } from "@/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import {
   Calendar,
   DollarSign,

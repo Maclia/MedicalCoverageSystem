@@ -1,15 +1,15 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Input } from '@/features/ui/input';
-import { Label } from '@/features/ui/label';
-import { Textarea } from '@/features/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/features/ui/select';
-import { Checkbox } from '@/features/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/features/ui/radio-group';
-import { Badge } from '@/features/ui/badge';
-import { Progress } from '@/features/ui/progress';
-import { Alert, AlertDescription } from '@/features/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
+import { Textarea } from '@/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
+import { Checkbox } from '@/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/ui/radio-group';
+import { Badge } from '@/ui/badge';
+import { Progress } from '@/ui/progress';
+import { Alert, AlertDescription } from '@/ui/alert';
 import {
   User,
   MapPin,

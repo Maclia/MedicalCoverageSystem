@@ -1,13 +1,13 @@
 import { useMemo, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Badge } from "@/features/ui/badge";
-import { Button } from "@/features/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
-import { Input } from "@/features/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/features/ui/table";
-import { Alert, AlertDescription, AlertTitle } from "@/features/ui/alert";
-import { Progress } from "@/features/ui/progress";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Badge } from "@/ui/badge";
+import { Button } from "@/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Input } from "@/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
+import { Alert, AlertDescription, AlertTitle } from "@/ui/alert";
+import { Progress } from "@/ui/progress";
 import {
   Shield,
   AlertTriangle,

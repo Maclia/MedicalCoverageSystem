@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
-import { Alert, AlertDescription } from '@/features/ui/alert';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
+import { Alert, AlertDescription } from '@/ui/alert';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/features/ui/select';
-import { Input } from '@/features/ui/input';
+} from '@/ui/select';
+import { Input } from '@/ui/input';
 import {
   Table,
   TableBody,
@@ -19,14 +19,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/features/ui/table';
+} from '@/ui/table';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/features/ui/dialog';
+} from '@/ui/dialog';
 import {
   FileText,
   Download,

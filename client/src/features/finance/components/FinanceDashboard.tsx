@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/features/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
-import { Button } from '@/features/ui/button';
-import { Badge } from '@/features/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
+import { Button } from '@/ui/button';
+import { Badge } from '@/ui/badge';
 import { formatCurrency } from '@/utils/format';
 import { useQuery } from '@tanstack/react-query';
 import financeApi, { billingApi, paymentsApi, commissionsApi, claimsFinancialApi } from '@/services/api/financeApi';

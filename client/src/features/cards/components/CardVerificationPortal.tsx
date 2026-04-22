@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Badge } from '../ui/badge';
+import { Button } from '../../features/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../../features/ui/card';
+import { Input } from '../../features/ui/input';
+import { Label } from '../../features/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../features/ui/select';
+import { Alert, AlertDescription } from '../../features/ui/alert';
+import { Badge } from '../../features/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useCardHistory, useVerifyCardMutation } from './cardApi';
 import { Loader2, CheckCircle, XCircle, Camera, Wifi, HandTap } from 'lucide-react';

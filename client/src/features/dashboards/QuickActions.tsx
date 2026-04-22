@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/features/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
 import CompanyForm from "@/components/companies/CompanyForm";
 import MemberForm from "@/components/members/MemberForm";
 import DependentForm from "@/components/dependents/DependentForm";

@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { useLocation } from 'wouter';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/features/ui/card';
-import { Button } from '@/features/ui/button';
-import { Input } from '@/features/ui/input';
-import { Label } from '@/features/ui/label';
-import { Checkbox } from '@/features/ui/checkbox';
-import { Alert, AlertDescription } from '@/features/ui/alert';
-import { Progress } from '@/features/ui/progress';
-import { Badge } from '@/features/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/features/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
+import { Checkbox } from '@/ui/checkbox';
+import { Alert, AlertDescription } from '@/ui/alert';
+import { Progress } from '@/ui/progress';
+import { Badge } from '@/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import {
   User,
   Lock,

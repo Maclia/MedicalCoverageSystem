@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { AvatarWithInitials } from "@/features/ui/avatar-with-initials";
+import { AvatarWithInitials } from "@/ui/avatar-with-initials";
 
 interface SidebarLink {
   path: string;

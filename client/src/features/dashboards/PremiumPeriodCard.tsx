@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { format, differenceInDays } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
-import { Progress } from "@/features/ui/progress";
-import { Skeleton } from "@/features/ui/skeleton";
-import { StatusBadge } from "@/features/ui/status-badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { Progress } from "@/ui/progress";
+import { Skeleton } from "@/ui/skeleton";
+import { StatusBadge } from "@/ui/status-badge";
 
 export default function PremiumPeriodCard() {
   const { data: periodData, isLoading } = useQuery({

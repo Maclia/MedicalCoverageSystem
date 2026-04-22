@@ -12,17 +12,17 @@ import {
   FormItem, 
   FormLabel, 
   FormMessage 
-} from "@/features/ui/form";
+} from "@/ui/form";
 import { 
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Button } from "@/features/ui/button";
-import { Card } from "@/features/ui/card";
-import { Progress } from "@/features/ui/progress";
+} from "@/ui/select";
+import { Button } from "@/ui/button";
+import { Card } from "@/ui/card";
+import { Progress } from "@/ui/progress";
 import { formatCurrency } from "@/utils/format";
 
 // Define form schema

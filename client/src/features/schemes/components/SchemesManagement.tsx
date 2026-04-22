@@ -1,18 +1,18 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { insuranceApi } from '@/services/api/insuranceApi';
-import { Button } from "@/features/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
-import { Badge } from "@/features/ui/badge";
-import { Input } from "@/features/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/features/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/features/ui/dialog";
-import { Label } from "@/features/ui/label";
-import { Textarea } from "@/features/ui/textarea";
-import { Switch } from "@/features/ui/switch";
-import { Separator } from "@/features/ui/separator";
-import { Alert, AlertDescription } from "@/features/ui/alert";
+import { Button } from "@/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
+import { Badge } from "@/ui/badge";
+import { Input } from "@/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/ui/dialog";
+import { Label } from "@/ui/label";
+import { Textarea } from "@/ui/textarea";
+import { Switch } from "@/ui/switch";
+import { Separator } from "@/ui/separator";
+import { Alert, AlertDescription } from "@/ui/alert";
 import { Plus, Edit, Eye, Settings, Users, Shield, TrendingUp, Layers, Gavel } from "lucide-react";
 
 interface Scheme {

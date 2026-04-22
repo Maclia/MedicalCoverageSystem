@@ -1,15 +1,15 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useSearch } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/features/ui/card";
-import { Button } from "@/features/ui/button";
-import { Input } from "@/features/ui/input";
-import { Label } from "@/features/ui/label";
-import { Switch } from "@/features/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/features/ui/select";
-import { Badge } from "@/features/ui/badge";
-import { Alert, AlertDescription } from "@/features/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Label } from "@/ui/label";
+import { Switch } from "@/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/ui/select";
+import { Badge } from "@/ui/badge";
+import { Alert, AlertDescription } from "@/ui/alert";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { Zap, Bell, Settings, Trash2, Plus } from "lucide-react";
 import { tokensAPI } from "@/api/tokens";
 

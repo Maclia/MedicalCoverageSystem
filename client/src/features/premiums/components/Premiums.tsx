@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/features/ui/dialog";
-import { Button } from "@/features/ui/button";
-import { Skeleton } from "@/features/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
+import { Button } from "@/ui/button";
+import { Skeleton } from "@/ui/skeleton";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
+} from "@/ui/select";
 import PremiumCalculator from "@/components/premiums/PremiumCalculator";
 import { formatCurrency } from "@/utils/format";
 import { billingApi } from '@/services/api/billingApi';

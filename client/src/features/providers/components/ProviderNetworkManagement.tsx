@@ -5,10 +5,10 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/features/ui/card";
-import { Button } from "@/features/ui/button";
-import { Input } from "@/features/ui/input";
-import { Badge } from "@/features/ui/badge";
+} from "@/ui/card";
+import { Button } from "@/ui/button";
+import { Input } from "@/ui/input";
+import { Badge } from "@/ui/badge";
 import {
   Table,
   TableBody,
@@ -16,7 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/features/ui/table";
+} from "@/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -24,17 +24,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/features/ui/dialog";
+} from "@/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/features/ui/select";
-import { Textarea } from "@/features/ui/textarea";
-import { Label } from "@/features/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/features/ui/tabs";
+} from "@/ui/select";
+import { Textarea } from "@/ui/textarea";
+import { Label } from "@/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Users, MapPin, TrendingUp, Search, Filter } from "lucide-react";
 import { hospitalApi } from '@/services/api/hospitalApi';

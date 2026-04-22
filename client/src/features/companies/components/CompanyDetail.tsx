@@ -11,17 +11,17 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/features/ui/card";
+} from "@/ui/card";
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@/features/ui/tabs";
-import { Button } from "@/features/ui/button";
-import { AvatarWithInitials } from "@/features/ui/avatar-with-initials";
-import { Badge } from "@/features/ui/badge";
-import { Skeleton } from "@/features/ui/skeleton";
+} from "@/ui/tabs";
+import { Button } from "@/ui/button";
+import { AvatarWithInitials } from "@/ui/avatar-with-initials";
+import { Badge } from "@/ui/badge";
+import { Skeleton } from "@/ui/skeleton";
 import { format } from "date-fns";
 
 interface Company {

@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle } from "@/features/ui/card";
-import { StatusBadge } from "@/features/ui/status-badge";
-import { Button } from "@/features/ui/button";
-import { AvatarWithInitials } from "@/features/ui/avatar-with-initials";
-import { Skeleton } from "@/features/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
+import { StatusBadge } from "@/ui/status-badge";
+import { Button } from "@/ui/button";
+import { AvatarWithInitials } from "@/ui/avatar-with-initials";
+import { Skeleton } from "@/ui/skeleton";
 
 type Registration = {
   id: number;
