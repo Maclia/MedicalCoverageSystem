@@ -52,6 +52,27 @@ router.post('/generate', async (req: Request, res: Response) => {
 });
 
 /**
+ * Get all cards
+ * GET /api/core/cards
+ */
+router.get('/', async (_req: Request, res: Response) => {
+  try {
+    const cards = await cardManagementService.listCards();
+
+    res.json({
+      success: true,
+      data: cards,
+    });
+  } catch (error) {
+    logger.error('Error retrieving cards:', toError(error));
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to retrieve cards',
+    });
+  }
+});
+
+/**
  * Get all cards for a member
  * GET /api/core/cards/member/:memberId
  */
@@ -113,10 +134,40 @@ router.get('/member/:memberId/active', async (req: Request, res: Response) => {
 });
 
 /**
+ * Downloadable digital card payload
+ * GET /api/core/cards/member/download-card/:cardId
+ */
+router.get('/member/download-card/:cardId', async (req: Request, res: Response) => {
+  try {
+    const cardId = parseInt(req.params.cardId);
+
+    if (isNaN(cardId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid card ID',
+      });
+    }
+
+    const payload = await cardManagementService.getDownloadableCard(cardId);
+
+    res.json({
+      success: true,
+      data: payload,
+    });
+  } catch (error) {
+    logger.error('Error preparing downloadable card payload:', toError(error));
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to prepare card payload',
+    });
+  }
+});
+
+/**
  * Get a specific card by ID
  * GET /api/core/cards/:cardId
  */
-router.get('/:cardId', async (req: Request, res: Response) => {
+router.get('/:cardId(\\d+)', async (req: Request, res: Response) => {
   try {
     const cardId = parseInt(req.params.cardId);
 
@@ -187,7 +238,7 @@ router.post('/verify', async (req: Request, res: Response) => {
  * Update card status
  * PUT /api/core/cards/:cardId/status
  */
-router.put('/:cardId/status', async (req: Request, res: Response) => {
+router.put('/:cardId(\\d+)/status', async (req: Request, res: Response) => {
   try {
     const cardId = parseInt(req.params.cardId);
     const { status, reason } = req.body;
@@ -222,7 +273,7 @@ router.put('/:cardId/status', async (req: Request, res: Response) => {
  * Request card replacement
  * POST /api/core/cards/:cardId/replace
  */
-router.post('/:cardId/replace', async (req: Request, res: Response) => {
+router.post('/:cardId(\\d+)/replace', async (req: Request, res: Response) => {
   try {
     const cardId = parseInt(req.params.cardId);
     const { reason, expedited } = req.body;
@@ -276,6 +327,28 @@ router.get('/history/:cardId', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to retrieve history',
+    });
+  }
+});
+
+/**
+ * Get recent verification events across all cards
+ * GET /api/core/cards/verifications
+ */
+router.get('/verifications', async (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const history = await cardManagementService.getRecentVerificationEvents(limit);
+
+    res.json({
+      success: true,
+      data: history,
+    });
+  } catch (error) {
+    logger.error('Error retrieving recent verifications:', toError(error));
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to retrieve verification events',
     });
   }
 });

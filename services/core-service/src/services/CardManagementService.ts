@@ -124,6 +124,21 @@ class CardManagementService {
   }
 
   /**
+   * Get all cards in the system
+   */
+  async listCards() {
+    try {
+      const cards = await db.execute(
+        sql`SELECT * FROM member_cards ORDER BY created_at DESC`
+      );
+
+      return cards.rows;
+    } catch (error) {
+      throw new Error(`Failed to retrieve cards: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
    * Get a specific card
    */
   async getCard(cardId: number) {
@@ -351,6 +366,17 @@ class CardManagementService {
   }
 
   /**
+   * Get recent verification events across all cards
+   */
+  async getRecentVerificationEvents(limit: number = 20) {
+    const result = await db.execute(
+      sql`SELECT * FROM card_verification_events ORDER BY verification_timestamp DESC LIMIT ${limit}`
+    );
+
+    return result.rows;
+  }
+
+  /**
    * Get card templates
    */
   async getCardTemplates(activeOnly: boolean = true) {
@@ -422,11 +448,56 @@ class CardManagementService {
    * Get card system analytics
    */
   async getCardAnalytics() {
-    const totalCards = await db.execute(sql`SELECT count(*) FROM member_cards`);
-    const activeCards = await db.execute(sql`SELECT count(*) FROM member_cards WHERE status = 'active'`);
+    const [totalCards, activeCards, pendingCards, digitalCards, physicalCards, verificationTotals, recentVerifications] = await Promise.all([
+      db.execute(sql`SELECT count(*) FROM member_cards`),
+      db.execute(sql`SELECT count(*) FROM member_cards WHERE status = 'active'`),
+      db.execute(sql`SELECT count(*) FROM member_cards WHERE status = 'pending'`),
+      db.execute(sql`SELECT count(*) FROM member_cards WHERE card_type IN ('digital', 'both')`),
+      db.execute(sql`SELECT count(*) FROM member_cards WHERE card_type IN ('physical', 'both')`),
+      db.execute(sql`
+        SELECT
+          count(*) AS total,
+          count(*) FILTER (WHERE verification_result = 'success') AS successful,
+          count(*) FILTER (WHERE verification_result = 'failed') AS failed
+        FROM card_verification_events
+      `),
+      db.execute(sql`SELECT * FROM card_verification_events ORDER BY verification_timestamp DESC LIMIT 10`),
+    ]);
+
     return {
-      total: parseInt(totalCards.rows[0].count as string),
-      active: parseInt(activeCards.rows[0].count as string)
+      cards: {
+        total: parseInt(totalCards.rows[0].count as string),
+        active: parseInt(activeCards.rows[0].count as string),
+        pending: parseInt(pendingCards.rows[0].count as string),
+        digital: parseInt(digitalCards.rows[0].count as string),
+        physical: parseInt(physicalCards.rows[0].count as string),
+      },
+      verification: {
+        total: parseInt((verificationTotals.rows[0].total ?? '0') as string),
+        successful: parseInt((verificationTotals.rows[0].successful ?? '0') as string),
+        failed: parseInt((verificationTotals.rows[0].failed ?? '0') as string),
+      },
+      recentVerifications: recentVerifications.rows,
+    };
+  }
+
+  /**
+   * Return a digital card payload suitable for download/wallet sync
+   */
+  async getDownloadableCard(cardId: number) {
+    const card = await this.getCard(cardId);
+
+    return {
+      id: card.id,
+      memberId: card.member_id,
+      cardNumber: card.card_number,
+      cardType: card.card_type,
+      status: card.status,
+      qrCodeData: card.qr_code_data,
+      templateType: card.template_type,
+      digitalCardUrl: card.digital_card_url,
+      expiryDate: card.expiry_date,
+      downloadedAt: new Date().toISOString(),
     };
   }
 

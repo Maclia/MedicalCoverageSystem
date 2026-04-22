@@ -124,13 +124,13 @@ export default function CRMDashboard() {
   const pipelineHealth = pipelineHealthData?.data?.pipelineHealth || {};
 
   // Prepare chart data
-  const leadSourceChartData = leadSourceAnalysis.map(source => ({
+  const leadSourceChartData = leadSourceAnalysis.map((source: any) => ({
     name: source.source.replace('_', ' ').charAt(0).toUpperCase() + source.source.slice(1),
     value: source.totalLeads,
     conversionRate: source.conversionRate
   }));
 
-  const pipelineChartData = currentPipeline.map(stage => ({
+  const pipelineChartData = currentPipeline.map((stage: any) => ({
     name: stage.stage.replace('_', ' ').charAt(0).toUpperCase() + stage.stage.slice(1),
     value: stage.totalValue || 0,
     count: stage.count,
@@ -335,7 +335,7 @@ export default function CRMDashboard() {
                       fill="#8884d8"
                       dataKey="value"
                     >
-                      {leadSourceChartData.map((entry, index) => (
+                      {leadSourceChartData.map((entry: any, index: number) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>

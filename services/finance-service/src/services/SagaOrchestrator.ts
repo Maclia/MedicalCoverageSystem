@@ -12,7 +12,7 @@ import { eq } from 'drizzle-orm';
 
 export type SagaStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'compensating' | 'compensated';
 export type StepStatus = 'pending' | 'in_progress' | 'completed' | 'failed' | 'compensated';
-export type StepAction = 'claim_created' | 'payment_processed' | 'notification_sent';
+export type StepAction = 'claim_created' | 'payment_processed' | 'notification_sent' | 'lead_converted' | 'company_created' | 'member_created' | 'policy_activated' | 'billing_account_created' | 'crm_updated';
 
 export interface SagaStep {
   id: string;
@@ -112,6 +112,55 @@ export class SagaOrchestrator extends EventEmitter {
         });
       },
       timeout: 5000,
+    });
+
+    // LEAD CONVERSION SAGA COMPENSATIONS
+    this.registerCompensation('company_created', {
+      stepName: 'company_created',
+      compensate: async (input, stepOutput) => {
+        console.log(`Compensating company creation for company ${stepOutput.companyId}`);
+        await this.callService('membership-service', 'DELETE', `/api/companies/${stepOutput.companyId}`, {
+          reason: 'saga_compensation',
+          timestamp: new Date().toISOString(),
+        });
+      },
+      timeout: 10000,
+    });
+
+    this.registerCompensation('member_created', {
+      stepName: 'member_created',
+      compensate: async (input, stepOutput) => {
+        console.log(`Compensating member creation for member ${stepOutput.memberId}`);
+        await this.callService('membership-service', 'DELETE', `/api/members/${stepOutput.memberId}`, {
+          reason: 'saga_compensation',
+          timestamp: new Date().toISOString(),
+        });
+      },
+      timeout: 10000,
+    });
+
+    this.registerCompensation('policy_activated', {
+      stepName: 'policy_activated',
+      compensate: async (input, stepOutput) => {
+        console.log(`Compensating policy activation for policy ${stepOutput.policyId}`);
+        await this.callService('insurance-service', 'POST', `/api/policies/${stepOutput.policyId}/cancel`, {
+          reason: 'saga_compensation',
+          timestamp: new Date().toISOString(),
+        });
+      },
+      timeout: 15000,
+    });
+
+    this.registerCompensation('billing_account_created', {
+      stepName: 'billing_account_created',
+      compensate: async (input, stepOutput) => {
+        console.log(`Compensating billing account creation for account ${stepOutput.accountId}`);
+        await this.callService('billing-service', 'DELETE', `/api/accounts/${stepOutput.accountId}`, {
+          reason: 'saga_compensation',
+          timestamp: new Date().toISOString(),
+        });
+      },
+      timeout: 10000,
     });
   }
 
@@ -378,6 +427,10 @@ export class SagaOrchestrator extends EventEmitter {
       'claims-service': process.env.CLAIMS_SERVICE_URL || 'http://claims-service:3010',
       'finance-service': process.env.FINANCE_SERVICE_URL || 'http://finance-service:3004',
       'notification-service': process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3009',
+      'crm-service': process.env.CRM_SERVICE_URL || 'http://crm-service:3007',
+      'membership-service': process.env.MEMBERSHIP_SERVICE_URL || 'http://membership-service:3002',
+      'insurance-service': process.env.INSURANCE_SERVICE_URL || 'http://insurance-service:3003',
+      'billing-service': process.env.BILLING_SERVICE_URL || 'http://billing-service:3005',
     };
 
     const baseUrl = serviceUrls[service];
@@ -484,6 +537,66 @@ export class SagaOrchestrator extends EventEmitter {
 
     // Re-execute from the failed step
     return this.executeSaga(sagaTransaction, executionPlan.slice(stepIndex));
+  }
+
+  /**
+   * Execute full Lead Conversion Saga workflow
+   * CRM Lead → Company → Member → Policy → Billing Account → CRM Sync
+   */
+  async executeLeadConversionSaga(leadId: number, conversionData: Record<string, any>, userId: string): Promise<SagaTransaction> {
+    const saga = await this.startSaga('lead_conversion', `lead_${leadId}`, {
+      leadId,
+      conversionData,
+      userId,
+      initiatedAt: new Date().toISOString()
+    });
+
+    const executionPlan = [
+      {
+        step: 'lead_converted' as StepAction,
+        service: 'crm-service',
+        endpoint: `/api/crm/leads/${leadId}/mark-converted`,
+        method: 'POST' as const,
+        input: { convertedBy: userId }
+      },
+      {
+        step: 'company_created' as StepAction,
+        service: 'membership-service',
+        endpoint: '/api/companies',
+        method: 'POST' as const,
+        input: conversionData.company
+      },
+      {
+        step: 'member_created' as StepAction,
+        service: 'membership-service',
+        endpoint: '/api/members',
+        method: 'POST' as const,
+        input: conversionData.principalMember
+      },
+      {
+        step: 'policy_activated' as StepAction,
+        service: 'insurance-service',
+        endpoint: '/api/policies',
+        method: 'POST' as const,
+        input: conversionData.policy
+      },
+      {
+        step: 'billing_account_created' as StepAction,
+        service: 'billing-service',
+        endpoint: '/api/accounts',
+        method: 'POST' as const,
+        input: conversionData.billingAccount
+      },
+      {
+        step: 'crm_updated' as StepAction,
+        service: 'crm-service',
+        endpoint: `/api/crm/leads/${leadId}/sync-ids`,
+        method: 'PATCH' as const,
+        input: {}
+      }
+    ];
+
+    return this.executeSaga(saga, executionPlan);
   }
 
   /**

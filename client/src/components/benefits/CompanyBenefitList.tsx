@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/tooltip";
 import { formatDate } from "@/utils/format";
 import { CompanyBenefit, Company } from "@shared/schema";
+import { useCompanyBenefits } from "./benefitsApi";
 
 type EnhancedCompanyBenefit = CompanyBenefit & {
   benefitName?: string;
@@ -40,19 +41,25 @@ type EnhancedCompanyBenefit = CompanyBenefit & {
   coverageRate?: number;
 };
 
+const unwrapArray = async (url: string) => {
+  const response = await fetch(url, { credentials: "include" });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || `Failed to fetch ${url}`);
+  }
+  return payload?.data ?? payload ?? [];
+};
+
 export default function CompanyBenefitList() {
   const [companyFilter, setCompanyFilter] = useState<string>("all");
 
   // Get company benefits
-  const { data: companyBenefits, isLoading } = useQuery({
-    queryKey: companyFilter === "all" 
-      ? ["/api/company-benefits"] 
-      : ["/api/company-benefits", { companyId: companyFilter }],
-  });
+  const { data: companyBenefits = [], isLoading } = useCompanyBenefits(companyFilter);
 
   // Get companies for filter
   const { data: companies } = useQuery({
     queryKey: ["/api/companies"],
+    queryFn: () => unwrapArray("/api/companies"),
   });
 
   const handleCompanyChange = (value: string) => {
@@ -79,7 +86,7 @@ export default function CompanyBenefitList() {
           </Select>
         </div>
         <div className="text-sm text-muted-foreground">
-          {companyBenefits ? `Showing ${companyBenefits.length} company benefits` : "Loading benefits..."}
+          {companyBenefits ? `Showing ${companyBenefits.length} persisted company benefits` : "Loading benefits..."}
         </div>
       </div>
 

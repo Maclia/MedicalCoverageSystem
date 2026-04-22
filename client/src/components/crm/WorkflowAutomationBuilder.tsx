@@ -31,7 +31,7 @@ import {
   Mail,
   Phone,
   Calendar,
-  TaskIcon,
+  ListTodo as TaskIcon,
   Send,
   Globe,
   Timer,

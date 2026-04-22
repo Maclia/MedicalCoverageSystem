@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Card,
   CardContent,
@@ -35,7 +36,21 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { toast } from "sonner";
+import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+
+// ✅ ALL BACKEND SERVICE INTEGRATIONS
+import { hospitalApi } from "@/services/hospitalApi";
+import { billingApi } from "@/services/billingApi";
+import { baseClaimsApi as claimsApi } from "@/services/claimsApi";
+import { insuranceApi } from "@/services/insuranceApi";
+import { fraudApi } from "@/services/fraudApi";
+import { analyticsApi } from "@/services/analyticsApi";
+import { crmApi } from "@/services/crmApi";
+import financeApi from "@/services/financeApi";
+
 import {
   Plus,
   Edit,
@@ -50,7 +65,14 @@ import {
   CheckCircle,
   Clock,
   User,
-  Building
+  Building,
+  Shield,
+  Activity,
+  TrendingUp,
+  BarChart3,
+  Star,
+  Target,
+  Heart
 } from "lucide-react";
 
 interface ProviderContract {
@@ -74,6 +96,8 @@ interface ProviderContract {
   institutionName: string;
   institutionType: string;
   institutionContactEmail: string;
+  specialTerms?: string;
+  internalNotes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -126,6 +150,9 @@ const reimbursementModelConfig = {
 };
 
 export default function ContractManagement() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
   const [contracts, setContracts] = useState<ProviderContract[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedContract, setSelectedContract] = useState<ProviderContract | null>(null);
@@ -169,10 +196,10 @@ export default function ContractManagement() {
       if (result.success) {
         setContracts(result.data);
       } else {
-        toast.error('Failed to fetch provider contracts');
+        toast({ title: "Error", description: 'Failed to fetch provider contracts', variant: "destructive" });
       }
     } catch (error) {
-      toast.error('Error fetching provider contracts');
+      toast({ title: "Error", description: 'Error fetching provider contracts', variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -201,9 +228,9 @@ export default function ContractManagement() {
       if (signaturesResult.success) {
         setSignatures(signaturesResult.data);
       }
-    } catch (error) {
-      toast.error('Error fetching contract details');
-    }
+  } catch (error) {
+    toast({ title: "Error", description: 'Error fetching contract details', variant: "destructive" });
+  }
   };
 
   const handleCreateContract = async (e: React.FormEvent) => {
@@ -221,15 +248,15 @@ export default function ContractManagement() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success('Contract created successfully');
+        toast({ title: "Success", description: 'Contract created successfully' });
         setIsCreateDialogOpen(false);
         resetForm();
         fetchContracts();
       } else {
-        toast.error(result.error || 'Failed to create contract');
+        toast({ title: "Error", description: result.error || 'Failed to create contract', variant: "destructive" });
       }
     } catch (error) {
-      toast.error('Error creating contract');
+      toast({ title: "Error", description: 'Error creating contract', variant: "destructive" });
     }
   };
 
@@ -242,16 +269,16 @@ export default function ContractManagement() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success('Contract activated successfully');
+        toast({ title: "Success", description: 'Contract activated successfully' });
         fetchContracts();
         if (selectedContract?.id === contractId) {
           fetchContractDetails(contractId);
         }
       } else {
-        toast.error(result.error || 'Failed to activate contract');
+        toast({ title: "Error", description: result.error || 'Failed to activate contract', variant: "destructive" });
       }
     } catch (error) {
-      toast.error('Error activating contract');
+      toast({ title: "Error", description: 'Error activating contract', variant: "destructive" });
     }
   };
 
@@ -268,16 +295,16 @@ export default function ContractManagement() {
       const result = await response.json();
 
       if (result.success) {
-        toast.success('Contract deleted successfully');
+        toast({ title: "Success", description: 'Contract deleted successfully' });
         fetchContracts();
         if (selectedContract?.id === contractId) {
           setSelectedContract(null);
         }
       } else {
-        toast.error(result.error || 'Failed to delete contract');
+        toast({ title: "Error", description: result.error || 'Failed to delete contract', variant: "destructive" });
       }
     } catch (error) {
-      toast.error('Error deleting contract');
+      toast({ title: "Error", description: 'Error deleting contract', variant: "destructive" });
     }
   };
 

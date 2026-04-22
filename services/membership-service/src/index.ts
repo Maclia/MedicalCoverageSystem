@@ -7,6 +7,7 @@ import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import membershipRoutes from './routes/membership';
+import adminRoutes from './routes/admin';
 import { auditMiddleware } from './middleware/auditMiddleware';
 import { responseMiddleware, errorHandler, notFoundHandler } from './middleware/responseMiddleware';
 
@@ -78,6 +79,7 @@ function createApp() {
 
   // API routes
   app.use('/api/members', membershipRoutes);
+  app.use('/api/admin', adminRoutes);
 
   // Root endpoint
   app.get('/', (_req, res) => {

@@ -175,6 +175,30 @@ export const membershipApi = {
     return apiRequest(`/membership/members/${memberId}/dependents`);
   },
 
+  async getDependents() {
+    return apiRequest('/membership/dependents');
+  },
+
+  async createDependent(dependentData: any) {
+    return apiRequest('/membership/dependents', {
+      method: 'POST',
+      body: JSON.stringify(dependentData),
+    });
+  },
+
+  async updateDependent(dependentId: number, dependentData: any) {
+    return apiRequest(`/membership/dependents/${dependentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(dependentData),
+    });
+  },
+
+  async deleteDependent(dependentId: number) {
+    return apiRequest(`/membership/dependents/${dependentId}`, {
+      method: 'DELETE',
+    });
+  },
+
   async addDependent(memberId: number, dependentData: any) {
     return apiRequest(`/membership/members/${memberId}/dependents`, {
       method: 'POST',

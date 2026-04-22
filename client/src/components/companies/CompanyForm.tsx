@@ -3,7 +3,23 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { insertCompanySchema } from "@shared/schema";
+// Local schema definition (fixes import issue - insertCompanySchema exists in shared schema but has build/caching problem)
+const baseCompanySchema = z.object({
+  name: z.string(),
+  registrationNumber: z.string(),
+  contactPerson: z.string(),
+  contactEmail: z.string(),
+  contactPhone: z.string(),
+  address: z.string(),
+  clientType: z.enum(["individual", "corporate", "sme", "government", "education", "association"]).optional(),
+  billingFrequency: z.enum(["monthly", "quarterly", "annual", "pro_rata"]).optional(),
+  employerContributionPercentage: z.number().optional(),
+  experienceRatingEnabled: z.boolean().optional(),
+  customBenefitStructure: z.boolean().optional(),
+  gradeBasedBenefits: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+  registrationExpiryDate: z.date().optional(),
+});
 import { useToast } from "@/hooks/use-toast";
 import {
   Form,
@@ -29,7 +45,7 @@ import { CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
 // Enhanced schema with validation rules for the new company fields
-const formSchema = insertCompanySchema.extend({
+const formSchema = baseCompanySchema.extend({
   name: z.string().min(2, "Company name must be at least 2 characters").max(200, "Company name must be less than 200 characters"),
   registrationNumber: z.string().min(3, "Registration number is required").max(50, "Registration number must be less than 50 characters"),
   contactPerson: z.string().min(2, "Contact person name is required").max(100, "Contact person name must be less than 100 characters"),

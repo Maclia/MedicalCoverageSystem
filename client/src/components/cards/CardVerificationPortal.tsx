@@ -6,6 +6,8 @@ import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { useCardHistory, useVerifyCardMutation } from './cardApi';
 import { Loader2, CheckCircle, XCircle, Camera, Wifi, HandTap } from 'lucide-react';
 
 interface CardVerificationPortalProps {
@@ -21,60 +23,55 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
 }) => {
   const [verificationMethod, setVerificationMethod] = useState<'qr_scan' | 'manual_entry' | 'nfc_tap'>('qr_scan');
   const [qrCodeData, setQrCodeData] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
   const [lastVerification, setLastVerification] = useState<any>(null);
   const [location, setLocation] = useState('');
   const [deviceInfo, setDeviceInfo] = useState('');
+  const { toast } = useToast();
+  const verifyMutation = useVerifyCardMutation();
+  const verifiedCardId = lastVerification?.card?.id;
+  const { data: recentHistory = [], isLoading: loadingHistory } = useCardHistory(verifiedCardId);
 
   const handleVerifyCard = async () => {
     if (!qrCodeData.trim()) {
-      alert('Please enter QR code data');
+      toast({
+        title: 'QR code required',
+        description: 'Please enter QR code data before verifying.',
+        variant: 'destructive',
+      });
       return;
     }
 
-    setIsVerifying(true);
     setLastVerification(null);
 
     try {
-      const verificationRequest = {
+      const result = await verifyMutation.mutateAsync({
         qrCodeData: qrCodeData.trim(),
         providerId,
         verificationType: verificationMethod,
         location: location || undefined,
         deviceInfo: deviceInfo || undefined
-      };
-
-      const response = await fetch('/api/cards/verify', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(verificationRequest),
       });
 
-      const result = await response.json();
+      setLastVerification(result);
+      onVerificationComplete?.(result);
 
-      if (result.success) {
-        setLastVerification(result.data);
-        onVerificationComplete?.(result.data);
-
-        // Clear form on successful verification
-        if (result.data.verification?.result === 'success') {
-          setQrCodeData('');
-        }
-      } else {
-        throw new Error(result.error || 'Verification failed');
+      if (result.verification?.result === 'success') {
+        setQrCodeData('');
       }
     } catch (error) {
-      console.error('Error verifying card:', error);
+      const message = error instanceof Error ? error.message : 'Verification failed';
       setLastVerification({
         verification: {
           result: 'failed'
         },
-        message: error instanceof Error ? error.message : 'Verification failed'
+        message
       });
-    } finally {
-      setIsVerifying(false);
+
+      toast({
+        title: 'Verification failed',
+        description: message,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -113,7 +110,6 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Verification Method Selection */}
           <div>
             <Label className="text-base font-medium mb-3 block">Verification Method</Label>
             <Select value={verificationMethod} onValueChange={(value: any) => setVerificationMethod(value)}>
@@ -143,7 +139,6 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
             </Select>
           </div>
 
-          {/* QR Code Input */}
           <div>
             <Label htmlFor="qrCode" className="text-base font-medium mb-3 block">
               QR Code Data
@@ -159,11 +154,10 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
               onChange={(e) => setQrCodeData(e.target.value)}
               placeholder="Enter QR code data or scan with camera"
               className="font-mono"
-              disabled={isVerifying}
+              disabled={verifyMutation.isPending}
             />
           </div>
 
-          {/* Optional Fields */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="location" className="text-sm font-medium mb-2 block">
@@ -174,7 +168,7 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Office room, desk number, etc."
-                disabled={isVerifying}
+                disabled={verifyMutation.isPending}
               />
             </div>
 
@@ -187,19 +181,18 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
                 value={deviceInfo}
                 onChange={(e) => setDeviceInfo(e.target.value)}
                 placeholder="Scanner type, device ID, etc."
-                disabled={isVerifying}
+                disabled={verifyMutation.isPending}
               />
             </div>
           </div>
 
-          {/* Verify Button */}
           <Button
             onClick={handleVerifyCard}
-            disabled={isVerifying || !qrCodeData.trim()}
+            disabled={verifyMutation.isPending || !qrCodeData.trim()}
             className="w-full"
             size="lg"
           >
-            {isVerifying ? (
+            {verifyMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Verifying Card...
@@ -216,7 +209,6 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
             )}
           </Button>
 
-          {/* Verification Result */}
           {lastVerification && (
             <Alert className={getStatusColor(lastVerification.verification?.result)}>
               <div className="flex items-start gap-3">
@@ -224,11 +216,15 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
                 <div className="flex-1">
                   <AlertDescription>
                     <div className="font-medium mb-2">
-                      {lastVerification.message || (lastVerification.verification?.result === 'success' ? '✓ Card Verified Successfully' : '✗ Card Verification Failed')}
+                      {lastVerification.message || (
+                        lastVerification.verification?.result === 'success'
+                          ? 'Card verified successfully'
+                          : 'Card verification failed'
+                      )}
                     </div>
 
                     {lastVerification.verification?.result === 'success' && lastVerification.card ? (
-                      <div className="space-y-2 mt-3 p-3 bg-white bg-opacity-50 rounded">
+                      <div className="space-y-2 mt-3 p-3 bg-white/60 rounded">
                         <div className="grid grid-cols-2 gap-4 text-sm">
                           <div>
                             <strong>Member ID:</strong> #{lastVerification.card.memberId}
@@ -275,38 +271,66 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
             </Alert>
           )}
 
-          {/* Instructions */}
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <h4 className="font-medium text-blue-900 mb-2">Verification Instructions</h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• <strong>QR Code Scan:</strong> Position camera over the QR code on the digital card</li>
-              <li>• <strong>Manual Entry:</strong> Enter the QR code data manually if scanning is not possible</li>
-              <li>• <strong>NFC Tap:</strong> Tap NFC-enabled card on the reader device</li>
-              <li>• Ensure good lighting and steady hand for best scanning results</li>
-              <li>• Contact support if verification fails multiple times</li>
+              <li>- <strong>QR Code Scan:</strong> Position camera over the QR code on the digital card</li>
+              <li>- <strong>Manual Entry:</strong> Enter the QR code data manually if scanning is not possible</li>
+              <li>- <strong>NFC Tap:</strong> Tap NFC-enabled card on the reader device</li>
+              <li>- Ensure good lighting and steady hand for best scanning results</li>
+              <li>- Contact support if verification fails multiple times</li>
             </ul>
           </div>
         </CardContent>
       </Card>
 
-      {/* Recent Verification History */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Recent Verifications</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-gray-600 mb-4">
-            Your recent verification history will appear here. This helps track provider interactions and card usage.
+            Persisted verification events for the last card you checked appear here after a lookup.
           </p>
 
-          <div className="text-center py-8 text-gray-500">
-            <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin opacity-50" />
-            <p className="text-sm">Loading verification history...</p>
-          </div>
+          {loadingHistory ? (
+            <div className="text-center py-8 text-gray-500">
+              <Loader2 className="w-8 h-8 mx-auto mb-2 animate-spin opacity-50" />
+              <p className="text-sm">Loading verification history...</p>
+            </div>
+          ) : recentHistory.length > 0 ? (
+            <div className="space-y-3">
+              {recentHistory.map((event) => (
+                <div key={event.id} className="rounded-lg border p-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="font-medium">{event.verificationMethod}</div>
+                      <div className="text-sm text-gray-600">
+                        {event.verificationTimestamp
+                          ? new Date(event.verificationTimestamp).toLocaleString()
+                          : 'Unknown time'}
+                      </div>
+                    </div>
+                    <Badge variant={event.verificationResult === 'success' ? 'default' : 'destructive'}>
+                      {event.verificationResult}
+                    </Badge>
+                  </div>
+                  {typeof event.fraudRiskScore === 'number' && (
+                    <div className="mt-2 text-sm text-gray-600">
+                      Fraud risk score: {event.fraudRiskScore}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">
+              No persisted verification history yet. Verify a card to see backend events here.
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Help & Support */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Need Help?</CardTitle>
@@ -315,10 +339,10 @@ export const CardVerificationPortal: React.FC<CardVerificationPortalProps> = ({
           <div className="text-sm text-gray-600">
             <h4 className="font-medium mb-2">Common Issues:</h4>
             <ul className="space-y-1 ml-4">
-              <li>• QR code not scanning - Try better lighting or manual entry</li>
-              <li>• Card not found - Verify the QR code data is correct</li>
-              <li>• Card inactive - Member may need to update their coverage</li>
-              <li>• System errors - Try refreshing the page and try again</li>
+              <li>- QR code not scanning: Try better lighting or manual entry</li>
+              <li>- Card not found: Verify the QR code data is correct</li>
+              <li>- Card inactive: Member may need to update their coverage</li>
+              <li>- System errors: Try refreshing the page and try again</li>
             </ul>
           </div>
 

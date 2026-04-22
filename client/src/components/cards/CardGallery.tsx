@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { MemberCard } from '@shared/schema';
+import React, { useMemo, useState } from 'react';
 import DigitalCard from './DigitalCard';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
+import { useToast } from '@/hooks/use-toast';
+import { CardRecord, downloadCardPayload, useMemberCards } from './cardApi';
 import {
   Download,
   Smartphone,
@@ -19,58 +20,32 @@ interface CardGalleryProps {
   className?: string;
 }
 
-interface CardWithTemplate extends MemberCard {
-  template?: any;
-  member?: any;
-}
-
 export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = '' }) => {
-  const [cards, setCards] = useState<CardWithTemplate[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [selectedCard, setSelectedCard] = useState<CardWithTemplate | null>(null);
+  const { data: cards = [], isLoading: loading, refetch } = useMemberCards(memberId);
+  const { toast } = useToast();
+  const [selectedCard, setSelectedCard] = useState<CardRecord | null>(null);
   const [showQRCode, setShowQRCode] = useState(true);
-
-  useEffect(() => {
-    loadMemberCards();
-  }, [memberId]);
-
-  const loadMemberCards = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/cards/member/${memberId}`);
-      const result = await response.json();
-
-      if (result.success) {
-        setCards(result.data);
-      }
-    } catch (error) {
-      console.error('Error loading member cards:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDownloadDigitalCard = async (cardId: number) => {
     try {
-      const response = await fetch(`/api/cards/member/download-card/${cardId}`);
-      const result = await response.json();
+      const payload = await downloadCardPayload(cardId);
+      const dataStr = JSON.stringify(payload, null, 2);
+      const dataBlob = new Blob([dataStr], { type: 'application/json' });
+      const url = URL.createObjectURL(dataBlob);
 
-      if (result.success) {
-        // Create a JSON file with card data for mobile app
-        const dataStr = JSON.stringify(result.data, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        const url = URL.createObjectURL(dataBlob);
-
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `digital-card-${cardId}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-      }
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `digital-card-${cardId}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error downloading digital card:', error);
+      toast({
+        title: 'Download failed',
+        description: error instanceof Error ? error.message : 'Unable to download card payload',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -105,14 +80,14 @@ export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = 
     }
   };
 
-  const getSortedCards = () => {
-    return cards.sort((a, b) => {
+  const sortedCards = useMemo(() => {
+    return [...cards].sort((a, b) => {
       // Active cards first, then by creation date (newest first)
-      if (a.cardStatus === 'active' && b.cardStatus !== 'active') return -1;
-      if (a.cardStatus !== 'active' && b.cardStatus === 'active') return 1;
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      if (a.status === 'active' && b.status !== 'active') return -1;
+      if (a.status !== 'active' && b.status === 'active') return 1;
+      return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
     });
-  };
+  }, [cards]);
 
   if (loading) {
     return (
@@ -128,8 +103,6 @@ export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = 
     );
   }
 
-  const sortedCards = getSortedCards();
-
   if (sortedCards.length === 0) {
     return (
       <div className={`text-center py-8 ${className}`}>
@@ -138,7 +111,7 @@ export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = 
         <p className="text-gray-600 mb-4">
           You don't have any insurance cards yet. Contact your administrator to request a card.
         </p>
-        <Button onClick={() => window.location.reload()}>
+        <Button onClick={() => refetch()}>
           <RefreshCw className="w-4 h-4 mr-2" />
           Refresh
         </Button>
@@ -163,7 +136,7 @@ export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = 
           <Button
             variant="outline"
             size="sm"
-            onClick={loadMemberCards}
+            onClick={() => refetch()}
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
@@ -184,19 +157,19 @@ export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = 
                      card.cardType === 'physical' ? 'Physical Card' : 'Digital & Physical'}
                   </CardTitle>
                 </div>
-                <Badge className={getStatusColor(card.cardStatus)}>
-                  {card.cardStatus}
+                <Badge className={getStatusColor(card.status)}>
+                  {card.status}
                 </Badge>
               </div>
 
               {/* Warning for inactive cards */}
-              {(card.cardStatus === 'lost' || card.cardStatus === 'stolen' || card.cardStatus === 'expired') && (
+              {(card.status === 'lost' || card.status === 'stolen' || card.status === 'expired') && (
                 <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
                   <div className="flex items-center gap-2 text-yellow-800">
                     <AlertTriangle className="w-4 h-4" />
                     <span className="text-sm">
-                      {card.cardStatus === 'expired' ? 'Card has expired' :
-                       card.cardStatus === 'lost' ? 'Card reported as lost' :
+                      {card.status === 'expired' ? 'Card has expired' :
+                       card.status === 'lost' ? 'Card reported as lost' :
                        'Card reported as stolen'}
                     </span>
                   </div>
@@ -217,7 +190,7 @@ export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = 
 
               {/* Card Actions */}
               <div className="space-y-2">
-                {card.cardType === 'digital' && card.cardStatus === 'active' && (
+                {(card.cardType === 'digital' || card.cardType === 'both') && card.status === 'active' && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -232,8 +205,8 @@ export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = 
                 {card.cardType === 'physical' && (
                   <div className="text-sm text-gray-600 p-2 bg-gray-50 rounded">
                     <div className="font-medium mb-1">Physical Card</div>
-                    <div>Status: {card.cardStatus}</div>
-                    {card.shippingAddress && (
+                    <div>Status: {card.status}</div>
+                    {card.deliveryAddress && (
                       <div className="mt-1 text-xs">Shipped to your address</div>
                     )}
                     {card.trackingNumber && (
@@ -244,13 +217,11 @@ export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = 
                   </div>
                 )}
 
-                {/* Issue Date and Expiration */}
-                <div className="text-xs text-gray-500 space-y-1">
-                  <div>Issued: {new Date(card.issuedAt).toLocaleDateString()}</div>
-                  {card.expiresAt && (
-                    <div>Expires: {new Date(card.expiresAt).toLocaleDateString()}</div>
-                  )}
-                </div>
+              {/* Issue Date and Expiration */}
+              <div className="text-xs text-gray-500 space-y-1">
+                {card.issuedAt && <div>Issued: {new Date(card.issuedAt).toLocaleDateString()}</div>}
+                {card.expiresAt && <div>Expires: {new Date(card.expiresAt).toLocaleDateString()}</div>}
+              </div>
               </div>
 
               {/* Card Details Toggle */}
@@ -271,7 +242,8 @@ export const CardGallery: React.FC<CardGalleryProps> = ({ memberId, className = 
                   <h4 className="font-medium mb-2">Card Information</h4>
                   <div className="text-sm space-y-1">
                     <div><strong>Card ID:</strong> #{card.id}</div>
-                    <div><strong>Template ID:</strong> #{card.templateId}</div>
+                    {card.templateId && <div><strong>Template ID:</strong> #{card.templateId}</div>}
+                    {card.templateType && <div><strong>Template:</strong> {card.templateType}</div>}
                     <div><strong>QR Code:</strong> {card.qrCodeData ? 'Available' : 'Not Generated'}</div>
                     {card.lastUsedAt && (
                       <div><strong>Last Used:</strong> {new Date(card.lastUsedAt).toLocaleString()}</div>

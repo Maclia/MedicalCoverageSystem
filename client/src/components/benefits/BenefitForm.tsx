@@ -2,10 +2,9 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
 import { z } from "zod";
 import { insertBenefitSchema } from "@shared/schema";
+import { useCreateBenefitMutation } from "./benefitsApi";
 import {
   Form,
   FormControl,
@@ -25,7 +24,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 
 // Extend the schema with any additional validation
@@ -43,7 +41,7 @@ interface BenefitFormProps {
 
 export default function BenefitForm({ onSuccess }: BenefitFormProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const benefitMutation = useCreateBenefitMutation();
 
   // Set up default values
   const defaultValues: Partial<BenefitFormValues> = {
@@ -62,44 +60,41 @@ export default function BenefitForm({ onSuccess }: BenefitFormProps) {
     defaultValues,
   });
 
-  const benefitMutation = useMutation({
-    mutationFn: async (data: BenefitFormValues) => {
-      return apiRequest("/api/benefits", "POST", data);
-    },
-    onSuccess: () => {
-      toast({
-        title: "Benefit Created",
-        description: "The benefit has been successfully created.",
-      });
-      
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ["/api/benefits"] });
-      
-      // Call the success callback
-      if (onSuccess) {
-        onSuccess();
-      }
-      
-      // Reset the form
-      form.reset(defaultValues);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to create benefit. Please try again.",
-        variant: "destructive",
-      });
-      console.error("Benefit creation error:", error);
-    },
-  });
-
-  const onSubmit = (data: BenefitFormValues) => {
+  const onSubmit = async (data: BenefitFormValues) => {
     // If hasWaitingPeriod is false, set waitingPeriodDays to undefined
     if (!data.hasWaitingPeriod) {
       data.waitingPeriodDays = undefined;
     }
-    
-    benefitMutation.mutate(data);
+
+    try {
+      await benefitMutation.mutateAsync({
+        name: data.name,
+        description: data.description,
+        category: data.category,
+        coverageType: data.category,
+        standardLimit: data.limitAmount,
+        standardWaitingPeriod: data.waitingPeriodDays ?? 0,
+        isActive: true,
+      });
+
+      toast({
+        title: "Benefit Created",
+        description: "The benefit has been successfully created in the insurance service.",
+      });
+
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      form.reset(defaultValues);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create benefit. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Benefit creation error:", error);
+    }
   };
 
   // Show/hide waiting period days based on hasWaitingPeriod

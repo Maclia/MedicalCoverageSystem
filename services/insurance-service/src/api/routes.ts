@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { SchemesController, validationMiddleware } from './schemesController';
 import { BenefitsController, benefitsValidationMiddleware } from './benefitsController';
+import { companyBenefitService } from '../services/CompanyBenefitService';
 import { standardizeResponse, ErrorCodes } from '../utils/api-standardization';
 import { createLogger } from '../utils/logger';
 
@@ -142,6 +143,52 @@ router.put('/benefits/:id', benefitsValidationMiddleware.validateUpdateBenefit, 
 
 // DELETE /benefits/:id - Delete benefit
 router.delete('/benefits/:id', BenefitsController.deleteBenefit);
+
+// COMPANY BENEFITS ROUTES
+
+router.get('/company-benefits', async (req, res) => {
+  try {
+    const result = await companyBenefitService.listCompanyBenefits(
+      {
+        companyId: req.query.companyId ? Number(req.query.companyId) : undefined,
+        premiumId: req.query.premiumId ? Number(req.query.premiumId) : undefined,
+        activeOnly: req.query.activeOnly === 'true',
+      },
+      req.correlationId
+    );
+
+    res.json(result);
+  } catch (error) {
+    logger.error('Failed to retrieve company benefits', error as Error, {
+      correlationId: req.correlationId,
+    });
+
+    res.error(
+      ErrorCodes.INTERNAL_SERVER_ERROR,
+      'Failed to retrieve company benefits',
+      { originalError: (error as Error).message }
+    );
+  }
+});
+
+router.post('/company-benefits', async (req, res) => {
+  try {
+    const result = await companyBenefitService.createCompanyBenefit(req.body, req.correlationId);
+    const statusCode = result.success ? 201 : 400;
+    res.status(statusCode).json(result);
+  } catch (error) {
+    logger.error('Failed to create company benefit', error as Error, {
+      correlationId: req.correlationId,
+      payload: req.body,
+    });
+
+    res.error(
+      ErrorCodes.INTERNAL_SERVER_ERROR,
+      'Failed to create company benefit',
+      { originalError: (error as Error).message }
+    );
+  }
+});
 
 // COVERAGE VERIFICATION ROUTES
 

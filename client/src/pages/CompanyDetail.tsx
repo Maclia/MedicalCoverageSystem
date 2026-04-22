@@ -24,42 +24,102 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 
+interface Company {
+  id: number;
+  name: string;
+  registrationNumber: string;
+  industry?: string;
+  establishedDate?: string;
+  address?: string;
+  contactPerson?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface CompanyPeriod {
+  id: number;
+  companyId: number;
+  periodId: number;
+  periodName: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+}
+
+interface CompanyBenefit {
+  id: number;
+  companyId: number;
+  benefitName: string;
+  benefitCategory: string;
+  coverageDetails: string;
+  limitAmount?: number;
+}
+
+interface Premium {
+  id: number;
+  companyId: number;
+  periodId: number;
+  totalAmount: number;
+  amountPaid: number;
+  paymentStatus: string;
+}
+
+interface Member {
+  id: number;
+  companyId: number;
+  principalId?: number;
+  memberType: 'principal' | 'dependent';
+  firstName: string;
+  lastName: string;
+  employeeId?: string;
+}
+
+interface Period {
+  id: number;
+  name: string;
+  startDate: string;
+  endDate: string;
+  isActive: boolean;
+}
+
 export default function CompanyDetail() {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch company details
-  const { data: company, isLoading: companyLoading } = useQuery({
+  const { data: company, isLoading: companyLoading } = useQuery<Company>({
     queryKey: ['/api/companies', id],
     enabled: !!id,
   });
 
   // Fetch company periods
-  const { data: companyPeriods, isLoading: periodsLoading } = useQuery({
+  const { data: companyPeriods, isLoading: periodsLoading } = useQuery<CompanyPeriod[]>({
     queryKey: ['/api/company-periods/company', id],
     enabled: !!id,
   });
 
   // Fetch company benefits
-  const { data: companyBenefits, isLoading: benefitsLoading } = useQuery({
+  const { data: companyBenefits, isLoading: benefitsLoading } = useQuery<CompanyBenefit[]>({
     queryKey: ['/api/company-benefits/company', id],
     enabled: !!id,
   });
 
   // Fetch company premiums
-  const { data: premiums, isLoading: premiumsLoading } = useQuery({
+  const { data: premiums, isLoading: premiumsLoading } = useQuery<Premium[]>({
     queryKey: ['/api/premiums/company', id],
     enabled: !!id,
   });
 
   // Fetch company members
-  const { data: members, isLoading: membersLoading } = useQuery({
+  const { data: members, isLoading: membersLoading } = useQuery<Member[]>({
     queryKey: ['/api/members/company', id],
     enabled: !!id,
   });
 
   // Fetch active period
-  const { data: activePeriod } = useQuery({
+  const { data: activePeriod } = useQuery<Period>({
     queryKey: ['/api/periods/active'],
   });
 
@@ -172,9 +232,9 @@ export default function CompanyDetail() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Status</p>
-                <Badge variant={financialStats.balance > 0 ? "destructive" : "success"}>
-                  {financialStats.balance > 0 ? "OUTSTANDING" : "PAID"}
-                </Badge>
+                  <Badge variant={financialStats.balance > 0 ? "destructive" : "default"} className={financialStats.balance === 0 ? "bg-green-100 text-green-800" : ""}>
+                    {financialStats.balance > 0 ? "OUTSTANDING" : "PAID"}
+                  </Badge>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Coverage Start</p>
@@ -425,9 +485,9 @@ export default function CompanyDetail() {
                               <td className="py-3 px-4">${premium.amountPaid?.toFixed(2) || "0.00"}</td>
                               <td className="py-3 px-4">${balance.toFixed(2)}</td>
                               <td className="py-3 px-4">
-                                <Badge variant={balance > 0 ? "destructive" : "success"}>
-                                  {balance > 0 ? "OUTSTANDING" : "PAID"}
-                                </Badge>
+                                 <Badge variant={balance > 0 ? "destructive" : "default"} className={balance === 0 ? "bg-green-100 text-green-800" : ""}>
+                                   {balance > 0 ? "OUTSTANDING" : "PAID"}
+                                 </Badge>
                               </td>
                               <td className="py-3 px-4">
                                 {balance > 0 && (

@@ -10,6 +10,21 @@ import { swaggerUi, specs } from '../swagger';
 const router = Router();
 const logger = createLogger();
 
+const requireAdminUser = (req: any, res: any, next: any) => {
+  if (!req.user || req.user.userType !== 'insurance') {
+    return res.status(403).json(
+      createErrorResponse(
+        'INSUFFICIENT_PERMISSIONS',
+        'Admin access required',
+        undefined,
+        req.correlationId
+      )
+    );
+  }
+
+  next();
+};
+
 // Apply rate limiting to all routes
 router.use(standardRateLimit);
 
@@ -439,6 +454,7 @@ router.use('/api/cards', authenticateToken, userRateLimit, dynamicProxyMiddlewar
 router.use('/api/insurance', authenticateToken, dynamicProxyMiddleware('insurance'));
 router.use('/api/schemes', authenticateToken, dynamicProxyMiddleware('insurance'));
 router.use('/api/benefits', authenticateToken, dynamicProxyMiddleware('insurance'));
+router.use('/api/company-benefits', authenticateToken, dynamicProxyMiddleware('insurance'));
 router.use('/api/coverage', authenticateToken, dynamicProxyMiddleware('insurance'));
 
 // Hospital service routes
@@ -475,6 +491,10 @@ router.use('/api/membership', authenticateToken, dynamicProxyMiddleware('members
 router.use('/api/enrollments', authenticateToken, dynamicProxyMiddleware('membership'));
 router.use('/api/renewals', authenticateToken, dynamicProxyMiddleware('membership'));
 
+// Admin routes proxied to membership service for persisted admin dashboards/workflows
+router.use('/api/admin/dashboard', authenticateToken, userRateLimit, requireAdminUser, dynamicProxyMiddleware('membership'));
+router.use('/api/admin/documents', authenticateToken, userRateLimit, requireAdminUser, dynamicProxyMiddleware('membership'));
+
 // Wellness service routes (programs, activities, incentives)
 router.use('/api/wellness', authenticateToken, dynamicProxyMiddleware('wellness'));
 router.use('/api/programs', authenticateToken, dynamicProxyMiddleware('wellness'));
@@ -486,18 +506,7 @@ router.use('/api/fraud', authenticateToken, userRateLimit, dynamicProxyMiddlewar
 
 // Admin routes (restricted access)
 router.use('/api/admin', authenticateToken, userRateLimit, (req, res, next) => {
-  // Check if user is admin (insurance type user)
-  if (!req.user || req.user.userType !== 'insurance') {
-    return res.status(403).json(
-      createErrorResponse(
-        'INSUFFICIENT_PERMISSIONS',
-        'Admin access required',
-        undefined,
-        req.correlationId
-      )
-    );
-  }
-  next();
+  requireAdminUser(req, res, next);
 });
 
 // Admin route to view all service health

@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   Table,
   TableBody,
@@ -11,9 +10,6 @@ import {
 import {
   Card,
   CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
 import {
   Select,
@@ -24,26 +20,20 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { formatCurrency, formatDate } from "@/utils/format";
-import { Benefit } from "@shared/schema";
+import { formatCurrency } from "@/utils/format";
+import { useBenefits } from "./benefitsApi";
 
 export default function BenefitList() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
-  const { data: benefits, isLoading } = useQuery({
-    queryKey: categoryFilter === "all" 
-      ? ["/api/benefits"] 
-      : ["/api/benefits", { category: categoryFilter }],
-    select: (data: Benefit[]) => data.sort((a, b) => a.name.localeCompare(b.name)),
-  });
+  const { data: benefits = [], isLoading } = useBenefits(categoryFilter);
 
   const handleCategoryChange = (value: string) => {
     setCategoryFilter(value);
   };
 
   // Get unique categories for filter
-  const categories = benefits 
+  const categories = benefits
     ? [...new Set(benefits.map(b => b.category))]
     : [];
 
@@ -67,7 +57,7 @@ export default function BenefitList() {
           </Select>
         </div>
         <div className="text-sm text-muted-foreground">
-          {benefits ? `Showing ${benefits.length} benefits` : "Loading benefits..."}
+          {benefits ? `Showing ${benefits.length} persisted benefits` : "Loading benefits..."}
         </div>
       </div>
 
@@ -109,7 +99,7 @@ export default function BenefitList() {
                 </TableCell>
                 <TableCell>
                   {benefit.hasWaitingPeriod
-                    ? `${benefit.waitingPeriodDays} days`
+                    ? `${benefit.waitingPeriodDays ?? 0} days`
                     : "None"}
                 </TableCell>
                 <TableCell>

@@ -857,30 +857,44 @@ export const CommunicationDashboard: React.FC<CommunicationDashboardProps> = ({
 
           {selectedThread && (
             <div className="space-y-4">
-              <div className="max-h-96 overflow-y-auto space-y-4">
-                {/* Mock conversation messages */}
-                <div className="flex items-start space-x-3">
-                  <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white text-sm">
-                    Y
+              <div className="max-h-[420px] overflow-y-auto space-y-4 pr-2" id="thread-messages">
+                {/* Sample message display - will use real data when messages property is added to MessageThread type */}
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-medium shrink-0 bg-gradient-to-br from-gray-500 to-gray-600 shadow-sm">
+                    S
                   </div>
-                  <div className="flex-1">
-                    <div className="bg-gray-100 rounded-lg p-3">
-                      <p className="text-sm">This is a sample conversation message.</p>
+                  <div className="flex flex-col max-w-[75%]">
+                    <div className="rounded-2xl px-4 py-3 bg-gray-100 text-gray-900 shadow-sm">
+                      <p className="text-sm leading-relaxed">{selectedThread.lastMessagePreview || 'This is a system message'}</p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">You • {new Date().toLocaleString()}</p>
+                    <div className="flex items-center gap-2 mt-1.5 text-xs text-gray-500">
+                      <span>System</span>
+                      <span>•</span>
+                      <span>{new Date(selectedThread.lastMessageAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Reply Input */}
-              <div className="flex space-x-2">
-                <Textarea
-                  placeholder="Type your reply..."
-                  className="flex-1"
-                  rows={3}
-                />
-                <Button>
-                  <Send className="h-4 w-4" />
+              <div className="flex gap-3 items-end border-t pt-4">
+                <div className="flex-1 relative">
+                  <Textarea
+                    placeholder="Type your reply..."
+                    className="flex-1 min-h-[60px] max-h-[120px] resize-none pr-12"
+                    rows={2}
+                  />
+                  <div className="absolute right-3 bottom-3 flex gap-1">
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-full">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                    </Button>
+                    <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-full">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                    </Button>
+                  </div>
+                </div>
+                <Button size="icon" className="h-[60px] w-[60px] rounded-xl shadow-md bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700">
+                  <Send className="h-5 w-5" />
                 </Button>
               </div>
             </div>

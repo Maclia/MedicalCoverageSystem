@@ -1,6 +1,6 @@
 import { Database } from '../models/Database';
 import { WinstonLogger } from '../utils/WinstonLogger';
-import { members, lifeEvents, documents, consents } from '../models/schema';
+import { members, lifeEvents, documents, consents, communications, companies } from '../models/schema';
 import {
   CreateMemberRequest,
   UpdateMemberRequest,
@@ -440,6 +440,342 @@ export class MembershipServiceSimplified {
       .returning();
 
     return created[0];
+  }
+
+  async getAdminDashboardSummary(): Promise<any> {
+    const db: any = this.db.getDb();
+    const memberTable: any = members;
+    const documentTable: any = documents;
+    const communicationTable: any = communications;
+    const companyTable: any = companies;
+
+    const [allMembers, allDocuments, allCommunications, recentMembers, recentDocuments, recentCommunications] =
+      await Promise.all([
+        db.select().from(memberTable),
+        db.select().from(documentTable),
+        db.select().from(communicationTable),
+        db
+          .select({
+            member: memberTable,
+            company: companyTable,
+          })
+          .from(memberTable)
+          .leftJoin(companyTable, eq(memberTable.companyId, companyTable.id))
+          .orderBy(desc(memberTable.createdAt))
+          .limit(3),
+        db
+          .select({
+            document: documentTable,
+            member: memberTable,
+            company: companyTable,
+          })
+          .from(documentTable)
+          .innerJoin(memberTable, eq(documentTable.memberId, memberTable.id))
+          .leftJoin(companyTable, eq(documentTable.companyId, companyTable.id))
+          .orderBy(desc(documentTable.updatedAt))
+          .limit(3),
+        db
+          .select({
+            communication: communicationTable,
+            member: memberTable,
+            company: companyTable,
+          })
+          .from(communicationTable)
+          .leftJoin(memberTable, eq(communicationTable.memberId, memberTable.id))
+          .leftJoin(companyTable, eq(communicationTable.companyId, companyTable.id))
+          .orderBy(desc(communicationTable.createdAt))
+          .limit(3),
+      ]);
+
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const activeMembers = allMembers.filter((member: any) => member.membershipStatus === 'active').length;
+    const verifiedMembers = allMembers.filter((member: any) => Boolean(member.isVerified)).length;
+    const pendingDocuments = allDocuments.filter((document: any) => document.status === 'pending').length;
+    const needsMoreInfoDocuments = allDocuments.filter((document: any) => Boolean(document.metadata?.reviewRequested)).length;
+    const emailsSentToday = allCommunications.filter((communication: any) => {
+      if (!communication.sentAt) return false;
+      return new Date(communication.sentAt) >= startOfToday;
+    }).length;
+
+    const completionRate = allMembers.length > 0
+      ? ((verifiedMembers || activeMembers) / allMembers.length) * 100
+      : 0;
+
+    const completionDurations = allMembers
+      .filter((member: any) => member.enrollmentDate && member.effectiveDate)
+      .map((member: any) => {
+        const start = new Date(member.enrollmentDate);
+        const end = new Date(member.effectiveDate);
+        return Math.max(0, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+      });
+
+    const averageCompletionDays = completionDurations.length > 0
+      ? completionDurations.reduce((sum: number, value: number) => sum + value, 0) / completionDurations.length
+      : 0;
+
+    const memberEngagementBase = allMembers.length || 1;
+    const portalAdoptionRate = (allMembers.filter((member: any) => Boolean(member.email)).length / memberEngagementBase) * 100;
+
+    const recentActivity = [
+      ...recentMembers.map(({ member, company }: any) => ({
+        id: `member-${member.id}`,
+        type: 'member_registered',
+        title: 'New member registered',
+        description: `${member.firstName} ${member.lastName} joined ${company?.name || 'the platform'}`,
+        timestamp: member.createdAt,
+        tone: 'blue',
+      })),
+      ...recentDocuments.map(({ document, member }: any) => ({
+        id: `document-${document.id}`,
+        type: document.status === 'approved'
+          ? 'document_approved'
+          : document.status === 'rejected'
+            ? 'document_rejected'
+            : Boolean(document.metadata?.reviewRequested)
+              ? 'document_needs_info'
+              : 'document_uploaded',
+        title: document.status === 'approved'
+          ? 'Document approved'
+          : document.status === 'rejected'
+            ? 'Document rejected'
+            : Boolean(document.metadata?.reviewRequested)
+              ? 'Additional document info requested'
+              : 'Document uploaded',
+        description: `${member.firstName} ${member.lastName} - ${document.documentType.replace(/_/g, ' ')}`,
+        timestamp: document.updatedAt || document.createdAt,
+        tone: document.status === 'approved' ? 'green' : document.status === 'rejected' ? 'red' : 'purple',
+      })),
+      ...recentCommunications.map(({ communication, member }: any) => ({
+        id: `communication-${communication.id}`,
+        type: 'email_sent',
+        title: 'Email campaign sent',
+        description: `${communication.communicationType.replace(/_/g, ' ')} sent${member ? ` to ${member.firstName} ${member.lastName}` : ''}`,
+        timestamp: communication.sentAt || communication.createdAt,
+        tone: 'yellow',
+      })),
+    ]
+      .sort((left, right) => new Date(right.timestamp).getTime() - new Date(left.timestamp).getTime())
+      .slice(0, 6);
+
+    return {
+      quickStats: {
+        activeMembers,
+        onboardingCompletionRate: Number(completionRate.toFixed(1)),
+        pendingDocuments,
+        emailsSentToday,
+      },
+      performance: {
+        sevenDayCompletionRate: Number(completionRate.toFixed(1)),
+        averageDaysToComplete: Number(averageCompletionDays.toFixed(1)),
+        dailyActiveUsers: activeMembers,
+        portalAdoptionRate: Number(portalAdoptionRate.toFixed(1)),
+      },
+      documentSummary: {
+        pending: pendingDocuments,
+        needsMoreInfo: needsMoreInfoDocuments,
+        processed: allDocuments.filter((document: any) => document.status !== 'pending').length,
+      },
+      recentActivity,
+    };
+  }
+
+  async getAdminDocumentReviewQueue(filters: {
+    status?: string;
+    search?: string;
+    documentType?: string;
+    priority?: string;
+  }): Promise<any> {
+    const db: any = this.db.getDb();
+    const documentTable: any = documents;
+    const memberTable: any = members;
+    const companyTable: any = companies;
+
+    const rows = await db
+      .select({
+        document: documentTable,
+        member: memberTable,
+        company: companyTable,
+      })
+      .from(documentTable)
+      .innerJoin(memberTable, eq(documentTable.memberId, memberTable.id))
+      .leftJoin(companyTable, eq(documentTable.companyId, companyTable.id))
+      .orderBy(desc(documentTable.createdAt));
+
+    const normalized = rows.map(({ document, member, company }: any) => {
+      const metadata = document.metadata || {};
+      const documentData = document.documentData || {};
+      const uploadDate = document.createdAt || document.updatedAt;
+      const reviewStatus = document.status === 'pending' && metadata.reviewRequested
+        ? 'needs_more_info'
+        : document.status;
+
+      const ageInHours = uploadDate
+        ? (Date.now() - new Date(uploadDate).getTime()) / (1000 * 60 * 60)
+        : 0;
+      const expiresSoon = document.expiryDate
+        ? (new Date(document.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24) <= 7
+        : false;
+
+      let priority: 'low' | 'medium' | 'high' | 'urgent' = 'low';
+      if (reviewStatus === 'pending' || reviewStatus === 'needs_more_info') {
+        if (expiresSoon || ageInHours >= 72) {
+          priority = 'urgent';
+        } else if (ageInHours >= 24) {
+          priority = 'high';
+        } else {
+          priority = 'medium';
+        }
+      }
+
+      return {
+        id: String(document.id),
+        memberId: String(member.id),
+        memberName: `${member.firstName} ${member.lastName}`.trim(),
+        companyName: company?.name || 'Unknown company',
+        documentType: document.documentType.replace(/_/g, ' '),
+        fileName: documentData.originalName || document.documentNumber,
+        fileSize: Number(documentData.fileSize || 0),
+        mimeType: documentData.mimeType || 'application/octet-stream',
+        uploadDate,
+        reviewStatus,
+        reviewedBy: document.approvedBy || document.rejectedBy || metadata.reviewRequestedBy || null,
+        reviewedDate: document.approvedAt || document.rejectedAt || metadata.reviewRequestedAt || null,
+        reviewNotes: document.rejectionReason || document.notes || metadata.reviewRequestNotes || null,
+        priority,
+        tags: [document.documentType.replace(/_/g, ' '), company?.name].filter(Boolean),
+        extractedText: documentData.extractedText || null,
+        confidenceScore: documentData.confidenceScore || null,
+        expirationDate: document.expiryDate || null,
+        isRequired: document.documentType === 'national_id' || document.documentType === 'insurance_card',
+        downloadUrl: document.documentUrl || null,
+      };
+    });
+
+    const search = filters.search?.trim().toLowerCase();
+    const filtered = normalized.filter((document: any) => {
+      const matchesStatus = !filters.status || filters.status === 'all'
+        ? true
+        : document.reviewStatus === filters.status;
+      const matchesType = !filters.documentType || filters.documentType === 'all'
+        ? true
+        : document.documentType === filters.documentType;
+      const matchesPriority = !filters.priority || filters.priority === 'all'
+        ? true
+        : document.priority === filters.priority;
+      const matchesSearch = !search
+        ? true
+        : [
+            document.memberName,
+            document.companyName,
+            document.documentType,
+            document.fileName,
+            ...(document.tags || []),
+          ]
+            .filter(Boolean)
+            .some((value: string) => value.toLowerCase().includes(search));
+
+      return matchesStatus && matchesType && matchesPriority && matchesSearch;
+    });
+
+    const reviewedDocuments = normalized.filter((document: any) => document.reviewedDate);
+    const avgReviewTime = reviewedDocuments.length > 0
+      ? reviewedDocuments.reduce((sum: number, document: any) => {
+          const uploaded = new Date(document.uploadDate).getTime();
+          const reviewed = new Date(document.reviewedDate).getTime();
+          return sum + ((reviewed - uploaded) / (1000 * 60 * 60));
+        }, 0) / reviewedDocuments.length
+      : 0;
+
+    const today = new Date().toDateString();
+
+    return {
+      documents: filtered,
+      stats: {
+        pending: normalized.filter((document: any) => document.reviewStatus === 'pending').length,
+        approved: normalized.filter((document: any) => document.reviewStatus === 'approved').length,
+        rejected: normalized.filter((document: any) => document.reviewStatus === 'rejected').length,
+        needsMoreInfo: normalized.filter((document: any) => document.reviewStatus === 'needs_more_info').length,
+        avgReviewTime: Number(avgReviewTime.toFixed(1)),
+        todayProcessed: normalized.filter((document: any) => document.reviewedDate && new Date(document.reviewedDate).toDateString() === today).length,
+      },
+    };
+  }
+
+  async reviewAdminDocument(
+    documentId: number,
+    reviewData: {
+      action: 'approve' | 'reject' | 'request_info';
+      notes?: string;
+    },
+    context: any
+  ): Promise<any> {
+    const db: any = this.db.getDb();
+    const documentTable: any = documents;
+
+    const existing = await db.select().from(documentTable).where(eq(documentTable.id, documentId)).limit(1);
+    if (existing.length === 0) {
+      throw new NotFoundError('Document not found');
+    }
+
+    const document = existing[0];
+    const metadata = document.metadata || {};
+    const now = new Date();
+    const userId = context?.userId ? Number(context.userId) : null;
+
+    const updatePayload: Record<string, unknown> = {
+      updatedAt: now,
+      notes: reviewData.notes ?? document.notes ?? null,
+    };
+
+    if (reviewData.action === 'approve') {
+      updatePayload.status = 'approved';
+      updatePayload.approvedBy = userId;
+      updatePayload.approvedAt = now;
+      updatePayload.rejectedBy = null;
+      updatePayload.rejectedAt = null;
+      updatePayload.rejectionReason = null;
+      updatePayload.metadata = {
+        ...metadata,
+        reviewRequested: false,
+        lastReviewAction: 'approved',
+      };
+    } else if (reviewData.action === 'reject') {
+      updatePayload.status = 'rejected';
+      updatePayload.rejectedBy = userId;
+      updatePayload.rejectedAt = now;
+      updatePayload.rejectionReason = reviewData.notes ?? null;
+      updatePayload.approvedBy = null;
+      updatePayload.approvedAt = null;
+      updatePayload.metadata = {
+        ...metadata,
+        reviewRequested: false,
+        lastReviewAction: 'rejected',
+      };
+    } else {
+      updatePayload.status = 'pending';
+      updatePayload.approvedBy = null;
+      updatePayload.approvedAt = null;
+      updatePayload.rejectedBy = null;
+      updatePayload.rejectedAt = null;
+      updatePayload.rejectionReason = null;
+      updatePayload.metadata = {
+        ...metadata,
+        reviewRequested: true,
+        reviewRequestedAt: now.toISOString(),
+        reviewRequestedBy: userId,
+        reviewRequestNotes: reviewData.notes ?? null,
+        lastReviewAction: 'request_info',
+      };
+    }
+
+    const updated = await db
+      .update(documentTable)
+      .set(updatePayload)
+      .where(eq(documentTable.id, documentId))
+      .returning();
+
+    return updated[0];
   }
 
   private async updateMemberStatus(

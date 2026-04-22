@@ -2,10 +2,10 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { insertCompanyBenefitSchema } from "@shared/schema";
+import { useCreateCompanyBenefitMutation } from "./benefitsApi";
 import {
   Form,
   FormControl,
@@ -46,21 +46,33 @@ interface CompanyBenefitFormProps {
   onSuccess?: () => void;
 }
 
+const unwrapArray = async (url: string) => {
+  const response = await fetch(url, { credentials: "include" });
+  const payload = await response.json();
+  if (!response.ok) {
+    throw new Error(payload?.error?.message || `Failed to fetch ${url}`);
+  }
+  return payload?.data ?? payload ?? [];
+};
+
 export default function CompanyBenefitForm({ onSuccess }: CompanyBenefitFormProps) {
   const { toast } = useToast();
-  const queryClient = useQueryClient();
+  const companyBenefitMutation = useCreateCompanyBenefitMutation();
 
   // Fetch companies, benefits, and premiums for the select inputs
   const { data: companies, isLoading: isLoadingCompanies } = useQuery({
     queryKey: ["/api/companies"],
+    queryFn: () => unwrapArray("/api/companies"),
   });
 
   const { data: benefits, isLoading: isLoadingBenefits } = useQuery({
     queryKey: ["/api/benefits"],
+    queryFn: () => unwrapArray("/api/benefits?limit=100"),
   });
 
   const { data: premiums, isLoading: isLoadingPremiums } = useQuery({
     queryKey: ["/api/premiums"],
+    queryFn: () => unwrapArray("/api/premiums"),
   });
 
   // Set up default values
@@ -81,50 +93,33 @@ export default function CompanyBenefitForm({ onSuccess }: CompanyBenefitFormProp
     defaultValues,
   });
 
-  const companyBenefitMutation = useMutation({
-    mutationFn: async (data: CompanyBenefitFormValues) => {
-      return apiRequest("/api/company-benefits", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(data),
-      });
-    },
-    onSuccess: () => {
-      toast({
-        title: "Company Benefit Created",
-        description: "The company benefit has been successfully created.",
-      });
-      
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: ["/api/company-benefits"] });
-      
-      // Call the success callback
-      if (onSuccess) {
-        onSuccess();
-      }
-      
-      // Reset the form
-      form.reset(defaultValues);
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to create company benefit. Please try again.",
-        variant: "destructive",
-      });
-      console.error("Company benefit creation error:", error);
-    },
-  });
-
-  const onSubmit = (data: CompanyBenefitFormValues) => {
+  const onSubmit = async (data: CompanyBenefitFormValues) => {
     // If additionalCoverage is false, clear additionalCoverageDetails
     if (!data.additionalCoverage) {
       data.additionalCoverageDetails = "";
     }
-    
-    companyBenefitMutation.mutate(data);
+
+    try {
+      await companyBenefitMutation.mutateAsync(data);
+
+      toast({
+        title: "Company Benefit Created",
+        description: "The company benefit has been saved to the insurance service.",
+      });
+
+      if (onSuccess) {
+        onSuccess();
+      }
+
+      form.reset(defaultValues);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create company benefit. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Company benefit creation error:", error);
+    }
   };
 
   // Watch for additionalCoverage to decide whether to show additionalCoverageDetails

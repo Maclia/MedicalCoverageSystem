@@ -31,7 +31,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   BarChart,
-  Bar
+  Bar,
+  Legend
 } from "recharts";
 
 interface CommissionTransaction {

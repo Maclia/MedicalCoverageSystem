@@ -42,8 +42,9 @@ interface DigitalCardProps {
     cardNumber: string;
     cardType: string;
     status: string;
-    expiryDate: Date | string;
-    qrCodeData: string;
+    expiryDate?: Date | string;
+    expiresAt?: Date | string | null;
+    qrCodeData?: string | null;
     personalizationData?: string;
     templateType?: string;
   };
@@ -77,7 +78,7 @@ export const DigitalCard: React.FC<DigitalCardProps> = ({
   };
 
   const finalTemplate = { ...defaultTemplate, ...template };
-  const expiryDate = new Date(card.expiryDate);
+  const expiryDate = new Date(card.expiryDate ?? card.expiresAt ?? Date.now());
   const formattedExpiry = `${String(expiryDate.getMonth() + 1).padStart(2, '0')}/${expiryDate.getFullYear()}`;
 
   const maskCardNumber = (cardNumber: string): string => {
@@ -217,7 +218,7 @@ export const DigitalCard: React.FC<DigitalCardProps> = ({
             <div className="flex justify-center mb-6">
               <div className="bg-white p-4 rounded-lg">
                 <QRCodeSVG
-                  value={card.qrCodeData}
+                  value={card.qrCodeData || ''}
                   size={150}
                   fgColor="#000000"
                   bgColor="#ffffff"

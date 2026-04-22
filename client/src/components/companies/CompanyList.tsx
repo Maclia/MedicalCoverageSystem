@@ -13,13 +13,13 @@ export default function CompanyList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   
-  const { data: companies, isLoading } = useQuery({
+  const { data: companies = [], isLoading } = useQuery<any[]>({
     queryKey: ['/api/companies'],
   });
   
-  const filteredCompanies = companies?.filter(company => 
+  const filteredCompanies = Array.isArray(companies) ? companies.filter((company: any) => 
     company.name.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  ) : [];
 
   if (isLoading) {
     return (
@@ -78,7 +78,7 @@ export default function CompanyList() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredCompanies.map((company) => (
+           {filteredCompanies.map((company: any) => (
                 <Link key={company.id} href={`/companies/${company.id}`}>
                   <a className="block border border-gray-200 rounded-lg hover:shadow-md transition-shadow p-4">
                     <div className="flex items-center mb-3">

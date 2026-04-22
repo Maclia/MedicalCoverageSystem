@@ -152,6 +152,15 @@ export const serviceProxies = {
     paths: ['/api/claims', '/api/disputes', '/api/reconciliation']
   },
 
+  membership: {
+    middleware: createServiceProxy('membership', {
+      '^/api/membership': '',
+      '^/api/enrollments': '/enrollments',
+      '^/api/renewals': '/renewals'
+    }),
+    paths: ['/api/membership', '/api/enrollments', '/api/renewals', '/api/admin/dashboard', '/api/admin/documents']
+  },
+
   payment: {
     middleware: createServiceProxy('payment', {
       '^/api/payment': '',
