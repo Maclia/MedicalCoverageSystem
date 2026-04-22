@@ -146,6 +146,14 @@ docs/_build/
 docs/site/
 docs/build.log
 
+# Token System
+token-exports/
+*.token
+token-cache.json
+token-metrics-*.json
+token-backup-*.json
+client/src/features/tokens/.local
+
 # Misc
 *.tmp
 *.bak

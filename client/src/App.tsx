@@ -1,41 +1,70 @@
+// 3rd Party Libraries
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
+
+// Internal Utilities
 import { queryClient } from "./lib/queryClient";
+
+// UI Components
 import { Toaster } from "@/ui/toaster";
+
+// Context Providers
 import { AuthProvider } from "@/features/actions/contexts/AuthContext";
 import { FinanceProvider } from "@/features/actions/contexts/FinanceContext";
+
+// Auth & Layout
 import ProtectedRoute from "@/features/auth/ProtectedRoute";
 import Login from "@/pages/Login";
 import AppLayout from "@/features/layout/AppLayout";
 
 // Dashboard Components
+import Dashboard from "@/features/dashboards/Dashboard";
 import InsuranceDashboard from "@/features/dashboards/InsuranceDashboard";
 import InstitutionDashboard from "@/features/dashboards/InstitutionDashboard";
 import ProviderDashboard from "@/features/dashboards/ProviderDashboard";
 
-// Existing Pages
-import Dashboard from "@/features/dashboards/Dashboard";
+// Companies Feature
 import Companies from "@/features/companies/components/Companies";
 import CompanyDetail from "@/features/companies/components/CompanyDetail";
+import Benefits from "@/features/companies/components/Benefits";
+import MedicalInstitutions from "@/features/companies/components/MedicalInstitutions";
+import Communication from "@/features/companies/components/Communication";
+
+// Members Feature
 import Members from "@/features/members/Members";
 import Dependents from "@/features/members/Dependents";
+import MemberDashboard from "@/features/members/MemberDashboard";
+
+// Premiums & Periods
 import Premiums from "@/features/premiums/components/Premiums";
 import Periods from "@/features/periods/components/Periods";
-import Benefits from "@/features/companies/components/Benefits";
+
+// Regions Feature
 import Regions from "@/features/regions/components/Regions";
-import MedicalInstitutions from "@/features/companies/components/MedicalInstitutions";
+
+// Providers Feature
 import MedicalPersonnel from "@/features/providers/components/MedicalPersonnel";
 import PanelDocumentation from "@/features/providers/components/PanelDocumentation";
-import Claims from "@/features/claims/components/Claims";
-import MemberDashboard from "@/features/members/MemberDashboard";
 import ProviderClaimSubmission from "@/features/providers/components/ProviderClaimSubmission";
-import Communication from "@/features/companies/components/Communication";
-import Wellness from "@/features/wellness/components/Wellness";
-import RiskAssessment from "@/features/risk-assessment/components/RiskAssessment";
-import { ClaimsManagement } from "@/features/claims-management/components/ClaimsManagement";
-import SchemesManagement from "@/features/schemes/components/SchemesManagement";
 import ProviderSchemesManagement from "@/features/providers/components/ProviderSchemesManagement";
+
+// Claims Feature
+import Claims from "@/features/claims/components/Claims";
+import { ClaimsManagement } from "@/features/claims-management/components/ClaimsManagement";
+
+// Schemes Feature
+import SchemesManagement from "@/features/schemes/components/SchemesManagement";
+
+// Wellness Feature
+import Wellness from "@/features/wellness/components/Wellness";
+
+// Risk Assessment
+import RiskAssessment from "@/features/risk-assessment/components/RiskAssessment";
+
+// Finance Feature
 import Finance from "@/features/finance/components/Finance";
+
+// Utility Pages
 import NotFound from "@/pages/not-found";
 
 function Router() {
