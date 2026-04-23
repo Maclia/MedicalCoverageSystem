@@ -28,6 +28,7 @@
       "@shared/schemas/*": ["../shared/schemas/*"]
     },
     "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
     "types": ["jest", "node"]
   },
   "include": [

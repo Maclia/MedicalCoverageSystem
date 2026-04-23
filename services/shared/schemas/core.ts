@@ -1,4 +1,5 @@
-import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal, sql } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, date, timestamp, real, pgEnum, uuid, varchar, decimal } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -18,6 +19,15 @@ export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'sent', 
 export const consentTypeEnum = pgEnum('consent_type', ['data_processing', 'marketing_communications', 'data_sharing_providers', 'data_sharing_partners', 'wellness_programs']);
 export const auditActionEnum = pgEnum('audit_action', ['create', 'read', 'update', 'delete', 'view']);
 export const auditEntityTypeEnum = pgEnum('audit_entity_type', ['member', 'company', 'benefit', 'claim', 'document']);
+
+// Onboarding & Personalization enums
+export const onboardingStatusEnum = pgEnum('onboarding_status', ['pending', 'active', 'completed', 'paused', 'cancelled']);
+export const taskTypeEnum = pgEnum('task_type', ['profile_completion', 'document_upload', 'benefits_education', 'dependent_registration', 'wellness_setup', 'emergency_setup', 'completion']);
+export const documentStatusEnum = pgEnum('document_status', ['pending', 'approved', 'rejected', 'expired']);
+export const activationStatusEnum = pgEnum('activation_status', ['pending', 'active', 'expired', 'used']);
+export const personalizationLevelEnum = pgEnum('personalization_level', ['minimal', 'moderate', 'full']);
+export const recommendationTypeEnum = pgEnum('recommendation_type', ['preventive_care', 'wellness', 'cost_optimization', 'care_coordination', 'educational']);
+export const journeyStageEnum = pgEnum('journey_stage', ['new_member', 'established_member', 'long_term_member', 'new_parent', 'chronic_condition', 'high_risk', 'wellness_champion']);
 
 // Companies table
 export const companies = pgTable("companies", {
@@ -50,7 +60,7 @@ export const members = pgTable("members", {
   dateOfBirth: date("date_of_birth").notNull(),
   employeeId: text("employee_id").notNull(),
   memberType: memberTypeEnum("member_type").notNull(),
-  principalId: integer("principal_id").references(() => members.id),
+  principalId: integer("principal_id").references((): any => members.id),
   dependentType: dependentTypeEnum("dependent_type"),
   hasDisability: boolean("has_disability").default(false),
   disabilityDetails: text("disability_details"),

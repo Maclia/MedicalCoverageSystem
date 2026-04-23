@@ -1,4 +1,4 @@
-import { drizzle } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import * as schema from '@shared/schemas/claims.ts';
 
@@ -16,16 +16,13 @@ const pool = new Pool({
 
 // Create Drizzle database instance
 export const db = drizzle(pool, {
-  schema: schema,
-  pg: {
-    preferBigInt: true
-  }
+  schema: schema
 });
 
 // Health check for database connection
 export const checkDatabaseConnection = async (): Promise<boolean> => {
   try {
-    const result = await db.select().from(schema.claims).limit(1);
+    const result = await db.select().from(schema.claims as any).limit(1);
     return true;
   } catch (error) {
     console.error('Database connection check failed:', error);
