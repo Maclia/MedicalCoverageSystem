@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { tokenBillingService, TokenPurchaseData, TokenSubscriptionData, AutoTopupPolicyData } from '../services/TokenBillingService';
-import { db } from '../config/database';
-import { autoTopupPolicies } from '../models/schema';
+import { tokenBillingService, TokenPurchaseData, TokenSubscriptionData, AutoTopupPolicyData } from '../services/TokenBillingService.js';
+import { db } from '../config/database.js';
+import { autoTopupPolicies } from '../models/schema.js';
 import { eq } from 'drizzle-orm';
-import { createLogger } from '../utils/logger';
-import { ResponseFactory, createValidationErrorResponse, ErrorCodes } from '../utils/api-standardization';
+import { createLogger } from '../utils/logger.js';
+import { ResponseFactory, createValidationErrorResponse, ErrorCodes } from '../utils/api-standardization.js';
 
 const logger = createLogger();
 

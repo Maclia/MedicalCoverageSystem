@@ -3,11 +3,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import { createServer } from 'http';
-import { config } from './config';
-import { createLogger, generateCorrelationId } from './utils/logger';
-import routes from './routes';
-import { errorHandlerMiddleware, notFoundHandlerMiddleware } from './middleware/responseStandardizationMiddleware';
-import { validateEnvironmentVariables } from './utils/validation';
+import { config } from './config/index.js';
+import { createLogger, generateCorrelationId } from './utils/logger.js';
+import routes from './routes/index.js';
+import { errorHandlerMiddleware, notFoundHandlerMiddleware } from './middleware/responseStandardizationMiddleware.js';
+import { validateEnvironmentVariables } from './utils/validation.js';
 
 const logger = createLogger();
 
@@ -196,7 +196,7 @@ class BillingServer {
 
             // Close database connections
             try {
-              const { db } = await import('./config/database');
+              const { db } = await import('./config/database.js');
               await db.$client.end();
               logger.info('Database connections closed');
             } catch (error) {

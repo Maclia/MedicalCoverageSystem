@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { createLogger, generateCorrelationId } from '../utils/logger';
+import { createLogger, generateCorrelationId } from '../utils/logger.js';
 
 export const correlationIdMiddleware = (req: Request, res: Response, next: NextFunction) => {
   const correlationId = generateCorrelationId();

@@ -5,7 +5,7 @@
 
 import crypto from 'crypto';
 import { eq, and } from 'drizzle-orm';
-import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../../../shared/schema';
+import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../../../shared/schema';
 
 // Type for the database connection - flexible for any drizzle database instance
 type DatabaseConnection = any;

@@ -1,12 +1,10 @@
 import express from 'express';
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
 import dotenv from 'dotenv';
-import pino from 'pino';
-import { analyticsRoutes } from './api/routes';
-import { MetricsCollector } from './services/MetricsCollector';
-import { AnalyticsAggregator } from './services/AnalyticsAggregator';
-import { DatabaseConnection } from './services/DatabaseConnection';
+import * as pino from 'pino';
+import { analyticsRoutes } from './api/routes.js';
+import { MetricsCollector } from './services/MetricsCollector.js';
+import { AnalyticsAggregator } from './services/AnalyticsAggregator.js';
+import { DatabaseConnection } from './services/DatabaseConnection.js';
 
 dotenv.config();
 
@@ -37,7 +35,7 @@ app.use((req, res, next) => {
 });
 
 // Health check endpoint
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({
     status: 'healthy',
     service: 'analytics-service',
@@ -72,7 +70,7 @@ async function initializeServices() {
     logger.info('Aggregation schedule started (5 minute interval)');
 
     // Register routes
-    app.use('/api/analytics', analyticsRoutes(db, metricsCollector, analyticsAggregator, logger));
+app.use('/api/analytics', analyticsRoutes(metricsCollector, analyticsAggregator, logger));
 
     logger.info('All analytics routes registered');
     logger.info('Endpoints:');

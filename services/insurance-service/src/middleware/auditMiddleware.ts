@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { createLogger, generateCorrelationId } from '../utils/logger';
+import { createLogger, generateCorrelationId } from '../utils/logger.js';
 
 declare global {
   namespace Express {

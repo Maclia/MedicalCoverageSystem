@@ -17,7 +17,7 @@ import {
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Import shared enums
+// Import shared enums and tables
 import {
   memberTypeEnum,
   dependentTypeEnum,
@@ -48,8 +48,21 @@ import {
   deliveryStatusEnum,
   consentTypeEnum,
   auditActionEnum,
-  auditEntityTypeEnum
-} from "../../../shared/schema";
+  auditEntityTypeEnum,
+  benefits,
+  premiumRates,
+  schemeBenefits,
+  periods
+} from "../../../shared/schema.js";
+
+// Re-export enums that are used externally
+export {
+  benefitCategoryEnum,
+  memberTypeEnum,
+  dependentTypeEnum,
+  periodStatusEnum,
+  periodTypeEnum
+};
 
 // Companies table
 export const companies = pgTable("companies", {
@@ -368,6 +381,9 @@ export const eligibility = pgTable("eligibility", {
   createdAtIdx: index('eligibility_created_at_idx').on(table.createdAt),
 }));
 
+// Export shared tables
+export { benefits, premiumRates, schemeBenefits, periods };
+
 // Export all tables
 export type Company = typeof companies.$inferSelect;
 export type NewCompany = typeof companies.$inferInsert;
@@ -383,3 +399,13 @@ export type Communication = typeof communications.$inferSelect;
 export type NewCommunication = typeof communications.$inferInsert;
 export type Eligibility = typeof eligibility.$inferSelect;
 export type NewEligibility = typeof eligibility.$inferInsert;
+
+// Export types for shared tables
+export type Benefit = typeof benefits.$inferSelect;
+export type NewBenefit = typeof benefits.$inferInsert;
+export type PremiumRate = typeof premiumRates.$inferSelect;
+export type NewPremiumRate = typeof premiumRates.$inferInsert;
+export type SchemeBenefit = typeof schemeBenefits.$inferSelect;
+export type NewSchemeBenefit = typeof schemeBenefits.$inferInsert;
+export type Period = typeof periods.$inferSelect;
+export type NewPeriod = typeof periods.$inferInsert;

@@ -33,6 +33,8 @@ export interface ApiResponse<T = any> {
     campaignId?: number;
     recordCount?: number;
     operation?: string;
+    rule?: string;
+    service?: string;
   };
 }
 

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { createLogger } from '../utils/logger';
+import { createLogger } from '../utils/logger.js';
 import { randomUUID } from 'crypto';
-import { ResponseFactory, ErrorCodes } from '../utils/api-standardization';
+import { ResponseFactory, ErrorCodes } from '../utils/api-standardization.js';
 
 const logger = createLogger();
 

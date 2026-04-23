@@ -1,8 +1,8 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
 import { createClient, RedisClientType } from 'redis';
-import { config } from '../config';
-import { createLogger } from '../utils/logger';
+import { config } from '../config.js';
+import { createLogger } from '../utils/logger/index.js';
 
 const logger = createLogger();
 

@@ -1,17 +1,17 @@
 import { Router, Request, Response } from 'express';
 import type { Logger } from 'pino';
-import { subHours, subDays, startOfDay, startOfHour } from 'date-fns';
-import { MetricsCollector } from '../services/MetricsCollector';
-import { AnalyticsAggregator } from '../services/AnalyticsAggregator';
+import { subHours } from 'date-fns';
+import { MetricsCollector } from '../services/MetricsCollector.js';
+import { AnalyticsAggregator } from '../services/AnalyticsAggregator.js';
 
-export function analyticsRoutes(db: any, metricsCollector: MetricsCollector, analyticsAggregator: AnalyticsAggregator, logger: Logger) {
+export function analyticsRoutes(metricsCollector: MetricsCollector, analyticsAggregator: AnalyticsAggregator, logger: Logger) {
   const router = Router();
 
   // ==========================================
   // HEALTH & STATUS ENDPOINTS
   // ==========================================
 
-  router.get('/health', (req: Request, res: Response) => {
+  router.get('/health', (_req: Request, res: Response) => {
     res.json({
       status: 'healthy',
       service: 'analytics-service',
@@ -283,7 +283,7 @@ export function analyticsRoutes(db: any, metricsCollector: MetricsCollector, ana
    * GET /api/analytics/services
    * Get service health metrics
    */
-  router.get('/services', async (req: Request, res: Response) => {
+  router.get('/services', async (_req: Request, res: Response) => {
     try {
       res.json({
         success: true,
@@ -324,7 +324,7 @@ export function analyticsRoutes(db: any, metricsCollector: MetricsCollector, ana
    * GET /api/analytics/summary
    * Get executive summary
    */
-  router.get('/summary', async (req: Request, res: Response) => {
+  router.get('/summary', async (_req: Request, res: Response) => {
     try {
       const startTime = subHours(new Date(), 24);
 

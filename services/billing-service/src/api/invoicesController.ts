@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import { invoiceService } from '../services/InvoiceService';
-import { createLogger } from '../utils/logger';
+import { invoiceService } from '../services/InvoiceService.js';
+import { createLogger } from '../utils/logger.js';
 import {
   ResponseFactory,
   ErrorCodes,
   createValidationErrorResponse
-} from '../utils/api-standardization';
-import { Joi } from 'joi';
+} from '../utils/api-standardization.js';
+import Joi from 'joi';
 
 const logger = createLogger();
 

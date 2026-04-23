@@ -481,3 +481,6 @@ export class GeolocationService {
     }
   }
 }
+
+// Export singleton instance
+export const geolocationService = new GeolocationService();

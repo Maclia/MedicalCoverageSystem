@@ -53,15 +53,15 @@ class CardManagementService {
         const templateResult = await db.execute(
           sql`SELECT template_type FROM card_templates WHERE id = ${request.templateId} LIMIT 1`
         );
-        if (templateResult.rows.length > 0) {
-          templateType = templateResult.rows[0].template_type as string;
+        if (templateResult.length > 0) {
+          templateType = templateResult[0].template_type as string;
         }
       } else {
         const defaultTemplate = await db.execute(
           sql`SELECT template_type FROM card_templates WHERE is_default = true AND is_active = true LIMIT 1`
         );
-        if (defaultTemplate.rows.length > 0) {
-          templateType = defaultTemplate.rows[0].template_type as string;
+        if (defaultTemplate.length > 0) {
+          templateType = defaultTemplate[0].template_type as string;
         }
       }
 
@@ -79,7 +79,7 @@ class CardManagementService {
             RETURNING *`
       );
 
-      const card = cardResult.rows[0];
+      const card = cardResult[0];
 
       // Log audit event
       await auditService.logAuditEvent({
@@ -117,7 +117,7 @@ class CardManagementService {
       }
 
       const cards = await db.execute(query);
-      return cards.rows;
+      return cards;
     } catch (error) {
       throw new Error(`Failed to retrieve member cards: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -132,7 +132,7 @@ class CardManagementService {
         sql`SELECT * FROM member_cards ORDER BY created_at DESC`
       );
 
-      return cards.rows;
+      return cards;
     } catch (error) {
       throw new Error(`Failed to retrieve cards: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -147,11 +147,11 @@ class CardManagementService {
         sql`SELECT * FROM member_cards WHERE id = ${cardId} LIMIT 1`
       );
 
-      if (!card.rows.length) {
+      if (!card.length) {
         throw new Error('Card not found');
       }
 
-      return card.rows[0];
+      return card[0];
     } catch (error) {
       throw new Error(`Failed to retrieve card: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -170,11 +170,11 @@ class CardManagementService {
         sql`SELECT * FROM member_cards WHERE card_number = ${cardInfo.cardNumber} LIMIT 1`
       );
 
-      if (!cardResult.rows.length) {
+      if (!cardResult.length) {
         throw new Error('Card not found');
       }
 
-      const cardData = cardResult.rows[0];
+      const cardData = cardResult[0];
 
       // Check if card is active and not expired
       const now = new Date();
@@ -236,7 +236,7 @@ class CardManagementService {
             RETURNING *`
       );
 
-      const event = eventResult.rows[0];
+      const event = eventResult[0];
 
       // Log audit event for verification
       await auditService.logAuditEvent({
@@ -293,7 +293,7 @@ class CardManagementService {
             RETURNING *`
       );
 
-      if (!cardResult.rows.length) {
+      if (!cardResult.length) {
         throw new Error('Card not found');
       }
 
@@ -309,7 +309,7 @@ class CardManagementService {
 
       return {
         success: true,
-        card: cardResult.rows[0],
+        card: cardResult[0],
         message: `Card status updated to ${update.status}`,
       };
     } catch (error) {
@@ -362,7 +362,7 @@ class CardManagementService {
     const result = await db.execute(
       sql`SELECT * FROM card_verification_events WHERE card_id = ${cardId} ORDER BY verification_timestamp DESC LIMIT ${limit}`
     );
-    return result.rows;
+    return result;
   }
 
   /**
@@ -373,7 +373,7 @@ class CardManagementService {
       sql`SELECT * FROM card_verification_events ORDER BY verification_timestamp DESC LIMIT ${limit}`
     );
 
-    return result.rows;
+    return result;
   }
 
   /**
@@ -388,7 +388,7 @@ class CardManagementService {
       }
 
       const templates = await db.execute(query);
-      return templates.rows;
+      return templates;
     } catch (error) {
       throw new Error(`Failed to retrieve card templates: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -414,7 +414,7 @@ class CardManagementService {
       }
 
       const batches = await db.execute(query);
-      return batches.rows;
+      return batches;
     } catch (error) {
       throw new Error(`Failed to retrieve production batches: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -427,7 +427,7 @@ class CardManagementService {
     const result = await db.execute(
       sql`SELECT * FROM card_production_batches WHERE batch_id = ${batchId} LIMIT 1`
     );
-    return result.rows[0];
+    return result[0];
   }
 
   /**
@@ -441,7 +441,7 @@ class CardManagementService {
           WHERE batch_id = ${batchId} 
           RETURNING *`
     );
-    return result.rows[0];
+    return result[0];
   }
 
   /**
@@ -466,18 +466,18 @@ class CardManagementService {
 
     return {
       cards: {
-        total: parseInt(totalCards.rows[0].count as string),
-        active: parseInt(activeCards.rows[0].count as string),
-        pending: parseInt(pendingCards.rows[0].count as string),
-        digital: parseInt(digitalCards.rows[0].count as string),
-        physical: parseInt(physicalCards.rows[0].count as string),
+        total: parseInt(totalCards[0].count as string),
+        active: parseInt(activeCards[0].count as string),
+        pending: parseInt(pendingCards[0].count as string),
+        digital: parseInt(digitalCards[0].count as string),
+        physical: parseInt(physicalCards[0].count as string),
       },
       verification: {
-        total: parseInt((verificationTotals.rows[0].total ?? '0') as string),
-        successful: parseInt((verificationTotals.rows[0].successful ?? '0') as string),
-        failed: parseInt((verificationTotals.rows[0].failed ?? '0') as string),
+        total: parseInt((verificationTotals[0].total ?? '0') as string),
+        successful: parseInt((verificationTotals[0].successful ?? '0') as string),
+        failed: parseInt((verificationTotals[0].failed ?? '0') as string),
       },
-      recentVerifications: recentVerifications.rows,
+      recentVerifications: recentVerifications,
     };
   }
 
@@ -512,7 +512,7 @@ class CardManagementService {
             ORDER BY verification_timestamp DESC 
             LIMIT ${limit}`
       );
-      return events.rows;
+      return events;
     } catch (error) {
       throw new Error(`Failed to retrieve verification history: ${error instanceof Error ? error.message : String(error)}`);
     }
@@ -529,10 +529,10 @@ class CardManagementService {
             ORDER BY verification_timestamp DESC LIMIT 1`
       );
 
-      if (result.rows.length > 0 && result.rows[0].geolocation) {
-        const geo = typeof result.rows[0].geolocation === 'string'
-          ? JSON.parse(result.rows[0].geolocation)
-          : result.rows[0].geolocation;
+      if (result.length > 0 && result[0].geolocation) {
+        const geo = typeof result[0].geolocation === 'string'
+          ? JSON.parse(result[0].geolocation)
+          : result[0].geolocation;
         return { lat: geo.lat, lng: geo.lng };
       }
       return null;
@@ -552,8 +552,8 @@ class CardManagementService {
             ORDER BY verification_timestamp DESC LIMIT 1`
       );
 
-      if (result.rows.length > 0) {
-        return new Date(result.rows[0].verification_timestamp);
+      if (result.length > 0) {
+        return new Date(result[0].verification_timestamp);
       }
       return null;
     } catch {

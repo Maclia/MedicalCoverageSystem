@@ -1,6 +1,18 @@
 import { Request, Response, NextFunction } from 'express';
 import { WinstonLogger } from '../utils/WinstonLogger';
 
+// Extend Express Request type to include user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId?: string;
+        [key: string]: any;
+      };
+    }
+  }
+}
+
 /**
  * Enhanced audit middleware for CRM service
  * Tracks all API requests, responses, and security events

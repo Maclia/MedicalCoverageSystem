@@ -3,11 +3,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import { createServer } from 'http';
-import { config } from './config';
-import { createLogger, generateCorrelationId } from './utils/logger';
-import routes from './routes';
-import { errorHandlerMiddleware, notFoundHandlerMiddleware } from './middleware/responseStandardizationMiddleware';
-import { validateEnvironmentVariables } from './utils/validation';
+import { config } from './config/index.js';
+import { createLogger, generateCorrelationId } from './utils/logger.js';
+import routes from './routes/index.js';
+import { errorHandlerMiddleware, notFoundHandlerMiddleware } from './middleware/responseStandardizationMiddleware.js';
+import { validateEnvironmentVariables } from './utils/validation.js';
 
 const logger = createLogger();
 
@@ -70,8 +70,8 @@ class HospitalServer {
     this.app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
     // Correlation ID middleware
-    this.app.use((req, res, next) => {
-      req.correlationId = req.headers['x-correlation-id'] as string || generateCorrelationId();
+      this.app.use((req, res, next) => {
+      req.correlationId = (req.headers['x-correlation-id'] as string) || generateCorrelationId();
       res.setHeader('X-Correlation-ID', req.correlationId);
       next();
     });
@@ -195,7 +195,7 @@ class HospitalServer {
 
             // Close database connections
             try {
-              const { db } = await import('./config/database');
+              const { db } = await import('./config/database.js');
               await db.$client.end();
               logger.info('Database connections closed');
             } catch (error) {
@@ -230,7 +230,7 @@ class HospitalServer {
 
     // Handle unhandled promise rejections
     process.on('unhandledRejection', (reason, promise) => {
-      logger.error('Unhandled promise rejection', {
+      logger.error('Unhandled promise rejection', undefined, {
         reason: reason instanceof Error ? reason.message : reason,
         promise: promise.toString()
       });

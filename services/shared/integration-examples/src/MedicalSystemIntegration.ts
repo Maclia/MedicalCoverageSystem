@@ -1,13 +1,13 @@
-import { serviceRegistry } from '../service-communication/src/ServiceRegistry';
-import { httpClient } from '../service-communication/src/HttpClient';
-import { cacheService } from '../redis-cache/src/cache/CacheService';
-import { messageQueue } from '../message-queue/src/queue/MessageQueue';
-import { eventBus, EventFactory } from '../message-queue/src/events/EventBus';
-import { sagaOrchestrator, SagaBuilder } from '../message-queue/src/orchestrator/SagaOrchestrator';
-import { tracingService, createTracingService } from '../distributed-tracing/src/TracingService';
-import { createServiceMesh } from '../service-mesh/src/ServiceMesh';
-import { circuitBreakerRegistry } from '../circuit-breaker/src/CircuitBreaker';
-import { createLogger } from '../config/logger';
+import { serviceRegistry } from '../../service-communication/src/ServiceRegistry';
+import { httpClient } from '../../service-communication/src/HttpClient';
+import { cacheService } from '../../redis-cache/src/cache/CacheService';
+import { messageQueue } from '../../message-queue/src/queue/MessageQueue';
+import { eventBus, EventFactory } from '../../message-queue/src/events/EventBus';
+import { sagaOrchestrator, SagaBuilder } from '../../message-queue/src/orchestrator/SagaOrchestrator';
+import { tracingService, createTracingService } from '../../distributed-tracing/src/TracingService';
+import { createServiceMesh } from '../../service-mesh/src/ServiceMesh';
+import { circuitBreakerRegistry } from '../../circuit-breaker/src/CircuitBreaker';
+import { createLogger } from '../../redis-cache/src/config/logger';
 
 const logger = createLogger();
 
@@ -165,7 +165,7 @@ export class MedicalSystemIntegration {
         },
         {
           name: 'rate-limit-policy',
-          type: 'rateLimiting',
+          type: 'traffic',
           target: '*',
           rules: [
             {
@@ -340,7 +340,7 @@ export class MedicalSystemIntegration {
 
   private async initializeEventArchitecture(): Promise<void> {
     // Subscribe to patient events
-    await eventBus.subscribe('patient.created', async (event) => {
+    await eventBus.subscribe('patient.created', async (event: any) => {
       await this.handlePatientCreated(event);
     }, {
       batchSize: 10,
@@ -348,23 +348,23 @@ export class MedicalSystemIntegration {
       retryAttempts: 3
     });
 
-    await eventBus.subscribe('patient.updated', async (event) => {
+    await eventBus.subscribe('patient.updated', async (event: any) => {
       await this.handlePatientUpdated(event);
     });
 
-    await eventBus.subscribe('appointment.created', async (event) => {
+    await eventBus.subscribe('appointment.created', async (event: any) => {
       await this.handleAppointmentCreated(event);
     });
 
-    await eventBus.subscribe('appointment.completed', async (event) => {
+    await eventBus.subscribe('appointment.completed', async (event: any) => {
       await this.handleAppointmentCompleted(event);
     });
 
-    await eventBus.subscribe('invoice.created', async (event) => {
+    await eventBus.subscribe('invoice.created', async (event: any) => {
       await this.handleInvoiceCreated(event);
     });
 
-    await eventBus.subscribe('payment.completed', async (event) => {
+    await eventBus.subscribe('payment.completed', async (event: any) => {
       await this.handlePaymentCompleted(event);
     });
 
@@ -378,7 +378,7 @@ export class MedicalSystemIntegration {
         logger.debug('Validating patient data');
         return { valid: true };
       })
-      .step('createPatientRecord', async (data) => {
+      .step('createPatientRecord', async (data: any) => {
         logger.debug('Creating patient record', { patientId: data.patientId });
         return { patientId: data.patientId, medicalRecordNumber: 'MRN-' + Date.now() };
       }, {
@@ -386,11 +386,11 @@ export class MedicalSystemIntegration {
           logger.debug('Rolling back patient record creation');
         }
       })
-      .step('sendWelcomeEmail', async (data) => {
+      .step('sendWelcomeEmail', async (data: any) => {
         logger.debug('Sending welcome email', { patientId: data.patientId });
         return { emailSent: true };
       })
-      .step('scheduleFollowUp', async (data) => {
+      .step('scheduleFollowUp', async (data: any) => {
         logger.debug('Scheduling follow-up appointment', { patientId: data.patientId });
         return { scheduled: true };
       })
@@ -404,19 +404,19 @@ export class MedicalSystemIntegration {
         logger.debug('Validating appointment request');
         return { valid: true };
       })
-      .step('checkAvailability', async (data) => {
+      .step('checkAvailability', async (data: any) => {
         logger.debug('Checking appointment availability', { doctorId: data.doctorId });
         return { available: true, slotId: data.slotId };
       })
-      .step('bookAppointment', async (data) => {
+      .step('bookAppointment', async (data: any) => {
         logger.debug('Booking appointment', { slotId: data.slotId });
         return { appointmentId: 'APT-' + Date.now() };
       }, {
-        compensate: async (data) => {
+        compensate: async (data: any) => {
           logger.debug('Releasing appointment slot', { slotId: data.slotId });
         }
       })
-      .step('sendConfirmation', async (data) => {
+      .step('sendConfirmation', async (data: any) => {
         logger.debug('Sending appointment confirmation', { appointmentId: data.appointmentId });
         return { sent: true };
       })
@@ -430,15 +430,15 @@ export class MedicalSystemIntegration {
         logger.debug('Validating insurance claim');
         return { valid: true };
       })
-      .step('checkCoverage', async (data) => {
+      .step('checkCoverage', async (data: any) => {
         logger.debug('Checking insurance coverage', { policyId: data.policyId });
         return { covered: true, coverageAmount: 10000 };
       })
-      .step('processClaim', async (data) => {
+      .step('processClaim', async (data: any) => {
         logger.debug('Processing insurance claim', { claimId: data.claimId });
         return { processed: true, approvedAmount: data.coverageAmount };
       })
-      .step('updatePolicy', async (data) => {
+      .step('updatePolicy', async (data: any) => {
         logger.debug('Updating insurance policy', { policyId: data.policyId });
         return { updated: true };
       })
@@ -500,11 +500,11 @@ export class MedicalSystemIntegration {
   }
 
   private setupEventHandlers(): void {
-    eventBus.on('message:failed', (event) => {
+    eventBus.on('message:failed', (event: any) => {
       logger.error('Event processing failed', event);
     });
 
-    eventBus.on('saga:failed', (event) => {
+    eventBus.on('saga:failed', (event: any) => {
       logger.error('Saga execution failed', event);
     });
   }

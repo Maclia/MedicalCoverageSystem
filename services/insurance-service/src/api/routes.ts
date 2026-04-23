@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { SchemesController, validationMiddleware } from './schemesController';
-import { BenefitsController, benefitsValidationMiddleware } from './benefitsController';
-import { companyBenefitService } from '../services/CompanyBenefitService';
-import { standardizeResponse, ErrorCodes } from '../utils/api-standardization';
-import { createLogger } from '../utils/logger';
+import { SchemesController, validationMiddleware } from './schemesController.js';
+import { BenefitsController, benefitsValidationMiddleware } from './benefitsController.js';
+import { companyBenefitService } from '../services/CompanyBenefitService.js';
+import { standardizeResponse, ErrorCodes } from '../utils/api-standardization.js';
+import { createLogger } from '../utils/logger.js';
 
 const router = Router();
 const logger = createLogger();

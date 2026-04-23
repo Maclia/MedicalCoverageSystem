@@ -1,5 +1,5 @@
 import winston from 'winston';
-import { config } from '../config';
+import { config } from '../config/index.js';
 
 // Define log levels
 const levels = {
@@ -38,7 +38,7 @@ const format = winston.format.combine(
 );
 
 // Define which transports the logger must use
-const transports = [
+const transports: winston.transport[] = [
   // Console transport
   new winston.transports.Console({
     format,

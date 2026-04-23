@@ -1,23 +1,21 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../config';
-import { createLogger } from '../utils/logger';
-import { ResponseFactory, ErrorCodes } from '../utils/api-standardization';
+import { config }  from '../config/index.js';
+import { createLogger } from '../utils/logger.js';
+import { ResponseFactory, ErrorCodes } from '../utils/api-standardization.js';
 
 const logger = createLogger();
 
 // Extend Request interface to include user information
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        email: string;
-        role: string;
-        permissions: string[];
-      };
-      correlationId?: string;
-    }
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: {
+      id: number;
+      email: string;
+      role: string;
+      permissions: string[];
+    };
+    correlationId?: string;
   }
 }
 

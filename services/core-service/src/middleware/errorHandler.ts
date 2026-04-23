@@ -43,7 +43,8 @@ export const globalErrorHandler = async (
         appError.message
       );
     } catch (auditError) {
-      logger.error('Failed to log security error to audit service', auditError);
+      const error = auditError instanceof Error ? auditError : new Error(String(auditError));
+      logger.error('Failed to log security error to audit service', error);
     }
   }
 

@@ -290,14 +290,14 @@ export class AutomationError extends CrmError {
 // Integration errors
 export class ThirdPartyIntegrationError extends ExternalServiceError {
   constructor(service: string, message: string) {
-    super(service, `Third-party integration error with ${service}: ${message}`, 'THIRD_PARTY_INTEGRATION_ERROR');
+    super(service, `Third-party integration error with ${service}: ${message}`);
     this.name = 'ThirdPartyIntegrationError';
   }
 }
 
 export class SyncError extends ExternalServiceError {
   constructor(service: string, message: string) {
-    super(service, `Synchronization error with ${service}: ${message}`, 'SYNC_ERROR');
+    super(service, `Synchronization error with ${service}: ${message}`);
     this.name = 'SyncError';
   }
 }
@@ -312,20 +312,20 @@ export function isOperationalError(error: Error): boolean {
 
 // Utility function to create appropriate error from error code
 export function createErrorFromCode(errorCode: string, message?: string): CrmError {
-  const errorMap: Record<string, typeof CrmError> = {
-    VALIDATION_ERROR: ValidationError,
-    NOT_FOUND: NotFoundError,
-    DUPLICATE_RESOURCE: DuplicateResourceError,
-    BUSINESS_RULE_VIOLATION: BusinessRuleError,
-    AUTHENTICATION_ERROR: AuthenticationError,
-    AUTHORIZATION_ERROR: AuthorizationError,
-    RATE_LIMIT_EXCEEDED: RateLimitError,
-    DATABASE_ERROR: DatabaseError,
-    CONFIGURATION_ERROR: ConfigurationError,
+  const errorMap: Record<string, (message?: string) => CrmError> = {
+    VALIDATION_ERROR: (msg) => new ValidationError(msg || 'Validation error'),
+    NOT_FOUND: (msg) => new NotFoundError(msg),
+    DUPLICATE_RESOURCE: (msg) => new DuplicateResourceError(msg || 'Resource', 'field'),
+    BUSINESS_RULE_VIOLATION: (msg) => new BusinessRuleError(msg || 'Business rule violation'),
+    AUTHENTICATION_ERROR: (msg) => new AuthenticationError(msg),
+    AUTHORIZATION_ERROR: (msg) => new AuthorizationError(msg),
+    RATE_LIMIT_EXCEEDED: (msg) => new RateLimitError(msg),
+    DATABASE_ERROR: (msg) => new DatabaseError(msg || 'Database operation failed'),
+    CONFIGURATION_ERROR: (msg) => new ConfigurationError(msg || 'Configuration error'),
   };
 
-  const ErrorClass = errorMap[errorCode] || CrmError;
-  return new ErrorClass(message || `Error: ${errorCode}`);
+  const createError = errorMap[errorCode] || ((msg) => new CrmError(msg || `Error: ${errorCode}`));
+  return createError(message);
 }
 
 export default {

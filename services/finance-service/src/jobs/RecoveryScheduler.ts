@@ -29,12 +29,19 @@ export class RecoveryScheduler {
     this.intervalId = setInterval(() => this.processRetries(), 5 * 60 * 1000);
   }
 
-  private async processRetries(): Promise<void> {
+  public async processRetries(): Promise<void> {
     try {
       await this.recoveryService.processScheduledRetries();
     } catch (error) {
       console.error('[RECOVERY SCHEDULER ERROR]', error);
     }
+  }
+
+  /**
+   * Alias for processRetries() for test compatibility
+   */
+  public async processScheduledRetries(): Promise<void> {
+    return this.processRetries();
   }
 
   stop(): void {

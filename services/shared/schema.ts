@@ -972,6 +972,9 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// Import and re-export schemes module
+export * from './schemas/schemes';
+
 // User sessions table for JWT token management
 export const userSessions = pgTable("user_sessions", {
   id: serial("id").primaryKey(),
@@ -1171,55 +1174,6 @@ export const actuarialRateTables = pgTable("actuarial_rate_tables", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Insert schemas for payment tables
-// // export const insertPremiumPaymentSchema = createInsertSchema(premiumPayments).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertClaimPaymentSchema = createInsertSchema(claimPayments).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderDisbursementSchema = createInsertSchema(providerDisbursements).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertDisbursementItemSchema = createInsertSchema(disbursementItems).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertInsuranceBalanceSchema = createInsertSchema(insuranceBalances).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// Insert schemas for enhanced premium calculation tables
-// // export const insertEnhancedPremiumCalculationSchema = createInsertSchema(enhancedPremiumCalculations).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertRiskAdjustmentFactorSchema = createInsertSchema(riskAdjustmentFactors).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertHealthcareInflationRateSchema = createInsertSchema(healthcareInflationRates).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertActuarialRateTableSchema = createInsertSchema(actuarialRateTables).omit({
-//   id: true,
-//   createdAt: true,
-// });
 
 // Types for payment entities
 export type PremiumPayment = typeof premiumPayments.$inferSelect;
@@ -1407,23 +1361,7 @@ export const claimProcedureItems = pgTable("claim_procedure_items", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Insert schemas for medical procedures tables
-// // export const insertMedicalProcedureSchema = createInsertSchema(medicalProcedures).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
 
-// // export const insertProviderProcedureRateSchema = createInsertSchema(providerProcedureRates).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertClaimProcedureItemSchema = createInsertSchema(claimProcedureItems).omit({
-//   id: true,
-//   createdAt: true,
-// });
 
 // Types for medical procedures entities
 export type MedicalProcedure = typeof medicalProcedures.$inferSelect;
@@ -1435,22 +1373,6 @@ export type InsertProviderProcedureRate = z.infer<typeof insertProviderProcedure
 export type ClaimProcedureItem = typeof claimProcedureItems.$inferSelect;
 export type InsertClaimProcedureItem = z.infer<typeof insertClaimProcedureItemSchema>;
 
-// Insert schemas for authentication tables
-// // export const insertUserSchema = createInsertSchema(users).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertUserSessionSchema = createInsertSchema(userSessions).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
-//   id: true,
-//   timestamp: true,
-// });
 
 // Types for authentication entities
 export type User = typeof users.$inferSelect;
@@ -1637,63 +1559,6 @@ export const recommendationHistory = pgTable("recommendation_history", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Insert schemas for onboarding system
-// // export const insertOnboardingSessionSchema = createInsertSchema(onboardingSessions).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertOnboardingTaskSchema = createInsertSchema(onboardingTasks).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertMemberDocumentSchema = createInsertSchema(memberDocuments).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertOnboardingPreferenceSchema = createInsertSchema(onboardingPreferences).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertActivationTokenSchema = createInsertSchema(activationTokens).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// Insert schemas for personalization system
-// // export const insertMemberPreferenceSchema = createInsertSchema(memberPreferences).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertBehaviorAnalyticSchema = createInsertSchema(behaviorAnalytics).omit({
-//   id: true,
-// });
-
-// // export const insertPersonalizationScoreSchema = createInsertSchema(personalizationScores).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertJourneyStageSchema = createInsertSchema(journeyStages).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertRecommendationHistorySchema = createInsertSchema(recommendationHistory).omit({
-//   id: true,
-//   createdAt: true,
-// });
 
 // Types for onboarding system
 export type OnboardingSession = typeof onboardingSessions.$inferSelect;
@@ -1837,36 +1702,6 @@ export const benefitUtilization = pgTable("benefit_utilization", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Insert schemas for enhanced claims processing tables
-// // export const insertClaimAdjudicationResultSchema = createInsertSchema(claimAdjudicationResults).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertMedicalNecessityValidationSchema = createInsertSchema(medicalNecessityValidations).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertFraudDetectionResultSchema = createInsertSchema(fraudDetectionResults).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertExplanationOfBenefitsSchema = createInsertSchema(explanationOfBenefits).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertClaimAuditTrailSchema = createInsertSchema(claimAuditTrails).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertBenefitUtilizationSchema = createInsertSchema(benefitUtilization).omit({
-//   id: true,
-//   createdAt: true,
-// });
 
 // Types for enhanced claims processing entities
 export type ClaimAdjudicationResult = typeof claimAdjudicationResults.$inferSelect;
@@ -1990,29 +1825,7 @@ export const cardProductionBatches = pgTable("card_production_batches", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-// Insert schemas for card management
-// // export const insertMemberCardSchema = createInsertSchema(memberCards).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
 
-// // export const insertCardTemplateSchema = createInsertSchema(cardTemplates).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertCardVerificationEventSchema = createInsertSchema(cardVerificationEvents).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertCardProductionBatchSchema = createInsertSchema(cardProductionBatches).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
 
 // Types for card management entities
 export type MemberCard = typeof memberCards.$inferSelect;
@@ -2026,60 +1839,6 @@ export type InsertCardVerificationEvent = z.infer<typeof insertCardVerificationE
 
 export type CardProductionBatch = typeof cardProductionBatches.$inferSelect;
 export type InsertCardProductionBatch = z.infer<typeof insertCardProductionBatchSchema>;
-
-// Insert schemas for provider network management tables
-// // export const insertProviderNetworkSchema = createInsertSchema(providerNetworks).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderNetworkAssignmentSchema = createInsertSchema(providerNetworkAssignments).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// Insert schemas for contract management tables
-// // export const insertProviderContractSchema = createInsertSchema(providerContracts).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertContractDocumentSchema = createInsertSchema(contractDocuments).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertContractSignatureSchema = createInsertSchema(contractSignatures).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// Insert schemas for tariff catalog tables
-// // export const insertTariffCatalogSchema = createInsertSchema(tariffCatalogs).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertTariffItemSchema = createInsertSchema(tariffItems).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertPharmacyPriceListSchema = createInsertSchema(pharmacyPriceLists).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertConsumablesPriceListSchema = createInsertSchema(consumablesPriceLists).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
 
 // Types for provider network management entities
 export type ProviderNetwork = typeof providerNetworks.$inferSelect;
@@ -2386,150 +2145,6 @@ export const providerClinicalExpertise = pgTable("provider_clinical_expertise", 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
-
-// Insert schemas for enhanced provider management tables
-// // export const insertProviderOnboardingApplicationSchema = createInsertSchema(providerOnboardingApplications).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderVerificationChecklistSchema = createInsertSchema(providerVerificationChecklist).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderAccreditationSchema = createInsertSchema(providerAccreditations).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderPerformanceMetricSchema = createInsertSchema(providerPerformanceMetrics).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderComplianceMonitoringSchema = createInsertSchema(providerComplianceMonitoring).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderQualityScoreSchema = createInsertSchema(providerQualityScores).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderFinancialPerformanceSchema = createInsertSchema(providerFinancialPerformance).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderReferralNetworkSchema = createInsertSchema(providerReferralNetwork).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderEducationTrainingSchema = createInsertSchema(providerEducationTraining).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertProviderClinicalExpertiseSchema = createInsertSchema(providerClinicalExpertise).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// Insert schemas for Schemes & Benefits module
-// // export const insertSchemeSchema = createInsertSchema(schemes).omit({
-// //   id: true,
-// //   createdAt: true,
-// //   updatedAt: true,
-// // });
-// 
-// // export const insertSchemeVersionSchema = createInsertSchema(schemeVersions).omit({
-//   id: true,
-//   createdAt: true,
-// });
-
-// // export const insertPlanTierSchema = createInsertSchema(planTiers).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertEnhancedBenefitSchema = createInsertSchema(enhancedBenefits).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertSchemeBenefitMappingSchema = createInsertSchema(schemeBenefitMappings).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertCostSharingRuleSchema = createInsertSchema(costSharingRules).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertBenefitLimitSchema = createInsertSchema(benefitLimits).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertCorporateSchemeConfigSchema = createInsertSchema(corporateSchemeConfigs).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertEmployeeGradeBenefitSchema = createInsertSchema(employeeGradeBenefits).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertDependentCoverageRuleSchema = createInsertSchema(dependentCoverageRules).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertBenefitRiderSchema = createInsertSchema(benefitRiders).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertMemberRiderSelectionSchema = createInsertSchema(memberRiderSelections).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertBenefitRuleSchema = createInsertSchema(benefitRules).omit({
-//   id: true,
-//   createdAt: true,
-//   updatedAt: true,
-// });
-
-// // export const insertRuleExecutionLogSchema = createInsertSchema(ruleExecutionLogs).omit({
-//   id: true,
-//   createdAt: true,
-// });
 
 // Types for enhanced provider management entities
 export type ProviderOnboardingApplication = typeof providerOnboardingApplications.$inferSelect;

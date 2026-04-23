@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { benefitService } from '../services/BenefitService';
-import { createLogger } from '../utils/logger';
+import { benefitService } from '../services/BenefitService.js';
+import { createLogger } from '../utils/logger.js';
 import {
   ResponseFactory,
   ErrorCodes,
   createValidationErrorResponse
-} from '../utils/api-standardization';
+} from '../utils/api-standardization.js';
 import Joi from 'joi';
 
 const logger = createLogger();

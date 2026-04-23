@@ -2,7 +2,7 @@ import { Database } from '../models/Database';
 import { paymentRecovery } from '../models/schema';
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
-import { eq, and, lte, ne } from 'drizzle-orm';
+import { eq, and, ne } from 'drizzle-orm';
 
 export enum RecoveryStatus {
   PENDING = 'pending',
@@ -126,13 +126,13 @@ export class ErrorRecoveryService {
     for (const recovery of pendingRecoveries) {
       // Check if retry is due
       if (recovery.nextRetryAt && recovery.nextRetryAt <= now) {
-        await this.performRetry(recovery as PaymentRecoveryRecord);
+        await this.performRetry(recovery.id);
       }
 
       // Check if should escalate (48 hours elapsed)
       const hoursElapsed = (now.getTime() - recovery.createdAt.getTime()) / (1000 * 60 * 60);
       if (hoursElapsed >= this.escalationThreshold && recovery.status !== RecoveryStatus.ESCALATED) {
-        await this.escalateToSupport(recovery as PaymentRecoveryRecord);
+        await this.escalateToSupport(recovery.id);
       }
     }
   }
@@ -140,13 +140,20 @@ export class ErrorRecoveryService {
   /**
    * Perform retry attempt
    */
-  private async performRetry(recovery: PaymentRecoveryRecord): Promise<void> {
-    try {
-      console.log(`[RECOVERY] Attempting retry for payment ${recovery.paymentId}`, {
-        retryCount: recovery.retryCount + 1,
-        amount: recovery.amount,
-      });
+  public async performRetry(recoveryId: number): Promise<{ success: boolean; attempt: number }> {
+    const recovery = await this.db.getDb()
+      .select()
+      .from(paymentRecovery)
+      .where(eq(paymentRecovery.id, recoveryId))
+      .then(records => records[0] as PaymentRecoveryRecord);
 
+    if (!recovery) {
+      return { success: false, attempt: 0 };
+    }
+
+    const attemptNumber = recovery.retryCount + 1;
+
+    try {
       // Attempt payment
       const result = await this.retryPayment(recovery);
 
@@ -159,7 +166,7 @@ export class ErrorRecoveryService {
             action: 'PAYMENT_RECOVERED',
             details: {
               retryCount: recovery.retryCount,
-              retryAttempt: recovery.retryCount + 1,
+              retryAttempt: attemptNumber,
             },
             performedBy: 'recovery-service',
           },
@@ -177,7 +184,7 @@ export class ErrorRecoveryService {
 
         await this.notifyMemberRecovered(recovery);
 
-        console.log(`[RECOVERY] Payment ${recovery.paymentId} recovered successfully`);
+        return { success: true, attempt: attemptNumber };
       } else {
         // Payment still failing
         const newRetryCount = recovery.retryCount + 1;
@@ -220,8 +227,10 @@ export class ErrorRecoveryService {
           });
         } else {
           // Max retries exceeded, escalate to support
-          await this.escalateToSupport(recovery);
+          await this.escalateToSupport(recovery.id);
         }
+
+        return { success: false, attempt: attemptNumber };
       }
     } catch (error: any) {
       console.error(`[RECOVERY ERROR] Retry failed for payment ${recovery.paymentId}`, error);
@@ -246,13 +255,24 @@ export class ErrorRecoveryService {
           updatedAt: new Date(),
         })
         .where(eq(paymentRecovery.id, recovery.id));
+
+      return { success: false, attempt: attemptNumber };
     }
   }
 
   /**
    * Escalate to support team
    */
-  private async escalateToSupport(recovery: PaymentRecoveryRecord): Promise<void> {
+  public async escalateToSupport(recoveryId: number): Promise<string | null> {
+    const recovery = await this.db.getDb()
+      .select()
+      .from(paymentRecovery)
+      .where(eq(paymentRecovery.id, recoveryId))
+      .then(records => records[0] as PaymentRecoveryRecord);
+
+    if (!recovery) {
+      return null;
+    }
     try {
       console.log(`[RECOVERY] Escalating payment ${recovery.paymentId} to support`);
 
@@ -313,6 +333,8 @@ ${recovery.auditTrail.map(entry => `  [${entry.timestamp.toISOString()}] ${entry
       // Notify member and finance team
       await this.notifyMemberEscalated(recovery);
       await this.notifyFinanceTeam(recovery);
+
+      return ticketResponse.data.ticketId;
     } catch (error: any) {
       console.error(`[RECOVERY ERROR] Support escalation failed`, error);
 
@@ -335,6 +357,8 @@ ${recovery.auditTrail.map(entry => `  [${entry.timestamp.toISOString()}] ${entry
           updatedAt: new Date(),
         })
         .where(eq(paymentRecovery.id, recovery.id));
+      
+      return null;
     }
   }
 

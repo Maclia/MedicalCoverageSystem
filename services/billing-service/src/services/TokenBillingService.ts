@@ -1,12 +1,12 @@
-import { createLogger } from '../utils/logger';
+import { createLogger } from '../utils/logger.js';
 import {
   ResponseFactory,
   ErrorCodes,
   createValidationErrorResponse,
   ValidationError
-} from '../utils/api-standardization';
-import { db } from '../config/database';
-import { tokenPurchases, tokenSubscriptions, autoTopupPolicies } from '../models/schema';
+} from '../utils/api-standardization.js';
+import { db } from '../config/database.js';
+import { tokenPurchases, tokenSubscriptions, autoTopupPolicies } from '../models/schema.js';
 import { eq, and, desc, gte, lte, count, sum } from 'drizzle-orm';
 
 const logger = createLogger();

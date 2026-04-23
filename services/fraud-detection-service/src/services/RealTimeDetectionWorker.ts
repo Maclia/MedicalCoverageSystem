@@ -97,7 +97,7 @@ export class RealTimeDetectionWorker {
 
       try {
         // Run fraud detection
-        const result = await fraudDetectionEngine.detectFraud(job.data.claim);
+const result = await fraudDetectionEngine.assessClaimFraud(job.data.claim);
 
         // Call registered callback if exists
         const callback = this.resultCallbacks.get(job.data.jobId);
@@ -236,7 +236,7 @@ export class RealTimeDetectionWorker {
 
     return {
       name: 'fraud-detection',
-      count: counts.wait + counts.active + counts.delayed,
+      count: counts.waiting + counts.active + counts.delayed,
       activeCount: counts.active,
       delayedCount: counts.delayed,
       failedCount: counts.failed,

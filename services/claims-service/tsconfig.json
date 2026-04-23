@@ -24,11 +24,13 @@
     "baseUrl": ".",
     "paths": {
       "@core/*": ["../core-service/src/*"]
-    }
+    },
+    "types": ["jest", "node"]
   },
   "include": [
     "src/**/*",
+    "tests/**/*",
     "../core-service/src/**/*"
   ],
-  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+  "exclude": ["node_modules", "dist"]
 }

@@ -61,6 +61,15 @@ export const config = {
     highRiskCountries: (process.env.GEOLOCATION_HIGH_RISK_COUNTRIES || '').split(',').filter(Boolean),
   },
 
+  // NLP
+  nlp: {
+    enabled: process.env.NLP_ENABLED === 'true',
+    apiUrl: process.env.NLP_API_URL || 'https://api.nlp-service.io',
+    apiKey: process.env.NLP_API_KEY || '',
+    timeout: parseInt(process.env.NLP_TIMEOUT || '10000', 10),
+    analysisThreshold: parseFloat(process.env.NLP_ANALYSIS_THRESHOLD || '0.6'),
+  },
+
   // Investigation
   investigation: {
     autoAssignmentEnabled: process.env.AUTO_ASSIGN_INVESTIGATION === 'true',

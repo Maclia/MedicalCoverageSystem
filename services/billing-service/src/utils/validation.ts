@@ -1,5 +1,5 @@
-import { config } from '../config';
-import { createLogger } from './logger';
+import { config } from '../config/index.js';
+import { createLogger } from './logger.js';
 
 const logger = createLogger();
 
@@ -270,7 +270,7 @@ export async function validateEnvironmentVariables(): Promise<void> {
 export function validateDatabaseConnection(): Promise<boolean> {
   return new Promise(async (resolve) => {
     try {
-      const { db } = await import('../config/database');
+      const { db } = await import('../config/database.js');
 
       // Test database connection with a simple query
       await db.execute('SELECT 1');
@@ -342,10 +342,15 @@ async function validateRedisConnection(): Promise<boolean> {
 
 async function validateExternalServiceHealth(serviceName: string, serviceUrl: string): Promise<boolean> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+
     const response = await fetch(`${serviceUrl}/health`, {
       method: 'GET',
-      timeout: 5000
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId);
 
     if (response.ok) {
       logger.debug(`Health check passed for ${serviceName}`, { serviceUrl });

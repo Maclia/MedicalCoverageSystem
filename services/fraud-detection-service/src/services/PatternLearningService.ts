@@ -77,8 +77,8 @@ export class PatternLearningService {
       occurrences: 0,
       confidence: 0.72,
       riskMultiplier: 1.3,
-      discoveredAt: new DateTime().toISOString(),
-      lastSeen: new DateTime().toISOString(),
+      discoveredAt: new Date().toISOString(),
+      lastSeen: new Date().toISOString(),
       isActive: true,
       detectionRules: {
         percentageOver: 50, // 50% over peer average

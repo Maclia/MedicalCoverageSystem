@@ -1,12 +1,12 @@
 import { Router } from 'express';
-import { InvoicesController, invoicesValidationMiddleware } from '../api/invoicesController';
-import { PaymentsController, paymentsValidationMiddleware } from '../api/paymentsController';
-import { CommissionsController, commissionsValidationMiddleware } from '../api/commissionsController';
-import { TokenBillingController, TokenBillingValidationMiddleware } from '../api/tokenBillingController';
-import { auditMiddleware } from '../middleware/auditMiddleware';
-import { responseStandardizationMiddleware } from '../middleware/responseStandardizationMiddleware';
-import { authMiddleware } from '../middleware/authMiddleware';
-import { rateLimitMiddleware } from '../middleware/rateLimitMiddleware';
+import { InvoicesController, invoicesValidationMiddleware } from '../api/invoicesController.js';
+import { PaymentsController, paymentsValidationMiddleware } from '../api/paymentsController.js';
+import { CommissionsController, commissionsValidationMiddleware } from '../api/commissionsController.js';
+import { TokenBillingController, TokenBillingValidationMiddleware } from '../api/tokenBillingController.js';
+import { auditMiddleware } from '../middleware/auditMiddleware.js';
+import { responseStandardizationMiddleware } from '../middleware/responseStandardizationMiddleware.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { rateLimitMiddleware } from '../middleware/rateLimitMiddleware.js';
 
 const router = Router();
 

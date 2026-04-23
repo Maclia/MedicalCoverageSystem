@@ -1,13 +1,13 @@
 import { eq, and, desc, asc, ilike, count, inArray } from 'drizzle-orm';
-import { db } from '../config/database';
-import { benefits, schemeBenefits, premiumRates, benefitCategoryEnum } from '../models/schema';
-import { config } from '../config';
-import { createLogger } from '../utils/logger';
+import { db } from '../config/database.js';
+import { benefits, schemeBenefits, premiumRates, benefitCategoryEnum } from '../models/schema.js';
+import { config } from '../config/index.js';
+import { createLogger } from '../utils/logger.js';
 import {
   ResponseFactory,
   ErrorCodes,
   createValidationErrorResponse
-} from '../utils/api-standardization';
+} from '../utils/api-standardization.js';
 
 const logger = createLogger();
 
@@ -103,8 +103,8 @@ export class BenefitService {
       // Check for duplicate benefit name
       const existingBenefit = await db
         .select()
-        .from(benefits)
-        .where(ilike(benefits.name, data.name))
+        .from(benefits as any)
+        .where(ilike(benefits.name as any, data.name))
         .limit(1);
 
       if (existingBenefit.length > 0) {
@@ -118,7 +118,7 @@ export class BenefitService {
 
       // Create benefit
       const [newBenefit] = await db
-        .insert(benefits)
+        .insert(benefits as any)
         .values({
           name: data.name,
           description: data.description,
@@ -135,7 +135,7 @@ export class BenefitService {
           createdAt: new Date(),
           updatedAt: new Date()
         })
-        .returning();
+        .returning() as any[];
 
       logger.info('Benefit created successfully', {
         benefitId: newBenefit.id,
@@ -164,8 +164,8 @@ export class BenefitService {
     try {
       const benefit = await db
         .select()
-        .from(benefits)
-        .where(eq(benefits.id, id))
+        .from(benefits as any)
+        .where(eq(benefits.id as any, id))
         .limit(1);
 
       if (benefit.length === 0) {
@@ -179,7 +179,7 @@ export class BenefitService {
 
       logger.debug('Benefit retrieved', {
         benefitId: id,
-        name: benefit[0].name,
+        name: (benefit[0] as any).name,
         correlationId
       });
 
@@ -215,39 +215,39 @@ export class BenefitService {
     correlationId?: string
   ): Promise<any> {
     try {
-      let query = db.select().from(benefits);
+      let query: any = db.select().from(benefits as any);
 
       // Apply filters
       if (filters.category) {
-        query = query.where(eq(benefits.category, filters.category as any));
+        query = query.where(eq(benefits.category as any, filters.category as any));
       }
 
       if (filters.coverageType) {
-        query = query.where(eq(benefits.coverageType, filters.coverageType));
+        query = query.where(eq((benefits as any).coverageType, filters.coverageType));
       }
 
       if (filters.isActive !== undefined) {
-        query = query.where(eq(benefits.isActive, filters.isActive));
+        query = query.where(eq((benefits as any).isActive, filters.isActive));
       }
 
       if (filters.requiresPreauthorization !== undefined) {
-        query = query.where(eq(benefits.requiresPreauthorization, filters.requiresPreauthorization));
+        query = query.where(eq((benefits as any).requiresPreauthorization, filters.requiresPreauthorization));
       }
 
       if (filters.search) {
         query = query.where(
-          ilike(benefits.name, `%${filters.search}%`)
+          ilike(benefits.name as any, `%${filters.search}%`)
         );
       }
 
       // Get total count for pagination
       const totalCountQuery = query;
       const [totalResult] = await totalCountQuery.select({ count: count() });
-      const total = totalResult.count;
+      const total = (totalResult as any).count;
 
       // Apply pagination and ordering
       const results = await query
-        .orderBy(desc(benefits.createdAt))
+        .orderBy(desc(benefits.createdAt as any))
         .limit(pagination.limit)
         .offset((pagination.page - 1) * pagination.limit);
 
@@ -293,8 +293,8 @@ export class BenefitService {
       // Check if benefit exists
       const existingBenefit = await db
         .select()
-        .from(benefits)
-        .where(eq(benefits.id, id))
+        .from(benefits as any)
+        .where(eq(benefits.id as any, id))
         .limit(1);
 
       if (existingBenefit.length === 0) {
@@ -307,7 +307,7 @@ export class BenefitService {
       }
 
       // Validate update data
-      const validationErrors = this.validateBenefitData({ ...existingBenefit[0], ...data });
+      const validationErrors = this.validateBenefitData({ ...existingBenefit[0] as any, ...data });
       if (validationErrors.length > 0) {
         return createValidationErrorResponse(
           validationErrors.map(error => ({ field: 'general', message: error })),
@@ -316,12 +316,12 @@ export class BenefitService {
       }
 
       // Check for duplicate benefit name (if name is being changed)
-      if (data.name && data.name !== existingBenefit[0].name) {
+      if (data.name && data.name !== (existingBenefit[0] as any).name) {
         const duplicateBenefit = await db
           .select()
-          .from(benefits)
+          .from(benefits as any)
           .where(and(
-            ilike(benefits.name, data.name),
+            ilike(benefits.name as any, data.name),
             // Exclude current benefit from check
           ))
           .limit(1);
@@ -343,10 +343,10 @@ export class BenefitService {
       }
 
       const [updatedBenefit] = await db
-        .update(benefits)
+        .update(benefits as any)
         .set(updateData)
-        .where(eq(benefits.id, id))
-        .returning();
+        .where(eq(benefits.id as any, id))
+        .returning() as any[];
 
       logger.info('Benefit updated successfully', {
         benefitId: id,
@@ -379,8 +379,8 @@ export class BenefitService {
       // Check if benefit exists
       const existingBenefit = await db
         .select()
-        .from(benefits)
-        .where(eq(benefits.id, id))
+        .from(benefits as any)
+        .where(eq(benefits.id as any, id))
         .limit(1);
 
       if (existingBenefit.length === 0) {
@@ -393,23 +393,23 @@ export class BenefitService {
       }
 
       // Check if benefit is used in any schemes
-      const schemeBenefits = await db
+      const existingSchemeBenefits = await db
         .select()
-        .from(schemeBenefits)
-        .where(eq(schemeBenefits.benefitId, id))
+        .from(schemeBenefits as any)
+        .where(eq((schemeBenefits as any).benefitId, id))
         .limit(1);
 
-      if (schemeBenefits.length > 0) {
+      if (existingSchemeBenefits.length > 0) {
         return ResponseFactory.createErrorResponse(
           ErrorCodes.CONFLICT,
           'Cannot delete benefit that is used in schemes. Remove from schemes first.',
-          { benefitId: id, schemeCount: schemeBenefits.length },
+          { benefitId: id, schemeCount: existingSchemeBenefits.length },
           correlationId
         );
       }
 
       // Delete benefit
-      await db.delete(benefits).where(eq(benefits.id, id));
+      await db.delete(benefits as any).where(eq(benefits.id as any, id));
 
       logger.info('Benefit deleted successfully', { benefitId: id, correlationId });
 
@@ -448,16 +448,16 @@ export class BenefitService {
       // Get usage statistics for each category
       const categoryStats = await db
         .select({
-          category: benefits.category,
-          count: count(benefits.id)
+          category: benefits.category as any,
+          count: count(benefits.id as any)
         })
-        .from(benefits)
-        .where(eq(benefits.isActive, true))
-        .groupBy(benefits.category);
+        .from(benefits as any)
+        .where(eq((benefits as any).isActive, true))
+        .groupBy(benefits.category as any);
 
       const result = categories.map(category => ({
         ...category,
-        count: categoryStats.find(stat => stat.category === category.value)?.count || 0
+        count: categoryStats.find(stat => (stat as any).category === category.value)?.count || 0
       }));
 
       return ResponseFactory.createSuccessResponse(result, undefined, correlationId);
@@ -481,17 +481,17 @@ export class BenefitService {
       // Get benefits most used in schemes
       const popularBenefits = await db
         .select({
-          benefit: benefits,
-          usageCount: count(schemeBenefits.schemeId)
+          benefit: benefits as any,
+          usageCount: count((schemeBenefits as any).schemeId)
         })
-        .from(benefits)
-        .leftJoin(schemeBenefits, eq(benefits.id, schemeBenefits.benefitId))
-        .where(eq(benefits.isActive, true))
-        .groupBy(benefits.id)
-        .orderBy(desc(count(schemeBenefits.schemeId)))
+        .from(benefits as any)
+        .leftJoin(schemeBenefits as any, eq(benefits.id as any, (schemeBenefits as any).benefitId))
+        .where(eq((benefits as any).isActive, true))
+        .groupBy(benefits.id as any)
+        .orderBy(desc(count((schemeBenefits as any).schemeId)))
         .limit(limit);
 
-      const result = popularBenefits.map(item => ({
+      const result = popularBenefits.map((item: any) => ({
         ...item.benefit,
         usageCount: item.usageCount
       }));

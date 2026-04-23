@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
-import { appointmentService } from '../services/AppointmentService';
-import { createLogger } from '../utils/logger';
+import { appointmentService } from '../services/AppointmentService.js';
+import { createLogger } from '../utils/logger.js';
 import {
   ResponseFactory,
   ErrorCodes,
   createValidationErrorResponse
-} from '../utils/api-standardization';
+} from '../utils/api-standardization.js';
 import * as Joi from 'joi';
 import moment from 'moment';
 

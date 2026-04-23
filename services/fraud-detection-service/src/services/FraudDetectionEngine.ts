@@ -623,5 +623,9 @@ export class FraudDetectionEngine {
   }
 }
 
+// Type aliases for backward compatibility
+export type ClaimForDetection = Parameters<FraudDetectionEngine['assessClaimFraud']>[0];
+export type DetectionResult = ClaimFraudAssessment;
+
 // Export singleton instance
 export const fraudDetectionEngine = new FraudDetectionEngine();
