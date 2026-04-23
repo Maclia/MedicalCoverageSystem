@@ -53,7 +53,7 @@ import {
   premiumRates,
   schemeBenefits,
   periods
-} from "../../../shared/schema.js";
+} from "../../../shared/schemas/schema.jschema.js";
 
 // Re-export enums that are used externally
 export {

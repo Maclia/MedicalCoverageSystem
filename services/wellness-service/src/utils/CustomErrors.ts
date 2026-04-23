@@ -316,8 +316,8 @@ export function requiresMedicalAttention(error: Error): boolean {
   return false;
 }
 
-export function createErrorFromCode(errorCode: string, message?: string, healthImpact?: string): WellnessError {
-  const errorMap: Record<string, typeof WellnessError> = {
+export function createErrorFromCode(errorCode: string, message?: string, healthImpact?: 'none' | 'low' | 'medium' | 'high' | 'critical'): WellnessError {
+  const errorMap: Record<string, new (...args: any[]) => WellnessError> = {
     VALIDATION_ERROR: ValidationError,
     NOT_FOUND: NotFoundError,
     DUPLICATE_RESOURCE: DuplicateResourceError,
@@ -335,8 +335,15 @@ export function createErrorFromCode(errorCode: string, message?: string, healthI
     MEDICAL_SAFETY_ERROR: MedicalSafetyError,
   };
 
-  const ErrorClass = errorMap[errorCode] || WellnessError;
-  return new ErrorClass(message || `Error: ${errorCode}`, 500, errorCode);
+  const ErrorClass = errorMap[errorCode];
+  
+  if (ErrorClass) {
+    // For custom error classes with specific constructors, pass only message and appropriate parameters
+    return new ErrorClass(message || `Error: ${errorCode}`, healthImpact);
+  }
+  
+  // Fallback to base WellnessError with standard parameters
+  return new WellnessError(message || `Error: ${errorCode}`, 500, errorCode, healthImpact);
 }
 
 export default {

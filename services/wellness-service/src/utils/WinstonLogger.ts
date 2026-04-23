@@ -274,7 +274,7 @@ export class WinstonLogger {
       activityId,
       activityType,
       duration,
-      wellnessEvent: 'exercise' || activityType,
+      wellnessEvent: activityType || 'exercise',
       ...meta
     });
   }
@@ -478,7 +478,7 @@ export class WinstonLogger {
   /**
    * Log wellness analytics
    */
-  logWellnessAnalytics(analyticsType: string, userId?: number, data: any, timeRange?: string, meta?: any): void {
+  logWellnessAnalytics(analyticsType: string, data: any, userId?: number, timeRange?: string, meta?: any): void {
     const logData = {
       event: 'wellness_analytics',
       analyticsType,

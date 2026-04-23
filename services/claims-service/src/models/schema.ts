@@ -1,4 +1,4 @@
-import { claims, diagnosisCodes, medicalInstitutions, medicalPersonnel, panelDocumentation } from '../../../shared/schema.js';
+import { claims, diagnosisCodes, medicalInstitutions, medicalPersonnel, panelDocumentation } from '../../../shared/schema.v.js.js';
 
 // Claims schema
 export const schema = {

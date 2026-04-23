@@ -1,4 +1,17 @@
 import { Request, Response, NextFunction } from 'express';
+
+// Extend Express Request type to include user property
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        userId?: string;
+        companyId?: string;
+        [key: string]: any;
+      };
+    }
+  }
+}
 import { WinstonLogger } from '../utils/WinstonLogger';
 
 /**

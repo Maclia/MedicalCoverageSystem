@@ -4,7 +4,12 @@
  */
 
 import express, { Request, Response, Router } from 'express';
-import { cardManagementService } from '../services/cardManagementService.js';
+import { cardManagementService } from '../services/CardManagementService.js';
+
+// Initialize card management service with database connection
+// Note: This will be properly injected with actual DB connection in production
+// @ts-ignore - db will be available at runtime
+const cardService = cardManagementService((globalThis as any).db || {});
 
 const router: Router = express.Router();
 
@@ -28,7 +33,7 @@ router.post('/generate', async (req: Request, res: Response) => {
       });
     }
 
-    const result = await cardManagementService.generateMemberCard({
+    const result = await cardService.generateMemberCard({
       memberId,
       cardType,
       templateId,
@@ -38,8 +43,9 @@ router.post('/generate', async (req: Request, res: Response) => {
 
     res.status(201).json(result);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      error: error.message || 'Failed to generate card',
+      error: errorMessage || 'Failed to generate card',
     });
   }
 });
@@ -53,7 +59,7 @@ router.get('/member/:memberId', async (req: Request, res: Response) => {
     const { memberId } = req.params;
     const { activeOnly } = req.query;
 
-    const cards = await cardManagementService.getMemberCards(parseInt(memberId), activeOnly === 'true');
+    const cards = await cardService.getMemberCards(parseInt(memberId), activeOnly === 'true');
 
     res.json({
       success: true,
@@ -61,8 +67,9 @@ router.get('/member/:memberId', async (req: Request, res: Response) => {
       cards,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      error: error.message || 'Failed to retrieve cards',
+      error: errorMessage || 'Failed to retrieve cards cards',
     });
   }
 });
@@ -75,7 +82,7 @@ router.get('/member/:memberId/active', async (req: Request, res: Response) => {
   try {
     const { memberId } = req.params;
 
-    const cards = await cardManagementService.getMemberCards(parseInt(memberId), true);
+    const cards = await cardService.getMemberCards(parseInt(memberId), true);
 
     res.json({
       success: true,
@@ -83,8 +90,9 @@ router.get('/member/:memberId/active', async (req: Request, res: Response) => {
       cards,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      error: error.message || 'Failed to retrieve active cards',
+      error: errorMessage || 'Failed to retrieve active cards',
     });
   }
 });
@@ -97,15 +105,16 @@ router.get('/:cardId', async (req: Request, res: Response) => {
   try {
     const { cardId } = req.params;
 
-    const card = await cardManagementService.getCard(parseInt(cardId));
+    const card = await cardService.getCard(parseInt(cardId));
 
     res.json({
       success: true,
       card,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(404).json({
-      error: error.message || 'Card not found',
+      error: errorMessage || 'Card not found',
     });
   }
 });
@@ -124,7 +133,7 @@ router.post('/verify', async (req: Request, res: Response) => {
       });
     }
 
-    const result = await cardManagementService.verifyCard(
+    const result = await cardService.verifyCard(
       {
         qrCodeData,
         providerId,
@@ -139,9 +148,10 @@ router.post('/verify', async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(400).json({
       success: false,
-      error: error.message || 'Card verification failed',
+      error: errorMessage || 'Card verification failed',
     });
   }
 });
@@ -168,7 +178,7 @@ router.put('/:cardId/status', async (req: Request, res: Response) => {
       });
     }
 
-    const result = await cardManagementService.updateCardStatus({
+    const result = await cardService.updateCardStatus({
       cardId: parseInt(cardId),
       status,
       reason,
@@ -176,8 +186,9 @@ router.put('/:cardId/status', async (req: Request, res: Response) => {
 
     res.json(result);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(400).json({
-      error: error.message || 'Failed to update card status',
+      error: errorMessage || 'Failed to update card status',
     });
   }
 });
@@ -197,12 +208,13 @@ router.post('/:cardId/replace', async (req: Request, res: Response) => {
       });
     }
 
-    const result = await cardManagementService.requestCardReplacement(parseInt(cardId), reason, expedited);
+    const result = await cardService.requestCardReplacement(parseInt(cardId), reason, expedited);
 
     res.status(201).json(result);
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(400).json({
-      error: error.message || 'Failed to request replacement',
+      error: errorMessage || 'Failed to request replacement',
     });
   }
 });
@@ -216,7 +228,7 @@ router.get('/history/:cardId', async (req: Request, res: Response) => {
     const { cardId } = req.params;
     const { limit } = req.query;
 
-    const history = await cardManagementService.getCardVerificationHistory(
+    const history = await cardService.getCardVerificationHistory(
       parseInt(cardId),
       limit ? parseInt(limit as string) : 20
     );
@@ -227,8 +239,9 @@ router.get('/history/:cardId', async (req: Request, res: Response) => {
       events: history,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      error: error.message || 'Failed to retrieve verification history',
+      error: errorMessage || 'Failed to retrieve verification history',
     });
   }
 });
@@ -245,7 +258,7 @@ router.get('/templates', async (req: Request, res: Response) => {
   try {
     const { activeOnly } = req.query;
 
-    const templates = await cardManagementService.getCardTemplates(activeOnly !== 'false');
+    const templates = await cardService.getCardTemplates(activeOnly !== 'false');
 
     res.json({
       success: true,
@@ -253,8 +266,9 @@ router.get('/templates', async (req: Request, res: Response) => {
       templates,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      error: error.message || 'Failed to retrieve templates',
+      error: errorMessage || 'Failed to retrieve templates',
     });
   }
 });
@@ -273,15 +287,16 @@ router.post('/templates', async (req: Request, res: Response) => {
       });
     }
 
-    const template = await cardManagementService.upsertCardTemplate(templateData);
+    const template = await cardService.upsertCardTemplate(templateData);
 
     res.status(201).json({
       success: true,
       template,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      error: error.message || 'Failed to create template',
+      error: errorMessage || 'Failed to create template',
     });
   }
 });
@@ -297,15 +312,16 @@ router.put('/templates/:templateId', async (req: Request, res: Response) => {
 
     templateData.id = parseInt(templateId);
 
-    const template = await cardManagementService.upsertCardTemplate(templateData);
+    const template = await cardService.upsertCardTemplate(templateData);
 
     res.json({
       success: true,
       template,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      error: error.message || 'Failed to update template',
+      error: errorMessage || 'Failed to update template',
     });
   }
 });
@@ -322,7 +338,7 @@ router.get('/batches', async (req: Request, res: Response) => {
   try {
     const { status } = req.query;
 
-    const batches = await cardManagementService.getProductionBatches(status as string);
+    const batches = await cardService.getProductionBatches(status as string);
 
     res.json({
       success: true,
@@ -330,8 +346,9 @@ router.get('/batches', async (req: Request, res: Response) => {
       batches,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      error: error.message || 'Failed to retrieve batches',
+      error: errorMessage || 'Failed to retrieve batches',
     });
   }
 });
@@ -344,15 +361,16 @@ router.get('/batches/:batchId', async (req: Request, res: Response) => {
   try {
     const { batchId } = req.params;
 
-    const batch = await cardManagementService.getBatchDetails(batchId);
+    const batch = await cardService.getBatchDetails(batchId);
 
     res.json({
       success: true,
       batch,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(404).json({
-      error: error.message || 'Batch not found',
+      error: errorMessage || 'Batch not found',
     });
   }
 });
@@ -372,15 +390,16 @@ router.put('/batches/:batchId/status', async (req: Request, res: Response) => {
       });
     }
 
-    const batch = await cardManagementService.updateBatchStatus(batchId, status, additionalData);
+    const batch = await cardService.updateBatchStatus(batchId, status, additionalData);
 
     res.json({
       success: true,
       batch,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(400).json({
-      error: error.message || 'Failed to update batch status',
+      error: errorMessage || 'Failed to update batch status',
     });
   }
 });
@@ -395,15 +414,16 @@ router.put('/batches/:batchId/status', async (req: Request, res: Response) => {
  */
 router.get('/analytics', async (req: Request, res: Response) => {
   try {
-    const analytics = await cardManagementService.getCardAnalytics();
+    const analytics = await cardService.getCardAnalytics();
 
     res.json({
       success: true,
       data: analytics,
     });
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
     res.status(500).json({
-      error: error.message || 'Failed to generate analytics',
+      error: errorMessage || 'Failed to generate analytics',
     });
   }
 });

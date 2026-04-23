@@ -27,7 +27,7 @@ import {
   deliveryStatusEnum,
   consentTypeEnum,
   approvalStatusEnum
-} from "../../../../shared/schema";
+} from "../../../shared/schemas/schemas/schema";
 
 // Companies table
 export const companies = pgTable("companies", {

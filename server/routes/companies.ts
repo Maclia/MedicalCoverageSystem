@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
-import { companies, insertCompanySchema } from '../../services/shared/schema';
+import { companies, insertCompanySchema } from '../../services/shared/schemas/schemas/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { z } from 'zod';
 

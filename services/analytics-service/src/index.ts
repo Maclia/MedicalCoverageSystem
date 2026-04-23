@@ -1,6 +1,6 @@
 import express from 'express';
 import dotenv from 'dotenv';
-import * as pino from 'pino';
+import { pino } from 'pino';
 import { analyticsRoutes } from './api/routes.js';
 import { MetricsCollector } from './services/MetricsCollector.js';
 import { AnalyticsAggregator } from './services/AnalyticsAggregator.js';
@@ -29,7 +29,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Request logging
-app.use((req, res, next) => {
+app.use((req, _res, next) => {
   logger.info(`${req.method} ${req.path}`);
   next();
 });

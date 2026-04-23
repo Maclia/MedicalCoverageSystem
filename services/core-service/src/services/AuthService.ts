@@ -2,7 +2,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { eq, lte } from 'drizzle-orm';
 import { db } from '../config/database';
-import { users, userSessions, companies, medicalInstitutions, medicalPersonnel } from '@shared/schema';
+import { users, userSessions, companies, medicalInstitutions, medicalPersonnel } from '@shared/schema.v';
 import { config } from '../config';
 import { createLogger, generateCorrelationId } from '../utils/logger';
 import { auditService } from '../services/AuditService';

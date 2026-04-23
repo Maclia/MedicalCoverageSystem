@@ -1,6 +1,6 @@
 import { eq, and, desc, lte, gte } from 'drizzle-orm';
 import { db } from '../config/database';
-import { auditLogs } from '@shared/schema';
+import { auditLogs } from '@shared/schema.v';
 import { loggerInstance, generateCorrelationId } from '../utils/logger';
 
 export interface AuditEventData {

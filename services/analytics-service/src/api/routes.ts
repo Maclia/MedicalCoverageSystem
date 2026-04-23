@@ -37,14 +37,14 @@ export function analyticsRoutes(metricsCollector: MetricsCollector, analyticsAgg
 
       await metricsCollector.recordEvents(eventList);
 
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         message: `Recorded ${eventList.length} events`,
         count: eventList.length,
       });
     } catch (error) {
       logger.error('Error recording events:', error);
-      res.status(500).json({ error: 'Failed to record events' });
+      return res.status(500).json({ error: 'Failed to record events' });
     }
   });
 

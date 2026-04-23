@@ -139,44 +139,45 @@ export class WellnessService {
     const db = this.db.getDb();
 
     try {
-      let query = db.select().from(wellnessPrograms);
+      // Build conditions array
+      const conditions: any[] = [];
 
       // Apply filters
       if (searchParams.filters) {
         const { filters } = searchParams;
 
         if (filters.programType) {
-          query = query.where(eq(wellnessPrograms.programType, filters.programType));
+          conditions.push(eq(wellnessPrograms.programType, filters.programType));
         }
 
         if (filters.difficultyLevel) {
-          query = query.where(eq(wellnessPrograms.difficultyLevel, filters.difficultyLevel));
+          conditions.push(eq(wellnessPrograms.difficultyLevel, filters.difficultyLevel));
         }
 
         if (filters.category) {
-          query = query.where(ilike(wellnessPrograms.category, `%${filters.category}%`));
+          conditions.push(ilike(wellnessPrograms.category, `%${filters.category}%`));
         }
 
         if (filters.isActive !== undefined) {
-          query = query.where(eq(wellnessPrograms.isActive, filters.isActive));
+          conditions.push(eq(wellnessPrograms.isActive, filters.isActive));
         }
 
         if (filters.isPremium !== undefined) {
-          query = query.where(eq(wellnessPrograms.isPremium, filters.isPremium));
+          conditions.push(eq(wellnessPrograms.isPremium, filters.isPremium));
         }
 
         if (filters.minDuration) {
-          query = query.where(gte(wellnessPrograms.duration, filters.minDuration));
+          conditions.push(gte(wellnessPrograms.duration, filters.minDuration));
         }
 
         if (filters.maxDuration) {
-          query = query.where(lte(wellnessPrograms.duration, filters.maxDuration));
+          conditions.push(lte(wellnessPrograms.duration, filters.maxDuration));
         }
       }
 
       // Apply text search
       if (searchParams.query) {
-        query = query.where(
+        conditions.push(
           or(
             ilike(wellnessPrograms.name, `%${searchParams.query}%`),
             ilike(wellnessPrograms.description, `%${searchParams.query}%`),
@@ -185,20 +186,30 @@ export class WellnessService {
         );
       }
 
+      // Build base query
+      let query = db.select().from(wellnessPrograms);
+
+      // Apply all conditions at once
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as any;
+      }
+
       // Apply sorting
       if (searchParams.sortBy) {
         const sortField = wellnessPrograms[searchParams.sortBy as keyof typeof wellnessPrograms];
-        const sortOrder = searchParams.sortOrder === 'desc' ? desc(sortField) : asc(sortField);
-        query = query.orderBy(sortOrder);
+        if (sortField && typeof sortField !== 'function') {
+          const sortOrder = searchParams.sortOrder === 'desc' ? desc(sortField as any) : asc(sortField as any);
+          query = query.orderBy(sortOrder) as any;
+        }
       } else {
-        query = query.orderBy(desc(wellnessPrograms.createdAt));
+        query = query.orderBy(desc(wellnessPrograms.createdAt)) as any;
       }
 
       // Apply pagination
       const { page = 1, limit = 20 } = searchParams.pagination || {};
       const offset = (page - 1) * limit;
 
-      const programResults = await query
+      const programResults = await (query as any)
         .limit(limit)
         .offset(offset);
 
@@ -229,65 +240,63 @@ export class WellnessService {
    */
   async enrollUserInProgram(userId: number, programId: number, enrollmentData: any, context: any): Promise<UserProgramEnrollment> {
     const db = this.db.getDb();
-    const transaction = await db.beginTransaction();
 
     try {
-      this.logger.logProgramEnrollment(userId, programId, 'enrollment', context);
+      return await db.transaction(async (tx: any) => {
+        this.logger.logProgramEnrollment(userId, programId, 'enrollment', context);
 
-      // Check if program exists and is active
-      const program = await this.getWellnessProgramById(programId);
-      if (!program.isActive) {
-        throw new ProgramStatusError(program.status, 'active', 'enroll');
-      }
+        // Check if program exists and is active
+        const program = await this.getWellnessProgramById(programId);
+        if (!program.isActive) {
+          throw new ProgramStatusError(program.isActive ? 'active' : 'inactive', 'active', 'enroll');
+        }
 
-      // Check if user is already enrolled
-      const existingEnrollment = await db
-        .select()
-        .from(userProgramEnrollments)
-        .where(
-          and(
-            eq(userProgramEnrollments.userId, userId),
-            eq(userProgramEnrollments.programId, programId),
-            inArray(userProgramEnrollments.status, ['active', 'paused'])
+        // Check if user is already enrolled
+        const existingEnrollment = await tx
+          .select()
+          .from(userProgramEnrollments)
+          .where(
+            and(
+              eq(userProgramEnrollments.userId, userId),
+              eq(userProgramEnrollments.programId, programId),
+              inArray(userProgramEnrollments.status, ['active', 'paused'])
+            )
           )
-        )
-        .limit(1);
+          .limit(1);
 
-      if (existingEnrollment.length > 0) {
-        throw new ValidationError('User is already enrolled in this program');
-      }
+        if (existingEnrollment.length > 0) {
+          throw new ValidationError('User is already enrolled in this program');
+        }
 
-      // Validate enrollment rules
-      await this.validateEnrollmentRules(userId, program, enrollmentData);
+        // Validate enrollment rules
+        await this.validateEnrollmentRules(userId, program, enrollmentData);
 
-      const enrollmentRecord = {
-        userId,
-        programId,
-        enrollmentDate: new Date(),
-        status: 'active',
-        startDate: enrollmentData.startDate || new Date(),
-        targetEndDate: enrollmentData.targetEndDate,
-        customGoals: enrollmentData.customGoals || {},
-        preferences: enrollmentData.preferences || {},
-        progressData: {},
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+        const enrollmentRecord = {
+          userId,
+          programId,
+          enrollmentDate: new Date(),
+          status: 'active',
+          startDate: enrollmentData.startDate || new Date(),
+          targetEndDate: enrollmentData.targetEndDate,
+          customGoals: enrollmentData.customGoals || {},
+          preferences: enrollmentData.preferences || {},
+          progressData: {},
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
 
-      const enrollment = await transaction.insert(userProgramEnrollments).values(enrollmentRecord).returning();
+        const enrollment = await tx.insert(userProgramEnrollments).values(enrollmentRecord).returning();
 
-      await transaction.commit();
+        this.logger.info('User successfully enrolled in wellness program', {
+          userId,
+          programId,
+          enrollmentId: enrollment[0].id
+        });
 
-      this.logger.info('User successfully enrolled in wellness program', {
-        userId,
-        programId,
-        enrollmentId: enrollment[0].id
+        return enrollment[0];
       });
 
-      return enrollment[0];
-
     } catch (error) {
-      await transaction.rollback();
       this.logger.error('Failed to enroll user in wellness program', { error, userId, programId });
       throw error;
     }
@@ -341,14 +350,13 @@ export class WellnessService {
       }
 
       // Calculate completion percentage
-      const completionPercentage = calculateCompletionPercentage(progressData);
+      const completionPercentage = this.calculateCompletionPercentage(progressData);
 
       const updatedEnrollment = await db
         .update(userProgramEnrollments)
         .set({
           progressData,
           completionPercentage,
-          lastUpdated: new Date(),
           updatedAt: new Date()
         })
         .where(eq(userProgramEnrollments.id, enrollmentId))
@@ -394,7 +402,7 @@ export class WellnessService {
       this.logger.logProgramCompletion(
         updatedEnrollment[0].userId,
         updatedEnrollment[0].programId,
-        calculateCompletionDuration(updatedEnrollment[0].enrollmentDate, new Date())
+          this.calculateCompletionDuration(updatedEnrollment[0].enrollmentDate, new Date())
       );
 
       return updatedEnrollment[0];
@@ -500,7 +508,7 @@ export class WellnessService {
 
       // Update user program progress if activity is part of a program
       if (activityData.programId) {
-        await this.updateProgramProgressFromActivity(userId, activityData.programId, activityLog[0]);
+        await this.updateProgramProgressFromActivity(userId, activityData.programId, userActivity[0]);
       }
 
       return userActivity[0];
@@ -550,25 +558,21 @@ export class WellnessService {
     const db = this.db.getDb();
 
     try {
-      let query = db
-        .select()
-        .from(wellnessTracking)
-        .where(
-          and(
-            eq(wellnessTracking.userId, userId),
-            eq(wellnessTracking.metricType, metricType)
-          )
-        );
+      const conditions: any[] = [
+        eq(wellnessTracking.userId, userId),
+        eq(wellnessTracking.metricType, metricType)
+      ];
 
       // Apply date range filter
       if (dateRange) {
-        query = query.where(
-          and(
-            gte(wellnessTracking.recordedAt, dateRange.startDate),
-            lte(wellnessTracking.recordedAt, dateRange.endDate)
-          )
-        );
+        conditions.push(gte(wellnessTracking.recordedAt, dateRange.startDate));
+        conditions.push(lte(wellnessTracking.recordedAt, dateRange.endDate));
       }
+
+      let query = db
+        .select()
+        .from(wellnessTracking)
+        .where(and(...conditions));
 
       const metrics = await query.orderBy(desc(wellnessTracking.recordedAt));
 
@@ -589,7 +593,7 @@ export class WellnessService {
     const db = this.db.getDb();
 
     try {
-      this.logger.logGoalCreated(context.userId, goalData.goalType, parseFloat(goalData.targetValue.toString()));
+      this.logger.logGoalCreated(context.userId, goalData.goalType, goalData.targetValue ? parseFloat(goalData.targetValue.toString()) : 0);
 
       // Validate goal
       await this.validateWellnessGoal(goalData);
@@ -631,8 +635,8 @@ export class WellnessService {
       }
 
       // Calculate new progress percentage
-      const targetValue = parseFloat(goal[0].targetValue.toString());
-      const currentValue = progressData.currentValue || parseFloat(goal[0].currentValue.toString());
+      const targetValue = goal[0].targetValue ? parseFloat(goal[0].targetValue.toString()) : 0;
+      const currentValue = progressData.currentValue || (goal[0].currentValue ? parseFloat(goal[0].currentValue.toString()) : 0);
       const progressPercentage = Math.min(100, Math.round((currentValue / targetValue) * 100));
 
       const updatedGoal = await db
@@ -654,7 +658,7 @@ export class WellnessService {
           goal[0].userId,
           goalId,
           goal[0].goalType,
-          calculateGoalCompletionDuration(goal[0].startDate, new Date())
+          this.calculateGoalCompletionDuration(goal[0].startDate, new Date())
         );
       }
 
@@ -713,17 +717,17 @@ export class WellnessService {
 
   private async validateEnrollmentRules(userId: number, program: WellnessProgram, enrollmentData: any): Promise<void> {
     // Check age restrictions if any
-    if (program.targetAudience?.ageRange) {
+    if ((program.targetAudience as any)?.ageRange) {
       // This would typically involve checking user profile data
       // For now, we'll log the requirement
       this.logger.info('Program has age restrictions', {
         programId: program.id,
-        ageRange: program.targetAudience.ageRange
+        ageRange: (program.targetAudience as any).ageRange
       });
     }
 
     // Check if program requires medical clearance
-    if (program.requirements?.medicalClearance) {
+    if ((program.requirements as any)?.medicalClearance) {
       this.logger.info('Program requires medical clearance', {
         programId: program.id,
         requirements: program.requirements
@@ -784,7 +788,7 @@ export class WellnessService {
     }
 
     // Validate target value
-    if (parseFloat(goalData.targetValue.toString()) <= 0) {
+    if (!goalData.targetValue || parseFloat(goalData.targetValue.toString()) <= 0) {
       throw new ValidationError('Target value must be greater than 0');
     }
 
@@ -833,7 +837,7 @@ export class WellnessService {
         const updatedProgress = await db
           .update(userProgramEnrollments)
           .set({
-            lastUpdated: new Date()
+             updatedAt: new Date()
           })
           .where(eq(userProgramEnrollments.id, enrollment[0].id));
 

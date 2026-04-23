@@ -1,13 +1,13 @@
 import { eventBus, DomainEvent, EventFactory } from '../events/EventBus';
-import { createLogger } from '../config/logger';
+import { createLogger } from '../../../../core-service/src/utils/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger();
 
 export interface SagaStep {
   name: string;
-  action: () => Promise<any>;
-  compensate?: () => Promise<any>;
+  action: (data?: any) => Promise<any>;
+  compensate?: (data?: any) => Promise<any>;
   retryPolicy?: {
     maxAttempts: number;
     delay: number;
@@ -172,11 +172,12 @@ class SagaOrchestrator {
 
       } catch (error) {
         lastError = error as Error;
-        logger.warn('Saga step attempt failed', lastError, {
+        logger.warn('Saga step attempt failed', {
           sagaId: saga.id,
           stepName: step.name,
           attempt,
-          maxAttempts: retryPolicy.maxAttempts
+          maxAttempts: retryPolicy.maxAttempts,
+          error: lastError
         });
 
         if (attempt < retryPolicy.maxAttempts) {
@@ -289,6 +290,19 @@ class SagaOrchestrator {
 
   private sleep(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  private async handleSagaFailure(saga: Saga, error: Error): Promise<void> {
+    saga.status = 'failed';
+    saga.error = error;
+    saga.updatedAt = new Date();
+
+    await this.publishSagaEvent(saga, 'failed', {
+      error: error.message,
+      stepIndex: saga.currentStep
+    });
+
+    await this.compensateSaga(saga);
   }
 
   private async publishSagaEvent(saga: Saga, eventType: string, data?: any): Promise<void> {

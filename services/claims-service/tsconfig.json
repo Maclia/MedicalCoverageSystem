@@ -23,8 +23,11 @@
     "moduleResolution": "Node16",
     "baseUrl": ".",
     "paths": {
-      "@core/*": ["../core-service/src/*"]
+      "@core/*": ["../core-service/src/*"],
+      "@shared/*": ["../shared/*"],
+      "@shared/schemas/*": ["../shared/schemas/*"]
     },
+    "allowImportingTsExtensions": true,
     "types": ["jest", "node"]
   },
   "include": [

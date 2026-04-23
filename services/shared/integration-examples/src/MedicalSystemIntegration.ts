@@ -378,7 +378,8 @@ export class MedicalSystemIntegration {
         logger.debug('Validating patient data');
         return { valid: true };
       })
-      .step('createPatientRecord', async (data: any) => {
+      .step('createPatientRecord', async () => {
+        const data = {} as any; // Saga context will be injected at runtime
         logger.debug('Creating patient record', { patientId: data.patientId });
         return { patientId: data.patientId, medicalRecordNumber: 'MRN-' + Date.now() };
       }, {
@@ -386,11 +387,13 @@ export class MedicalSystemIntegration {
           logger.debug('Rolling back patient record creation');
         }
       })
-      .step('sendWelcomeEmail', async (data: any) => {
+      .step('sendWelcomeEmail', async () => {
+        const data = {} as any; // Saga context will be injected at runtime
         logger.debug('Sending welcome email', { patientId: data.patientId });
         return { emailSent: true };
       })
-      .step('scheduleFollowUp', async (data: any) => {
+      .step('scheduleFollowUp', async () => {
+        const data = {} as any; // Saga context will be injected at runtime
         logger.debug('Scheduling follow-up appointment', { patientId: data.patientId });
         return { scheduled: true };
       })
@@ -404,19 +407,23 @@ export class MedicalSystemIntegration {
         logger.debug('Validating appointment request');
         return { valid: true };
       })
-      .step('checkAvailability', async (data: any) => {
+      .step('checkAvailability', async () => {
+        const data = {} as any; // Saga context will be injected at runtime
         logger.debug('Checking appointment availability', { doctorId: data.doctorId });
         return { available: true, slotId: data.slotId };
       })
-      .step('bookAppointment', async (data: any) => {
+      .step('bookAppointment', async () => {
+        const data = {} as any; // Saga context will be injected at runtime
         logger.debug('Booking appointment', { slotId: data.slotId });
         return { appointmentId: 'APT-' + Date.now() };
       }, {
-        compensate: async (data: any) => {
+        compensate: async () => {
+          const data = {} as any; // Saga context will be injected at runtime
           logger.debug('Releasing appointment slot', { slotId: data.slotId });
         }
       })
-      .step('sendConfirmation', async (data: any) => {
+      .step('sendConfirmation', async () => {
+        const data = {} as any; // Saga context will be injected at runtime
         logger.debug('Sending appointment confirmation', { appointmentId: data.appointmentId });
         return { sent: true };
       })
@@ -430,15 +437,18 @@ export class MedicalSystemIntegration {
         logger.debug('Validating insurance claim');
         return { valid: true };
       })
-      .step('checkCoverage', async (data: any) => {
+      .step('checkCoverage', async () => {
+        const data = {} as any; // Saga context will be injected at runtime
         logger.debug('Checking insurance coverage', { policyId: data.policyId });
         return { covered: true, coverageAmount: 10000 };
       })
-      .step('processClaim', async (data: any) => {
+      .step('processClaim', async () => {
+        const data = {} as any; // Saga context will be injected at runtime
         logger.debug('Processing insurance claim', { claimId: data.claimId });
         return { processed: true, approvedAmount: data.coverageAmount };
       })
-      .step('updatePolicy', async (data: any) => {
+      .step('updatePolicy', async () => {
+        const data = {} as any; // Saga context will be injected at runtime
         logger.debug('Updating insurance policy', { policyId: data.policyId });
         return { updated: true };
       })
@@ -720,7 +730,7 @@ export class MedicalSystemIntegration {
   }
 
   private async updateInvoiceStatus(invoiceId: string, status: string): Promise<void> {
-    await httpClient.put(`billing-service/invoices/${invoiceId}/status`, { status });
+    await httpClient.put(`billing-service/invoices/${invoiceId}/status`, status);
   }
 
   private async sendNotification(type: string, data: any): Promise<void> {

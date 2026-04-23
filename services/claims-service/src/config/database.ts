@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm';
 import { Pool } from 'pg';
-import { schema } from '../../../shared/schema';
+import * as schema from '@shared/schemas/claims.ts';
 
 // Database configuration
 const pool = new Pool({

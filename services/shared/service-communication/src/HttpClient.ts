@@ -1,5 +1,5 @@
 import { serviceRegistry } from './ServiceRegistry';
-import { createLogger } from '../config/logger';
+import { createLogger } from '../../redis-cache/src/config/logger';
 import { EventEmitter } from 'events';
 
 const logger = createLogger();
@@ -9,6 +9,7 @@ export interface ServiceRequestOptions {
   retries?: number;
   retryDelay?: number;
   headers?: Record<string, string>;
+  params?: Record<string, string>;
   loadBalancing?: 'round-robin' | 'weighted' | 'least-connections';
   onlyHealthy?: boolean;
   fallback?: () => Promise<any>;
