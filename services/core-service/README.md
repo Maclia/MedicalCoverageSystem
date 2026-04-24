@@ -9,6 +9,7 @@ The Core Service handles authentication, authorization, and user management for 
 - **Role-based Access Control**
 - **Password Security & Reset**
 - **Session Management**
+- ✅ **Centralized Business Rules Engine**
 - **Comprehensive Audit Logging**
 - **Structured Logging**
 - **Rate Limiting**
@@ -44,6 +45,48 @@ The Core Service handles authentication, authorization, and user management for 
 - `PORT` - Service port (default: 3001)
 - `REDIS_URL` - Redis connection for session storage
 - `LOG_LEVEL` - Logging level (info/debug/warn/error)
+
+
+---
+
+## ✅ Centralized Business Rules Engine
+
+Core Service provides **Single Source of Truth** for all system business logic. All services must use this engine for policy decisions.
+
+### Modular Architecture
+```
+src/services/business-rules/
+├── index.ts                          # Public API facade
+├── DomainServiceClient.ts            # Cross-service HTTP client
+├── FinancialRulesService.ts          # Financial calculations
+├── ClaimRulesService.ts              # Claim validation logic
+└── CardRulesService.ts               # Card management rules
+```
+
+### Available Rule Modules
+
+| Module | Responsibility |
+|--------|----------------|
+| **FinancialRulesService** | Premium allocation, commission calculation, balance validation, settlement rules |
+| **ClaimRulesService** | Policy exclusions, waiting periods, diagnosis validation, pre-authorization |
+| **CardRulesService** | Card eligibility, replacement policies, printing discrepancy handling |
+
+### Usage Example
+```typescript
+// ✅ Recommended: direct modular imports
+import { FinancialRulesService, BusinessRules } from '@core/services/business-rules';
+
+// Calculate premium allocation
+const allocation = await FinancialRulesService.calculatePremiumAllocation(10000);
+
+// Or use facade access
+const balance = await BusinessRules.Financial.validateCompanyBalance(companyId, claimAmount);
+```
+
+### ⚠️ Legacy Compatibility
+`BusinessRulesEngine` remains fully functional for backward compatibility with deprecation warnings. Migrate to modular imports for v2.0.
+
+---
 
 ## Security Features
 
