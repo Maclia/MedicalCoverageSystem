@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { cardManagementService } from '../../services/CardManagementService';
+import { cardManagementService } from '../../../../membership-service/src/services/CardManagementService';
 import { createLogger } from '../../utils/logger';
 
 const router = Router();

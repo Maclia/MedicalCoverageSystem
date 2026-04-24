@@ -7,10 +7,13 @@
  */
 
 import crypto from 'crypto';
-import { db } from '../config/database.js';
-import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '@shared/schema';
+import { database } from '../models/Database.js';
+import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../models/schema.js';
 import { eq, and, desc, gte, lte, count, sum, sql } from 'drizzle-orm';
-import { auditService } from './AuditService.js';
+import { auditLogger } from '../middleware/auditMiddleware.js';
+
+const db = database.getDb();
+const auditService = auditLogger;
 
 export interface CardGenerationRequest {
   memberId: number;
@@ -85,17 +88,17 @@ class CardManagementService {
       const card = cardResult[0];
 
       // Log audit event
-      await auditService.logAuditEvent({
+      auditService.info('Card generated', {
         userId: request.memberId,
         action: 'CARD_GENERATED',
         resource: 'MemberCard',
-        resourceId: card.id.toString(),
+        resourceId: (card as any).id?.toString(),
         severity: 'MEDIUM'
       });
 
       // If physical card requested, create production batch record
       if (request.cardType === 'physical' || request.cardType === 'both') {
-        await this.initializePhysicalCardProduction(card.id);
+        await this.initializePhysicalCardProduction(card.id as number);
       }
 
       return {
@@ -181,7 +184,7 @@ class CardManagementService {
 
       // Check if card is active and not expired
       const now = new Date();
-      const expiryDate = new Date(cardData.expiry_date);
+      const expiryDate = new Date(cardData.expiry_date as string | number | Date);
       const isExpired = expiryDate < now;
       const isActive = cardData.status === 'active' && !isExpired;
 
@@ -206,7 +209,7 @@ class CardManagementService {
 
       // Geolocation-based fraud detection (if provided)
       if (request.geolocation) {
-        const lastVerificationLocation = await this.getLastVerificationLocation(cardData.id);
+        const lastVerificationLocation = await this.getLastVerificationLocation(cardData.id as number);
         if (lastVerificationLocation) {
           const distance = this.calculateDistance(
             request.geolocation.lat,
@@ -216,7 +219,7 @@ class CardManagementService {
           );
 
           // Impossible travel detection (>900 km in < 24 hours)
-          const lastVerificationTime = await this.getLastVerificationTime(cardData.id);
+          const lastVerificationTime = await this.getLastVerificationTime(cardData.id as number);
           if (lastVerificationTime) {
             const timeDiffHours = (now.getTime() - lastVerificationTime.getTime()) / (1000 * 60 * 60);
             const speed = distance / timeDiffHours;
@@ -235,18 +238,18 @@ class CardManagementService {
       const eventResult = await db.execute(
         sql`INSERT INTO card_verification_events 
             (card_id, member_id, verifier_id, verification_method, verification_result, verification_data, ip_address, geolocation, fraud_risk_score, fraud_indicators, verification_timestamp)
-            VALUES (${cardData.id}, ${memberId || cardData.member_id}, ${this.parseProviderIdToInt(request.providerId)}, ${request.verificationType}, ${verificationResult}, ${JSON.stringify({ qrCodeData: request.qrCodeData, location: request.location, deviceInfo: request.deviceInfo })}, ${request.ipAddress || null}, ${request.geolocation ? JSON.stringify(request.geolocation) : null}, ${fraudRiskScore}, ${JSON.stringify(fraudIndicators)}, ${now})
+        VALUES (${(cardData.id as number)}, ${memberId || (cardData.member_id as number)}, ${this.parseProviderIdToInt(request.providerId)}, ${request.verificationType}, ${verificationResult}, ${JSON.stringify({ qrCodeData: request.qrCodeData, location: request.location, deviceInfo: request.deviceInfo })}, ${request.ipAddress || null}, ${request.geolocation ? JSON.stringify(request.geolocation) : null}, ${fraudRiskScore}, ${JSON.stringify(fraudIndicators)}, ${now})
             RETURNING *`
       );
 
       const event = eventResult[0];
 
       // Log audit event for verification
-      await auditService.logAuditEvent({
-        userId: memberId || cardData.member_id,
+      auditService.info('Card verified', {
+        userId: memberId || (cardData as any).member_id,
         action: 'CARD_VERIFIED',
         resource: 'MemberCard',
-        resourceId: cardData.id.toString(),
+        resourceId: (cardData as any).id?.toString(),
         metadata: { result: verificationResult, fraudRiskScore, method: request.verificationType },
         ipAddress: request.ipAddress,
         userAgent: request.deviceInfo,
@@ -258,7 +261,7 @@ class CardManagementService {
         card: {
           id: cardData.id,
           memberId: cardData.member_id,
-          cardNumber: this.maskCardNumber(cardData.card_number),
+          cardNumber: this.maskCardNumber(cardData.card_number as string),
           status: cardData.status,
           expiryDate: expiryDate,
         },
@@ -301,14 +304,14 @@ class CardManagementService {
       }
 
       // Log status change
-      await auditService.logDataModification(
-        0, // System/Admin ID should be passed here if available
-        'UPDATE',
-        'MemberCard',
-        update.cardId.toString(),
-        { status: 'previous' },
-        { status: update.status, reason: update.reason }
-      );
+      auditService.info('Card status updated', {
+        action: 'UPDATE',
+        resource: 'MemberCard',
+        resourceId: update.cardId.toString(),
+        oldStatus: 'previous',
+        newStatus: update.status,
+        reason: update.reason
+      });
 
       return {
         success: true,
@@ -339,10 +342,10 @@ class CardManagementService {
 
       // Generate new card
       const newCardRequest: CardGenerationRequest = {
-        memberId: originalCard.member_id,
-        cardType: originalCard.card_type,
+        memberId: originalCard.member_id as number,
+        cardType: originalCard.card_type as 'digital' | 'physical' | 'both',
         expeditedShipping: expedited,
-        deliveryAddress: originalCard.delivery_address,
+        deliveryAddress: originalCard.delivery_address as string | undefined,
       };
 
       const newCard = await this.generateMemberCard(newCardRequest);
@@ -556,7 +559,7 @@ class CardManagementService {
       );
 
       if (result.length > 0) {
-        return new Date(result[0].verification_timestamp);
+        return new Date(result[0].verification_timestamp as any);
       }
       return null;
     } catch {

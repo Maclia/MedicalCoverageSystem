@@ -27,7 +27,7 @@ import {
   deliveryStatusEnum,
   consentTypeEnum,
   approvalStatusEnum
-} from "../../../shared/schemas/schemas/schema";
+} from "../../../shared/schemas/core.js";
 
 // Companies table
 export const companies = pgTable("companies", {
@@ -361,6 +361,78 @@ export type Communication = typeof communications.$inferSelect;
 export type NewCommunication = typeof communications.$inferInsert;
 export type Eligibility = typeof eligibility.$inferSelect;
 export type NewEligibility = typeof eligibility.$inferInsert;
+
+// ✅ Card Management Tables (migrated from Core Service)
+export const memberCards = pgTable("member_cards", {
+  id: serial("id").primaryKey(),
+  memberId: integer("member_id").references(() => members.id).notNull(),
+  cardNumber: text("card_number").notNull().unique(),
+  cardType: text("card_type").notNull(),
+  status: text("status").notNull().default('pending'),
+  templateType: text("template_type").notNull(),
+  expiryDate: timestamp("expiry_date").notNull(),
+  qrCodeData: text("qr_code_data").notNull(),
+  digitalCardUrl: text("digital_card_url"),
+  nfcEnabled: boolean("nfc_enabled").default(true),
+  chipEnabled: boolean("chip_enabled").default(true),
+  personalizationData: jsonb("personalization_data"),
+  deliveryMethod: text("delivery_method"),
+  deliveryAddress: text("delivery_address"),
+  deactivationDate: timestamp("deactivation_date"),
+  replacementReason: text("replacement_reason"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  cardNumberIdx: index('member_cards_card_number_idx').on(table.cardNumber),
+  memberIdIdx: index('member_cards_member_id_idx').on(table.memberId),
+  statusIdx: index('member_cards_status_idx').on(table.status),
+}));
+
+export const cardTemplates = pgTable("card_templates", {
+  id: serial("id").primaryKey(),
+  templateType: text("template_type").notNull().unique(),
+  templateName: text("template_name").notNull(),
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  templateData: jsonb("template_data"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const cardVerificationEvents = pgTable("card_verification_events", {
+  id: serial("id").primaryKey(),
+  cardId: integer("card_id").references(() => memberCards.id).notNull(),
+  memberId: integer("member_id").references(() => members.id),
+  verifierId: integer("verifier_id"),
+  verificationMethod: text("verification_method").notNull(),
+  verificationResult: text("verification_result").notNull(),
+  verificationData: jsonb("verification_data"),
+  ipAddress: text("ip_address"),
+  geolocation: jsonb("geolocation"),
+  fraudRiskScore: integer("fraud_risk_score").default(0),
+  fraudIndicators: jsonb("fraud_indicators"),
+  verificationTimestamp: timestamp("verification_timestamp").defaultNow().notNull(),
+}, (table) => ({
+  cardIdIdx: index('card_verification_events_card_id_idx').on(table.cardId),
+  timestampIdx: index('card_verification_events_timestamp_idx').on(table.verificationTimestamp),
+}));
+
+export const cardProductionBatches = pgTable("card_production_batches", {
+  id: serial("id").primaryKey(),
+  batchId: text("batch_id").notNull().unique(),
+  cardId: integer("card_id").references(() => memberCards.id).notNull(),
+  productionStatus: text("production_status").notNull().default('pending'),
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  producedAt: timestamp("produced_at"),
+  shippedAt: timestamp("shipped_at"),
+  deliveredAt: timestamp("delivered_at"),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  batchIdIdx: index('card_production_batches_batch_id_idx').on(table.batchId),
+  cardIdIdx: index('card_production_batches_card_id_idx').on(table.cardId),
+}));
 
 // Backwards-compatible aliases for older service code.
 export const memberLifeEvents = lifeEvents;

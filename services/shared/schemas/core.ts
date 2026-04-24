@@ -17,6 +17,7 @@ export const communicationTypeEnum = pgEnum('communication_type', ['enrollment_c
 export const communicationChannelEnum = pgEnum('communication_channel', ['sms', 'email', 'mobile_app', 'postal', 'provider_notification']);
 export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'sent', 'delivered', 'failed', 'bounced']);
 export const consentTypeEnum = pgEnum('consent_type', ['data_processing', 'marketing_communications', 'data_sharing_providers', 'data_sharing_partners', 'wellness_programs']);
+export const approvalStatusEnum = pgEnum('approval_status', ['pending', 'approved', 'rejected', 'cancelled', 'expired']);
 export const auditActionEnum = pgEnum('audit_action', ['create', 'read', 'update', 'delete', 'view']);
 export const auditEntityTypeEnum = pgEnum('audit_entity_type', ['member', 'company', 'benefit', 'claim', 'document']);
 
