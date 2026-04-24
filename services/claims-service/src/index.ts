@@ -2,10 +2,10 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import { createLogger } from './utils/logger';
-import { checkDatabaseConnection } from './config/database';
-import { schema } from './models/schema';
-import claimsRoutes from './routes';
+import { createLogger } from './utils/logger.js';
+import { checkDatabaseConnection } from './config/database.js';
+import { schema } from './models/schema.js';
+import claimsRoutes from './routes/index.js';
 
 const app = express();
 const logger = createLogger();

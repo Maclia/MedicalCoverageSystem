@@ -1,295 +1,222 @@
 # Claims Service
+> Medical Coverage System - Claim Processing Microservice
 
-A microservice for processing insurance claims in the Medical Coverage System.
+---
 
-## Overview
+## 📌 Overview
+Claims Service is responsible for processing, validating, and managing medical insurance claims across the platform. It follows the standard microservice architecture pattern used throughout the Medical Coverage System.
 
-The Claims Service is responsible for handling all aspects of insurance claim processing, including claim submission, validation, status tracking, and integration with other services in the Medical Coverage System.
+**Service Port:** `3002`  
+**Service Name:** `claims-service`  
+**Database Schema:** `claims_schema`
 
-## Features
+---
 
-- **Claim Submission**: Process new insurance claims with comprehensive validation
-- **Claim Management**: Track claim status throughout the lifecycle
-- **Fraud Detection**: Integration with fraud detection service
-- **Payment Processing**: Integration with payment service for claim settlements
-- **Dispute Management**: Handle claim disputes and appeals
-- **Analytics**: Generate claim statistics and reports
-- **Audit Trail**: Maintain complete audit logs for compliance
+## 📐 Architecture
 
-## Technology Stack
-
-- **Runtime**: Node.js 18+
-- **Framework**: Express.js
-- **Language**: TypeScript
-- **Database**: PostgreSQL with Drizzle ORM
-- **Validation**: Zod schemas
-- **Logging**: Winston
-- **Testing**: Jest, Supertest
-- **Containerization**: Docker
-- **CI/CD**: GitHub Actions
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+
-- npm
-- PostgreSQL 14+
-- Docker (optional)
-
-### Installation
-
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd services/claims-service
+### Standard 3-Layer Architecture
+```
+src/
+├── api/                  # HTTP Routes layer
+│   ├── index.ts          # Route aggregator
+│   ├── claims.routes.ts  # Claims domain endpoints
+│   └── stats.routes.ts   # Statistics endpoints
+├── controllers/          # HTTP Request handlers
+│   └── ClaimsController.ts
+├── services/             # Pure business logic layer
+│   ├── ClaimsService.ts
+│   └── ClaimAdjudicationEngine.ts  ✅ **NEW: 6-STAGE ADJUDICATION PIPELINE**
+├── middleware/           # HTTP Middleware
+│   └── claimValidation.ts
+├── config/
+│   └── database.ts
+├── models/
+│   └── schema.ts
+├── utils/
+│   └── logger.ts
+├── index.ts              # Service entry point
+└── server.ts             # Express server setup
 ```
 
-2. Install dependencies:
+---
+
+## 🔗 System Integration Points
+
+### Connected Services
+| Service | Integration Method | Purpose |
+|---------|--------------------|---------|
+| ✅ **Core Service** | Synchronous HTTP | Centralized Business Rules Engine |
+| ✅ **Membership Service** | Synchronous HTTP | Member eligibility, card status verification |
+| ✅ **Insurance Service** | Synchronous HTTP | Benefit definitions, scheme authorization |
+| **Billing Service** | Async Event Bus | Invoicing, payment processing, commission calculations |
+| **Finance Service** | Saga Orchestration | Distributed transaction coordination |
+| **Fraud Detection** | Async Event Bus | Real-time fraud risk analysis |
+| **Analytics Service** | Async Event Bus | Metrics, reporting, business intelligence |
+| **CRM Service** | Async Event Bus | Agent dashboard updates, customer communications |
+
+### Communication Patterns
+✅ **Synchronous**: `shared/service-communication/HttpClient` with automatic retries, load balancing, fallbacks  
+✅ **Asynchronous**: `shared/message-queue/EventBus` with at-least-once delivery  
+✅ **Distributed Transactions**: Saga pattern with automatic compensating actions
+
+---
+
+## 📡 API Endpoints
+
+### Claims Management
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/claims` | Get paginated claims list with filtering |
+| `GET` | `/api/claims/:id` | Get single claim by ID |
+| `POST` | `/api/claims` | Create new claim |
+| `PUT` | `/api/claims/:id` | Update existing claim |
+| `DELETE` | `/api/claims/:id` | Delete claim |
+| `PATCH` | `/api/claims/:id/status` | Update claim status |
+| `POST` | `/api/claims/:id/submit` | Submit claim for processing |
+| `POST` | `/api/claims/:id/approve` | Approve claim |
+| `POST` | `/api/claims/:id/deny` | Deny claim |
+
+### Statistics & Reports
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/stats/summary` | Claim statistics summary |
+| `GET` | `/api/stats/trends` | Claim trends over time |
+| `GET` | `/api/stats/metrics` | Performance metrics |
+| `GET` | `/api/stats/reports` | Generate reports |
+
+### System
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/health` | Health check endpoint |
+| `GET` | `/health/ready` | Readiness probe |
+| `GET` | `/health/live` | Liveness probe |
+
+---
+
+## 🚀 Usage
+
+### Development
 ```bash
+# Install dependencies
 npm install
-```
 
-3. Set up environment:
-```bash
-cp .env.example .env
-# Edit .env with your database configuration
-```
-
-4. Start the service:
-```bash
+# Run development server
 npm run dev
+
+# Run TypeScript check
+npm run type-check
+
+# Run tests
+npm run test
 ```
 
-## API Documentation
-
-See [API Documentation](docs/api.md) for complete API reference.
-
-## Development
-
-### Available Scripts
-
+### Production
 ```bash
-# Development
-npm run dev          # Start development server
-npm run build        # Build for production
-npm run start        # Start production server
+# Build service
+npm run build
 
-# Testing
-npm test             # Run tests
-npm run test:watch   # Run tests in watch mode
-
-# Code Quality
-npm run lint         # Check code style
-npm run lint:fix     # Auto-fix linting issues
-
-# Database
-npx drizzle-kit generate  # Generate migrations
-npx drizzle-kit migrate   # Run migrations
+# Start production server
+npm start
 ```
-
-### Development Tools
-
-- **VS Code Integration**: Auto-format on save, ESLint integration
-- **Docker Support**: Development and production configurations
-- **Monitoring**: Health checks, structured logging
-- **Testing**: Comprehensive test suite with coverage
-
-## Configuration
 
 ### Environment Variables
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| PORT | Service port | 3005 |
-| NODE_ENV | Environment | development |
-| DATABASE_URL | PostgreSQL connection string | postgresql://localhost:5432/medical_coverage |
-| JWT_SECRET | JWT secret key | required |
-| LOG_LEVEL | Logging level | info |
-
-### Database Configuration
-
-The service uses PostgreSQL with the following default settings:
-
-- Host: localhost
-- Port: 5432
-- Database: medical_coverage
-- User: postgres
-- Password: (empty)
-
-## Testing
-
-### Running Tests
-
-```bash
-# Run all tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run specific test file
-npx jest tests/claims.test.ts
+```env
+PORT=3002
+DATABASE_URL=postgresql://user:pass@localhost:5432/medical_db?schema=claims_schema
+SERVICE_NAME=claims-service
+NODE_ENV=development
+LOG_LEVEL=info
 ```
 
-### Test Database
+---
 
-The service uses a separate test database configuration. Ensure you have a test database set up in your .env file.
+## ✅ Validation Rules
+Claims are validated against:
+- Required fields verification
+- Member eligibility checks
+- Benefit coverage validation
+- Business rule enforcement
+- Fraud risk scoring
+- Duplicate claim detection
 
-## Deployment
+---
 
-### Docker Deployment
-
-```bash
-# Build Docker image
-docker build -t claims-service .
-
-# Run Docker container
-docker run -p 3005:3005 claims-service
-```
-
-### Production Deployment
-
-1. Build the project: `npm run build`
-2. Set up environment variables
-3. Start the service: `npm start`
-4. Configure reverse proxy (e.g., Nginx)
-5. Set up monitoring and logging
-
-## Monitoring
-
-### Health Check
-
-The service provides a health check endpoint:
+## 🔄 **✅ FINALIZED 6-STAGE CLAIM ADJUDICATION PIPELINE**
 
 ```
-GET /health
+📌 CLAIM ADJUDICATION ENGINE - STRICT EXECUTION SEQUENCE
+
+🔹 STAGE 1: Duplicate Claim Detection
+   ✅ Prevents #1 most common fraud pattern
+   ✅ 72 hour duplicate detection window
+   ✅ Automatic rejection on duplicate detection
+
+🔹 STAGE 2: Provider Authorization Verification
+   ✅ Provider license validation
+   ✅ Blacklist check
+   ✅ Benefit type authorization check
+   ✅ License expiry validation
+
+🔹 STAGE 3: Member Eligibility Verification
+   ✅ Membership status validation
+   ✅ Active coverage check
+   ✅ Service date within coverage period
+   ✅ Termination date validation
+
+🔹 STAGE 4: Benefit Balance Check
+   ✅ Current benefit utilization tracking
+   ✅ Remaining balance verification
+   ✅ Annual limit enforcement
+   ✅ Period reset handling
+
+🔹 STAGE 5: ✅ CENTRALIZED BUSINESS RULES ENGINE (CORE SERVICE)
+   ✅ Standard business policy validation
+   ✅ Global policy enforcement
+   ✅ Pre-authorization requirements
+   ✅ Special coverage rules
+
+🔹 STAGE 6: Final Adjudication & Claim Creation
+   ✅ Final approval decision
+   ✅ Claim record creation
+   ✅ Metadata tracking
+   ✅ Event publication
+
+✅ OUTCOME STATES:
+   - ✅ APPROVED
+   - ❌ REJECTED
+   - ⏳ PENDING
+   - 📋 PENDING_AUTHORIZATION
+   - 🔍 PENDING_MANUAL_REVIEW
 ```
 
-Returns service status, version, and database connectivity information.
+All stages execute in sequence. Pipeline fails fast with appropriate decision outcome. All steps have automatic compensation actions on failure ensuring system-wide data consistency.
 
-### Metrics
+---
 
-The service includes basic metrics collection:
-- Response times
-- Error rates
-- Database connection status
-- Memory usage
+## 🧩 Standard Compliance
+✅ **Follows TEMPLATE-STANDARD-SERVICE.md** architecture pattern  
+✅ **100% TypeScript type safety**  
+✅ **Standard audit logging middleware**  
+✅ **Standard error handling patterns**  
+✅ **Standard health check implementation**  
+✅ **Idempotent operations**  
+✅ **Correlation ID propagation across all services**
 
-## Security
+---
 
-### Authentication
+## 🔒 Security
+- JWT Authentication
+- Role based access control
+- Request rate limiting
+- Input sanitization
+- Audit logging for all operations
+- PII data protection
 
-- JWT-based authentication
-- Role-based access control
-- Secure token validation
+---
 
-### Data Protection
-
-- Input validation with Zod schemas
-- SQL injection prevention
-- XSS protection
-- Rate limiting
-
-### Security Headers
-
-- Helmet security headers
-- CORS configuration
-- Content Security Policy
-
-## Backup and Recovery
-
-### Backup Procedures
-
-```bash
-# Create backup
-./backup.sh
-
-# Restore from backup
-./restore.sh
-```
-
-### Disaster Recovery
-
-- Regular database backups
-- Configuration backups
-- Automated recovery procedures
-- Monitoring and alerting
-
-## Performance
-
-### Optimization
-
-- Database query optimization
-- Caching strategies
-- Connection pooling
-- Resource monitoring
-
-### Scaling
-
-- Horizontal scaling support
-- Load balancing configuration
-- Database connection management
-- Memory optimization
-
-## Integration
-
-### Other Services
-
-The Claims Service integrates with:
-
-- **Authentication Service**: User authentication and authorization
-- **Database Service**: PostgreSQL for data persistence
-- **Fraud Detection Service**: Fraud risk assessment
-- **Payment Service**: Claim settlement processing
-- **Notification Service**: Claim status notifications
-- **Audit Service**: Audit trail management
-
-### API Endpoints
-
-See [API Documentation](docs/api.md) for complete endpoint reference.
-
-## Troubleshooting
-
-### Common Issues
-
-See [Troubleshooting Guide](TROUBLESHOOTING.md) for common issues and solutions.
-
-### Support
-
-For support and questions, please refer to the documentation or contact the development team.
-
-## Contributing
-
-### Development Guidelines
-
-- Follow established code patterns
-- Write comprehensive tests
-- Update documentation
-- Use meaningful commit messages
-
-### Code Quality
-
-- TypeScript strict mode
-- ESLint configuration
-- Prettier formatting
-- Comprehensive test coverage
-
-## License
-
-This project is licensed under the MIT License.
-
-## Version History
-
-See [Release Notes](RELEASE_NOTES.md) for version history and changelog.
-
-## Contact
-
-For questions and support, please contact the development team.
-
-## Related Services
-
-- [Authentication Service](https://github.com/MedicalCoverageSystem/auth-service)
-- [Database Service](https://github.com/MedicalCoverageSystem/database-service)
-- [Payment Service](https://github.com/MedicalCoverageSystem/payment-service)
-- [Fraud Detection Service](https://github.com/MedicalCoverageSystem/fraud-detection-service)
+## 📚 Related Documentation
+- [System Architecture](../../SYSTEM_LAYOUT.md)
+- [Service Integration Patterns](../shared/integration-examples/)
+- [API Documentation](./docs/api.md)
+- [Development Guide](./DEVELOPMENT.md)
+- [Troubleshooting](./TROUBLESHOOTING.md)

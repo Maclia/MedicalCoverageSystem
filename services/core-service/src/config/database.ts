@@ -17,3 +17,14 @@ const client = postgres(connectionString, {
 export const db = drizzle(client, { schema });
 export const rawDb = client; // Raw postgres-js client for raw SQL queries
 export { schema };
+
+// Health check for database connection
+export const checkDatabaseConnection = async (): Promise<boolean> => {
+  try {
+    await client`SELECT 1`;
+    return true;
+  } catch (error) {
+    console.error('Database connection check failed:', error);
+    return false;
+  }
+};

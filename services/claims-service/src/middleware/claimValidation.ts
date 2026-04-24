@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { createLogger } from '../utils/logger';
-import { schema } from '../models/schema';
+import { createLogger } from '../utils/logger.js';
+import { schema } from '../models/schema.js';
 
 const logger = createLogger('claim-validation');
 
@@ -11,8 +11,13 @@ export const claimSchema = z.object({
   institutionId: z.number().positive('Institution ID must be a positive number'),
   memberId: z.number().positive('Member ID must be a positive number'),
   benefitId: z.number().positive('Benefit ID must be a positive number'),
+  providerId: z.number({
+    required_error: 'Provider ID is required. Every claim must be associated with a registered medical provider.'
+  }).positive('Provider ID must be a valid positive number'),
   claimDate: z.date().optional(),
-  serviceDate: z.date().optional(),
+  serviceDate: z.date({
+    required_error: 'Service date is a mandatory field. Please provide the date when the medical service was performed.'
+  }),
   memberName: z.string().min(1, 'Member name is required').max(255, 'Member name is too long'),
   serviceType: z.string().min(1, 'Service type is required').max(100, 'Service type is too long'),
   totalAmount: z.number().positive('Total amount must be a positive number'),
@@ -35,10 +40,10 @@ export const validateClaim = (req: Request, res: Response, next: NextFunction) =
     const claimData = req.body;
     const validatedClaim = claimSchema.parse(claimData);
     (req as any).validatedClaim = validatedClaim;
-    next();
+    return next();
   } catch (error) {
     logger.warn('Claim validation failed:', error);
-    res.status(400).json({
+    return res.status(400).json({
       success: false,
       message: 'Invalid claim data',
       errors: (error as any).errors
@@ -57,5 +62,5 @@ export const validateClaimId = (req: Request, res: Response, next: NextFunction)
     });
   }
   (req as any).claimId = claimId;
-  next();
+  return next();
 };

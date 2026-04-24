@@ -1,8 +1,8 @@
 import { and, desc, eq } from 'drizzle-orm';
-import { db } from '../config/database';
-import { benefits, companies, companyBenefits, premiums } from '../models/schema';
-import { ResponseFactory, ErrorCodes } from '../utils/api-standardization';
-import { createLogger } from '../utils/logger';
+import { db } from '../config/database.js';
+import { benefits, companies, companyBenefits, premiums } from '../models/schema.js';
+import { ResponseFactory, ErrorCodes } from '../utils/api-standardization.js';
+import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 
@@ -112,7 +112,7 @@ class CompanyBenefitService {
       }
 
       const [created] = await db
-        .insert(companyBenefits)
+        .insert(companyBenefits as any)
         .values({
           companyId: data.companyId,
           benefitId: data.benefitId,

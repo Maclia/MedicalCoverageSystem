@@ -12,7 +12,7 @@
     "noImplicitAny": false,
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "../",
     "resolveJsonModule": true,
     "typeRoots": ["./node_modules/@types"],
     "allowImportingTsExtensions": true,

@@ -43,7 +43,7 @@ router.get('/health', async (req, res) => {
 
     res.status(StatusCodes.OK).json(response);
   } catch (error) {
-    logger.error('Health check failed:', error);
+    logger.error('Health check failed:', error as Error);
     res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
       status: 'error',
       service: 'core-service',

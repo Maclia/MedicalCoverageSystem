@@ -7,3 +7,6 @@ export const schema = {
   medicalInstitutions,
   medicalPersonnel
 };
+
+// Export individual tables for direct imports
+export { claims, diagnosisCodes, medicalInstitutions, medicalPersonnel };

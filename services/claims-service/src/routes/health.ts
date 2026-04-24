@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { StatusCodes } from 'http-status-codes';
-import { createLogger } from '../utils/logger';
-import { checkDatabaseConnection } from '../config/database';
+import { createLogger } from '../utils/logger.js';
+import { checkDatabaseConnection } from '../config/database.js';
 
 const logger = createLogger('health-route');
 const router = Router();

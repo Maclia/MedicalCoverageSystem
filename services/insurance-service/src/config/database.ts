@@ -1,8 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from '@shared/schemas/schemes';
-import * as schemaClaims from '@shared/schemas/claims';
-import * as schemaCore from '@shared/schemas/core';
+import * as schema from '@shared/schemas/schemes.js';
 
 const connectionString = process.env.INSURANCE_DB_URL || process.env.DATABASE_URL;
 
