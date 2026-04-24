@@ -16,7 +16,7 @@ export const auditMiddleware = (req: Request, res: Response, next: NextFunction)
       path: req.path,
       statusCode: res.statusCode,
       duration,
-      userId: req.user?.userId,
+      userId: req.user?.id,
       userEmail: req.user?.email,
       userRole: req.user?.role,
       ip: req.ip,

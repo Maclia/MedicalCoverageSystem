@@ -5,22 +5,20 @@ import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 
-// Extend Request interface to include user information
-declare global {
-  namespace Express {
-    interface Request {
-      user?: {
-        id: number;
-        userId: number;
-        userType: string;
-        entityId: number;
-        email: string;
-        role: string;
-        permissions: string[];
-      };
-      correlationId?: string;
-      startTime?: number;
-    }
+// Extend Express Request interface properly with declaration merging
+declare module 'express-serve-static-core' {
+  interface Request {
+    user?: {
+      id: number;
+      userId: number;
+      userType: 'insurance' | 'institution' | 'provider';
+      entityId: number;
+      email: string;
+      role: string;
+      permissions: string[];
+    };
+    correlationId?: string;
+    startTime?: number;
   }
 }
 
@@ -48,7 +46,7 @@ export const authenticateToken = async (
       email: payload.email,
       role: payload.role,
       permissions: payload.permissions || []
-    };
+    } as any;
 
     logger.debug('Token authentication successful', {
       userId: payload.userId,
@@ -75,12 +73,12 @@ export const requireRole = (allowedRoles: string[]) => {
     }
 
     if (!allowedRoles.includes(req.user.role)) {
-      logger.warn('Access denied - insufficient role', {
-        userId: req.user.userId,
-        userRole: req.user.role,
-        requiredRoles: allowedRoles,
-        correlationId: req.correlationId
-      });
+    logger.warn('Access denied - insufficient role', {
+      userId: req.user.id,
+      userRole: req.user.role,
+      requiredRoles: allowedRoles,
+      correlationId: req.correlationId
+    });
 
       res.status(403).json({
         error: `Access denied. Required roles: ${allowedRoles.join(', ')}`
@@ -89,7 +87,7 @@ export const requireRole = (allowedRoles: string[]) => {
     }
 
     logger.debug('Role authorization successful', {
-      userId: req.user.userId,
+      userId: req.user.id,
       role: req.user.role,
       allowedRoles,
       correlationId: req.correlationId
@@ -113,7 +111,7 @@ export const requirePermission = (requiredPermissions: string[]) => {
 
     if (!hasRequiredPermissions) {
       logger.warn('Access denied - insufficient permissions', {
-        userId: req.user.userId,
+        userId: req.user.id,
         userPermissions,
         requiredPermissions,
         correlationId: req.correlationId
@@ -126,7 +124,7 @@ export const requirePermission = (requiredPermissions: string[]) => {
     }
 
     logger.debug('Permission authorization successful', {
-      userId: req.user.userId,
+      userId: req.user.id,
       permissions: userPermissions,
       requiredPermissions,
       correlationId: req.correlationId
@@ -135,3 +133,5 @@ export const requirePermission = (requiredPermissions: string[]) => {
     next();
   };
 };
+
+export {};

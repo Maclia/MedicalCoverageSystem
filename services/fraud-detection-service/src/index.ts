@@ -8,7 +8,7 @@ import fraudDetectionRoutes from './api/routes.js';
 import { authenticateToken } from './middleware/authMiddleware.js';
 import auditMiddleware from './middleware/auditMiddleware.js';
 import rateLimiter from './middleware/rateLimitMiddleware.js';
-import { tracingMiddleware } from '@shared/distributed-tracing';
+import { tracingMiddleware } from '@shared/distributed-tracing/src/index.js';
 
 const app: Express = express();
 const logger = createLogger();

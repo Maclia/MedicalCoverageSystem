@@ -16,7 +16,7 @@
     "noEmit": false,
     "rewriteRelativeImportExtensions": true,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "../",
 
     /* Linting */
     "strict": false,
@@ -29,12 +29,12 @@
     "noFallthroughCasesInSwitch": true,
 
     /* Path aliases */
-    "baseUrl": ".",
+    "baseUrl": "../",
     "paths": {
-      "@/*": ["src/*"],
-      "@shared/*": ["../shared/*"]
+      "@/*": ["fraud-detection-service/src/*"],
+      "@shared/*": ["shared/*"]
     }
   },
-  "include": ["src"],
+  "include": ["fraud-detection-service/src/**/*", "shared/**/*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

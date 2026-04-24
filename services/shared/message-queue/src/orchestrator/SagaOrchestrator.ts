@@ -1,5 +1,5 @@
-import { eventBus, DomainEvent, EventFactory } from '../events/EventBus';
-import { createLogger } from '../../../../core-service/src/utils/logger.js';
+import { eventBus, DomainEvent, EventFactory } from '../events/EventBus.js';
+import { createLogger } from '../config/logger.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger();
@@ -327,19 +327,19 @@ class SagaOrchestrator {
 
   private setupEventHandlers(): void {
     // Handle saga-related events
-    eventBus.subscribe('saga.started', async (event) => {
+    eventBus.subscribe('saga.started', async (event: DomainEvent) => {
       logger.info('Saga started event received', event.data);
     });
 
-    eventBus.subscribe('saga.completed', async (event) => {
+    eventBus.subscribe('saga.completed', async (event: DomainEvent) => {
       logger.info('Saga completed event received', event.data);
     });
 
-    eventBus.subscribe('saga.failed', async (event) => {
+    eventBus.subscribe('saga.failed', async (event: DomainEvent) => {
       logger.warn('Saga failed event received', event.data);
     });
 
-    eventBus.subscribe('saga.compensated', async (event) => {
+    eventBus.subscribe('saga.compensated', async (event: DomainEvent) => {
       logger.info('Saga compensated event received', event.data);
     });
   }
