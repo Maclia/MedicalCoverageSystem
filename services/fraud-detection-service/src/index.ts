@@ -5,11 +5,21 @@ import compression from 'compression';
 import { config } from './config/index.js';
 import { createLogger } from './utils/logger.js';
 import fraudDetectionRoutes from './api/routes.js';
+import { authenticateToken } from './middleware/authMiddleware.js';
+import auditMiddleware from './middleware/auditMiddleware.js';
+import rateLimiter from './middleware/rateLimitMiddleware.js';
+import { tracingMiddleware } from '@shared/distributed-tracing';
 
 const app: Express = express();
 const logger = createLogger();
 
-// Middleware
+// Tracing middleware - FIRST in order
+app.use(tracingMiddleware({
+  serviceName: 'fraud-detection-service',
+  includeUserAgent: true
+}));
+
+// Security Middleware
 app.use(helmet());
 app.use(compression());
 app.use(
@@ -19,8 +29,11 @@ app.use(
   })
 );
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Rate Limiting
+app.use(rateLimiter);
 
 // Request logging middleware
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -31,7 +44,10 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   next();
 });
 
-// Health check endpoint
+// Audit Logging
+app.use(auditMiddleware);
+
+// Health check endpoint (unprotected)
 app.get('/health', (req: Request, res: Response) => {
   res.json({
     status: 'healthy',
@@ -41,8 +57,8 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// API Routes
-app.use('/api/fraud-detection', fraudDetectionRoutes);
+// Protected API Routes - apply authentication
+app.use('/api/fraud-detection', authenticateToken, fraudDetectionRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
