@@ -13,8 +13,8 @@ import {
   notFoundHandler,
   setupGlobalErrorHandlers
 } from './middleware/errorHandler';
-import routes from './api/routes';
-import cardRoutes from './api/cardRoutes';
+import routes from './routes';
+import cardRoutes from './routes/card.routes';
 import { createLogger } from './utils/logger';
 import { authService } from './services/AuthService';
 
@@ -173,7 +173,7 @@ setInterval(async () => {
   try {
     await authService.cleanupExpiredSessions();
   } catch (error) {
-    logger.error('Failed to cleanup expired sessions', error);
+    logger.error('Failed to cleanup expired sessions', error as Error);
   }
 }, 60 * 60 * 1000); // 1 hour
 

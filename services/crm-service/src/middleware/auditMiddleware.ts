@@ -1,7 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { WinstonLogger } from '../utils/WinstonLogger';
 
-// Extend Express Request type to include user property
 declare global {
   namespace Express {
     interface Request {
@@ -9,6 +8,7 @@ declare global {
         userId?: string;
         [key: string]: any;
       };
+      correlationId?: string;
     }
   }
 }

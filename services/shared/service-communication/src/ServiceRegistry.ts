@@ -1,5 +1,5 @@
-import { redisManager } from '../config/redis';
-import { createLogger } from '../config/logger';
+import { redisManager } from '../../message-queue/src/config/redis';
+import { createLogger } from '../../message-queue/src/config/logger';
 import { EventEmitter } from 'events';
 
 const logger = createLogger();
@@ -435,12 +435,12 @@ class ServiceRegistry extends EventEmitter {
 
           logger.warn('Circuit breaker opened', {
             serviceName,
-            instanceId,
+            instanceId: instance.id,
             failures: recentErrors,
             threshold: failureThreshold
           });
 
-          this.emit('circuit_breaker:opened', { serviceName, instanceId });
+          this.emit('circuit_breaker:opened', { serviceName, instanceId: instance.id });
 
         } else if (state.state === 'half-open') {
           // Check if requests are succeeding
@@ -453,11 +453,11 @@ class ServiceRegistry extends EventEmitter {
 
             logger.info('Circuit breaker closed', {
               serviceName,
-              instanceId,
+              instanceId: instance.id,
               successes: recentSuccess
             });
 
-            this.emit('circuit_breaker:closed', { serviceName, instanceId });
+            this.emit('circuit_breaker:closed', { serviceName, instanceId: instance.id });
           } else {
             // Re-open the circuit breaker
             state.state = 'open';
@@ -465,7 +465,7 @@ class ServiceRegistry extends EventEmitter {
 
             logger.warn('Circuit breaker re-opened', {
               serviceName,
-              instanceId
+              instanceId: instance.id
             });
           }
         }

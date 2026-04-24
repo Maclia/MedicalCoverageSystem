@@ -1,11 +1,11 @@
-import { redisManager } from '../config/redis';
-import { createLogger } from '../config/logger';
+import { redisManager } from '../config/redis.js';
+import { createLogger } from '../config/logger.js';
 import { EventEmitter } from 'events';
 import { RedisClientType } from 'redis';
 
 const logger = createLogger();
 
-export interface Message {
+export interface Message extends Record<string, string | number | any> {
   id?: string;
   data: any;
   timestamp: number;
@@ -23,6 +23,7 @@ export interface QueueOptions {
   idempotencyWindow?: number; // Time in ms to track processed messages
   deadLetterQueue?: string;
   visibilityTimeout?: number;
+  maxRetries?: number;
 }
 
 export interface ConsumerOptions {
@@ -57,6 +58,15 @@ class MessageQueue extends EventEmitter {
     this.setupGracefulShutdown();
   }
 
+  private serializeMessage(message: Message): Record<string, string> {
+    return Object.fromEntries(
+      Object.entries(message).map(([key, value]) => [
+        key,
+        typeof value === 'object' ? JSON.stringify(value) : String(value)
+      ])
+    );
+  }
+
   // Queue management
   async createQueue(name: string, options: QueueOptions = {}): Promise<void> {
     const defaultOptions: QueueOptions = {
@@ -77,13 +87,13 @@ class MessageQueue extends EventEmitter {
     try {
       // Create Redis stream
       await this.client.xAdd(name, '*', {
-        created: Date.now(),
+        created: Date.now().toString(),
         type: 'queue_created'
       });
 
       // Create consumer group if it doesn't exist
       try {
-        await this.client.xGroupCreate(name, defaultOptions.consumerGroup, '0', {
+        await this.client.xGroupCreate(name, defaultOptions.consumerGroup!, '0', {
           MKSTREAM: true
         });
       } catch (error: any) {
@@ -96,8 +106,8 @@ class MessageQueue extends EventEmitter {
       if (defaultOptions.deadLetterQueue) {
         try {
           await this.client.xGroupCreate(
-            defaultOptions.deadLetterQueue,
-            defaultOptions.consumerGroup,
+            defaultOptions.deadLetterQueue!,
+            defaultOptions.consumerGroup!,
             '0',
             { MKSTREAM: true }
           );
@@ -139,7 +149,7 @@ class MessageQueue extends EventEmitter {
     };
 
     try {
-      const messageId = await this.client.xAdd(queueName, '*', message);
+      const messageId = await this.client.xAdd(queueName, '*', this.serializeMessage(message));
 
       logger.info('Message published', {
         queueName,
@@ -173,12 +183,12 @@ class MessageQueue extends EventEmitter {
         delay: options.delay
       };
 
-      messageIds.push(pipeline.xAdd(queueName, '*', message) as any);
+      messageIds.push(pipeline.xAdd(queueName, '*', this.serializeMessage(message)) as unknown as string);
     }
 
     try {
       const results = await pipeline.exec();
-      const actualIds = results?.map(([, id]) => id) || [];
+      const actualIds = results ? (results as [null, string][]).map(([, id]) => id) : [];
 
       logger.info('Batch messages published', {
         queueName,
@@ -239,8 +249,8 @@ class MessageQueue extends EventEmitter {
           const messages = results[0].messages;
           await this.processMessages(queueName, messages, processor, groupName, consumerName, processingTimeout);
         }
-      } catch (error) {
-        if (error.message.includes('NOGROUP')) {
+      } catch (error: unknown) {
+        if (error instanceof Error && error.message.includes('NOGROUP')) {
           // Consumer group doesn't exist, recreate it
           await this.recreateConsumerGroup(queueName, groupName);
         } else {
@@ -386,9 +396,9 @@ class MessageQueue extends EventEmitter {
       const groups = await this.client.xInfoGroups(queueName);
 
       return {
-        pending: parseInt(info['last-generated-id'].split('-')[0]) - info.length,
+        pending: parseInt(info.lastGeneratedId.split('-')[0]) - info.length,
         processing: groups.reduce((total, group) => total + group.pending, 0),
-        completed: info['first-entry'] ? parseInt(info['first-generated-id'].split('-')[0]) : 0,
+        completed: info.firstEntry ? parseInt(info.lastGeneratedId.split('-')[0]) : 0,
         failed: 0, // Would need to track this separately
         deadLettered: 0, // Would need to check DLQ
         throughput: 0 // Would need to track metrics
@@ -477,7 +487,9 @@ class MessageQueue extends EventEmitter {
       try {
         const messages = await this.client.xRange(retryQueueName, '-', '+');
 
-        for (const [messageId, messageData] of messages) {
+        for (const entry of messages) {
+          const messageId = entry.id;
+          const messageData = entry.message;
           const message = messageData as Message;
 
           if (message.delay && message.delay > 0) {

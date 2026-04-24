@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { trace, SpanKind, SpanStatusCode, propagation, Context } from '@opentelemetry/api';
+import { trace, SpanKind, SpanStatusCode, propagation, context } from '@opentelemetry/api';
 import { createLogger } from '../config/logger';
 
 const logger = createLogger();
@@ -30,7 +30,7 @@ export const tracingMiddleware = (options: TracingMiddlewareOptions = {}) => {
     }
 
     // Extract context from incoming headers
-    const context = propagation.extract(Context.current(), {
+    const extractedContext = propagation.extract(context.active(), {
       traceparent: req.headers['traceparent'] as string,
       tracestate: req.headers['tracestate'] as string,
       baggage: req.headers['baggage'] as string
@@ -42,8 +42,8 @@ export const tracingMiddleware = (options: TracingMiddlewareOptions = {}) => {
       `${req.method} ${req.path}`,
       {
         kind: SpanKind.SERVER,
-        parentSpan: trace.getSpan(context)
-      }
+      },
+      extractedContext
     );
 
     // Set span attributes
@@ -77,7 +77,7 @@ export const tracingMiddleware = (options: TracingMiddlewareOptions = {}) => {
 
     // Add correlation ID if available
     if (req.correlationId) {
-      span.setAttributes('correlation.id', req.correlationId);
+      span.setAttribute('correlation.id', req.correlationId);
     }
 
     // Store span in request
@@ -88,7 +88,7 @@ export const tracingMiddleware = (options: TracingMiddlewareOptions = {}) => {
     };
 
     // Set context for this request
-    const ctx = trace.setSpan(context, span);
+    const ctx = trace.setSpan(extractedContext, span);
     context.with(ctx, () => {
       // Override res.end to capture response
       const originalEnd = res.end;
@@ -107,12 +107,12 @@ export const tracingMiddleware = (options: TracingMiddlewareOptions = {}) => {
       }
 
       // Capture response size
-      res.write = function(chunk: any) {
+      res.write = function(chunk: any, encoding?: any, callback?: any) {
         responseSize += Buffer.byteLength(chunk);
-        return originalWrite.call(this, chunk);
+        return originalWrite.apply(this, arguments as any);
       };
 
-      res.end = function(chunk?: any) {
+      res.end = function(chunk?: any, encoding?: any, callback?: any) {
         if (chunk) {
           responseSize += Buffer.byteLength(chunk);
         }
@@ -164,7 +164,7 @@ export const tracingMiddleware = (options: TracingMiddlewareOptions = {}) => {
         span.end();
 
         // Call original end
-        return originalEnd.call(this, chunk);
+        return originalEnd.apply(this, arguments as any);
       };
 
       // Override res.json to capture request body if configured
@@ -286,12 +286,13 @@ export const traceAsyncOperation = (
     }
 
     const tracer = trace.getTracer('async-operation');
+    const parentContext = trace.setSpan(context.active(), req.span);
+    
     const span = tracer.startSpan(name, {
       kind: SpanKind.INTERNAL,
-      parentSpan: req.span
-    });
+    }, parentContext);
 
-    tracer.startActiveSpan(name, { parentSpan: req.span }, async (activeSpan) => {
+    tracer.startActiveSpan(name, {}, parentContext, async (activeSpan) => {
       try {
         await operation(req, res, next);
         span.setStatus({ code: SpanStatusCode.OK });
@@ -312,8 +313,8 @@ export const traceAsyncOperation = (
 // Database operation tracing helper
 export const traceDatabaseOperation = (
   operation: string,
-  query?: string,
-  execute: () => Promise<any>
+  execute: () => Promise<any>,
+  query: string | undefined = undefined
 ) => {
   return async (req: RequestWithSpan, res: Response, next: NextFunction) => {
     if (!req.span) {
@@ -321,10 +322,11 @@ export const traceDatabaseOperation = (
     }
 
     const tracer = trace.getTracer('database-operation');
+    const parentContext = trace.setSpan(context.active(), req.span);
+    
     const span = tracer.startSpan(`db.${operation}`, {
       kind: SpanKind.CLIENT,
-      parentSpan: req.span
-    });
+    }, parentContext);
 
     span.setAttributes({
       'db.system': 'postgresql',
