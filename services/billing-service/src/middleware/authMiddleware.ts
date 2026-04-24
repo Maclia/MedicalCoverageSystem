@@ -11,11 +11,15 @@ declare module 'express-serve-static-core' {
   interface Request {
     user?: {
       id: number;
+      userId: number;
+      userType?: 'insurance' | 'institution' | 'provider';
+      entityId?: number;
       email: string;
       role: string;
       permissions: string[];
     };
     correlationId?: string;
+    startTime?: number;
   }
 }
 
@@ -53,6 +57,9 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     // Attach user information to request
     req.user = {
       id: decoded.userId,
+      userId: decoded.userId,
+      userType: decoded.userType,
+      entityId: decoded.entityId,
       email: decoded.email,
       role: decoded.role,
       permissions: decoded.permissions || []
@@ -209,6 +216,9 @@ export const optionalAuthMiddleware = async (req: Request, res: Response, next: 
     // Attach user information to request
     req.user = {
       id: decoded.userId,
+      userId: decoded.userId,
+      userType: decoded.userType,
+      entityId: decoded.entityId,
       email: decoded.email,
       role: decoded.role,
       permissions: decoded.permissions || []

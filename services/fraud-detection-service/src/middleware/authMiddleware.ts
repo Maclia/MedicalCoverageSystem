@@ -11,8 +11,8 @@ declare module 'express-serve-static-core' {
     user?: {
       id: number;
       userId: number;
-      userType: 'insurance' | 'institution' | 'provider';
-      entityId: number;
+      userType?: 'insurance' | 'institution' | 'provider';
+      entityId?: number;
       email: string;
       role: string;
       permissions: string[];
@@ -46,7 +46,7 @@ export const authenticateToken = async (
       email: payload.email,
       role: payload.role,
       permissions: payload.permissions || []
-    } as any;
+    };
 
     logger.debug('Token authentication successful', {
       userId: payload.userId,
