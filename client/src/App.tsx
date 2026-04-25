@@ -7,6 +7,7 @@ import { queryClient } from "./lib/queryClient";
 
 // UI Components
 import { Toaster } from "@/ui/toaster";
+import NetworkStatusIndicator from "./components/NetworkStatusIndicator";
 
 // Context Providers
 import { AuthProvider } from "@/features/actions/contexts/AuthContext";
@@ -260,6 +261,7 @@ function App() {
       <AuthProvider>
         <Router />
         <Toaster />
+        <NetworkStatusIndicator />
       </AuthProvider>
     </QueryClientProvider>
   );

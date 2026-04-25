@@ -36,10 +36,11 @@ src/
 │   ├── auditMiddleware.ts
 │   ├── responseMiddleware.ts
 │   └── specialized operation middleware
-├── routes/                ✅ 3 route modules / 43 endpoints
+├── routes/                ✅ 4 route modules / 44 endpoints
 │   ├── membership.ts      ✅ 28 member endpoints
 │   ├── admin.ts           ✅ 12 admin endpoints
-│   └── cardManagement.ts  ✅ 3 card endpoints
+│   ├── cardManagement.ts  ✅ 3 card endpoints
+│   └── cards/analytics.routes.ts ✅ 1 card analytics endpoint
 ├── services/              ✅ 3 service layers
 │   ├── MembershipService.ts       ✅ 27 public methods
 │   ├── CardManagementService.ts
@@ -124,6 +125,7 @@ HTTP Response
 | `POST` | `/generate` | Generate new benefit card | Private |
 | `POST` | `/verify` | Verify card validity | System |
 | `POST` | `/:id/revoke` | Revoke benefit card | Admin |
+| `GET`  | `/analytics` | Get card usage statistics and analytics | Private |
 
 ### System
 | Method | Endpoint | Description |
@@ -131,7 +133,7 @@ HTTP Response
 | `GET` | `/health` | Service health check |
 | `GET` | `/` | Service status endpoint |
 
-**✅ TOTAL ENDPOINTS: 43**
+**✅ TOTAL ENDPOINTS: 44**
 
 ---
 
@@ -313,4 +315,4 @@ Returns database connection status, uptime, version and latency
 > All modules are properly imported, referenced, and fully connected through a complete modular reference chain.
 > No broken imports, no circular dependencies, no orphaned code.
 >
-> Version: 1.0.0 | Last Updated: 25/04/2026
+> Version: 1.1.0 | Last Updated: 25/04/2026
