@@ -2,23 +2,23 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
-import { config } from './config';
+import { config } from './config/index.js';
 import {
   correlationIdMiddleware,
   requestTimingMiddleware,
   errorAuditMiddleware
-} from './middleware/auditMiddleware';
+} from './middleware/auditMiddleware.js';
 import {
   standardizeResponse,
   addSecurityHeaders,
   addApiVersion,
   addRequestTiming,
   standardErrorResponse
-} from './middleware/responseStandardization';
-import { addAuthHeaders } from './middleware/auth';
-import routes from './api/routes';
-import { createLogger } from './utils/logger';
-import { serviceRegistry } from './services/ServiceRegistry';
+} from './middleware/responseStandardization.js';
+import { addAuthHeaders } from './middleware/auth.js';
+import routes from './api/routes.js';
+import { createLogger } from './utils/logger.js';
+import { serviceRegistry } from './services/ServiceRegistry.js';
 
 const logger = createLogger();
 
