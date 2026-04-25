@@ -41,33 +41,16 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// CORS configuration
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests from any origin in development
-    if (config.nodeEnv === 'development') {
-      callback(null, true);
-      return;
-    }
-
-    // Allow specific origins in production
-    const allowedOrigins = [
-      config.services.apiGateway,
-      'http://localhost:3000',
-      'http://localhost:3001'
-    ];
-
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID'],
-  exposedHeaders: ['X-Correlation-ID', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset']
-}));
+// CORS configuration - HANDLED AT API GATEWAY EDGE
+// Disabled to eliminate duplicate processing overhead
+// CORS policy is enforced at the system boundary
+// Internal service communication does not require CORS validation
+// app.use(cors({
+//   origin: config.allowedOrigins,
+//   credentials: true,
+//   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+//   allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-ID', 'X-Company-ID'],
+// }));
 
 // Compression middleware
 app.use(compression());

@@ -12,7 +12,9 @@ const logger = createLogger();
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+// CORS configuration - HANDLED AT API GATEWAY EDGE
+// Disabled to eliminate duplicate processing overhead
+// app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

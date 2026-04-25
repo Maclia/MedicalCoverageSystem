@@ -54,7 +54,10 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false
 }));
 
-// CORS configuration
+// CORS configuration - Optimized with preflight caching
+// Maintain origin lookup Set for O(1) lookups
+const allowedOriginsSet = new Set(config.security.corsOrigins);
+
 app.use(cors({
   origin: (origin, callback) => {
     // Allow requests from any origin in development
@@ -63,10 +66,8 @@ app.use(cors({
       return;
     }
 
-    // Allow specific origins in production
-    const allowedOrigins = config.security.corsOrigins;
-
-    if (!origin || allowedOrigins.includes(origin)) {
+    // Allow specific origins in production (O(1) lookup)
+    if (!origin || allowedOriginsSet.has(origin)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
@@ -91,8 +92,14 @@ app.use(cors({
     'X-Response-Time',
     'API-Version',
     'X-Gateway-Service'
-  ]
+  ],
+  maxAge: 86400, // Cache preflight requests for 24 hours
+  preflightContinue: false,
+  optionsSuccessStatus: 204
 }));
+
+// Handle OPTIONS requests early before other middleware
+app.options('*', cors());
 
 // Compression middleware
 app.use(compression());

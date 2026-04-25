@@ -26,13 +26,14 @@ function createApp() {
     },
   }));
 
-  // CORS configuration
-  app.use(cors({
-    origin: config.allowedOrigins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-ID', 'X-Company-ID'],
-  }));
+  // CORS configuration - HANDLED AT API GATEWAY EDGE
+  // Disabled to eliminate duplicate processing overhead
+  // app.use(cors({
+  //   origin: config.allowedOrigins,
+  //   credentials: true,
+  //   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  //   allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-ID', 'X-Company-ID'],
+  // }));
 
   // Compression
   app.use(compression());

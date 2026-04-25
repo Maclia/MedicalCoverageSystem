@@ -27,12 +27,12 @@ function createApp() {
   }));
 
   // CORS configuration
-  app.use(cors({
-    origin: config.allowedOrigins,
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-ID', 'X-Company-ID'],
-  }));
+  // app.use(cors({
+  //   origin: config.allowedOrigins,
+  //   credentials: true,
+  //   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  //   allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-ID', 'X-Company-ID'],
+  // }));
 
   // Compression
   app.use(compression());

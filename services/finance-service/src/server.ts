@@ -13,7 +13,9 @@ const app = express();
 // MIDDLEWARE ORDER - STANDARD MANDATORY ORDER
 app.use(auditMiddleware);
 app.use(helmet());
-app.use(cors());
+// CORS configuration - HANDLED AT API GATEWAY EDGE
+// Disabled to eliminate duplicate processing overhead
+// app.use(cors());
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));

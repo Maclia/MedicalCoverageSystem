@@ -32,26 +32,27 @@ function createApp() {
     }
   }));
 
-  // CORS configuration
-  const corsOptions = {
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
+  // CORS configuration - HANDLED AT API GATEWAY EDGE
+  // Disabled to eliminate duplicate processing overhead
+  // const corsOptions = {
+  //   origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+  //     // Allow requests with no origin (like mobile apps or curl requests)
+  //     if (!origin) return callback(null, true);
 
-      const allowedOrigins = config.cors.allowedOrigins;
-      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error('Not allowed by CORS'), false);
-      }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Correlation-ID'],
-    exposedHeaders: ['X-Total-Count', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset']
-  };
+  //     const allowedOrigins = config.cors.allowedOrigins;
+  //     if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+  //       callback(null, true);
+  //     } else {
+  //       callback(new Error('Not allowed by CORS'), false);
+  //     }
+  //   },
+  //   credentials: true,
+  //   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  //   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Correlation-ID'],
+  //   exposedHeaders: ['X-Total-Count', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset']
+  // };
 
-  app.use(cors(corsOptions));
+  // app.use(cors(corsOptions));
 
   // Compression middleware
   app.use(compression());
