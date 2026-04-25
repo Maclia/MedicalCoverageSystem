@@ -23,6 +23,12 @@ export const config = {
     payment: process.env.PAYMENT_SERVICE_URL || 'http://localhost:3006',
     authService: process.env.AUTH_SERVICE_URL || process.env.CORE_SERVICE_URL || 'http://localhost:3001',
     insuranceService: process.env.INSURANCE_SERVICE_URL || 'http://localhost:3002',
+    insuranceServiceUrl: process.env.INSURANCE_SERVICE_URL || 'http://localhost:3002',
+    insuranceServiceApiKey: process.env.INSURANCE_SERVICE_API_KEY || '',
+    claimsServiceUrl: process.env.CLAIMS_SERVICE_URL || 'http://localhost:3005',
+    claimsServiceApiKey: process.env.CLAIMS_SERVICE_API_KEY || '',
+    membershipServiceUrl: process.env.MEMBERSHIP_SERVICE_URL || 'http://localhost:3007',
+    membershipServiceApiKey: process.env.MEMBERSHIP_SERVICE_API_KEY || '',
   },
 
   business: {

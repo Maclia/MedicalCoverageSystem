@@ -6,7 +6,7 @@
 ## 📌 Overview
 Claims Service is responsible for processing, validating, and managing medical insurance claims across the platform. It follows the standard microservice architecture pattern used throughout the Medical Coverage System.
 
-**Service Port:** `3002`  
+**Service Port:** `3005`  
 **Service Name:** `claims-service`  
 **Database Schema:** `claims_schema`
 
@@ -17,26 +17,35 @@ Claims Service is responsible for processing, validating, and managing medical i
 ### Standard 3-Layer Architecture
 ```
 src/
-├── api/                  # HTTP Routes layer
-│   ├── index.ts          # Route aggregator
-│   ├── claims.routes.ts  # Claims domain endpoints
-│   └── stats.routes.ts   # Statistics endpoints
-├── controllers/          # HTTP Request handlers
+├── routes/                # HTTP Routes layer
+│   ├── index.ts           # Main router aggregator
+│   └── health.ts          # Health check endpoints
+├── controllers/           # HTTP Request handlers (Presentation Layer)
 │   └── ClaimsController.ts
-├── services/             # Pure business logic layer
-│   ├── ClaimsService.ts
-│   └── ClaimAdjudicationEngine.ts  ✅ **NEW: 6-STAGE ADJUDICATION PIPELINE**
-├── middleware/           # HTTP Middleware
+├── services/              # Pure Business Logic Layer ✅ ALL BUSINESS LOGIC HERE
+│   ├── ClaimsService.ts   # Core claim operations & business rules
+│   └── ClaimAdjudicationEngine.ts  # 6-STAGE ADJUDICATION PIPELINE
+├── middleware/            # HTTP Middleware
+│   ├── auth.ts
 │   └── claimValidation.ts
 ├── config/
-│   └── database.ts
+│   └── database.ts        # Database connection configuration
 ├── models/
-│   └── schema.ts
+│   └── schema.ts          # Drizzle ORM schema definitions
+├── types/
+│   ├── index.ts
+│   └── enums.ts           # Centralized constants & enumerations
 ├── utils/
 │   └── logger.ts
-├── index.ts              # Service entry point
-└── server.ts             # Express server setup
+├── index.ts               # Express app setup & middleware configuration
+└── server.ts              # Server initialization & graceful shutdown
 ```
+
+✅ **Proper Architecture Enforcement**:
+- Routes only handle routing
+- Controllers only handle HTTP request/response formatting
+- **All business logic lives exclusively in Services layer**
+- No business logic leakage anywhere else
 
 ---
 
@@ -64,32 +73,28 @@ src/
 ## 📡 API Endpoints
 
 ### Claims Management
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/claims` | Get paginated claims list with filtering |
-| `GET` | `/api/claims/:id` | Get single claim by ID |
-| `POST` | `/api/claims` | Create new claim |
-| `PUT` | `/api/claims/:id` | Update existing claim |
-| `DELETE` | `/api/claims/:id` | Delete claim |
-| `PATCH` | `/api/claims/:id/status` | Update claim status |
-| `POST` | `/api/claims/:id/submit` | Submit claim for processing |
-| `POST` | `/api/claims/:id/approve` | Approve claim |
-| `POST` | `/api/claims/:id/deny` | Deny claim |
+| Method | Path | Permissions | Description |
+|--------|------|-------------|-------------|
+| `GET` | `/api/claims` | `claim:read` | Get paginated claims list with filtering |
+| `GET` | `/api/claims/:claimId` | `claim:read` | Get single claim by ID |
+| `POST` | `/api/claims` | `claim:create` | Create new claim (runs full adjudication pipeline) |
+| `PATCH` | `/api/claims/:claimId/status` | `claim:update` | Update claim status |
+| `DELETE` | `/api/claims/:claimId` | `claim:delete` | Delete claim |
+| `POST` | `/api/claims/:claimId/submit` | `claim:submit` | Submit claim for processing |
+| `POST` | `/api/claims/:claimId/approve` | `claim:approve` | Approve claim |
+| `POST` | `/api/claims/:claimId/deny` | `claim:approve` | Deny claim |
 
 ### Statistics & Reports
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/api/stats/summary` | Claim statistics summary |
-| `GET` | `/api/stats/trends` | Claim trends over time |
-| `GET` | `/api/stats/metrics` | Performance metrics |
-| `GET` | `/api/stats/reports` | Generate reports |
+| Method | Path | Permissions | Description |
+|--------|------|-------------|-------------|
+| `GET` | `/api/claims/stats/summary` | `claim:read` | Claim statistics summary |
+| `GET` | `/api/claims/stats/trends` | `claim:read` | Claim trends over time |
 
 ### System
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Health check endpoint |
-| `GET` | `/health/ready` | Readiness probe |
-| `GET` | `/health/live` | Liveness probe |
+| `GET` | `/api/claims/health` | Module health check |
 
 ---
 
@@ -121,8 +126,12 @@ npm start
 
 ### Environment Variables
 ```env
-PORT=3002
-DATABASE_URL=postgresql://user:pass@localhost:5432/medical_db?schema=claims_schema
+PORT=3005
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=medical_coverage
+DB_USER=postgres
+DB_PASSWORD=password
 SERVICE_NAME=claims-service
 NODE_ENV=development
 LOG_LEVEL=info
@@ -130,18 +139,22 @@ LOG_LEVEL=info
 
 ---
 
-## ✅ Validation Rules
-Claims are validated against:
-- Required fields verification
-- Member eligibility checks
-- Benefit coverage validation
-- Business rule enforcement
-- Fraud risk scoring
-- Duplicate claim detection
+## ✅ BUSINESS RULES IMPLEMENTATION
+
+All business logic is implemented in **`ClaimsService.ts`**
+
+| Business Rule | Location | Description |
+|---------------|----------|-------------|
+| 🔍 **Duplicate Claim Detection** | Lines 354-397 | Prevents #1 most common fraud pattern. Detects identical claims submitted within 72 hours. |
+| 👤 **Member Eligibility Verification** | Lines 181-247 | Validates active membership status, enrollment dates, coverage validity periods. |
+| 🏥 **Provider Authorization Checks** | Lines 253-348 | Critical fraud prevention. Verifies provider status, license validity, blacklist status. |
+| 💰 **Benefit Balance Validation** | Lines 120-175 | Checks remaining benefit balance, calculates utilized vs remaining amounts. |
+| 🚫 **Blacklist Detection** | Line 286-292 | Immediate rejection for claims from blacklisted providers. |
+| 📅 **Date Range Validation** | Lines 221, 229, 311 | Validates service dates against enrollment, termination, and license expiry dates. |
 
 ---
 
-## 🔄 **✅ FINALIZED 6-STAGE CLAIM ADJUDICATION PIPELINE**
+## 🔄 **6-STAGE CLAIM ADJUDICATION PIPELINE**
 
 ```
 📌 CLAIM ADJUDICATION ENGINE - STRICT EXECUTION SEQUENCE
@@ -201,14 +214,17 @@ All stages execute in sequence. Pipeline fails fast with appropriate decision ou
 ✅ **Standard health check implementation**  
 ✅ **Idempotent operations**  
 ✅ **Correlation ID propagation across all services**
+✅ **Graceful shutdown handlers (SIGINT / SIGTERM)**
 
 ---
 
 ## 🔒 Security
 - JWT Authentication
 - Role based access control
+- Module level access restrictions
+- Granular permission based authorization
 - Request rate limiting
-- Input sanitization
+- Input sanitization & validation
 - Audit logging for all operations
 - PII data protection
 

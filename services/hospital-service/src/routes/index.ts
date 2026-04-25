@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import { AppointmentsController, appointmentsValidationMiddleware } from '../api/appointmentsController';
-import { PatientsController, patientsValidationMiddleware } from '../api/patientsController';
-import { auditMiddleware } from '../middleware/auditMiddleware';
-import { responseStandardizationMiddleware } from '../middleware/responseStandardizationMiddleware';
-import { authMiddleware } from '../middleware/authMiddleware';
-import { rateLimitMiddleware } from '../middleware/rateLimitMiddleware';
+import { AppointmentsController, appointmentsValidationMiddleware } from '../api/appointmentsController.js';
+import { PatientsController, patientsValidationMiddleware } from '../api/patientsController.js';
+import { auditMiddleware } from '../middleware/auditMiddleware.js';
+import { responseStandardizationMiddleware } from '../middleware/responseStandardizationMiddleware.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { rateLimitMiddleware } from '../middleware/rateLimitMiddleware.js';
+import { memberVerificationMiddleware, memberVerificationLoggingMiddleware } from '../middleware/memberVerificationMiddleware.js';
 
 const router = Router();
 
@@ -25,6 +26,16 @@ router.get('/health', (req, res) => {
 // Authentication middleware for protected routes
 router.use(authMiddleware);
 
+// Member verification for write operations
+router.post('/patients', memberVerificationMiddleware);
+router.put('/patients/:id', memberVerificationMiddleware);
+router.post('/appointments', memberVerificationMiddleware);
+router.put('/appointments/:id', memberVerificationMiddleware);
+router.post('/appointments/:id/cancel', memberVerificationMiddleware);
+
+// Logging only for read operations
+router.use(memberVerificationLoggingMiddleware);
+
 // Rate limiting for write operations
 const writeRateLimit = rateLimitMiddleware({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -39,7 +50,7 @@ router.get('/patients/stats', PatientsController.getPatientStats);
 router.get('/patients/:id', PatientsController.getPatient);
 router.post('/patients', writeRateLimit, patientsValidationMiddleware.validateCreatePatient, PatientsController.createPatient);
 router.put('/patients/:id', writeRateLimit, patientsValidationMiddleware.validateUpdatePatient, PatientsController.updatePatient);
-router.post('/patients/:id/deactivate', writeRateLimit, patientsValidationMiddleware.validateCancelAppointment, PatientsController.deactivatePatient);
+router.post('/patients/:id/deactivate', writeRateLimit, patientsValidationMiddleware.validateDeactivatePatient, PatientsController.deactivatePatient);
 
 // Appointment routes
 router.get('/appointments', appointmentsValidationMiddleware.validateQuery, AppointmentsController.getAppointments);

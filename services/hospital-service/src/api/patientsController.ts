@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import { patientService } from '../services/PatientService';
-import { createLogger } from '../utils/logger';
+import { patientService } from '../services/PatientService.js';
+import { createLogger } from '../utils/logger.js';
 import {
   ResponseFactory,
   ErrorCodes,
   createValidationErrorResponse
-} from '../utils/api-standardization';
-import { Joi } from 'joi';
+} from '../utils/api-standardization.js';
+import Joi from 'joi';
 
 const logger = createLogger();
 
@@ -57,7 +57,7 @@ const createPatientSchema = Joi.object({
 
 const updatePatientSchema = createPatientSchema.fork(
   ['firstName', 'lastName', 'dateOfBirth', 'gender', 'phone'],
-  (schema) => schema.optional()
+  (schema: Joi.AnySchema) => schema.optional()
 );
 
 const searchPatientsSchema = Joi.object({
@@ -78,7 +78,7 @@ const validate = (schema: Joi.ObjectSchema) => {
     });
 
     if (error) {
-      const details = error.details.map(detail => ({
+      const details = error.details.map((detail: Joi.ValidationErrorItem) => ({
         field: detail.path.join('.'),
         message: detail.message,
         value: detail.context?.value
@@ -117,11 +117,11 @@ const validateQuery = (req: Request, res: Response, next: Function) => {
   });
 
   if (error) {
-    const details = error.details.map(detail => ({
-      field: detail.path.join('.'),
-      message: detail.message,
-      value: detail.context?.value
-    }));
+      const details = error.details.map((detail: Joi.ValidationErrorItem) => ({
+        field: detail.path.join('.'),
+        message: detail.message,
+        value: detail.context?.value
+      }));
 
     return res.status(400).json(
       createValidationErrorResponse(details, req.correlationId)
@@ -137,11 +137,11 @@ const validateSearchQuery = (req: Request, res: Response, next: Function) => {
   const schema = searchPatientsSchema.validate(req.query);
 
   if (schema.error) {
-    const details = schema.error.details.map(detail => ({
-      field: detail.path.join('.'),
-      message: detail.message,
-      value: detail.context?.value
-    }));
+      const details = schema.error.details.map((detail: Joi.ValidationErrorItem) => ({
+        field: detail.path.join('.'),
+        message: detail.message,
+        value: detail.context?.value
+      }));
 
     return res.status(400).json(
       createValidationErrorResponse(details, req.correlationId)
@@ -149,6 +149,33 @@ const validateSearchQuery = (req: Request, res: Response, next: Function) => {
   }
 
   req.query = schema.value;
+  next();
+};
+
+// Deactivate patient validation
+const validateDeactivatePatient = (req: Request, res: Response, next: Function) => {
+  const schema = Joi.object({
+    reason: Joi.string().max(500).optional()
+  });
+
+  const { error, value } = schema.validate(req.body, {
+    abortEarly: false,
+    stripUnknown: true
+  });
+
+  if (error) {
+      const details = error.details.map((detail: Joi.ValidationErrorItem) => ({
+        field: detail.path.join('.'),
+        message: detail.message,
+        value: detail.context?.value
+      }));
+
+    return res.status(400).json(
+      createValidationErrorResponse(details, req.correlationId)
+    );
+  }
+
+  req.body = value;
   next();
 };
 
@@ -436,5 +463,6 @@ export const patientsValidationMiddleware = {
   validateCreatePatient: validate(createPatientSchema),
   validateUpdatePatient: validate(updatePatientSchema),
   validateQuery,
-  validateSearchQuery
+  validateSearchQuery,
+  validateDeactivatePatient
 };

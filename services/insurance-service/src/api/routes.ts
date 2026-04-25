@@ -24,9 +24,9 @@ router.put('/benefits/:id', BenefitsController.updateBenefit);
 router.delete('/benefits/:id', BenefitsController.deleteBenefit);
 
 // Company Benefits routes
-import { companyBenefitService } from '../services/CompanyBenefitService.js';
-router.get('/company-benefits', (req, res) => companyBenefitService.listCompanyBenefits(req.query, req.correlationId).then(result => res.json(result)));
-router.post('/company-benefits', (req, res) => companyBenefitService.createCompanyBenefit(req.body, req.correlationId).then(result => res.status(result.success ? 201 : 400).json(result)));
+import { CompanyBenefitsController } from './companyBenefitsController.js';
+router.get('/company-benefits', CompanyBenefitsController.getCompanyBenefits);
+router.post('/company-benefits', CompanyBenefitsController.createCompanyBenefit);
 
 // Schemes routes
 router.get('/schemes', SchemesController.getSchemes);
