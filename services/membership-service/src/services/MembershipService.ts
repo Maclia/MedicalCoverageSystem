@@ -30,7 +30,9 @@ export class MembershipServiceSimplified {
     await this.validateBusinessRules(request);
     await this.checkForExistingMember(request);
 
-    const memberNumber = await this.generateMemberNumber(request.companyId);
+    // Auto-detect independent vs company member
+    const isIndependentMember = !request.companyId;
+    const memberNumber = await this.generateMemberNumber(request.companyId, isIndependentMember);
     const now = new Date();
 
     const created = await db
@@ -164,6 +166,86 @@ export class MembershipServiceSimplified {
         notes: data?.notes ?? null,
       },
     });
+  }
+
+  async reinstateMember(memberId: number, data: any, context: any): Promise<any> {
+    const member = await this.getMemberById(memberId);
+    
+    if (!member) {
+      throw new NotFoundError('Member not found');
+    }
+
+    // Only terminated or expired members can be reinstated
+    if (!['terminated', 'expired', 'suspended'].includes(member.membershipStatus)) {
+      throw new BusinessRuleError('Only terminated, expired or suspended members can be reinstated');
+    }
+
+    const reinstatementDate = data.reinstatementDate ? new Date(data.reinstatementDate) : new Date();
+    
+    // Validate reinstatement eligibility
+    await this.validateReinstatementEligibility(member, data);
+
+    const reinstatedMember = await this.updateMemberStatus(memberId, 'active', data?.reason ?? 'Membership reinstatement', context, {
+      effectiveDate: reinstatementDate.toISOString().slice(0, 10),
+      terminationDate: null,
+      terminationReason: null,
+      suspensionDate: null,
+      suspensionReason: null,
+      metadata: {
+        reinstatementDate: reinstatementDate.toISOString(),
+        previousStatus: member.membershipStatus,
+        originalTerminationDate: member.terminationDate,
+        originalSuspensionDate: member.suspensionDate,
+        reinstatementReason: data?.reason ?? null,
+        notes: data?.notes ?? null,
+        requiresVerification: data?.requiresVerification ?? false,
+        gracePeriodApplied: data?.gracePeriodApplied ?? false,
+        processedBy: context?.userId ?? null,
+      },
+    });
+
+    // Create reinstatement life event
+    await this.createLifeEvent(memberId, member.companyId, {
+      eventType: 'reinstatement',
+      eventDate: reinstatementDate,
+      effectiveDate: reinstatementDate,
+      reason: data?.reason ?? 'Membership reinstatement',
+      description: `Membership reinstated from ${member.membershipStatus} status`,
+      metadata: {
+        previousStatus: member.membershipStatus,
+        reinstatementDate: reinstatementDate.toISOString(),
+        processedBy: context?.userId ?? null,
+      },
+    });
+
+    return reinstatedMember;
+  }
+
+  private async validateReinstatementEligibility(member: any, data: any): Promise<void> {
+    // Check if member has outstanding balances if required
+    if (data?.checkOutstandingBalances !== false) {
+      // This would normally integrate with billing service
+      // For now we'll add validation hook
+      this.logger.info('Checking outstanding balances for reinstatement', { memberId: member.id });
+    }
+
+    // Check if reinstatement is within allowed period (e.g. 12 months after termination)
+    if (member.terminationDate) {
+      const terminationDate = new Date(member.terminationDate);
+      const today = new Date();
+      const monthsSinceTermination = (today.getFullYear() - terminationDate.getFullYear()) * 12 + 
+                                    (today.getMonth() - terminationDate.getMonth());
+      
+      // Business rule: Cannot reinstate after 12 months of termination without special approval
+      if (monthsSinceTermination > 12 && !data?.specialApproval) {
+        throw new BusinessRuleError('Membership cannot be reinstated after 12 months without special approval');
+      }
+    }
+
+    // Check required documents are present
+    if (data?.requiresDocumentation && !data?.documentsProvided) {
+      throw new ValidationError('Required documentation must be provided for reinstatement');
+    }
   }
 
   async searchMembers(request: MemberSearchRequest): Promise<any> {
@@ -857,21 +939,78 @@ export class MembershipServiceSimplified {
     }
   }
 
-  private async generateMemberNumber(companyId: number): Promise<string> {
+  private async generateMemberNumber(
+    companyId: number | null, 
+    isIndependent: boolean = false,
+    pattern?: string,
+    customPrefix?: string,
+    customSuffix?: string,
+    includeYear: boolean = false
+  ): Promise<string> {
     const db: any = this.db.getDb();
     const memberTable: any = members;
-    const prefix = `MC${companyId.toString().padStart(3, '0')}`;
+    const currentYear = new Date().getFullYear().toString();
+    
+    let prefix: string;
+    let sequencePattern: string;
+
+    // Allow custom pattern override
+    if (pattern) {
+      prefix = pattern
+        .replace('{companyId}', companyId ? companyId.toString().padStart(3, '0') : '')
+        .replace('{year}', currentYear)
+        .replace('{type}', isIndependent ? 'IND' : 'EMP');
+    } 
+    // Use custom prefix if provided
+    else if (customPrefix) {
+      prefix = customPrefix;
+      if (includeYear) {
+        prefix = `${prefix}${currentYear}`;
+      }
+    }
+    // Default patterns
+    else if (isIndependent || !companyId) {
+      // Independent / Individual Member
+      prefix = includeYear ? `MI${currentYear}` : 'MI';
+    } else {
+      // Company Employee Member
+      prefix = includeYear 
+        ? `MC${companyId.toString().padStart(3, '0')}${currentYear}` 
+        : `MC${companyId.toString().padStart(3, '0')}`;
+    }
+
+    sequencePattern = `${prefix}%`;
+
+    // Find latest member number for this sequence
     const existing = await db
       .select()
       .from(memberTable)
-      .where(like(memberTable.memberNumber, `${prefix}%`))
+      .where(like(memberTable.memberNumber, sequencePattern))
       .orderBy(desc(memberTable.memberNumber))
       .limit(1);
 
-    const lastNumber =
-      existing.length > 0 ? parseInt(String(existing[0].memberNumber).replace(prefix, ''), 10) || 0 : 0;
+    let nextSequence = 1;
+    
+    if (existing.length > 0) {
+      const lastMemberNumber = existing[0].memberNumber;
+      // Extract numeric sequence part
+      const numericMatch = lastMemberNumber.match(/(\d+)$/);
+      if (numericMatch) {
+        nextSequence = parseInt(numericMatch[1], 10) + 1;
+      }
+    }
 
-    return `${prefix}${String(lastNumber + 1).padStart(6, '0')}`;
+    // Format with leading zeros (6 digits = up to 999,999 per sequence)
+    const sequencePart = String(nextSequence).padStart(6, '0');
+    
+    let memberNumber = `${prefix}${sequencePart}`;
+    
+    // Add custom suffix if provided
+    if (customSuffix) {
+      memberNumber = `${memberNumber}${customSuffix}`;
+    }
+
+    return memberNumber;
   }
 
   private async createLifeEvent(memberId: number, companyId: number, event: any): Promise<void> {
