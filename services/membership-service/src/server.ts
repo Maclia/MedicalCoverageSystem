@@ -1,4 +1,4 @@
-import { config } from 'dotenv';
+import { config } from './config/index.js';
 import { Database } from './models/Database';
 import { WinstonLogger } from './utils/WinstonLogger';
 import express from 'express';
@@ -10,12 +10,6 @@ import membershipRoutes from './routes/membership';
 import adminRoutes from './routes/admin';
 import { auditMiddleware } from './middleware/auditMiddleware';
 import { responseMiddleware, errorHandler, notFoundHandler } from './middleware/responseMiddleware';
-
-// Load environment variables
-config();
-
-const PORT = process.env.PORT || 3006;
-const NODE_ENV = process.env.NODE_ENV || 'development';
 
 function createApp() {
   const app = express();
@@ -34,7 +28,7 @@ function createApp() {
 
   // CORS configuration
   app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+    origin: config.allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-ID', 'X-Company-ID'],
@@ -49,8 +43,8 @@ function createApp() {
 
   // Rate limiting
   const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 1000, // limit each IP to 1000 requests per windowMs
+    windowMs: config.rateLimit.windowMs,
+    max: config.rateLimit.max,
     message: 'Too many requests from this IP, please try again later.',
     standardHeaders: true,
     legacyHeaders: false,
@@ -103,8 +97,8 @@ async function bootstrap() {
 
   try {
     logger.info('Starting Membership Service', {
-      environment: NODE_ENV,
-      port: PORT,
+      environment: config.nodeEnv,
+      port: config.port,
       nodeVersion: process.version
     });
 
@@ -122,10 +116,10 @@ async function bootstrap() {
     const app = createApp();
 
     // Start server
-    const server = app.listen(PORT, () => {
+    const server = app.listen(config.port, () => {
       logger.info('Membership Service started successfully', {
-        port: PORT,
-        environment: NODE_ENV,
+        port: config.port,
+        environment: config.nodeEnv,
         pid: process.pid
       });
     });

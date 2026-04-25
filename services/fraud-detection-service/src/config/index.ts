@@ -2,6 +2,10 @@ import 'dotenv/config';
 
 export const config = {
   // Server
+  server: {
+    port: parseInt(process.env.PORT || '5009', 10),
+    environment: process.env.NODE_ENV || 'development',
+  },
   port: parseInt(process.env.PORT || '5009', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
 
@@ -142,3 +146,17 @@ export const config = {
     format: process.env.LOG_FORMAT || 'json',
   },
 };
+
+export async function validateEnvironmentVariables(): Promise<void> {
+  const requiredVars = [
+    'DATABASE_URL',
+    'REDIS_URL',
+    'JWT_SECRET'
+  ];
+
+  const missing = requiredVars.filter(varName => !process.env[varName]);
+  
+  if (missing.length > 0) {
+    throw new Error(`Missing required environment variables: ${missing.join(', ')}`);
+  }
+}

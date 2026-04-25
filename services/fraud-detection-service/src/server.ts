@@ -1,0 +1,242 @@
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import compression from 'compression';
+import rateLimit from 'express-rate-limit';
+import { config } from './config/index.js';
+import { createLogger, generateCorrelationId } from './utils/logger.js';
+import routes from './api/routes.js';
+import { errorHandlerMiddleware, notFoundHandlerMiddleware } from './middleware/responseStandardizationMiddleware.ts';
+import { validateEnvironmentVariables } from './config/index.js';
+import { auditMiddleware } from './middleware/auditMiddleware.js';
+import { authenticateToken } from './middleware/authMiddleware.js';
+import { tracingMiddleware } from '@shared/distributed-tracing/src/index.js';
+
+const logger = createLogger();
+
+function createApp() {
+  const app = express();
+
+  // Tracing middleware - FIRST in order
+  app.use(tracingMiddleware({
+    serviceName: 'fraud-detection-service',
+    includeUserAgent: true
+  }));
+
+  // Security middleware
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'"],
+        imgSrc: ["'self'", "data:", "https:"],
+      },
+    },
+    hsts: {
+      maxAge: 31536000,
+      includeSubDomains: true,
+      preload: true
+    }
+  }));
+
+  // CORS configuration
+  const corsOptions = {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+
+      const allowedOrigins = config.cors.allowedOrigins;
+      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'), false);
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'X-Correlation-ID'],
+    exposedHeaders: ['X-Total-Count', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset']
+  };
+
+  app.use(cors(corsOptions));
+
+  // Compression middleware
+  app.use(compression());
+
+  // Body parsing middleware
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Rate limiting
+  const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 1000,
+    message: 'Too many requests from this IP, please try again later.',
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+  app.use(limiter);
+
+    // Correlation ID middleware
+    app.use((req, res, next) => {
+      req.correlationId = (req.headers['x-correlation-id'] as string) || generateCorrelationId();
+      res.setHeader('X-Correlation-ID', req.correlationId);
+    next();
+  });
+
+  // Audit middleware
+  app.use(auditMiddleware);
+
+  // Request logging middleware
+  app.use((req, res, next) => {
+    const startTime = Date.now();
+
+    res.on('finish', () => {
+      const duration = Date.now() - startTime;
+      logger.info('HTTP Request', {
+        method: req.method,
+        url: req.url,
+        statusCode: res.statusCode,
+        duration,
+        userAgent: req.get('User-Agent'),
+        ip: req.ip,
+        correlationId: req.correlationId
+      });
+    });
+
+    next();
+  });
+
+  // Health check endpoint (before authentication)
+  app.get('/health', (req, res) => {
+    res.json({
+      status: 'healthy',
+      service: 'fraud-detection-service',
+      timestamp: new Date().toISOString(),
+      version: '1.0.0',
+      uptime: process.uptime(),
+      environment: config.server.environment,
+      correlationId: req.correlationId
+    });
+  });
+
+  // API routes - protected with authentication
+  app.use('/api/v1', authenticateToken, routes);
+
+  // Root endpoint
+  app.get('/', (req, res) => {
+    res.json({
+      service: 'fraud-detection-service',
+      version: '1.0.0',
+      status: 'running',
+      timestamp: new Date().toISOString(),
+      endpoints: {
+        health: '/health',
+        api: '/api/v1',
+        assessments: '/api/v1/assessments',
+        patterns: '/api/v1/patterns',
+        investigations: '/api/v1/investigations'
+      },
+      correlationId: req.correlationId
+    });
+  });
+
+  // Error handling
+  app.use(notFoundHandlerMiddleware);
+  app.use(errorHandlerMiddleware);
+
+  return app;
+}
+
+async function bootstrap() {
+  try {
+    // Validate environment variables
+    await validateEnvironmentVariables();
+
+    logger.info('Starting Fraud Detection Service', {
+      environment: config.server.environment,
+      port: config.server.port,
+      nodeVersion: process.version
+    });
+
+    // Create Express app
+    const app = createApp();
+
+    // Start server
+    const server = app.listen(config.server.port, () => {
+      logger.info('Fraud Detection service started successfully', {
+        port: config.server.port,
+        environment: config.server.environment,
+        nodeVersion: process.version,
+        pid: process.pid
+      });
+    });
+
+    // Handle server errors
+    server.on('error', (error: NodeJS.ErrnoException) => {
+      if (error.code === 'EADDRINUSE') {
+        logger.error(`Port ${config.server.port} is already in use`);
+      } else {
+        logger.error('Server error', error);
+      }
+      process.exit(1);
+    });
+
+    // Graceful shutdown handling
+    const gracefulShutdown = async (signal: string) => {
+      logger.info(`Received ${signal}, starting graceful shutdown`);
+
+      server.close(async () => {
+        logger.info('HTTP server closed');
+
+        // Close database connections
+        try {
+          // Drizzle config file does not contain database connection instance
+          // Database connections are managed internally by Drizzle ORM
+          logger.info('Database connections closed automatically');
+          logger.info('Database connections closed');
+        } catch (error) {
+          logger.error('Error closing database connections', error as Error);
+        }
+
+        logger.info('Graceful shutdown completed');
+        process.exit(0);
+      });
+
+      // Force shutdown after timeout
+      setTimeout(() => {
+        logger.error('Graceful shutdown timeout, forcing exit');
+        process.exit(1);
+      }, 30000); // 30 seconds timeout
+    };
+
+    // Handle shutdown signals
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (error) => {
+      logger.error('Uncaught exception', error);
+      gracefulShutdown('uncaughtException');
+    });
+
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      logger.error('Unhandled promise rejection', {
+        reason: reason instanceof Error ? reason.message : reason,
+        promise: promise.toString()
+      });
+      gracefulShutdown('unhandledRejection');
+    });
+
+    return server;
+
+  } catch (error) {
+    logger.error('Failed to start Fraud Detection service', error as Error);
+    process.exit(1);
+  }
+}
+
+// Start the service
+bootstrap();

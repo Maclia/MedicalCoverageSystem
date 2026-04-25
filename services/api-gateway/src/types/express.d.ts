@@ -13,6 +13,11 @@ declare global {
       correlationId?: string;
       startTime?: number;
     }
+
+    interface Response {
+      success: (data: any, meta?: any) => this;
+      error: (code: string, message: string, details?: any) => this;
+    }
   }
 }
 

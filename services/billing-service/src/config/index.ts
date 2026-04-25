@@ -51,6 +51,13 @@ export const config = {
     allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001']
   },
 
+  security: {
+    rateLimit: {
+      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10), // 15 minutes in ms
+      max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10) // 100 requests per window
+    }
+  },
+
   logging: {
     level: process.env.LOG_LEVEL || 'info',
     filePath: process.env.LOG_FILE_PATH || './logs',
