@@ -33,7 +33,9 @@
       "@config/*": ["./client/src/config/*"],
       "@contexts/*": ["./client/src/contexts/*"],
       "@guards/*": ["./client/src/guards/*"],
-      "@system/*": ["./services/shared/*"]
+      "@system/*": ["./services/shared/*"],
+      "@medical-system/shared-business-rules": ["./services/shared/business-rules/src/index.ts"],
+      "@medical-system/shared-business-rules/*": ["./services/shared/business-rules/src/*"]
     }
   }
 }

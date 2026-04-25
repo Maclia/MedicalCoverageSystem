@@ -1,5 +1,5 @@
 import { createLogger } from '../../utils/logger.js';
-import { DomainServiceClient } from '../DomainServiceClient.js';
+import { DomainServiceClient } from '../DomainServiceClient';
 
 const logger = createLogger('financial-rules-service');
 

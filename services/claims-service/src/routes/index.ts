@@ -4,7 +4,7 @@ import { schema } from '../models/schema.js';
 import { validateClaim, validateClaimId } from '../middleware/claimValidation.js';
 import { ClaimsService } from '../services/ClaimsService.js';
 import healthRouter from './health.js';
-import { authenticateToken, requireModuleAccess, requirePermission, requireMedicalUser } from '@core/middleware/auth.js';
+import { authenticateToken, requireModuleAccess, requirePermission, requireMedicalUser } from '../middleware/auth.js';
 
 const router = Router();
 const logger = createLogger('claims-routes');

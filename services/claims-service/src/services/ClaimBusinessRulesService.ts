@@ -11,38 +11,38 @@ import { IClaimRulesService, RuleResult, ExecutionMode, BusinessRuleFlags } from
 class ClaimBusinessRulesService extends BaseRuleModule implements IClaimRulesService {
   constructor() {
     super('claims-service');
-    this.setExecutionMode(BusinessRuleFlags.claimRules);
+    super.setExecutionMode(BusinessRuleFlags.claimRules);
   }
 
   async validateClaimEligibility(claimData: any): Promise<RuleResult<boolean>> {
-    return this.executeRule(
+    return super.executeRule(
       'validateClaimEligibility',
       async () => await this.localValidateClaim(claimData),
-      async () => await this.callCoreEndpoint('/api/business-rules/claims/validate', claimData)
+      async () => await super.callCoreEndpoint('/api/business-rules/claims/validate', claimData)
     );
   }
 
   async checkWaitingPeriod(memberId: number, diagnosisCode: string): Promise<RuleResult<boolean>> {
-    return this.executeRule(
+    return super.executeRule(
       'checkWaitingPeriod',
       async () => await this.localCheckWaitingPeriod(memberId, diagnosisCode),
-      async () => await this.callCoreEndpoint('/api/business-rules/claims/waiting-period', { memberId, diagnosisCode })
+      async () => await super.callCoreEndpoint('/api/business-rules/claims/waiting-period', { memberId, diagnosisCode })
     );
   }
 
   async validatePolicyExclusions(claimData: any): Promise<RuleResult<string[]>> {
-    return this.executeRule(
+    return super.executeRule(
       'validatePolicyExclusions',
       async () => await this.localValidatePolicyExclusions(claimData),
-      async () => await this.callCoreEndpoint('/api/business-rules/claims/exclusions', claimData)
+      async () => await super.callCoreEndpoint('/api/business-rules/claims/exclusions', claimData)
     );
   }
 
   async checkPreAuthorizationRequired(claimData: any): Promise<RuleResult<boolean>> {
-    return this.executeRule(
+    return super.executeRule(
       'checkPreAuthorizationRequired',
       async () => await this.localCheckPreAuthorization(claimData),
-      async () => await this.callCoreEndpoint('/api/business-rules/claims/pre-authorization', claimData)
+      async () => await super.callCoreEndpoint('/api/business-rules/claims/pre-authorization', claimData)
     );
   }
 
@@ -51,16 +51,16 @@ class ClaimBusinessRulesService extends BaseRuleModule implements IClaimRulesSer
   private async localValidateClaim(claimData: any): Promise<boolean> {
     // Execute full validation pipeline locally
     const validations = [
-      this.localCheckPolicyExclusions,
-      this.localCheckWaitingPeriod,
-      this.localValidateDiagnosisCodes,
-      this.localCheckPreAuthorization,
-      this.localCalculateCopayAndDeductible,
-      this.localCheckAutoApprovalThresholds
+      (data: any) => this.localCheckPolicyExclusions(data),
+      (data: any) => this.localCheckWaitingPeriod(data.memberId, data.diagnosisCode),
+      (data: any) => this.localValidateDiagnosisCodes(data),
+      (data: any) => this.localCheckPreAuthorization(data),
+      (data: any) => this.localCalculateCopayAndDeductible(data),
+      (data: any) => this.localCheckAutoApprovalThresholds(data)
     ];
 
     for (const validation of validations) {
-      const result = await validation.call(this, claimData);
+      const result = await validation(claimData);
       
       if (!result.valid) {
         return false;
@@ -117,20 +117,20 @@ class ClaimBusinessRulesService extends BaseRuleModule implements IClaimRulesSer
    * Full claim validation pipeline - original implementation from Core Service
    */
   async validateFullClaim(claimData: any): Promise<RuleResult<any>> {
-    return this.executeRule(
+    return super.executeRule(
       'validateFullClaim',
       async () => {
         const validations = [
-          this.localCheckPolicyExclusions,
-          this.localCheckWaitingPeriod,
-          this.localValidateDiagnosisCodes,
-          this.localCheckPreAuthorization,
-          this.localCalculateCopayAndDeductible,
-          this.localCheckAutoApprovalThresholds
+          (data: any) => this.localCheckPolicyExclusions(data),
+          (data: any) => this.localCheckWaitingPeriod(data.memberId, data.diagnosisCode),
+          (data: any) => this.localValidateDiagnosisCodes(data),
+          (data: any) => this.localCheckPreAuthorization(data),
+          (data: any) => this.localCalculateCopayAndDeductible(data),
+          (data: any) => this.localCheckAutoApprovalThresholds(data)
         ];
 
         for (const validation of validations) {
-          const result = await validation.call(this, claimData);
+          const result = await validation(claimData);
           
           if (!result.valid) {
             return result;
@@ -139,7 +139,7 @@ class ClaimBusinessRulesService extends BaseRuleModule implements IClaimRulesSer
 
         return { valid: true };
       },
-      async () => await this.callCoreEndpoint('/api/business-rules/claims/validate-full', claimData)
+      async () => await super.callCoreEndpoint('/api/business-rules/claims/validate-full', claimData)
     );
   }
 }

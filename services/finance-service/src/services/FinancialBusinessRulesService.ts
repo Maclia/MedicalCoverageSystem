@@ -1,48 +1,48 @@
-* Financial Business Rules - Migrated from Core Service
+/**
+ * Financial Business Rules - Migrated from Core Service
  * 
  * ✅ Official source of truth for all financial calculations, validation and policies
  * Implements dual execution capability for zero downtime migration
  */
 
-import { BaseRuleModule } from '@medical-system/shared-business-rules';
-import { IFinancialRulesService, RuleResult, ExecutionMode, BusinessRuleFlags } from '@medical-system/shared-business-rules';
+import { BaseRuleModule, IFinancialRulesService, RuleResult, ExecutionMode } from '@medical-system/shared-business-rules';
 import { companyBalanceService } from './CompanyBalanceService.js';
 
 class FinancialBusinessRulesService extends BaseRuleModule implements IFinancialRulesService {
   constructor() {
     super('finance-service');
-    this.setExecutionMode(BusinessRuleFlags.financialRules);
+    super.setExecutionMode(ExecutionMode.DUAL);
   }
 
   async calculatePremiumAllocation(amount: number): Promise<RuleResult<Record<string, number>>> {
-    return this.executeRule(
+    return super.executeRule(
       'calculatePremiumAllocation',
       async () => await this.localCalculatePremiumAllocation(amount),
-      async () => await this.callCoreEndpoint('/api/business-rules/finance/premium-allocation', { amount })
+      async () => await super.callCoreEndpoint('/api/business-rules/finance/premium-allocation', { amount })
     );
   }
 
   async validateCompanyBalance(companyId: number, claimAmount: number): Promise<RuleResult<boolean>> {
-    return this.executeRule(
+    return super.executeRule(
       'validateCompanyBalance',
       async () => await this.localValidateCompanyBalance(companyId, claimAmount),
-      async () => await this.callCoreEndpoint('/api/business-rules/finance/company-balance', { companyId, claimAmount })
+      async () => await super.callCoreEndpoint('/api/business-rules/finance/company-balance', { companyId, claimAmount })
     );
   }
 
   async calculateCommission(transactionAmount: number): Promise<RuleResult<number>> {
-    return this.executeRule(
+    return super.executeRule(
       'calculateCommission',
       async () => await this.localCalculateCommission(transactionAmount),
-      async () => await this.callCoreEndpoint('/api/business-rules/finance/commission', { transactionAmount })
+      async () => await super.callCoreEndpoint('/api/business-rules/finance/commission', { transactionAmount })
     );
   }
 
   async calculateSettlementAmount(claimAmount: number): Promise<RuleResult<number>> {
-    return this.executeRule(
+    return super.executeRule(
       'calculateSettlementAmount',
       async () => claimAmount * 0.95,
-      async () => await this.callCoreEndpoint('/api/business-rules/finance/settlement-amount', { claimAmount })
+      async () => await super.callCoreEndpoint('/api/business-rules/finance/settlement-amount', { claimAmount })
     );
   }
 
@@ -68,10 +68,10 @@ class FinancialBusinessRulesService extends BaseRuleModule implements IFinancial
 
   private async localValidateCompanyBalance(companyId: number, claimAmount: number): Promise<boolean> {
     // Get balance directly from local service with NO network call
-    const balance = await companyBalanceService.getCompanyBalance(companyId);
+    const balanceData = await companyBalanceService.getCompanyBalance(String(companyId));
     
     const minimumBalanceThreshold = 10000;
-    const availableAfterClaim = balance - claimAmount;
+    const availableAfterClaim = balanceData.currentBalance - claimAmount;
     
     return availableAfterClaim >= 0;
   }
@@ -88,7 +88,7 @@ class FinancialBusinessRulesService extends BaseRuleModule implements IFinancial
    * Full settlement window rules
    */
   async getSettlementWindow(providerType: string, claimAmount: number): Promise<RuleResult<any>> {
-    return this.executeRule(
+    return super.executeRule(
       'getSettlementWindow',
       async () => {
         if (claimAmount > 100000) {
@@ -125,7 +125,7 @@ class FinancialBusinessRulesService extends BaseRuleModule implements IFinancial
           batchCycle: 'weekly'
         };
       },
-      async () => await this.callCoreEndpoint('/api/business-rules/finance/settlement-window', { providerType, claimAmount })
+      async () => await super.callCoreEndpoint('/api/business-rules/finance/settlement-window', { providerType, claimAmount })
     );
   }
 

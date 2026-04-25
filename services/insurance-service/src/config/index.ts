@@ -5,7 +5,11 @@ dotenv.config();
 export const config = {
   port: parseInt(process.env.PORT || '3008', 10),
   nodeEnv: process.env.NODE_ENV || 'development',
-
+  allowedOrigins: process.env.ALLOWED_ORIGINS?.split(',') || ['http://localhost:3000'],
+  rateLimit: {
+    windowMs: 15 * 60 * 1000,
+    max: 1000
+  },
   database: {
     url: process.env.INSURANCE_DB_URL || process.env.DATABASE_URL,
   },

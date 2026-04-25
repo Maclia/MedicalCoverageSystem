@@ -5,10 +5,14 @@
  * business rules to decentralized domain implementation.
  */
 
-export * from './types';
-export * from './BaseRuleModule';
+export * from './types/index.js';
+export * from './BaseRuleModule.js';
 
-import { ExecutionMode, RuleFeatureFlags } from './types';
+import { ExecutionMode, RuleFeatureFlags } from './types/index.js';
+
+// Explicitly export interfaces and types that are being used by consuming services
+export type { IClaimRulesService, ICardRulesService, IFinancialRulesService, IBusinessRulesEngine, IBusinessRuleModule, RuleResult, RuleFeatureFlags } from './types/index.js';
+export { ExecutionMode } from './types/index.js';
 
 /**
  * Global feature flag configuration

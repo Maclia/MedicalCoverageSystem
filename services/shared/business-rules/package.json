@@ -2,6 +2,7 @@
   "name": "@medical-system/shared-business-rules",
   "version": "1.0.0",
   "description": "Decentralized business rules engine with dual execution capability",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {

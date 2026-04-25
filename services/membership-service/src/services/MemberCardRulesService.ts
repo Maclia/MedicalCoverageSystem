@@ -5,37 +5,36 @@
  * Implements dual execution capability for zero downtime migration
  */
 
-import { BaseRuleModule } from '@medical-system/shared-business-rules';
-import { ICardRulesService, RuleResult, ExecutionMode, BusinessRuleFlags } from '@medical-system/shared-business-rules';
+import { BaseRuleModule, ICardRulesService, RuleResult, ExecutionMode, BusinessRuleFlags } from '@medical-system/shared-business-rules';
 import { cardManagementService } from './CardManagementService.js';
 
 class MemberCardRulesService extends BaseRuleModule implements ICardRulesService {
   constructor() {
     super('membership-service');
-    this.setExecutionMode(BusinessRuleFlags.cardRules);
+    super.setExecutionMode(BusinessRuleFlags.cardRules);
   }
 
   async validateCardEligibility(memberId: number): Promise<RuleResult<boolean>> {
-    return this.executeRule(
+    return super.executeRule(
       'validateCardEligibility',
       async () => await this.localValidateCardEligibility(memberId),
-      async () => await this.callCoreEndpoint('/api/business-rules/cards/eligibility', { memberId })
+      async () => await super.callCoreEndpoint('/api/business-rules/cards/eligibility', { memberId })
     );
   }
 
   async calculateCardExpiryDate(memberId: number): Promise<RuleResult<Date>> {
-    return this.executeRule(
+    return super.executeRule(
       'calculateCardExpiryDate',
       async () => await this.localCalculateCardExpiryDate(memberId),
-      async () => await this.callCoreEndpoint('/api/business-rules/cards/expiry', { memberId })
+      async () => await super.callCoreEndpoint('/api/business-rules/cards/expiry', { memberId })
     );
   }
 
   async validateReplacementPolicy(cardId: number, reason: string): Promise<RuleResult<boolean>> {
-    return this.executeRule(
+    return super.executeRule(
       'validateReplacementPolicy',
       async () => await this.localValidateReplacementPolicy(cardId, reason),
-      async () => await this.callCoreEndpoint('/api/business-rules/cards/replacement', { cardId, reason })
+      async () => await super.callCoreEndpoint('/api/business-rules/cards/replacement', { cardId, reason })
     );
   }
 
@@ -77,7 +76,7 @@ class MemberCardRulesService extends BaseRuleModule implements ICardRulesService
    * Lost card request validation
    */
   async validateLostCardRequest(memberId: number, cardId: number): Promise<RuleResult<any>> {
-    return this.executeRule(
+    return super.executeRule(
       'validateLostCardRequest',
       async () => {
         return {
@@ -88,7 +87,7 @@ class MemberCardRulesService extends BaseRuleModule implements ICardRulesService
           replacementCost: 250
         };
       },
-      async () => await this.callCoreEndpoint('/api/business-rules/cards/lost', { memberId, cardId })
+      async () => await super.callCoreEndpoint('/api/business-rules/cards/lost', { memberId, cardId })
     );
   }
 
@@ -96,7 +95,7 @@ class MemberCardRulesService extends BaseRuleModule implements ICardRulesService
    * Print discrepancy policy check
    */
   async checkPrintDiscrepancy(batchId: string, discrepancyType: string): Promise<RuleResult<any>> {
-    return this.executeRule(
+    return super.executeRule(
       'checkPrintDiscrepancy',
       async () => {
         const printerErrors = ['printing_defect', 'misalignment', 'missing_information', 'damage_during_production'];
@@ -109,7 +108,7 @@ class MemberCardRulesService extends BaseRuleModule implements ICardRulesService
           chargeVendor: isPrinterError
         };
       },
-      async () => await this.callCoreEndpoint('/api/business-rules/cards/print-discrepancy', { batchId, discrepancyType })
+      async () => await super.callCoreEndpoint('/api/business-rules/cards/print-discrepancy', { batchId, discrepancyType })
     );
   }
 }

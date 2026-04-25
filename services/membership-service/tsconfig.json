@@ -27,7 +27,12 @@
     "noPropertyAccessFromIndexSignature": false,
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
-    "emitDecoratorMetadata": true
+    "emitDecoratorMetadata": true,
+    "baseUrl": ".",
+    "paths": {
+      "@medical-system/shared-business-rules": ["../shared/business-rules/src/index.ts"],
+      "@medical-system/shared-business-rules/*": ["../shared/business-rules/src/*"]
+    }
   },
   "include": [
     "src/**/*"

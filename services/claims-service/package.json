@@ -4,9 +4,9 @@
   "version": "1.0.0",
   "description": "Claims processing microservice for Medical Coverage System",
   "type": "module",
-  "main": "src/server.ts",
+  "main": "dist/claims-service/src/server.js",
   "scripts": {
-    "start": "node dist/server.js",
+    "start": "node dist/claims-service/src/server.js",
     "dev": "tsx src/server.ts",
     "build": "tsc",
     "test": "jest",
