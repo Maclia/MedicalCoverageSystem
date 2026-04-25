@@ -8,6 +8,7 @@ import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import membershipRoutes from './routes/membership';
 import adminRoutes from './routes/admin';
+import cardRoutes from './routes/cards';
 import { auditMiddleware } from './middleware/auditMiddleware';
 import { responseMiddleware, errorHandler, notFoundHandler } from './middleware/responseMiddleware';
 
@@ -75,6 +76,7 @@ function createApp() {
   // API routes
   app.use('/api/members', membershipRoutes);
   app.use('/api/admin', adminRoutes);
+  app.use('/api/cards', cardRoutes);
 
   // Root endpoint
   app.get('/', (_req, res) => {

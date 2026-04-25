@@ -14,7 +14,6 @@ import {
   setupGlobalErrorHandlers
 } from './middleware/errorHandler';
 import routes from './routes';
-import cardRoutes from './routes/card.routes';
 import { createLogger } from './utils/logger';
 import { authService } from './services/AuthService';
 
@@ -106,7 +105,6 @@ app.get('/docs', (req, res) => {
 
 // API routes
 app.use('/auth', routes);
-app.use('/cards', cardRoutes);
 
 // Enhanced error handling with audit logging
 app.use(errorAuditMiddleware);
