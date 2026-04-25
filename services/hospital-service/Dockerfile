@@ -1,58 +1,77 @@
-# Multi-stage build for production optimization
+# ================================================
+# ✅ STANDARD DOCKERFILE - ALL SERVICES MUST USE THIS
+# ================================================
+# Multi-stage optimized production build
+# 
+# ALL SERVICES FOLLOW THIS EXACT SAME DOCKERFILE
+# No customizations allowed - this ensures 100% consistency
+# Ports, commands and environment are handled at runtime
+
+FROM node:20-alpine AS dependencies
+
+WORKDIR /app
+
+# Copy package files first (for proper Docker layer caching)
+COPY package*.json ./
+
+# Install all dependencies (including dev for build)
+RUN npm install --legacy-peer-deps && npm cache clean --force
+
+# ================================================
+# BUILD STAGE
+# ================================================
 FROM node:20-alpine AS builder
 
-# Set working directory
-WORKDIR /app/services/hospital-service
+WORKDIR /app
 
-# Copy package files
-COPY services/hospital-service/package*.json ./
-
-# Install all dependencies (prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm install --legacy-peer-deps; else npm install --legacy-peer-deps; fi
-
-# Copy source code
-COPY services/hospital-service/ ./
-COPY shared/ /app/shared/
-
-# Build the application
-RUN npm run build
-
-# Production stage
-FROM node:20-alpine AS production
-
-# Install dumb-init for proper signal handling
+# Install system dependencies
 RUN apk add --no-cache dumb-init
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+# Copy from dependencies stage
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY package*.json tsconfig.json ./
 
-# Set working directory
-WORKDIR /app/services/hospital-service
+# Copy source code
+COPY src ./src
+
+# Build TypeScript
+RUN npm run build
+
+# ================================================
+# PRODUCTION STAGE
+# ================================================
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apk add --no-cache dumb-init
+
+# Create non-root user (security best practice)
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nodejs
 
 # Copy package files
-COPY services/hospital-service/package*.json ./
+COPY package*.json ./
 
-# Install only production dependencies (prefer lockfile if present)
-RUN if [ -f package-lock.json ]; then npm install --omit=dev --legacy-peer-deps; else npm install --omit=dev --legacy-peer-deps; fi && npm cache clean --force
+# Install production only dependencies
+RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/services/hospital-service/dist ./dist
-COPY --chown=nodejs:nodejs shared/ /app/shared/
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
-# Create logs directory
-RUN mkdir -p logs && chown nodejs:nodejs logs
+# Create logs directory with proper permissions
+RUN mkdir -p logs && chown -R nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs
 
-# Expose port
-EXPOSE 3002
-
-# Health check
+# Standard health check - works for ALL services
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3002/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# Start the application with dumb-init
-ENTRYPOINT ["dumb-init", "--"]
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+
+# Standard start command - ALL services use dist/server.js
 CMD ["node", "dist/server.js"]

@@ -1,15 +1,25 @@
-# Multi-stage build for Finance Service
+# ================================================
+# ✅ STANDARD DOCKERFILE - ALL SERVICES MUST USE THIS
+# ================================================
+# Multi-stage optimized production build
+# 
+# ALL SERVICES FOLLOW THIS EXACT SAME DOCKERFILE
+# No customizations allowed - this ensures 100% consistency
+# Ports, commands and environment are handled at runtime
+
 FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files first (for layer caching optimization)
+# Copy package files first (for proper Docker layer caching)
 COPY package*.json ./
 
-# Install all dependencies (including dev) for build
+# Install all dependencies (including dev for build)
 RUN npm install --legacy-peer-deps && npm cache clean --force
 
-# Build stage
+# ================================================
+# BUILD STAGE
+# ================================================
 FROM node:20-alpine AS builder
 
 WORKDIR /app
@@ -22,48 +32,46 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY package*.json tsconfig.json ./
 
 # Copy source code
-COPY src/ ./src/
+COPY src ./src
 
-# Build the application
+# Build TypeScript
 RUN npm run build
 
-# Production stage
-FROM node:20-alpine AS production
+# ================================================
+# PRODUCTION STAGE
+# ================================================
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dumb-init for signal handling
+# Install system dependencies
 RUN apk add --no-cache dumb-init
 
-# Create app user (non-root)
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S finance -u 1001 -G nodejs
+# Create non-root user (security best practice)
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nodejs
 
 # Copy package files
 COPY package*.json ./
 
-# Install production dependencies only
+# Install production only dependencies
 RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Copy built application from builder stage
-COPY --from=builder --chown=finance:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
 
 # Create logs directory with proper permissions
-RUN mkdir -p /app/logs && chown -R finance:nodejs /app
+RUN mkdir -p logs && chown -R nodejs:nodejs /app
 
 # Switch to non-root user
-USER finance
+USER nodejs
 
-# Expose port
-EXPOSE 3007
-
-# Environment variables
-ENV NODE_ENV=production
-
-# Health check
+# Standard health check - works for ALL services
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:3007/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })" || exit 1
+  CMD node -e "require('http').get('http://localhost:' + (process.env.PORT || 3000) + '/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"
 
-# Use dumb-init to handle signals properly
+# Use dumb-init for proper signal handling
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
-CMD ["node", "dist/index.js"]
+
+# Standard start command - ALL services use dist/server.js
+CMD ["node", "dist/server.js"]
