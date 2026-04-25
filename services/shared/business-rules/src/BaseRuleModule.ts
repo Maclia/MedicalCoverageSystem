@@ -1,4 +1,4 @@
-import { ExecutionMode, RuleResult, IBusinessRuleModule } from './types';
+import { ExecutionMode, RuleResult, IBusinessRuleModule } from './types/index.js';
 
 /**
  * Abstract Base Rule Module with dual execution capability
@@ -176,7 +176,41 @@ export abstract class BaseRuleModule implements IBusinessRuleModule {
   }
 
   private deepEqual(a: any, b: any): boolean {
-    return JSON.stringify(a) === JSON.stringify(b);
+    // Handle primitives and null/undefined
+    if (a === b) return true;
+    
+    // Handle different types
+    if (typeof a !== typeof b) return false;
+    
+    // Handle null case
+    if (a === null || b === null) return false;
+    
+    // Handle Dates
+    if (a instanceof Date && b instanceof Date) {
+      return a.getTime() === b.getTime();
+    }
+    
+    // Handle Arrays
+    if (Array.isArray(a) && Array.isArray(b)) {
+      if (a.length !== b.length) return false;
+      return a.every((item, index) => this.deepEqual(item, b[index]));
+    }
+    
+    // Handle Objects
+    if (typeof a === 'object' && typeof b === 'object') {
+      const keysA = Object.keys(a);
+      const keysB = Object.keys(b);
+      
+      if (keysA.length !== keysB.length) return false;
+      
+      return keysA.every(key => {
+        if (!keysB.includes(key)) return false;
+        return this.deepEqual(a[key], b[key]);
+      });
+    }
+    
+    // All other cases
+    return false;
   }
 
   /**

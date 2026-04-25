@@ -37,12 +37,19 @@ export interface ServiceConfig {
   };
 }
 
+interface TimedMetric {
+  timestamp: number;
+  value: number;
+}
+
 interface ServiceMetrics {
   requestCount: number;
   errorCount: number;
   responseTimeSum: number;
   lastRequest?: Date;
   circuitBreakerTrips: number;
+  requestHistory: TimedMetric[];
+  errorHistory: TimedMetric[];
 }
 
 class ServiceRegistry extends EventEmitter {
@@ -76,7 +83,14 @@ class ServiceRegistry extends EventEmitter {
 
       // Initialize metrics
       this.metrics.set(instance.name, new Map([
-        [instance.id, { requestCount: 0, errorCount: 0, responseTimeSum: 0, circuitBreakerTrips: 0 }]
+        [instance.id, {
+          requestCount: 0,
+          errorCount: 0,
+          responseTimeSum: 0,
+          circuitBreakerTrips: 0,
+          requestHistory: [],
+          errorHistory: []
+        }]
       ]));
 
       logger.info('New service registered', {
@@ -100,7 +114,9 @@ class ServiceRegistry extends EventEmitter {
           requestCount: 0,
           errorCount: 0,
           responseTimeSum: 0,
-          circuitBreakerTrips: 0
+          circuitBreakerTrips: 0,
+          requestHistory: [],
+          errorHistory: []
         });
       }
 
@@ -510,7 +526,9 @@ class ServiceRegistry extends EventEmitter {
         requestCount: 0,
         errorCount: 0,
         responseTimeSum: 0,
-        circuitBreakerTrips: 0
+        circuitBreakerTrips: 0,
+        requestHistory: [],
+        errorHistory: []
       });
     }
 
