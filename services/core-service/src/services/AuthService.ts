@@ -2,7 +2,7 @@ import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcrypt';
 import { eq, lte } from 'drizzle-orm';
 import { db } from '../config/database';
-import { users, userSessions, companies, medicalInstitutions, medicalPersonnel } from '@shared/schema';
+import { users, userSessions, companies, medicalInstitutions, medicalPersonnel, members } from '@shared/schema';
 import { config } from '../config';
 import { createLogger, generateCorrelationId } from '../utils/logger';
 import { auditService } from '../services/AuditService';
@@ -15,7 +15,7 @@ import {
 
 const logger = createLogger();
 
-export type UserRole = 'insurance' | 'institution' | 'provider' | 'sales_admin' | 'sales_manager' | 'team_lead' | 'sales_agent' | 'broker' | 'underwriter';
+export type UserRole = 'insurance' | 'institution' | 'provider' | 'sales_admin' | 'sales_manager' | 'team_lead' | 'sales_agent' | 'broker' | 'underwriter' | 'member';
 
 export interface JWTPayload {
   userId: number;
@@ -111,6 +111,14 @@ export class AuthService {
           .where(eq(medicalPersonnel.id, entityId))
           .limit(1);
         return personnelData[0] || null;
+
+      case 'member':
+        const memberData = await db
+          .select()
+          .from(members)
+          .where(eq(members.id, entityId))
+          .limit(1);
+        return memberData[0] || null;
 
       default:
         return null;

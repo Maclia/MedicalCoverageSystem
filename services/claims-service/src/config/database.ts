@@ -19,6 +19,9 @@ export const db = drizzle(pool, {
   schema: schema
 });
 
+// Export pool for shutdown operations
+export { pool };
+
 // Health check for database connection
 export const checkDatabaseConnection = async (): Promise<boolean> => {
   try {

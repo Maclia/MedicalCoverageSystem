@@ -96,6 +96,8 @@ export const requireInsuranceUser = requireUserType(['insurance']);
 export const requireInstitutionUser = requireUserType(['institution']);
 export const requireProviderUser = requireUserType(['provider']);
 export const requireMedicalUser = requireUserType(['institution', 'provider']);
+export const requireMemberUser = requireUserType(['member']);
+export const requireCompanyUser = requireUserType(['insurance']);
 
 // Role-based access control middleware
 export const requireRole = (allowedRoles: string[]) => {

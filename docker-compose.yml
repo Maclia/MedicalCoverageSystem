@@ -55,6 +55,42 @@ services:
       timeout: 10s
       retries: 5
 
+  # PostgreSQL Connection Pooler (PgBouncer)
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: medical_pgbouncer
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: ${DB_USER:-postgres}
+      DB_PASSWORD: ${DB_PASSWORD:-postgres_password_2024}
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 2000
+      DEFAULT_POOL_SIZE: 50
+      RESERVE_POOL_SIZE: 25
+      RESERVE_POOL_TIMEOUT: 5
+      MAX_DB_CONNECTIONS: 120
+      MAX_USER_CONNECTIONS: 120
+      QUERY_TIMEOUT: 0
+      IGNORE_STARTUP_PARAMETERS: extra_float_digits
+      AUTH_TYPE: scram-sha-256
+      LOG_CONNECTIONS: 0
+      LOG_DISCONNECTIONS: 0
+      LOG_POOLER_ERRORS: 1
+      STATS_PERIOD: 60
+    ports:
+      - "${PGBOUNCER_PORT:-6432}:6432"
+    networks:
+      - medical-services-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "psql -h localhost -p 6432 -U ${DB_USER:-postgres} -c 'SHOW POOLS;' || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
   frontend:
     build:
       context: ./client
@@ -89,7 +125,7 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 3001
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/api_gateway
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/api_gateway
       REDIS_URL: redis://redis:6379
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       SERVICE_TIMEOUT: 30000
@@ -134,7 +170,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3002
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_billing
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_billing
     ports:
       - "3002:3002"
     healthcheck:
@@ -152,7 +188,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3003
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_core
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_core
     ports:
       - "3003:3003"
     healthcheck:
@@ -170,7 +206,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3004
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_finance
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_finance
     ports:
       - "3004:3004"
     healthcheck:
@@ -188,7 +224,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3005
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_crm
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_crm
     ports:
       - "3005:3005"
     healthcheck:
@@ -206,7 +242,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3006
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_membership
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_membership
     ports:
       - "3006:3006"
     healthcheck:
@@ -224,7 +260,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3007
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_hospital
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_hospital
     ports:
       - "3007:3007"
     healthcheck:
@@ -242,7 +278,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3008
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_insurance
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_insurance
     ports:
       - "3008:3008"
     healthcheck:
@@ -260,7 +296,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3009
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_wellness
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_wellness
     ports:
       - "3009:3009"
     healthcheck:
@@ -278,7 +314,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 5009
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_fraud_detection
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_fraud_detection
       # External Fraud Detection APIs
       MIB_API_URL: ${MIB_API_URL:-https://api.mib.com}
       MIB_API_KEY: ${MIB_API_KEY:-}
@@ -315,7 +351,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3010
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_claims
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_claims
     ports:
       - "3010:3010"
     healthcheck:
@@ -333,7 +369,7 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3011
-      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@postgres:5432/medical_coverage_analytics
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_analytics
     ports:
       - "3011:3011"
     healthcheck:

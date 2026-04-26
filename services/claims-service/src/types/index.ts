@@ -5,6 +5,7 @@ declare global {
     interface Request {
       validatedClaim?: any;
       claimId?: number;
+      correlationId?: string;
     }
   }
 }

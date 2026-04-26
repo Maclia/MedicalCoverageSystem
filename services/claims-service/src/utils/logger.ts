@@ -36,4 +36,14 @@ export const createLogger = (serviceName?: string) => {
   return logger;
 };
 
+/**
+ * Generate unique correlation ID for distributed tracing
+ * Format: clm-[timestamp]-[random-hex]
+ */
+export const generateCorrelationId = (): string => {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `clm-${timestamp}-${random}`;
+};
+
 export default logger;

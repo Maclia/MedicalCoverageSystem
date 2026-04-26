@@ -23,7 +23,7 @@ export const deliveryStatusEnum = pgEnum('delivery_status', ['pending', 'sent', 
 export const consentTypeEnum = pgEnum('consent_type', ['data_processing', 'marketing_communications', 'data_sharing_providers', 'data_sharing_partners', 'wellness_programs']);
 export const auditActionEnum = pgEnum('audit_action', ['create', 'read', 'update', 'delete', 'view']);
 export const auditEntityTypeEnum = pgEnum('audit_entity_type', ['member', 'company', 'benefit', 'claim', 'document']);
-export const userTypeEnum = pgEnum('user_type', ['insurance', 'institution', 'provider', 'sales_admin', 'sales_manager', 'team_lead', 'sales_agent', 'broker', 'underwriter']);
+export const userTypeEnum = pgEnum('user_type', ['insurance', 'institution', 'provider', 'sales_admin', 'sales_manager', 'team_lead', 'sales_agent', 'broker', 'underwriter', 'member']);
 
 // CRM / Sales enums
 export const leadSourceEnum = pgEnum('lead_source', ['website', 'referral', 'campaign', 'cold_call', 'partner', 'event', 'social_media', 'email_marketing', 'third_party', 'manual']);

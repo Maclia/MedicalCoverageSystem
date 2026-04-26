@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { InvoicesController, invoicesValidationMiddleware } from '../api/invoicesController.js';
-import { PaymentsController, paymentsValidationMiddleware } from '../api/paymentsController.js';
-import { CommissionsController, commissionsValidationMiddleware } from '../api/commissionsController.js';
-import { TokenBillingController, TokenBillingValidationMiddleware } from '../api/tokenBillingController.js';
+import { InvoicesController, invoicesValidationMiddleware } from '../Controller/invoicesController.js';
+import { PaymentsController, paymentsValidationMiddleware } from '../Controller/paymentsController.js';
+import { CommissionsController, commissionsValidationMiddleware } from '../Controller/commissionsController.js';
+import { TokenBillingController, TokenBillingValidationMiddleware } from '../Controller/tokenBillingController.js';
 import { auditMiddleware } from '../middleware/auditMiddleware.js';
 import { responseStandardizationMiddleware } from '../middleware/responseStandardizationMiddleware.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
