@@ -1,17 +1,17 @@
 import { Router } from 'express';
-import { auditMiddleware } from '../middleware/auditMiddleware';
+import { auditMiddleware } from '../../middleware/auditMiddleware';
 
-import healthRoutes from './health';
-import leadRoutes from './leads.routes';
-import contactRoutes from './contacts.routes';
-import companyRoutes from './companies.routes';
-import opportunityRoutes from './opportunities.routes';
-import activityRoutes from './activities.routes';
-import campaignRoutes from './campaigns.routes';
-import dashboardRoutes from './dashboard.routes';
-import analyticsRoutes from './analytics.routes';
-import bulkRoutes from './bulk.routes';
-import dataOperationsRoutes from './data-operations.routes';
+import healthRoutes from './health.routes.js';
+import leadRoutes from './leads.routes.js';
+import contactRoutes from './contacts.routes.js';
+import companyRoutes from './companies.routes.js';
+import opportunityRoutes from './opportunities.routes.js';
+import activityRoutes from './activities.routes.js';
+import campaignRoutes from './campaigns.routes.js';
+import dashboardRoutes from './dashboard.routes.js';
+import analyticsRoutes from './analytics.routes.js';
+import bulkRoutes from './bulk.routes.js';
+import dataOperationsRoutes from './data-operations.routes.js';
 
 const router = Router();
 
