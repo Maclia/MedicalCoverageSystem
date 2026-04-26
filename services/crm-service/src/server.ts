@@ -6,14 +6,19 @@ import rateLimit from 'express-rate-limit';
 import { config } from './config';
 import crmRoutes from './routes';
 import { auditMiddleware } from './middleware/auditMiddleware';
-import { responseMiddleware, errorHandler, notFoundHandler } from './middleware/responseMiddleware';
+import { responseStandardization, errorHandler, notFoundHandler } from './middleware/responseStandardization';
 import { Database } from './models/Database';
 import { WinstonLogger } from './utils/WinstonLogger';
+import { initializeCrmSagas } from './integrations/CrmSagaOrchestrator';
+import { eventClient } from './integrations/EventClient';
 
 export function createApp() {
   const logger = new WinstonLogger('crm-service');
 
   const app = express();
+
+  // ✅ STANDARD MIDDLEWARE ORDER - AUDIT MUST BE FIRST
+  app.use(auditMiddleware);
 
   // Security middleware
   app.use(helmet({
@@ -27,21 +32,15 @@ export function createApp() {
     },
   }));
 
-  // CORS configuration - HANDLED AT API GATEWAY EDGE
-  // Disabled to eliminate duplicate processing overhead
-  // app.use(cors({
-  //   origin: config.allowedOrigins,
-  //   credentials: true,
-  //   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  //   allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-ID', 'X-Company-ID'],
-  // }));
-
   // Compression
   app.use(compression());
 
   // Body parsing
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Response Standardization
+  app.use(responseStandardization);
 
   // Rate limiting
   const limiter = rateLimit({
@@ -53,12 +52,8 @@ export function createApp() {
   });
   app.use(limiter);
 
-  // Audit and response middleware
-  app.use(auditMiddleware);
-  app.use(responseMiddleware);
-
   // API routes
-  app.use('/', crmRoutes);
+  app.use('/api', crmRoutes);
 
   // Error handling
   app.use(notFoundHandler);
@@ -87,6 +82,15 @@ export async function bootstrap() {
 
     logger.info('Database connected successfully');
 
+    // Initialize event client
+    eventClient.initialize()
+      .then(() => logger.info('Event client initialized successfully'))
+      .catch(err => logger.warn('Event client initialization failed', { error: err }));
+
+    // Initialize Saga Orchestrator
+    initializeCrmSagas();
+    logger.info('CRM Saga orchestrator initialized successfully');
+
     // Create Express app
     const app = createApp();
 
@@ -107,6 +111,11 @@ export async function bootstrap() {
         logger.info('HTTP server closed');
 
         try {
+          // Shutdown event client
+          await eventClient.shutdown();
+          logger.info('Event client shutdown completed');
+          
+          // Close database connection
           const database = Database.getInstance();
           await database.close();
 

@@ -2,11 +2,11 @@
   "name": "@medical-coverage/crm-service",
   "version": "1.0.0",
   "description": "CRM management microservice for Medical Coverage System",
-  "main": "dist/index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -29,6 +29,7 @@
   "author": "Medical Coverage System",
   "license": "MIT",
   "dependencies": {
+    "@medical-coverage/shared": "file:../shared",
     "@opentelemetry/api": "^1.4.1",
     "@opentelemetry/auto-instrumentations-node": "^0.39.4",
     "@opentelemetry/sdk-node": "^0.41.2",

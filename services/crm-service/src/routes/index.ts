@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { auditMiddleware } from '../middleware/auditMiddleware';
+import { auditMiddleware } from '../../middleware/auditMiddleware';
 
 import healthRoutes from './health.routes.js';
 import leadRoutes from './leads.routes.js';

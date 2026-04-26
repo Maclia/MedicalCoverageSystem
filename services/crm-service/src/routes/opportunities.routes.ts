@@ -5,7 +5,7 @@ import {
   crmDataAccessMiddleware,
   opportunityLifecycleMiddleware,
 } from '../middleware/auditMiddleware';
-import { CrmResponseHelper, asyncHandler } from '../middleware/responseMiddleware';
+import { CrmResponseHelper, asyncHandler } from '../middleware/responseStandardization';
 
 const router = Router();
 const crmService = new CrmService();

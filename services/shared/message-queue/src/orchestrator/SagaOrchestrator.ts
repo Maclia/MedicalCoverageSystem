@@ -40,7 +40,7 @@ export interface SagaDefinition {
   };
 }
 
-class SagaOrchestrator {
+export class SagaOrchestrator {
   private sagas: Map<string, Saga> = new Map();
   private sagaDefinitions: Map<string, SagaDefinition> = new Map();
   private isCompensating: Set<string> = new Set();

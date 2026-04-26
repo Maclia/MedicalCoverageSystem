@@ -14,7 +14,8 @@ service-name/
 │   │   ├── index.ts              # Root router mounting
 │   │   └── health.ts             # Standard health check endpoint
 │   ├── 📁 api/
-│   │   └── *Controller.ts        # ALL request handlers / controllers ONLY HERE
+│   │   └── 📁 controllers/
+│   │       └── *Controller.ts    # ALL request handlers / controllers ONLY HERE
 │   ├── 📁 services/
 │   │   └── *.ts                  # Pure business logic (NO HTTP DEPENDENCIES)
 │   ├── 📁 middleware/

@@ -1,13 +1,13 @@
 import winston from 'winston';
 
-export const createLogger = () => {
+export const createLogger = (serviceName: string = 'message-queue') => {
   return winston.createLogger({
     level: process.env.LOG_LEVEL || 'info',
     format: winston.format.combine(
       winston.format.timestamp(),
       winston.format.json()
     ),
-    defaultMeta: { service: 'message-queue' },
+    defaultMeta: { service: serviceName },
     transports: [
       new winston.transports.Console({
         format: winston.format.combine(

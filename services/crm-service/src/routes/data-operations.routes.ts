@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { CrmService } from '../services/CrmService';
 import { dataOperationMiddleware } from '../middleware/auditMiddleware';
-import { CrmResponseHelper, asyncHandler } from '../middleware/responseMiddleware';
+import { CrmResponseHelper, asyncHandler } from '../middleware/responseStandardization';
 
 const router = Router();
 const crmService = new CrmService();

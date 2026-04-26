@@ -35,6 +35,7 @@ export const leads = pgTable('leads', {
   lastContactDate: timestamp('last_contact_date'),
   nextFollowUpDate: timestamp('next_follow_up_date'),
   conversionDate: timestamp('conversion_date'),
+  companyId: integer('company_id'),
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
@@ -293,6 +294,67 @@ export const crmAnalytics = pgTable('crm_analytics', {
   endDateIdx: index('crm_analytics_end_date_idx').on(table.endDate),
 }));
 
+// =============================================
+// Bulk Member Upload Tables
+// =============================================
+
+export const bulkMemberUploads = pgTable('bulk_member_uploads', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull(),
+  uploaderId: integer('uploader_id').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, validating, validated, processing, completed, failed
+  dryRun: boolean('dry_run').default(false),
+  totalRecords: integer('total_records').default(0),
+  validRecords: integer('valid_records').default(0),
+  invalidRecords: integer('invalid_records').default(0),
+  processedRecords: integer('processed_records').default(0),
+  progressPercentage: decimal('progress_percentage', { precision: 5, scale: 2 }).default('0'),
+  currentStage: varchar('current_stage', { length: 100 }), // parsing, validating, processing, finalizing
+  stageProgress: integer('stage_progress').default(0),
+  stageTotal: integer('stage_total').default(0),
+  processingSpeed: integer('processing_speed'), // records per minute
+  estimatedRemainingTime: integer('estimated_remaining_time'), // seconds
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  validatedAt: timestamp('validated_at'),
+  confirmedAt: timestamp('confirmed_at'),
+  completedAt: timestamp('completed_at'),
+  errorMessage: text('error_message'),
+}, (table) => ({
+  companyIdIdx: index('bulk_member_uploads_company_id_idx').on(table.companyId),
+  statusIdx: index('bulk_member_uploads_status_idx').on(table.status),
+  uploaderIdIdx: index('bulk_member_uploads_uploader_id_idx').on(table.uploaderId),
+}));
+
+export const bulkUploadErrors = pgTable('bulk_upload_errors', {
+  id: serial('id').primaryKey(),
+  uploadId: integer('upload_id').notNull(),
+  rowNumber: integer('row_number').notNull(),
+  recordData: jsonb('record_data'),
+  errorCode: varchar('error_code', { length: 100 }),
+  errorMessage: varchar('error_message', { length: 500 }).notNull(),
+  field: varchar('field', { length: 100 }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  uploadIdIdx: index('bulk_upload_errors_upload_id_idx').on(table.uploadId),
+  rowNumberIdx: index('bulk_upload_errors_row_number_idx').on(table.rowNumber),
+}));
+
+export const bulkUploadRecords = pgTable('bulk_upload_records', {
+  id: serial('id').primaryKey(),
+  uploadId: integer('upload_id').notNull(),
+  rowNumber: integer('row_number').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('pending'), // pending, valid, invalid, processed
+  recordData: jsonb('record_data').notNull(),
+  validationResults: jsonb('validation_results'),
+  memberId: integer('member_id'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  uploadIdIdx: index('bulk_upload_records_upload_id_idx').on(table.uploadId),
+  statusIdx: index('bulk_upload_records_status_idx').on(table.status),
+}));
+
 // Export all tables
 export type Lead = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;
@@ -310,3 +372,11 @@ export type EmailCampaignRecipient = typeof emailCampaignRecipients.$inferSelect
 export type NewEmailCampaignRecipient = typeof emailCampaignRecipients.$inferInsert;
 export type CrmAnalytics = typeof crmAnalytics.$inferSelect;
 export type NewCrmAnalytics = typeof crmAnalytics.$inferInsert;
+
+// Bulk Upload Types
+export type BulkMemberUpload = typeof bulkMemberUploads.$inferSelect;
+export type NewBulkMemberUpload = typeof bulkMemberUploads.$inferInsert;
+export type BulkUploadError = typeof bulkUploadErrors.$inferSelect;
+export type NewBulkUploadError = typeof bulkUploadErrors.$inferInsert;
+export type BulkUploadRecord = typeof bulkUploadRecords.$inferSelect;
+export type NewBulkUploadRecord = typeof bulkUploadRecords.$inferInsert;

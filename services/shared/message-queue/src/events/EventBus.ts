@@ -1,5 +1,5 @@
-import { messageQueue, Message } from '../queue/MessageQueue';
-import { createLogger } from '../config/logger';
+import { messageQueue, Message } from '../queue/MessageQueue.js';
+import { createLogger } from '../config/logger.js';
 import { EventEmitter } from 'events';
 
 const logger = createLogger();
@@ -319,6 +319,7 @@ export class EventFactory {
     userId?: string;
     correlationId?: string;
     causationId?: string;
+    metadata?: Record<string, any>;
   }): DomainEvent {
     return {
       id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -331,7 +332,8 @@ export class EventFactory {
         correlationId: params.correlationId,
         causationId: params.causationId,
         timestamp: Date.now(),
-        version: 1
+        version: 1,
+        ...params.metadata
       }
     };
   }

@@ -58,6 +58,21 @@ class MessageQueue extends EventEmitter {
     this.setupGracefulShutdown();
   }
 
+  async connect(options: { host: string; port: number; password?: string }): Promise<void> {
+    if (!this.client.isOpen) {
+      await this.client.connect();
+    }
+    logger.info('Message queue connected successfully');
+  }
+
+  async disconnect(): Promise<void> {
+    this.isShuttingDown = true;
+    if (this.client.isOpen) {
+      await this.client.quit();
+    }
+    logger.info('Message queue disconnected successfully');
+  }
+
   private serializeMessage(message: Message): Record<string, string> {
     return Object.fromEntries(
       Object.entries(message).map(([key, value]) => [

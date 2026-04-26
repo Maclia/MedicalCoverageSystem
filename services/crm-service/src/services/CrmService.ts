@@ -1,5 +1,7 @@
 import { Database } from '../models/Database';
 import { WinstonLogger } from '../utils/WinstonLogger';
+import { eventClient } from '../integrations/EventClient';
+import { CRMEvents } from '../integrations/CrmDomainEvents';
 import {
   leads,
   contacts,
@@ -8,7 +10,8 @@ import {
   activities,
   emailCampaigns,
   emailCampaignRecipients,
-  crmAnalytics
+  crmAnalytics,
+  bulkMemberUploads
 } from '../models/schema';
 import {
   Lead,
@@ -45,9 +48,12 @@ import {
   count
 } from 'drizzle-orm';
 
+import { Server } from 'socket.io';
+
 export class CrmService {
   private readonly db: Database;
   private readonly logger: WinstonLogger;
+  private static io: Server | null = null;
 
   constructor() {
     this.db = Database.getInstance();
@@ -154,76 +160,88 @@ export class CrmService {
    */
   async convertLead(leadId: number, conversionData: any, context: any): Promise<any> {
     const db = this.db.getDb();
-    const transaction = await db.beginTransaction();
-
     try {
-      const lead = await this.getLeadById(leadId);
+      return await db.transaction(async (transaction) => {
+        const lead = await this.getLeadById(leadId);
 
-      if (lead.status === 'converted') {
-        throw new BusinessRuleError('Lead has already been converted');
-      }
+        if (lead.status === 'converted') {
+          throw new BusinessRuleError('Lead has already been converted');
+        }
 
-      // Create company if it doesn't exist
-      let company: Company | null = null;
-      if (lead.companyName && !lead.companyId) {
-        const companyData: NewCompany = {
-          name: lead.companyName,
-          industry: lead.industry,
-          website: '',
-          status: 'active',
-          assignedTo: lead.assignedTo || context.userId,
+        // Create company if it doesn't exist
+        let company: Company | null = null;
+        if (lead.companyName && !lead.companyId) {
+          const companyData: NewCompany = {
+            name: lead.companyName,
+            industry: lead.industry,
+            website: '',
+            status: 'active',
+            assignedTo: lead.assignedTo || context.userId,
+            createdBy: context.userId,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+
+          const companyResult = await transaction.insert(companies).values(companyData).returning();
+          company = companyResult[0];
+        }
+
+        // Create contact
+        const contactData: NewContact = {
+          firstName: lead.firstName,
+          lastName: lead.lastName,
+          email: lead.email,
+          phone: lead.phone,
+          companyId: company?.id || lead.companyId!,
+          leadId: lead.id,
+          isPrimary: true,
+          isDecisionMaker: true,
           createdBy: context.userId,
           createdAt: new Date(),
           updatedAt: new Date()
         };
 
-        company = await transaction.insert(companies).values(companyData).returning();
-        company = company[0];
-      }
+        const contact = await transaction.insert(contacts).values(contactData).returning();
 
-      // Create contact
-      const contactData: NewContact = {
-        firstName: lead.firstName,
-        lastName: lead.lastName,
-        email: lead.email,
-        phone: lead.phone,
-        companyId: company?.id || lead.companyId!,
-        leadId: lead.id,
-        isPrimary: true,
-        isDecisionMaker: true,
-        createdBy: context.userId,
-        createdAt: new Date(),
-        updatedAt: new Date()
-      };
+        // Update lead status
+        await transaction
+          .update(leads)
+          .set({
+            status: 'converted',
+            conversionDate: new Date(),
+            companyId: company?.id || lead.companyId,
+            updatedAt: new Date()
+          })
+          .where(eq(leads.id, leadId));
 
-      const contact = await transaction.insert(contacts).values(contactData).returning();
+        this.logger.logConversionCompleted(leadId, contact[0].id, company?.id || 0, {
+          companyName: company?.name || lead.companyName,
+          contactName: `${lead.firstName} ${lead.lastName}`
+        });
 
-      // Update lead status
-      await transaction
-        .update(leads)
-        .set({
-          status: 'converted',
-          conversionDate: new Date(),
-          companyId: company?.id || lead.companyId,
-          updatedAt: new Date()
-        })
-        .where(eq(leads.id, leadId));
+        // Publish lead converted event
+        try {
+          await eventClient.publishEvent(CRMEvents.LEAD_CONVERTED, leadId, {
+            lead,
+            contact: contact[0],
+            company,
+            convertedBy: context.userId
+          }, {
+            correlationId: context.correlationId,
+            userId: context.userId
+          });
+        } catch (eventError) {
+          this.logger.warn('Failed to publish lead converted event', { error: eventError, leadId });
+          // Continue execution - event publishing is non-critical
+        }
 
-      await transaction.commit();
-
-      this.logger.logConversionCompleted(leadId, contact[0].id, company?.id || 0, {
-        companyName: company?.name || lead.companyName,
-        contactName: `${lead.firstName} ${lead.lastName}`
+        return {
+          lead,
+          contact: contact[0],
+          company: company
+        };
       });
-
-      return {
-        lead,
-        contact: contact[0],
-        company: company
-      };
-
     } catch (error) {
-      await transaction.rollback();
       this.logger.error('Failed to convert lead', { error, leadId });
       throw error;
     }
@@ -236,48 +254,49 @@ export class CrmService {
     const db = this.db.getDb();
 
     try {
-      let query = db.select().from(leads);
+      const conditions: any[] = [];
+      let orderByClause: any = desc(leads.createdAt);
 
       // Apply filters
       if (searchParams.filters) {
         const { filters } = searchParams;
 
         if (filters.status) {
-          query = query.where(eq(leads.status, filters.status));
+          conditions.push(eq(leads.status, filters.status));
         }
 
         if (filters.source) {
-          query = query.where(eq(leads.source, filters.source));
+          conditions.push(eq(leads.source, filters.source));
         }
 
         if (filters.priority) {
-          query = query.where(eq(leads.priority, filters.priority));
+          conditions.push(eq(leads.priority, filters.priority));
         }
 
         if (filters.assignedTo) {
-          query = query.where(eq(leads.assignedTo, filters.assignedTo));
+          conditions.push(eq(leads.assignedTo, filters.assignedTo));
         }
 
         if (filters.scoreMin) {
-          query = query.where(sql`${leads.score} >= ${filters.scoreMin}`);
+          conditions.push(sql`${leads.score} >= ${filters.scoreMin}`);
         }
 
         if (filters.scoreMax) {
-          query = query.where(sql`${leads.score} <= ${filters.scoreMax}`);
+          conditions.push(sql`${leads.score} <= ${filters.scoreMax}`);
         }
 
         if (filters.expectedCloseDateFrom) {
-          query = query.where(gte(leads.expectedCloseDate, new Date(filters.expectedCloseDateFrom)));
+          conditions.push(gte(leads.expectedCloseDate, new Date(filters.expectedCloseDateFrom)));
         }
 
         if (filters.expectedCloseDateTo) {
-          query = query.where(lte(leads.expectedCloseDate, new Date(filters.expectedCloseDateTo)));
+          conditions.push(lte(leads.expectedCloseDate, new Date(filters.expectedCloseDateTo)));
         }
       }
 
       // Apply text search
       if (searchParams.query) {
-        query = query.where(
+        conditions.push(
           or(
             ilike(leads.firstName, `%${searchParams.query}%`),
             ilike(leads.lastName, `%${searchParams.query}%`),
@@ -291,11 +310,20 @@ export class CrmService {
       // Apply sorting
       if (searchParams.sortBy) {
         const sortField = leads[searchParams.sortBy as keyof typeof leads];
-        const sortOrder = searchParams.sortOrder === 'desc' ? desc(sortField) : asc(sortField);
-        query = query.orderBy(sortOrder);
-      } else {
-        query = query.orderBy(desc(leads.createdAt));
+        // Only use actual column fields (exclude table metadata properties)
+        if (sortField && typeof sortField !== 'function' && 'name' in sortField) {
+          orderByClause = searchParams.sortOrder === 'desc' ? desc(sortField as any) : asc(sortField as any);
+        }
       }
+
+      // Build final query
+      let query = db.select().from(leads);
+      
+      if (conditions.length > 0) {
+        query = query.where(and(...conditions)) as any;
+      }
+      
+      query = query.orderBy(orderByClause) as any;
 
       // Apply pagination
       const { page = 1, limit = 20 } = searchParams.pagination || {};
@@ -404,6 +432,19 @@ export class CrmService {
 
       this.logger.logCompanyCreated(company[0].id);
 
+      // Publish company created event
+      try {
+        await eventClient.publishEvent(CRMEvents.COMPANY_CREATED, company[0].id, {
+          company: company[0],
+          createdBy: context.userId
+        }, {
+          correlationId: context.correlationId,
+          userId: context.userId
+        });
+      } catch (eventError) {
+        this.logger.warn('Failed to publish company created event', { error: eventError, companyId: company[0].id });
+      }
+
       return company[0];
 
     } catch (error) {
@@ -455,7 +496,7 @@ export class CrmService {
         updatedAt: new Date()
       }).returning();
 
-      this.logger.logOpportunityCreated(opportunity[0].id, opportunity[0].companyId, opportunity[0].amount);
+      this.logger.logOpportunityCreated(opportunity[0].id, opportunity[0].companyId, parseFloat(opportunity[0].amount));
 
       return opportunity[0];
 
@@ -485,7 +526,22 @@ export class CrmService {
 
       // Log deal won/lost events
       if (updateData.status === 'won' && existingOpportunity.status !== 'won') {
-        this.logger.logDealWon(opportunityId, updateData.amount || existingOpportunity.amount, new Date());
+        this.logger.logDealWon(opportunityId, parseFloat(updateData.amount || existingOpportunity.amount), new Date());
+        
+        // Publish opportunity won event
+        try {
+          await eventClient.publishEvent(CRMEvents.OPPORTUNITY_WON, opportunityId, {
+            opportunity: updatedOpportunity[0],
+            previousStatus: existingOpportunity.status,
+            wonBy: context.userId
+          }, {
+            correlationId: context.correlationId,
+            userId: context.userId
+          });
+        } catch (eventError) {
+          this.logger.warn('Failed to publish opportunity won event', { error: eventError, opportunityId });
+        }
+        
       } else if (updateData.status === 'lost' && existingOpportunity.status !== 'lost') {
         this.logger.logDealLost(opportunityId, updateData.lostReason || 'Unknown reason');
       }
@@ -669,6 +725,212 @@ export class CrmService {
     }
   }
 
+  // ========================================
+  // Bulk Member Upload Management Methods
+  // ========================================
+
+  /**
+   * Initiate bulk member upload for company
+   */
+  async initiateBulkMemberUpload(companyId: number, fileData: any, dryRun: boolean = false): Promise<any> {
+    const db = this.db.getDb();
+
+    try {
+      this.logger.info('Initiating bulk member upload', { companyId, dryRun });
+
+      // Create upload tracking record
+      const uploadRecord = await db.insert(bulkMemberUploads).values({
+        companyId,
+        uploaderId: 0, // TODO: Get from authenticated context
+        status: 'pending',
+        dryRun,
+        totalRecords: fileData.records?.length || 0,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }).returning();
+
+      // Queue async validation job
+      this.queueMemberValidationJob(uploadRecord[0].id.toString(), fileData.records, companyId);
+
+      return {
+        uploadId: uploadRecord[0].id,
+        status: 'processing',
+        message: 'Member upload validation has been initiated. Check status endpoint for progress.',
+        estimatedTime: fileData.records?.length > 1000 ? '2-5 minutes' : '30 seconds'
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to initiate bulk member upload', { error, companyId });
+      throw error;
+    }
+  }
+
+  /**
+   * Initialize WebSocket server for real-time progress updates
+   */
+  public static initializeWebSocket(io: Server): void {
+    CrmService.io = io;
+  }
+
+  /**
+   * Broadcast progress update to connected clients
+   */
+  private async broadcastProgressUpdate(uploadId: number, statusData: any): Promise<void> {
+    if (CrmService.io) {
+      CrmService.io.to(`upload:${uploadId}`).emit('upload-progress', statusData);
+    }
+  }
+
+  /**
+   * Update upload progress tracking
+   */
+  async updateUploadProgress(
+    uploadId: number,
+    currentStage: string,
+    stageProgress: number,
+    stageTotal: number
+  ): Promise<void> {
+    const db = this.db.getDb();
+
+    const progressPercentage = stageTotal > 0
+      ? Math.round((stageProgress / stageTotal) * 10000) / 100
+      : 0;
+
+    await db
+      .update(bulkMemberUploads)
+      .set({
+        currentStage,
+        stageProgress,
+        stageTotal,
+      progressPercentage: progressPercentage.toString(),
+      updatedAt: new Date()
+      })
+      .where(eq(sql`id`, uploadId));
+
+    // Broadcast real-time update
+    await this.broadcastProgressUpdate(uploadId, {
+      uploadId,
+      currentStage,
+      stageProgress,
+      stageTotal,
+      progressPercentage
+    });
+  }
+
+  /**
+   * Get status of bulk upload operation
+   */
+  async getBulkUploadStatus(uploadId: string): Promise<any> {
+    const db = this.db.getDb();
+
+    try {
+      const upload = await db
+        .select()
+        .from(bulkMemberUploads)
+        .where(eq(bulkMemberUploads.id, parseInt(uploadId, 10)))
+        .limit(1);
+
+      if (upload.length === 0) {
+        throw new NotFoundError('Bulk upload operation');
+      }
+
+      // Calculate additional metrics
+      const data = upload[0];
+      
+      // Calculate processing speed
+      if (data.status === 'processing' && (data as any).processedRecords > 0) {
+        const confirmedAt = (data as any).confirmedAt ? new Date((data as any).confirmedAt) : new Date();
+        const elapsedMinutes = (Date.now() - confirmedAt.getTime()) / 60000;
+        (data as any).processingSpeed = Math.round((data as any).processedRecords / elapsedMinutes);
+        const remainingRecords = (data as any).totalRecords - (data as any).processedRecords;
+        (data as any).estimatedRemainingTime = Math.round((remainingRecords / (data as any).processingSpeed) * 60);
+      }
+
+      return data;
+
+    } catch (error) {
+      this.logger.error('Failed to get bulk upload status', { error, uploadId });
+      throw error;
+    }
+  }
+
+  /**
+   * Confirm and process validated member records
+   */
+  async confirmBulkMemberUpload(uploadId: string): Promise<any> {
+    const db = this.db.getDb();
+    return await db.transaction(async (tx) => {
+      this.logger.info('Confirming bulk member upload', { uploadId });
+
+      // Verify upload status is 'validated'
+      const upload = await this.getBulkUploadStatus(uploadId);
+      
+      if (upload.status !== 'validated') {
+        throw new BusinessRuleError('Cannot confirm upload. Validation must be completed successfully first.');
+      }
+
+      // Update status to processing
+      await tx
+        .update(bulkMemberUploads)
+        .set({
+          status: 'processing',
+          confirmedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(bulkMemberUploads.id, parseInt(uploadId, 10)));
+
+      // Queue actual member creation in Membership Service
+      this.queueMemberCreationJob(uploadId);
+
+      return {
+        uploadId,
+        status: 'processing',
+        message: 'Member upload confirmed. Members will be created in the background.'
+      };
+    });
+  }
+
+  /**
+   * Get validation errors for failed records
+   */
+  async getBulkUploadErrors(uploadId: string): Promise<any> {
+    const db = this.db.getDb();
+
+    try {
+      const errors = await db
+        .select()
+        .from(sql`crm.bulk_upload_errors`)
+        .where(eq(sql`upload_id`, uploadId))
+        .orderBy(asc(sql`row_number`));
+
+      return {
+        uploadId,
+        errorCount: errors.length,
+        errors: errors
+      };
+
+    } catch (error) {
+      this.logger.error('Failed to get bulk upload errors', { error, uploadId });
+      throw error;
+    }
+  }
+
+  /**
+   * Queue member validation job for background processing
+   */
+  private async queueMemberValidationJob(uploadId: string, records: any[], companyId: number): Promise<void> {
+    // This will be implemented with message queue for async processing
+    this.logger.debug('Queued member validation job', { uploadId, recordCount: records.length });
+  }
+
+  /**
+   * Queue member creation job for background processing
+   */
+  private async queueMemberCreationJob(uploadId: string): Promise<void> {
+    // This will be implemented with message queue for async processing
+    this.logger.debug('Queued member creation job', { uploadId });
+  }
+
   // Private validation methods
 
   private async validateLeadRules(leadData: NewLead): Promise<void> {
@@ -719,7 +981,7 @@ export class CrmService {
 
     // Validate status
     const validStatuses = ['active', 'inactive', 'prospect'];
-    if (!validStatuses.includes(companyData.status)) {
+    if (!companyData.status || !validStatuses.includes(companyData.status)) {
       throw new ValidationError('Invalid company status');
     }
   }
