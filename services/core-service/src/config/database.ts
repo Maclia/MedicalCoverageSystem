@@ -9,10 +9,13 @@ if (!connectionString) {
 }
 
 const client = postgres(connectionString, {
-  max: 10,
+  max: 25,
   idle_timeout: 20,
   connect_timeout: 10,
-});
+  statement_timeout: 30000,
+  tcp_keepalives_idle: 60,
+  prepare: true
+} as any);
 
 export const db = drizzle(client, { schema });
 export const rawDb = client; // Raw postgres-js client for raw SQL queries

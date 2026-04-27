@@ -24,15 +24,15 @@ export default function PaymentsOverview() {
   const queryClient = useQueryClient();
 
   // Fetch payments
-  const { data: paymentsData, isLoading: paymentsLoading } = useQuery({
+  const { data: paymentsData, isLoading: paymentsLoading } = useQuery<Payment[]>({
     queryKey: ['payments', 'history', filters],
-    queryFn: () => paymentsApi.getPaymentHistory(filters).then(res => res.data),
+    queryFn: () => paymentsApi.getPaymentHistory(filters).then(res => res.data as Payment[]),
   });
 
   // Fetch failed payments
-  const { data: failedPaymentsData, isLoading: failedLoading } = useQuery({
+  const { data: failedPaymentsData, isLoading: failedLoading } = useQuery<Payment[]>({
     queryKey: ['payments', 'failed'],
-    queryFn: () => paymentsApi.getFailedPayments().then(res => res.data),
+    queryFn: () => paymentsApi.getFailedPayments().then(res => res.data as Payment[]),
   });
 
   // Process payment mutation
@@ -108,7 +108,7 @@ export default function PaymentsOverview() {
               >
                 {showPaymentForm ? 'Cancel' : 'Process Payment'}
               </Button>
-              <Button onClick={() => paymentsApi.reconcilePayments({})}>
+              <Button onClick={() => paymentsApi.reconcilePayments({ provider: 'system' })}>
                 Reconcile Payments
               </Button>
             </div>
@@ -346,7 +346,7 @@ export default function PaymentsOverview() {
       )}
 
       {/* Failed Payments Alert */}
-      {failedPaymentsData?.length > 0 && (
+      {Array.isArray(failedPaymentsData) && failedPaymentsData.length > 0 && (
         <Alert className="border-red-200 bg-red-50">
           <AlertDescription>
             <div className="flex items-center justify-between">
@@ -451,7 +451,7 @@ export default function PaymentsOverview() {
                 <div key={i} className="h-24 bg-gray-200 rounded animate-pulse"></div>
               ))}
             </div>
-          ) : paymentsData?.length ? (
+          ) : Array.isArray(paymentsData) && paymentsData.length > 0 ? (
             <div className="space-y-4">
               {paymentsData.map((payment: Payment) => (
                 <div key={payment.id} className="border rounded-lg p-4">

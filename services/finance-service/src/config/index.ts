@@ -7,6 +7,12 @@ export const config = {
     name: process.env.DB_NAME || 'medical_coverage',
     user: process.env.DB_USER || 'postgres',
     password: process.env.DB_PASSWORD || 'postgres',
+    pool: {
+      max: 25,
+      idleTimeoutMillis: 30000,
+      statement_timeout: 30000,
+      keepAlive: true
+    }
   },
   redis: {
     host: process.env.REDIS_HOST || 'localhost',

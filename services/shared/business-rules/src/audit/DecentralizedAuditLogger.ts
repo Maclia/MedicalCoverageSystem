@@ -7,8 +7,12 @@
 
 import winston from 'winston';
 
+// ✅ Production Optimized Logger Configuration
+// Disables debug logging in production environment
+const isProduction = process.env.NODE_ENV === 'production';
+
 const auditLogger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: isProduction ? 'warn' : (process.env.LOG_LEVEL || 'info'),
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.json()
@@ -16,10 +20,12 @@ const auditLogger = winston.createLogger({
   defaultMeta: { service: 'business-rules-audit' },
   transports: [
     new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        winston.format.simple()
-      )
+      format: isProduction 
+        ? winston.format.json() 
+        : winston.format.combine(
+            winston.format.colorize(),
+            winston.format.simple()
+          )
     })
   ]
 });
@@ -57,9 +63,18 @@ export interface IAuditLogger {
  */
 class DecentralizedAuditLogger implements IAuditLogger {
   private serviceName: string;
+  private eventQueue: AuditEvent[] = [];
+  private isProcessing = false;
+  private readonly BATCH_SIZE = 50;
+  private readonly FLUSH_INTERVAL = 1000;
+  private readonly MAX_QUEUE_SIZE = 10000;
+  private flushTimer: NodeJS.Timeout | null = null;
 
   constructor(serviceName: string) {
     this.serviceName = serviceName;
+    
+    // Start background flush worker
+    this.flushTimer = setInterval(() => this.processQueue(), this.FLUSH_INTERVAL);
   }
 
   logEvent(event: Omit<AuditEvent, 'timestamp' | 'serviceName'>): void {
@@ -72,10 +87,22 @@ class DecentralizedAuditLogger implements IAuditLogger {
     // Log locally first - primary source of truth
     auditLogger.info(`AUDIT: ${auditEvent.eventType} ${auditEvent.action}`, auditEvent);
 
-    // Forward to central audit system asynchronously (fire and forget)
-    this.forwardToCentralSystem(auditEvent).catch(() => {
-      // Ignore failures - local log is authoritative
-    });
+    // ✅ Add to background queue instead of synchronous forwarding
+    if (this.eventQueue.length < this.MAX_QUEUE_SIZE) {
+      this.eventQueue.push(auditEvent);
+    } else {
+      // Queue full - drop oldest events to protect main request path
+      this.eventQueue.shift();
+      this.eventQueue.push(auditEvent);
+      auditLogger.warn('Audit log queue full - oldest event dropped', { 
+        queueSize: this.eventQueue.length 
+      });
+    }
+
+    // Trigger immediate processing if batch size reached
+    if (this.eventQueue.length >= this.BATCH_SIZE && !this.isProcessing) {
+      setImmediate(() => this.processQueue());
+    }
   }
 
   logBusinessRuleExecution(ruleName: string, subjectId: string | number, result: any, durationMs: number): void {
@@ -95,19 +122,63 @@ class DecentralizedAuditLogger implements IAuditLogger {
     });
   }
 
-  private async forwardToCentralSystem(event: AuditEvent): Promise<void> {
-    const centralAuditUrl = process.env.CENTRAL_AUDIT_URL || 'http://core-service:3000/api/audit/collect';
+  /**
+   * ✅ Background queue processor
+   * Runs asynchronously, never blocks main request thread
+   */
+  private async processQueue(): Promise<void> {
+    if (this.isProcessing || this.eventQueue.length === 0) {
+      return;
+    }
+
+    this.isProcessing = true;
     
     try {
-      await fetch(centralAuditUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(event),
-        signal: AbortSignal.timeout(1000)
-      });
-    } catch {
-      // Silently fail - local log is already persisted
-      // Events will be batched and retransmitted later
+      // Take batch from queue
+      const batch = this.eventQueue.splice(0, this.BATCH_SIZE);
+      
+      const centralAuditUrl = process.env.CENTRAL_AUDIT_URL || 'http://core-service:3000/api/audit/collect';
+      
+      try {
+        await fetch(centralAuditUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(batch),
+          signal: AbortSignal.timeout(5000)
+        });
+        
+        if (!isProduction) {
+          auditLogger.debug('Audit batch submitted successfully', { 
+            batchSize: batch.length,
+            remaining: this.eventQueue.length
+          });
+        }
+        
+      } catch {
+        // Failed - return events to front of queue for retry
+        this.eventQueue.unshift(...batch);
+        auditLogger.warn('Audit batch submission failed - will retry', { 
+          batchSize: batch.length,
+          retryQueueSize: this.eventQueue.length
+        });
+      }
+
+    } finally {
+      this.isProcessing = false;
+    }
+  }
+
+  /**
+   * Graceful shutdown - flush remaining events
+   */
+  async shutdown(): Promise<void> {
+    if (this.flushTimer) {
+      clearInterval(this.flushTimer);
+    }
+    
+    // Flush remaining events on shutdown
+    while (this.eventQueue.length > 0) {
+      await this.processQueue();
     }
   }
 }

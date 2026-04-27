@@ -282,4 +282,15 @@ export const analyticsApi = {
       body: JSON.stringify(comparisonData),
     });
   },
+
+  // Dashboard Specific Endpoints
+  async getInsuranceDashboardStats() {
+    return apiRequest('/analytics/dashboard/insurance');
+  },
+
+  async getRecentActivity(params: { limit?: number } = {}) {
+    const searchParams = new URLSearchParams();
+    if (params.limit) searchParams.append('limit', params.limit.toString());
+    return apiRequest(`/analytics/activity/recent?${searchParams}`);
+  },
 };

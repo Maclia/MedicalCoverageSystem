@@ -537,6 +537,46 @@ class MembersAPI {
     });
     return response.json();
   }
+
+  /**
+   * Get personalization preferences for a member
+   */
+  async getPersonalizationPreferences(memberId: string): Promise<any[]> {
+    const response = await apiRequest("GET", `${this.BASE_URL}/members/${memberId}/personalization/preferences`);
+    const result = await response.json();
+    return result.data || result;
+  }
+
+  /**
+   * Get personalization profile for a member
+   */
+  async getPersonalizationProfile(memberId: string): Promise<any> {
+    const response = await apiRequest("GET", `${this.BASE_URL}/members/${memberId}/personalization/profile`);
+    const result = await response.json();
+    return result.data || result;
+  }
+
+  /**
+   * Update personalization preferences for a member
+   */
+  async updatePersonalizationPreferences(memberId: string, preferences: any[]): Promise<any[]> {
+    const response = await apiRequest("PUT", `${this.BASE_URL}/members/${memberId}/personalization/preferences`, {
+      body: JSON.stringify({ preferences })
+    });
+    const result = await response.json();
+    return result.data || result;
+  }
+
+  /**
+   * Update personalization profile for a member
+   */
+  async updatePersonalizationProfile(memberId: string, profile: any): Promise<any> {
+    const response = await apiRequest("PUT", `${this.BASE_URL}/members/${memberId}/personalization/profile`, {
+      body: JSON.stringify(profile)
+    });
+    const result = await response.json();
+    return result.data || result;
+  }
 }
 
 export const membersAPI = new MembersAPI();

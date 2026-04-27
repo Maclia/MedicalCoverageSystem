@@ -13,6 +13,12 @@ export const config = {
   database: {
     url: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/medical_coverage_fraud_detection',
     ssl: process.env.NODE_ENV === 'production',
+    pool: {
+      max: 25,
+      idleTimeoutMillis: 30000,
+      statement_timeout: 30000,
+      keepAlive: true
+    }
   },
 
   // Redis

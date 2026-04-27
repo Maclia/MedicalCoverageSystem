@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { membersApi } from '@/services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
@@ -43,7 +45,8 @@ import {
   Sun,
   Volume2,
   VolumeX,
-  RotateCcw
+  RotateCcw,
+  Download
 } from 'lucide-react';
 
 interface PersonalizationPreference {
@@ -84,151 +87,57 @@ export const PersonalizationSettings: React.FC<PersonalizationSettingsProps> = (
   const [preferences, setPreferences] = useState<PersonalizationPreference[]>([]);
   const [profile, setProfile] = useState<PersonalizationProfile | null>(null);
   const [activeTab, setActiveTab] = useState('preferences');
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [showDataExportDialog, setShowDataExportDialog] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Mock data - in a real app, this would come from APIs
+  const queryClient = useQueryClient();
+
+  // Fetch personalization preferences from backend API
+  const { data: preferencesData, isLoading: preferencesLoading } = useQuery({
+    queryKey: ['memberPreferences', memberId],
+    queryFn: () => membersApi.getPersonalizationPreferences(memberId),
+    enabled: !!memberId
+  });
+
+  // Fetch personalization profile from backend API
+  const { data: profileData, isLoading: profileLoading } = useQuery({
+    queryKey: ['memberProfile', memberId],
+    queryFn: () => membersApi.getPersonalizationProfile(memberId),
+    enabled: !!memberId
+  });
+
+  // Update preferences mutation
+  const updatePreferencesMutation = useMutation({
+    mutationFn: (preferences: PersonalizationPreference[]) => 
+      membersApi.updatePersonalizationPreferences(memberId, preferences),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['memberPreferences', memberId] });
+      setHasUnsavedChanges(false);
+    }
+  });
+
+  // Update profile mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: (profile: PersonalizationProfile) => 
+      membersApi.updatePersonalizationProfile(memberId, profile),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['memberProfile', memberId] });
+      setHasUnsavedChanges(false);
+    }
+  });
+
   useEffect(() => {
-    const mockPreferences: PersonalizationPreference[] = [
-      {
-        id: 'ai_recommendations',
-        category: 'ai_features',
-        title: 'AI-Powered Recommendations',
-        description: 'Receive personalized benefit and wellness recommendations based on your usage patterns',
-        type: 'toggle',
-        value: true,
-        impact: 'high',
-        aiOptimized: true,
-        lastUpdated: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'predictive_insights',
-        category: 'ai_features',
-        title: 'Predictive Health Insights',
-        description: 'Get AI-driven predictions about potential health needs and benefit utilization',
-        type: 'toggle',
-        value: true,
-        impact: 'high',
-        aiOptimized: true,
-        lastUpdated: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'smart_notifications',
-        category: 'notifications',
-        title: 'Smart Notification Timing',
-        description: 'AI will determine the best times to send notifications based on your activity',
-        type: 'toggle',
-        value: true,
-        impact: 'medium',
-        aiOptimized: true,
-        lastUpdated: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'personalization_strength',
-        category: 'content',
-        title: 'Personalization Strength',
-        description: 'How much AI should personalize your experience (0 = minimal, 100 = maximum)',
-        type: 'slider',
-        value: 75,
-        min: 0,
-        max: 100,
-        step: 5,
-        impact: 'high',
-        aiOptimized: false,
-        lastUpdated: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'privacy_level',
-        category: 'privacy',
-        title: 'Privacy Protection Level',
-        description: 'Balance between personalization and privacy (0 = minimal privacy, 100 = maximum privacy)',
-        type: 'slider',
-        value: 80,
-        min: 0,
-        max: 100,
-        step: 5,
-        impact: 'high',
-        aiOptimized: true,
-        lastUpdated: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'location_tracking',
-        category: 'privacy',
-        title: 'Location-Based Services',
-        description: 'Use your location to find nearby providers and urgent care facilities',
-        type: 'toggle',
-        value: false,
-        impact: 'medium',
-        aiOptimized: false,
-        lastUpdated: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'notification_channels',
-        category: 'notifications',
-        title: 'Notification Channels',
-        description: 'Choose how you receive important updates',
-        type: 'multi_select',
-        value: ['email', 'push'],
-        options: ['email', 'sms', 'push', 'in_app'],
-        impact: 'medium',
-        aiOptimized: false,
-        lastUpdated: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'data_sharing',
-        category: 'data_usage',
-        title: 'Anonymous Data Sharing',
-        description: 'Share anonymized usage data to improve AI recommendations for all members',
-        type: 'toggle',
-        value: true,
-        impact: 'medium',
-        aiOptimized: true,
-        lastUpdated: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'learning_style',
-        category: 'content',
-        title: 'Learning Style Preference',
-        description: 'How you prefer to receive and process information',
-        type: 'select',
-        value: 'visual',
-        options: ['visual', 'auditory', 'kinesthetic', 'reading'],
-        impact: 'medium',
-        aiOptimized: true,
-        lastUpdated: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000)
-      },
-      {
-        id: 'content_complexity',
-        category: 'content',
-        title: 'Content Complexity',
-        description: 'Level of detail in explanations and recommendations',
-        type: 'select',
-        value: 'moderate',
-        options: ['simple', 'moderate', 'detailed'],
-        impact: 'low',
-        aiOptimized: false,
-        lastUpdated: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000)
-      }
-    ];
+    if (preferencesData) {
+      setPreferences(preferencesData);
+    }
+    if (profileData) {
+      setProfile(profileData);
+    }
+  }, [preferencesData, profileData]);
 
-    const mockProfile: PersonalizationProfile = {
-      memberId: memberId,
-      learningStyle: 'visual',
-      contentComplexity: 'moderate',
-      interactionFrequency: 'balanced',
-      decisionSupport: 'guided',
-      dataSharingLevel: 'standard',
-      aiAssistanceLevel: 'moderate',
-      personalizationStrength: 75,
-      privacyLevel: 80,
-      notificationFrequency: 60
-    };
-
-    setPreferences(mockPreferences);
-    setProfile(mockProfile);
-  }, [memberId]);
+  const isLoading = preferencesLoading || profileLoading || updatePreferencesMutation.isPending || updateProfileMutation.isPending;
 
   // Handle preference change
   const handlePreferenceChange = (preferenceId: string, newValue: any) => {
@@ -250,16 +159,13 @@ export const PersonalizationSettings: React.FC<PersonalizationSettingsProps> = (
 
   // Save settings
   const handleSave = async () => {
-    setLoading(true);
     try {
-      // In a real app, this would call an API
-      console.log('Saving preferences:', preferences);
-      console.log('Saving profile:', profile);
-      setHasUnsavedChanges(false);
+      await Promise.all([
+        updatePreferencesMutation.mutateAsync(preferences),
+        profile && updateProfileMutation.mutateAsync(profile)
+      ]);
     } catch (error) {
       console.error('Error saving settings:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -424,8 +330,8 @@ export const PersonalizationSettings: React.FC<PersonalizationSettingsProps> = (
             <RotateCcw className="h-4 w-4 mr-2" />
             Reset to Defaults
           </Button>
-          <Button onClick={handleSave} disabled={loading || !hasUnsavedChanges}>
-            {loading ? 'Saving...' : 'Save Changes'}
+          <Button onClick={handleSave} disabled={isLoading || !hasUnsavedChanges}>
+            {isLoading ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
       </div>

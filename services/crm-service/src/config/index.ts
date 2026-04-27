@@ -19,6 +19,15 @@ export const config = {
     fraudDetection: process.env.FRAUD_SERVICE_URL || 'http://localhost:3007',
     analytics: process.env.ANALYTICS_SERVICE_URL || 'http://localhost:3009'
   },
+  database: {
+    url: process.env.DATABASE_URL,
+    pool: {
+      max: 25,
+      idleTimeoutMillis: 30000,
+      statement_timeout: 30000,
+      keepAlive: true
+    }
+  },
   redis: {
     host: process.env.REDIS_HOST || 'localhost',
     port: parseInt(process.env.REDIS_PORT || '6379'),

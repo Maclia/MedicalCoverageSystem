@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { User, Bell, Palette, Keyboard, Lock, Eye, EyeOff, Save } from 'lucide-react';
+import { User, Bell, Palette, Lock, Save } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
@@ -434,7 +434,7 @@ const UserSettingsPage: React.FC = () => {
               <CardFooter>
                 <Button type="submit" disabled={isSaving} className="flex items-center gap-2">
                   <Save className="h-4 w-4" />
-                  {isSaving ? 'Saving...' : 'Save Preferences'}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </CardFooter>
             </form>
@@ -452,29 +452,35 @@ const UserSettingsPage: React.FC = () => {
             <form onSubmit={appearanceForm.handleSubmit(onSubmitAppearance)}>
               <CardContent className="space-y-6">
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="theme">Theme</Label>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="theme">Theme</Label>
+                      <p className="text-sm text-muted-foreground">Select your preferred color theme</p>
+                    </div>
                     <Select
                       value={appearanceForm.watch('theme')}
-                      onValueChange={(value: any) => appearanceForm.setValue('theme', value)}
+                      onValueChange={(value: 'light' | 'dark' | 'system') => appearanceForm.setValue('theme', value)}
                     >
-                      <SelectTrigger id="theme">
+                      <SelectTrigger id="theme" className="w-[180px]">
                         <SelectValue placeholder="Select theme" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="light">Light</SelectItem>
                         <SelectItem value="dark">Dark</SelectItem>
-                        <SelectItem value="system">System Default</SelectItem>
+                        <SelectItem value="system">System</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="density">Interface Density</Label>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="density">Content Density</Label>
+                      <p className="text-sm text-muted-foreground">Adjust spacing and layout density</p>
+                    </div>
                     <Select
                       value={appearanceForm.watch('density')}
-                      onValueChange={(value: any) => appearanceForm.setValue('density', value)}
+                      onValueChange={(value: 'comfortable' | 'compact' | 'standard') => appearanceForm.setValue('density', value)}
                     >
-                      <SelectTrigger id="density">
+                      <SelectTrigger id="density" className="w-[180px]">
                         <SelectValue placeholder="Select density" />
                       </SelectTrigger>
                       <SelectContent>
@@ -497,7 +503,7 @@ const UserSettingsPage: React.FC = () => {
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
-                      <Label htmlFor="highContrast">High Contrast</Label>
+                      <Label htmlFor="highContrast">High Contrast Mode</Label>
                       <p className="text-sm text-muted-foreground">Increase contrast for better readability</p>
                     </div>
                     <Switch
@@ -511,7 +517,7 @@ const UserSettingsPage: React.FC = () => {
               <CardFooter>
                 <Button type="submit" disabled={isSaving} className="flex items-center gap-2">
                   <Save className="h-4 w-4" />
-                  {isSaving ? 'Applying...' : 'Apply Settings'}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </CardFooter>
             </form>
@@ -523,7 +529,7 @@ const UserSettingsPage: React.FC = () => {
             <CardHeader>
               <CardTitle>Security Settings</CardTitle>
               <CardDescription>
-                Manage account security and authentication options
+                Manage account security and authentication preferences
               </CardDescription>
             </CardHeader>
             <form onSubmit={securityForm.handleSubmit(onSubmitSecurity)}>
@@ -532,7 +538,7 @@ const UserSettingsPage: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label htmlFor="twoFactorEnabled">Two-Factor Authentication</Label>
-                      <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
+                      <p className="text-sm text-muted-foreground">Add an extra layer of security to your account</p>
                     </div>
                     <Switch
                       id="twoFactorEnabled"
@@ -540,20 +546,31 @@ const UserSettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => securityForm.setValue('twoFactorEnabled', checked)}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
-                    <Input
-                      id="sessionTimeout"
-                      type="number"
-                      min="5"
-                      max="120"
-                      {...securityForm.register('sessionTimeout', { valueAsNumber: true })}
-                    />
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="sessionTimeout">Session Timeout (minutes)</Label>
+                      <p className="text-sm text-muted-foreground">Auto-logout after period of inactivity</p>
+                    </div>
+                    <Select
+                      value={securityForm.watch('sessionTimeout').toString()}
+                      onValueChange={(value) => securityForm.setValue('sessionTimeout', parseInt(value))}
+                    >
+                      <SelectTrigger id="sessionTimeout" className="w-[180px]">
+                        <SelectValue placeholder="Select timeout" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="15">15 minutes</SelectItem>
+                        <SelectItem value="30">30 minutes</SelectItem>
+                        <SelectItem value="60">1 hour</SelectItem>
+                        <SelectItem value="120">2 hours</SelectItem>
+                        <SelectItem value="0">Never</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="flex items-center justify-between">
                     <div className="space-y-0.5">
                       <Label htmlFor="allowRememberMe">Remember Me</Label>
-                      <p className="text-sm text-muted-foreground">Allow persistent login sessions</p>
+                      <p className="text-sm text-muted-foreground">Allow persistent sessions between browser restarts</p>
                     </div>
                     <Switch
                       id="allowRememberMe"
@@ -561,12 +578,23 @@ const UserSettingsPage: React.FC = () => {
                       onCheckedChange={(checked) => securityForm.setValue('allowRememberMe', checked)}
                     />
                   </div>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-0.5">
+                      <Label htmlFor="deviceFingerprinting">Device Fingerprinting</Label>
+                      <p className="text-sm text-muted-foreground">Detect and block unknown devices</p>
+                    </div>
+                    <Switch
+                      id="deviceFingerprinting"
+                      checked={securityForm.watch('deviceFingerprinting')}
+                      onCheckedChange={(checked) => securityForm.setValue('deviceFingerprinting', checked)}
+                    />
+                  </div>
                 </div>
               </CardContent>
               <CardFooter>
                 <Button type="submit" disabled={isSaving} className="flex items-center gap-2">
                   <Save className="h-4 w-4" />
-                  {isSaving ? 'Saving...' : 'Save Security Settings'}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </CardFooter>
             </form>

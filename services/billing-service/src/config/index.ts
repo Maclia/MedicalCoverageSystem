@@ -21,9 +21,11 @@ export const config = {
     ssl: process.env.NODE_ENV === 'production',
     pool: {
       min: 2,
-      max: 10,
+      max: 25,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 2000,
+      statement_timeout: 30000,
+      keepAlive: true
     }
   },
 

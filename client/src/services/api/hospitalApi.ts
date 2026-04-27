@@ -283,4 +283,22 @@ export const hospitalApi = {
   async getCurrentProvider() {
     return apiRequest('/hospital/providers/current');
   },
+
+  // Provider Notifications
+  async getProviderNotifications(params: number | {
+    page?: number;
+    limit?: number;
+    status?: string;
+    type?: string;
+    providerId?: number;
+  } = {}) {
+    // Support backwards compatibility for when providerId is passed directly
+    const actualParams = typeof params === 'number' ? { providerId: params } : params;
+    
+    const searchParams = new URLSearchParams();
+    Object.entries(actualParams).forEach(([key, value]) => {
+      if (value !== undefined) searchParams.append(key, value.toString());
+    });
+    return apiRequest(`/hospital/providers/notifications?${searchParams}`);
+  },
 };

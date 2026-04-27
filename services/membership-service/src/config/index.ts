@@ -12,7 +12,7 @@ export const config = {
   },
   database: {
     url: process.env.DATABASE_URL || '',
-    poolSize: parseInt(process.env.DATABASE_POOL_SIZE || '10', 10),
+    poolSize: parseInt(process.env.DATABASE_POOL_SIZE || '25', 10),
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'dev-secret-key',

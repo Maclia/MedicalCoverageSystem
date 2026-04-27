@@ -9,9 +9,11 @@ const pool = new Pool({
   database: process.env.DB_NAME || 'medical_coverage',
   user: process.env.DB_USER || 'postgres',
   password: process.env.DB_PASSWORD || 'password',
-  max: parseInt(process.env.DB_POOL_SIZE || '10'),
+  max: parseInt(process.env.DB_POOL_SIZE || '25'),
   idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
-  connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000')
+  connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000'),
+  statement_timeout: 30000,
+  keepAlive: true
 });
 
 // Create Drizzle database instance

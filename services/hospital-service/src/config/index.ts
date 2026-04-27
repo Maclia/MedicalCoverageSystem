@@ -8,6 +8,12 @@ export const config = {
 
   database: {
     url: process.env.HOSPITAL_DB_URL || process.env.DATABASE_URL,
+    pool: {
+      max: 25,
+      idleTimeoutMillis: 30000,
+      statement_timeout: 30000,
+      keepAlive: true
+    }
   },
 
   redis: {

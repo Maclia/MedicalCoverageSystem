@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { analyticsApi } from '@/services/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
@@ -20,25 +22,22 @@ import {
 
 const InsuranceDashboard: React.FC = () => {
   const { user } = useAuth();
-  // const [location] = useLocation();
-  // const navigate = useNavigate();
 
-  // Mock data - in real app, this would come from API
-  const stats = {
-    totalCompanies: 156,
-    totalMembers: 124589,
-    activeClaims: 1247,
-    monthlyPremium: 2847592,
-    satisfactionRate: 94.2,
-  };
+  // Fetch dashboard statistics from backend API
+  const { data: statsResponse, isLoading: statsLoading } = useQuery({
+    queryKey: ['dashboardStats'],
+    queryFn: () => analyticsApi.getInsuranceDashboardStats()
+  });
+  const stats = statsResponse?.data as any;
 
-  const recentActivity = [
-    { id: 1, type: 'company', action: 'New company onboarded', entity: 'Acme Corp', time: '2 hours ago', status: 'completed' },
-    { id: 2, type: 'claim', action: 'High value claim submitted', entity: 'John Doe - $45,000', time: '4 hours ago', status: 'pending' },
-    { id: 3, type: 'premium', action: 'Premium calculation completed', entity: 'Q4 2024 Rates', time: '6 hours ago', status: 'completed' },
-    { id: 4, type: 'member', action: 'Batch member import', entity: '2,500 members', time: '1 day ago', status: 'completed' },
-    { id: 5, type: 'system', action: 'Scheduled maintenance', entity: 'Database backup', time: '2 days ago', status: 'scheduled' },
-  ];
+  // Fetch recent activity from backend API
+  const { data: activityResponse, isLoading: activityLoading } = useQuery({
+    queryKey: ['recentActivity'],
+    queryFn: () => analyticsApi.getRecentActivity()
+  });
+  const recentActivity = activityResponse?.data as any[];
+
+  const loading = statsLoading || activityLoading;
 
   const quickActions = [
     {
@@ -85,8 +84,8 @@ const InsuranceDashboard: React.FC = () => {
     },
   ];
 
-  const getStatusColor = (status: string) => {
-    const colors = {
+  const getStatusColor = (status: 'completed' | 'pending' | 'scheduled' | 'failed' | string) => {
+    const colors: Record<string, string> = {
       completed: 'bg-green-100 text-green-800',
       pending: 'bg-yellow-100 text-yellow-800',
       scheduled: 'bg-blue-100 text-blue-800',
@@ -95,8 +94,8 @@ const InsuranceDashboard: React.FC = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
-  const getActionColor = (color: string) => {
-    const colors = {
+  const getActionColor = (color: 'blue' | 'green' | 'purple' | 'yellow' | 'indigo' | 'gray' | string) => {
+    const colors: Record<string, string> = {
       blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
       green: 'bg-green-50 text-green-600 hover:bg-green-100',
       purple: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
@@ -150,7 +149,7 @@ const InsuranceDashboard: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Companies</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalCompanies.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.totalCompanies?.toLocaleString() || 0}</p>
                   <p className="text-xs text-green-600">+12% from last month</p>
                 </div>
               </div>
@@ -165,7 +164,7 @@ const InsuranceDashboard: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Total Members</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalMembers.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.totalMembers?.toLocaleString() || 0}</p>
                   <p className="text-xs text-green-600">+8% from last month</p>
                 </div>
               </div>
@@ -180,7 +179,7 @@ const InsuranceDashboard: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Active Claims</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.activeClaims.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats?.activeClaims?.toLocaleString() || 0}</p>
                   <p className="text-xs text-yellow-600">+5% from last week</p>
                 </div>
               </div>
@@ -195,7 +194,7 @@ const InsuranceDashboard: React.FC = () => {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-gray-600">Monthly Premium</p>
-                  <p className="text-2xl font-bold text-gray-900">${stats.monthlyPremium.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-gray-900">${stats?.monthlyPremium?.toLocaleString() || 0}</p>
                   <p className="text-xs text-green-600">+15% from last month</p>
                 </div>
               </div>
@@ -220,7 +219,7 @@ const InsuranceDashboard: React.FC = () => {
                         key={index}
                         variant="outline"
                         className={`h-auto p-4 justify-start ${getActionColor(action.color)}`}
-                        onClick={() => navigate(action.href)}
+                        onClick={() => window.location.href = action.href}
                       >
                         <Icon className="h-6 w-6 mr-3" />
                         <div className="text-left">
@@ -244,7 +243,7 @@ const InsuranceDashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {recentActivity.map((activity) => (
+                  {recentActivity?.map((activity: any) => (
                     <div key={activity.id} className="flex items-start space-x-3">
                       <div className={`p-2 rounded-full ${
                         activity.type === 'company' ? 'bg-blue-100' :

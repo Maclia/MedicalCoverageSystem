@@ -154,26 +154,11 @@ const ProviderPortal: React.FC = () => {
 
   const fetchNotifications = async () => {
     try {
-      // Mock data - replace with actual API call
-      const mockNotifications: NotificationItem[] = [
-        {
-          id: 1,
-          type: 'success',
-          title: 'Contract Renewed',
-          message: 'Your provider contract has been successfully renewed for 2024.',
-          timestamp: new Date(Date.now() - 86400000).toISOString(),
-          read: false
-        },
-        {
-          id: 2,
-          type: 'warning',
-          title: 'Quality Review Due',
-          message: 'Your quarterly quality review is due next week.',
-          timestamp: new Date(Date.now() - 172800000).toISOString(),
-          read: false
-        }
-      ];
-      setNotifications(mockNotifications);
+      const providerId = providerData?.id || 1;
+      const response = await hospitalApi.getProviderNotifications(providerId);
+      if (response.success) {
+        setNotifications((response.data || []) as NotificationItem[]);
+      }
     } catch (error) {
       console.error('Error fetching notifications:', error);
     }

@@ -8,6 +8,12 @@ export const config = {
 
   database: {
     url: process.env.CORE_DB_URL || process.env.DATABASE_URL,
+    pool: {
+      max: 25,
+      idle_timeout: 30,
+      statement_timeout: 30,
+      tcp_keepalives_idle: 60
+    }
   },
 
   redis: {

@@ -12,7 +12,12 @@ export const config = {
   },
   database: {
     url: process.env.DATABASE_URL || '',
-    poolSize: parseInt(process.env.DATABASE_POOL_SIZE || '10', 10),
+    pool: {
+      max: 25,
+      idleTimeoutMillis: 30000,
+      statement_timeout: 30000,
+      keepAlive: true
+    }
   },
   jwt: {
     secret: process.env.JWT_SECRET || 'dev-secret-key',
