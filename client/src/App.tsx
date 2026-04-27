@@ -67,6 +67,7 @@ import Finance from "@/features/finance/components/Finance";
 
 // Utility Pages
 import NotFound from "@/pages/not-found";
+import UserSettingsPage from "@/features/settings/UserSettingsPage";
 
 function Router() {
   return (
@@ -238,7 +239,12 @@ function Router() {
               )} />
               <Route path="/profile" component={() => (
                 <ProtectedRoute>
-                  <Dashboard />
+                  <UserSettingsPage />
+                </ProtectedRoute>
+              )} />
+              <Route path="/settings" component={() => (
+                <ProtectedRoute>
+                  <UserSettingsPage />
                 </ProtectedRoute>
               )} />
 

@@ -712,6 +712,30 @@ export const medicalPersonnel = pgTable("medical_personnel", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ---------- Medical Procedures ----------
+export const medicalProcedures = pgTable("medical_procedures", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  code: varchar("code", { length: 20 }).notNull().unique(),
+  category: text("category").notNull(),
+  standardRate: real("standard_rate").notNull(),
+  description: text("description"),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const providerProcedureRates = pgTable("provider_procedure_rates", {
+  id: serial("id").primaryKey(),
+  institutionId: integer("institution_id").references(() => medicalInstitutions.id).notNull(),
+  procedureId: integer("procedure_id").references(() => medicalProcedures.id).notNull(),
+  agreedRate: real("agreed_rate").notNull(),
+  effectiveDate: date("effective_date").notNull(),
+  expiryDate: date("expiry_date"),
+  active: boolean("active").default(true),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // ---------- Fraud Detection ----------
 export const fraudAlerts = pgTable("fraud_alerts", {
   id: serial("id").primaryKey(),
@@ -1406,6 +1430,8 @@ export const insertProviderNetworkSchema = createInsertSchema(providerNetworks);
 export const insertProviderNetworkAssignmentSchema = createInsertSchema(providerNetworkAssignments);
 export const insertProviderContractSchema = createInsertSchema(providerContracts);
 export const insertMedicalPersonnelSchema = createInsertSchema(medicalPersonnel);
+export const insertMedicalProcedureSchema = createInsertSchema(medicalProcedures);
+export const insertProviderProcedureRateSchema = createInsertSchema(providerProcedureRates);
 
 // Fraud
 export const insertFraudAlertSchema = createInsertSchema(fraudAlerts);
@@ -1515,6 +1541,8 @@ export type ProviderNetwork = typeof providerNetworks.$inferSelect;
 export type ProviderNetworkAssignment = typeof providerNetworkAssignments.$inferSelect;
 export type ProviderContract = typeof providerContracts.$inferSelect;
 export type MedicalPersonnel = typeof medicalPersonnel.$inferSelect;
+export type MedicalProcedure = typeof medicalProcedures.$inferSelect;
+export type ProviderProcedureRate = typeof providerProcedureRates.$inferSelect;
 
 export type FraudAlert = typeof fraudAlerts.$inferSelect;
 export type FraudRule = typeof fraudRules.$inferSelect;
@@ -1616,6 +1644,8 @@ export type InsertProviderNetwork = z.infer<typeof insertProviderNetworkSchema>;
 export type InsertProviderNetworkAssignment = z.infer<typeof insertProviderNetworkAssignmentSchema>;
 export type InsertProviderContract = z.infer<typeof insertProviderContractSchema>;
 export type InsertMedicalPersonnel = z.infer<typeof insertMedicalPersonnelSchema>;
+export type InsertMedicalProcedure = z.infer<typeof insertMedicalProcedureSchema>;
+export type InsertProviderProcedureRate = z.infer<typeof insertProviderProcedureRateSchema>;
 
 export type InsertFraudAlert = z.infer<typeof insertFraudAlertSchema>;
 export type InsertFraudRule = z.infer<typeof insertFraudRuleSchema>;

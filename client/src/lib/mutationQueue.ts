@@ -5,6 +5,7 @@
  */
 
 import { generateIdempotencyKey } from './queryClient';
+import { queryClient } from './queryClient';
 
 export interface QueuedMutation {
   id: string;
@@ -16,6 +17,7 @@ export interface QueuedMutation {
   retryCount: number;
   lastAttempt?: number;
   status: 'pending' | 'processing' | 'failed';
+  invalidates?: string[];
 }
 
 interface QueueEventListener {
@@ -45,6 +47,7 @@ class MutationQueue {
     endpoint: string,
     method: 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     data: unknown,
+    invalidates?: string[],
   ): Promise<string> {
     const mutation: QueuedMutation = {
       id: crypto.randomUUID(),
@@ -55,6 +58,7 @@ class MutationQueue {
       timestamp: Date.now(),
       retryCount: 0,
       status: 'pending',
+      invalidates,
     };
 
     this.queue.push(mutation);
@@ -115,6 +119,13 @@ class MutationQueue {
       // Success: remove from queue
       this.queue = this.queue.filter(m => m.id !== mutation.id);
       this.saveQueue();
+
+      // Invalidate related queries after successful background processing
+      if (mutation.invalidates && mutation.invalidates.length > 0) {
+        mutation.invalidates.forEach(key => {
+          queryClient.invalidateQueries({ queryKey: [key] });
+        });
+      }
 
       this.eventListeners.forEach(l => l.onProcessed?.(mutation));
 

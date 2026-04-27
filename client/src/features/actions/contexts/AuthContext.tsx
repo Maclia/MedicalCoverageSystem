@@ -6,6 +6,10 @@ import { apiRequest } from '@/lib/queryClient';
 export interface User {
   id: number;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  avatarUrl?: string;
   userType: 'insurance' | 'institution' | 'provider';
   entityId: number;
   isActive: boolean;
@@ -262,9 +266,9 @@ export const useAuthenticatedRequest = () => {
   const makeAuthenticatedRequest = async (url: string, options: RequestInit = {}) => {
     const accessToken = localStorage.getItem('accessToken');
 
-    let headers = {
+    let headers: Record<string, string> = {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...(options.headers as Record<string, string>),
     };
 
     if (accessToken) {

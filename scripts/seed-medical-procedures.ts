@@ -1,5 +1,5 @@
-import { db } from '../server/db';
-import * as schema from ''../shared/schema'.js';
+import { db } from '../server/db.ts';
+import * as schema from '../services/shared/schema';
 import { faker } from '@faker-js/faker';
 
 async function seedMedicalProcedures() {
@@ -130,8 +130,8 @@ async function seedProviderProcedureRates() {
         institutionId: institution.id,
         procedureId: procedure.id,
         agreedRate,
-        effectiveDate,
-        expiryDate,
+        effectiveDate: effectiveDate.toISOString(),
+        expiryDate: expiryDate ? expiryDate.toISOString() : null,
         active: true,
         notes: `Negotiated rate for ${procedure.name} at ${institution.name}.`,
       });

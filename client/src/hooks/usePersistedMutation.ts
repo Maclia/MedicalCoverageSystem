@@ -45,10 +45,15 @@ export function usePersistedMutation<TData = unknown, TError = Error, TVariables
     }
 
     // If offline: add to persistence queue
-    await mutationQueue.enqueue(options.endpoint, options.method, variables);
+    await mutationQueue.enqueue(options.endpoint, options.method, variables, options.invalidates);
     
-    // Return optimistic data immediately
-    return {} as TData;
+    // Return optimistic data from user provided function or variables
+    if (options.optimisticUpdate) {
+      return options.optimisticUpdate(variables) as unknown as TData;
+    }
+    
+    // Fallback: return variables as optimistic data when no update function provided
+    return variables as unknown as TData;
   };
 
   return useMutation<TData, TError, TVariables, TContext>({
@@ -80,8 +85,8 @@ export function usePersistedMutation<TData = unknown, TError = Error, TVariables
     },
 
     onSuccess: (data, variables, context) => {
-      // Invalidate related queries after successful mutation
-      if (options.invalidates && navigator.onLine) {
+      // Invalidate related queries after successful mutation - even when queued offline
+      if (options.invalidates) {
         options.invalidates.forEach(key => {
           queryClient.invalidateQueries({ queryKey: [key] });
         });

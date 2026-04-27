@@ -2,6 +2,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 import RoleSidebar from "./RoleSidebar";
 import RoleAwareHeader from "./RoleAwareHeader";
+import Breadcrumb from "@/components/Breadcrumb";
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -39,6 +40,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <RoleAwareHeader toggleSidebar={toggleSidebar} />
+        <div className="px-6 pt-4 pb-2 bg-white border-b border-gray-200 dark:border-gray-700 dark:bg-gray-900">
+          <Breadcrumb />
+        </div>
         <main className="flex-1 overflow-y-auto bg-neutral-50 p-6">
           {children}
         </main>
