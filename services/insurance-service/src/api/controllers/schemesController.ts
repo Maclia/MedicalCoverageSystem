@@ -1,12 +1,12 @@
 import { Request, Response } from 'express';
-import { schemeService, SchemeBenefitData } from '../services/SchemeService.js';
-import { benefitService } from '../services/BenefitService.js';
-import { createLogger } from '../utils/logger.js';
+import { schemeService, SchemeBenefitData } from '../../services/SchemeService.js';
+import { benefitService } from '../../services/BenefitService.js';
+import { createLogger } from '../../utils/logger.js';
 import {
   ResponseFactory,
   ErrorCodes,
   createValidationErrorResponse
-} from '../utils/api-standardization.js';
+} from '../../utils/api-standardization.js';
 import Joi from 'joi';
 
 const logger = createLogger();
@@ -452,6 +452,401 @@ export class SchemesController {
         ResponseFactory.createErrorResponse(
           ErrorCodes.INTERNAL_SERVER_ERROR,
           'Failed to remove benefit from scheme',
+          { originalError: (error as Error).message },
+          req.correlationId
+        )
+      );
+    }
+  }
+
+  // PUT /schemes/:id/administrator
+  static async assignSchemeAdministrator(req: Request, res: Response) {
+    try {
+      const schemeId = Number(req.params.id);
+
+      if (isNaN(schemeId) || schemeId <= 0) {
+        return res.status(400).json(
+          ResponseFactory.createErrorResponse(
+            ErrorCodes.BAD_REQUEST,
+            'Invalid scheme ID',
+            { id: req.params.id },
+            req.correlationId
+          )
+        );
+      }
+
+      logger.info('Assigning scheme administrator', {
+        schemeId,
+        administratorId: req.body.schemeAdministratorId,
+        correlationId: req.correlationId
+      });
+
+      const result = await schemeService.assignAdministrator(
+        schemeId,
+        req.body.schemeAdministratorId,
+        req.user.id,
+        req.correlationId
+      );
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        const statusCode = result.error?.code === ErrorCodes.NOT_FOUND ? 404 : 400;
+        res.status(statusCode).json(result);
+      }
+
+    } catch (error) {
+      logger.error('Failed to assign scheme administrator', error as Error, {
+        schemeId: req.params.id,
+        administratorId: req.body.schemeAdministratorId,
+        correlationId: req.correlationId
+      });
+
+      res.status(500).json(
+        ResponseFactory.createErrorResponse(
+          ErrorCodes.INTERNAL_SERVER_ERROR,
+          'Failed to assign scheme administrator',
+          { originalError: (error as Error).message },
+          req.correlationId
+        )
+      );
+    }
+  }
+
+  // PUT /schemes/:id/suspend
+  static async suspendScheme(req: Request, res: Response) {
+    try {
+      const schemeId = Number(req.params.id);
+
+      if (isNaN(schemeId) || schemeId <= 0) {
+        return res.status(400).json(
+          ResponseFactory.createErrorResponse(
+            ErrorCodes.BAD_REQUEST,
+            'Invalid scheme ID',
+            { id: req.params.id },
+            req.correlationId
+          )
+        );
+      }
+
+      logger.info('Suspending scheme', {
+        schemeId,
+        suspendedBy: req.user.id,
+        reason: req.body.reason,
+        correlationId: req.correlationId
+      });
+
+      const result = await schemeService.suspendScheme(
+        schemeId,
+        req.user.id,
+        req.body.reason,
+        req.correlationId
+      );
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        const statusCode = result.error?.code === ErrorCodes.NOT_FOUND ? 404 : 400;
+        res.status(statusCode).json(result);
+      }
+
+    } catch (error) {
+      logger.error('Failed to suspend scheme', error as Error, {
+        schemeId: req.params.id,
+        correlationId: req.correlationId
+      });
+
+      res.status(500).json(
+        ResponseFactory.createErrorResponse(
+          ErrorCodes.INTERNAL_SERVER_ERROR,
+          'Failed to suspend scheme',
+          { originalError: (error as Error).message },
+          req.correlationId
+        )
+      );
+    }
+  }
+
+  // PUT /schemes/:id/activate
+  static async activateScheme(req: Request, res: Response) {
+    try {
+      const schemeId = Number(req.params.id);
+
+      if (isNaN(schemeId) || schemeId <= 0) {
+        return res.status(400).json(
+          ResponseFactory.createErrorResponse(
+            ErrorCodes.BAD_REQUEST,
+            'Invalid scheme ID',
+            { id: req.params.id },
+            req.correlationId
+          )
+        );
+      }
+
+      logger.info('Activating scheme', {
+        schemeId,
+        activatedBy: req.user.id,
+        correlationId: req.correlationId
+      });
+
+      const result = await schemeService.activateScheme(
+        schemeId,
+        req.user.id,
+        req.correlationId
+      );
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        const statusCode = result.error?.code === ErrorCodes.NOT_FOUND ? 404 : 400;
+        res.status(statusCode).json(result);
+      }
+
+    } catch (error) {
+      logger.error('Failed to activate scheme', error as Error, {
+        schemeId: req.params.id,
+        correlationId: req.correlationId
+      });
+
+      res.status(500).json(
+        ResponseFactory.createErrorResponse(
+          ErrorCodes.INTERNAL_SERVER_ERROR,
+          'Failed to activate scheme',
+          { originalError: (error as Error).message },
+          req.correlationId
+        )
+      );
+    }
+  }
+
+  // PUT /schemes/:id/approve
+  static async approveScheme(req: Request, res: Response) {
+    try {
+      const schemeId = Number(req.params.id);
+
+      if (isNaN(schemeId) || schemeId <= 0) {
+        return res.status(400).json(
+          ResponseFactory.createErrorResponse(
+            ErrorCodes.BAD_REQUEST,
+            'Invalid scheme ID',
+            { id: req.params.id },
+            req.correlationId
+          )
+        );
+      }
+
+      logger.info('Approving scheme', {
+        schemeId,
+        approvedBy: req.user.id,
+        userRole: req.user.role,
+        correlationId: req.correlationId
+      });
+
+      const result = await schemeService.approveScheme(
+        schemeId,
+        req.user.id,
+        req.user.role,
+        req.correlationId
+      );
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        const statusCode = 
+          result.error?.code === ErrorCodes.NOT_FOUND ? 404 :
+          result.error?.code === ErrorCodes.FORBIDDEN ? 403 :
+          400;
+        res.status(statusCode).json(result);
+      }
+
+    } catch (error) {
+      logger.error('Failed to approve scheme', error as Error, {
+        schemeId: req.params.id,
+        correlationId: req.correlationId
+      });
+
+      res.status(500).json(
+        ResponseFactory.createErrorResponse(
+          ErrorCodes.INTERNAL_SERVER_ERROR,
+          'Failed to approve scheme',
+          { originalError: (error as Error).message },
+          req.correlationId
+        )
+      );
+    }
+  }
+
+  // PUT /schemes/:id/allowed-claim-types
+  static async setAllowedClaimTypes(req: Request, res: Response) {
+    try {
+      const schemeId = Number(req.params.id);
+
+      if (isNaN(schemeId) || schemeId <= 0) {
+        return res.status(400).json(
+          ResponseFactory.createErrorResponse(
+            ErrorCodes.BAD_REQUEST,
+            'Invalid scheme ID',
+            { id: req.params.id },
+            req.correlationId
+          )
+        );
+      }
+
+      if (!Array.isArray(req.body.claimTypes)) {
+        return res.status(400).json(
+          createValidationErrorResponse([{
+            field: 'claimTypes',
+            message: 'claimTypes must be an array'
+          }], req.correlationId)
+        );
+      }
+
+      logger.info('Setting allowed claim types', {
+        schemeId,
+        claimTypes: req.body.claimTypes,
+        correlationId: req.correlationId
+      });
+
+      const result = await schemeService.setAllowedClaimTypes(
+        schemeId,
+        req.body.claimTypes,
+        req.correlationId
+      );
+
+      if (result.success) {
+        res.json(result);
+      } else {
+        const statusCode = result.error?.code === ErrorCodes.NOT_FOUND ? 404 : 400;
+        res.status(statusCode).json(result);
+      }
+
+    } catch (error) {
+      logger.error('Failed to set allowed claim types', error as Error, {
+        schemeId: req.params.id,
+        correlationId: req.correlationId
+      });
+
+      res.status(500).json(
+        ResponseFactory.createErrorResponse(
+          ErrorCodes.INTERNAL_SERVER_ERROR,
+          'Failed to set allowed claim types',
+          { originalError: (error as Error).message },
+          req.correlationId
+        )
+      );
+    }
+  }
+
+  // GET /schemes/:id/allowed-claim-types
+  static async getAllowedClaimTypes(req: Request, res: Response) {
+    try {
+      const schemeId = Number(req.params.id);
+
+      if (isNaN(schemeId) || schemeId <= 0) {
+        return res.status(400).json(
+          ResponseFactory.createErrorResponse(
+            ErrorCodes.BAD_REQUEST,
+            'Invalid scheme ID',
+            { id: req.params.id },
+            req.correlationId
+          )
+        );
+      }
+
+      logger.info('Getting allowed claim types', {
+        schemeId,
+        correlationId: req.correlationId
+      });
+
+      const result = await schemeService.getScheme(schemeId, req.correlationId);
+      
+      if (result.success && result.data?.scheme?.allowedClaimTypes) {
+        let allowedTypes = [];
+        try {
+          allowedTypes = JSON.parse(result.data.scheme.allowedClaimTypes);
+        } catch (e) {
+          allowedTypes = [];
+        }
+        
+        res.json(ResponseFactory.createSuccessResponse({
+          schemeId,
+          allowedClaimTypes: allowedTypes
+        }, undefined, req.correlationId));
+      } else {
+        res.json(ResponseFactory.createSuccessResponse({
+          schemeId,
+          allowedClaimTypes: []
+        }, undefined, req.correlationId));
+      }
+
+    } catch (error) {
+      logger.error('Failed to get allowed claim types', error as Error, {
+        schemeId: req.params.id,
+        correlationId: req.correlationId
+      });
+
+      res.status(500).json(
+        ResponseFactory.createErrorResponse(
+          ErrorCodes.INTERNAL_SERVER_ERROR,
+          'Failed to get allowed claim types',
+          { originalError: (error as Error).message },
+          req.correlationId
+        )
+      );
+    }
+  }
+
+  // POST /schemes/:id/validate-claim-type
+  static async validateClaimType(req: Request, res: Response) {
+    try {
+      const schemeId = Number(req.params.id);
+      const claimType = req.body.claimType;
+
+      if (isNaN(schemeId) || schemeId <= 0) {
+        return res.status(400).json(
+          ResponseFactory.createErrorResponse(
+            ErrorCodes.BAD_REQUEST,
+            'Invalid scheme ID',
+            { id: req.params.id },
+            req.correlationId
+          )
+        );
+      }
+
+      if (!claimType) {
+        return res.status(400).json(
+          createValidationErrorResponse([{
+            field: 'claimType',
+            message: 'claimType is required'
+          }], req.correlationId)
+        );
+      }
+
+      logger.info('Validating claim type', {
+        schemeId,
+        claimType,
+        correlationId: req.correlationId
+      });
+
+      const result = await schemeService.validateClaimTypeAllowed(
+        schemeId,
+        claimType,
+        req.correlationId
+      );
+
+      res.json(result);
+
+    } catch (error) {
+      logger.error('Failed to validate claim type', error as Error, {
+        schemeId: req.params.id,
+        claimType: req.body.claimType,
+        correlationId: req.correlationId
+      });
+
+      res.status(500).json(
+        ResponseFactory.createErrorResponse(
+          ErrorCodes.INTERNAL_SERVER_ERROR,
+          'Failed to validate claim type',
           { originalError: (error as Error).message },
           req.correlationId
         )

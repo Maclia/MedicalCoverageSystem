@@ -7,6 +7,109 @@ import { CompanyBalance, CompanyPremiumUtilization, CompanyTransaction, CompanyR
 const logger = new WinstonLogger('CompanyBalanceService');
 
 class CompanyBalanceService {
+  /**
+   * FR-16: Get real-time fund utilization tracking for Funded schemes
+   * Returns balance, utilization metrics, carry-forward status and alerts
+   */
+  async getSchemeFundBalance(schemeId: string): Promise<any> {
+    logger.info('Fetching scheme fund balance', { schemeId });
+
+    try {
+      const schemeDetails = await insuranceServiceClient.getSchemeDetails(schemeId);
+      
+      if (!schemeDetails || schemeDetails.schemeType !== 'Funded') {
+        return {
+          schemeId,
+          error: 'Scheme not found or not a Funded scheme'
+        };
+      }
+
+      const [billingStats, premiumStats, schemeBreakdown] = await Promise.allSettled([
+        billingServiceClient.getSchemeBillingStats(schemeId),
+        insuranceServiceClient.getSchemePremiumStats(schemeId),
+        insuranceServiceClient.getSchemeUtilizationBreakdown(schemeId)
+      ]);
+
+      const billingData = billingStats.status === 'fulfilled' ? billingStats.value : {};
+      const premiumData = (premiumStats.status === 'fulfilled' ? premiumStats.value : {
+        totalFundAllocated: 0,
+        totalFundUtilized: 0
+      }) as { totalFundAllocated: number; totalFundUtilized: number };
+      const breakdownData = schemeBreakdown.status === 'fulfilled' ? schemeBreakdown.value : [];
+
+      const totalAllocated = premiumData.totalFundAllocated || 0;
+      const totalUtilized = premiumData.totalFundUtilized || 0;
+      const utilizationRate = totalAllocated > 0 ? (totalUtilized / totalAllocated) * 100 : 0;
+      const remainingBalance = totalAllocated - totalUtilized;
+
+      // Check threshold alerts
+      let alertLevel = 'NONE';
+      let alertMessage = '';
+      
+      if (utilizationRate >= 90) {
+        alertLevel = 'CRITICAL';
+        alertMessage = 'Fund utilization exceeds 90% - Immediate attention required';
+      } else if (utilizationRate >= 75) {
+        alertLevel = 'WARNING';
+        alertMessage = 'Fund utilization exceeds 75%';
+      }
+
+      return {
+        schemeId,
+        schemeName: schemeDetails.schemeName,
+        schemeType: 'Funded',
+        balanceCarryForwardEnabled: schemeDetails.balanceCarryForwardEnabled || false,
+        totalFundAllocated: totalAllocated,
+        totalFundUtilized: totalUtilized,
+        remainingBalance,
+        utilizationRate: Math.round(utilizationRate * 100) / 100,
+        alertLevel,
+        alertMessage,
+        lastUpdated: new Date().toISOString(),
+        period: {
+          startDate: schemeDetails.policyStartDate,
+          endDate: schemeDetails.policyEndDate
+        },
+        utilizationBreakdown: breakdownData
+      };
+
+    } catch (error) {
+      logger.error('Failed to fetch scheme fund balance', { error: error as Error, schemeId });
+      throw error;
+    }
+  }
+
+  /**
+   * Toggle balance carry-forward setting for funded schemes
+   */
+  async updateCarryForwardSetting(schemeId: string, enabled: boolean, userId: number): Promise<boolean> {
+    logger.info('Updating balance carry-forward setting', { schemeId, enabled, userId });
+
+    try {
+      // Verify scheme is funded type
+      const schemeDetails = await insuranceServiceClient.getSchemeDetails(schemeId);
+      
+      if (!schemeDetails || schemeDetails.schemeType !== 'Funded') {
+        throw new Error('Only Funded schemes support balance carry-forward');
+      }
+
+      const result = await insuranceServiceClient.updateSchemeSetting(
+        schemeId, 
+        'balanceCarryForwardEnabled', 
+        enabled,
+        userId
+      );
+
+      logger.info('Balance carry-forward setting updated', { schemeId, enabled, userId });
+      
+      return result;
+
+    } catch (error) {
+      logger.error('Failed to update carry-forward setting', { error: error as Error, schemeId });
+      throw error;
+    }
+  }
+
   async getCompanyBalance(companyId: string): Promise<CompanyBalance> {
     logger.info('Fetching company balance', { companyId });
 

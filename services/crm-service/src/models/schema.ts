@@ -23,6 +23,7 @@ export const leads = pgTable('leads', {
   industry: varchar('industry', { length: 100 }),
   companySize: varchar('company_size', { length: 50 }),
   source: varchar('source', { length: 100 }).notNull(), // Website, Referral, Cold Call, etc.
+  leadType: varchar('lead_type', { length: 50 }).default('person'), // person, company, service_provider
   status: varchar('status', { length: 50 }).notNull().default('new'), // new, contacted, qualified, converted, lost
   priority: varchar('priority', { length: 20 }).notNull().default('medium'), // high, medium, low
   score: integer('score').default(0), // Lead scoring
@@ -39,6 +40,8 @@ export const leads = pgTable('leads', {
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  convertedToClientAt: timestamp('converted_to_client_at'),
+  type: varchar('type', { length: 50 }).default('company'), // company, individual, service_provider
 }, (table) => ({
   emailIdx: index('leads_email_idx').on(table.email),
   statusIdx: index('leads_status_idx').on(table.status),
@@ -75,6 +78,13 @@ export const contacts = pgTable('contacts', {
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  clientType: varchar('client_type', { length: 50 }), // INDIVIDUAL_CLIENT, CORPORATE_CLIENT
+  clientSince: timestamp('client_since'),
+  convertedAt: timestamp('converted_at'),
+  convertedBy: integer('converted_by'),
+  billingCycle: varchar('billing_cycle', { length: 20 }).default('MONTHLY'),
+  slaEffectiveDate: timestamp('sla_effective_date'),
+  slaExpiryDate: timestamp('sla_expiry_date'),
 }, (table) => ({
   emailIdx: index('contacts_email_idx').on(table.email),
   companyIdIdx: index('contacts_company_id_idx').on(table.companyId),
@@ -119,6 +129,8 @@ export const companies = pgTable('companies', {
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  convertedToClientAt: timestamp('converted_to_client_at'),
+  type: varchar('type', { length: 50 }).default('company'), // company, individual, service_provider
 }, (table) => ({
   nameIdx: index('companies_name_idx').on(table.name),
   industryIdx: index('companies_industry_idx').on(table.industry),
@@ -161,6 +173,11 @@ export const opportunities = pgTable('opportunities', {
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  insuranceId: integer('insurance_id'),
+  premium: decimal('premium', { precision: 15, scale: 2 }),
+  coverageDetails: jsonb('coverage_details'),
+  receivedAt: timestamp('received_at'),
+  receivedBy: integer('received_by'),
 }, (table) => ({
   nameIdx: index('opportunities_name_idx').on(table.name),
   companyIdIdx: index('opportunities_company_id_idx').on(table.companyId),
@@ -237,6 +254,11 @@ export const emailCampaigns = pgTable('email_campaigns', {
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  insuranceId: integer('insurance_id'),
+  premium: decimal('premium', { precision: 15, scale: 2 }),
+  coverageDetails: jsonb('coverage_details'),
+  receivedAt: timestamp('received_at'),
+  receivedBy: integer('received_by'),
 }, (table) => ({
   typeIdx: index('email_campaigns_type_idx').on(table.type),
   statusIdx: index('email_campaigns_status_idx').on(table.status),
@@ -272,6 +294,128 @@ export const emailCampaignRecipients = pgTable('email_campaign_recipients', {
   contactIdIdx: index('email_campaign_recipients_contact_id_idx').on(table.contactId),
   emailIdx: index('email_campaign_recipients_email_idx').on(table.email),
   statusIdx: index('email_campaign_recipients_status_idx').on(table.status),
+}));
+
+// Quote Management Tables
+export const quotes = pgTable('quotes', {
+  id: serial('id').primaryKey(),
+  referenceNumber: varchar('reference_number', { length: 50 }).notNull().unique(),
+  companyId: integer('company_id').notNull(),
+  opportunityId: integer('opportunity_id'),
+  leadId: integer('lead_id'),
+  contactId: integer('contact_id'),
+  assignedTo: integer('assigned_to').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('draft'), // draft, sent, received, under_review, approved, rejected, locked, negotiated
+  type: varchar('type', { length: 50 }).default('standard'), // standard, rfp, renewal
+  title: varchar('title', { length: 255 }).notNull(),
+  description: text('description'),
+  totalAmount: decimal('total_amount', { precision: 15, scale: 2 }).notNull(),
+  currency: varchar('currency', { length: 10 }).default('KES'),
+  validFrom: timestamp('valid_from').notNull(),
+  validTo: timestamp('valid_to').notNull(),
+  rfpDocumentUrl: varchar('rfp_document_url', { length: 500 }),
+  acceptanceLetterUrl: varchar('acceptance_letter_url', { length: 500 }),
+  rejectedReason: varchar('rejected_reason', { length: 255 }),
+  rejectCode: varchar('reject_code', { length: 50 }),
+  isLocked: boolean('is_locked').default(false),
+  approvedById: integer('approved_by_id'),
+  approvedAt: timestamp('approved_at'),
+  sentAt: timestamp('sent_at'),
+  sentBy: integer('sent_by'),
+  sentToInsurances: jsonb('sent_to_insurances'), // Array of insurance providers sent to
+  targetInsurances: jsonb('target_insurances'),
+  receivedQuotes: jsonb('received_quotes'), // Array of received quotes from insurers
+  negotiationHistory: jsonb('negotiation_history'),
+  lastNegotiationUpdate: timestamp('last_negotiation_update'),
+  lastNegotiationBy: integer('last_negotiation_by'),
+  lockedReason: varchar('locked_reason', { length: 255 }),
+  rejectedAt: timestamp('rejected_at'),
+  rejectedBy: integer('rejected_by'),
+  entityId: integer('entity_id'),
+  entityType: varchar('entity_type', { length: 50 }),
+  acceptanceLetterId: integer('acceptance_letter_id'),
+  termsAndConditions: text('terms_and_conditions'),
+  notes: text('notes'),
+  customFields: jsonb('custom_fields'),
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  referenceNumberIdx: index('quotes_reference_number_idx').on(table.referenceNumber),
+  companyIdIdx: index('quotes_company_id_idx').on(table.companyId),
+  statusIdx: index('quotes_status_idx').on(table.status),
+  assignedToIdx: index('quotes_assigned_to_idx').on(table.assignedTo),
+}));
+
+export const quoteItems = pgTable('quote_items', {
+  id: serial('id').primaryKey(),
+  quoteId: integer('quote_id').notNull(),
+  productId: integer('product_id'),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  quantity: integer('quantity').notNull(),
+  unitPrice: decimal('unit_price', { precision: 12, scale: 2 }).notNull(),
+  totalPrice: decimal('total_price', { precision: 15, scale: 2 }).notNull(),
+  category: varchar('category', { length: 100 }),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  quoteIdIdx: index('quote_items_quote_id_idx').on(table.quoteId),
+}));
+
+export const quoteDocuments = pgTable('quote_documents', {
+  id: serial('id').primaryKey(),
+  quoteId: integer('quote_id').notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  type: varchar('type', { length: 100 }).notNull(), // rfp, acceptance, supporting, quote_response
+  url: varchar('url', { length: 500 }).notNull(),
+  size: integer('size'),
+  uploadedBy: integer('uploaded_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  quoteIdIdx: index('quote_documents_quote_id_idx').on(table.quoteId),
+}));
+
+// Client Management Tables
+export const clients = pgTable('clients', {
+  id: serial('id').primaryKey(),
+  companyId: integer('company_id').notNull().unique(),
+  clientNumber: varchar('client_number', { length: 50 }).notNull().unique(),
+  status: varchar('status', { length: 50 }).default('active'), // active, inactive, suspended
+  tier: varchar('tier', { length: 20 }).default('standard'), // standard, premium, enterprise, vip
+  kycStatus: varchar('kyc_status', { length: 50 }).default('pending'), // pending, verified, rejected
+  slaId: integer('sla_id'),
+  creditLimit: decimal('credit_limit', { precision: 15, scale: 2 }),
+  paymentTerms: varchar('payment_terms', { length: 50 }),
+  onboardingDate: timestamp('onboarding_date'),
+  renewalDate: timestamp('renewal_date'),
+  riskProfile: varchar('risk_profile', { length: 20 }).default('medium'), // low, medium, high
+  customFields: jsonb('custom_fields'),
+  notes: text('notes'),
+  createdBy: integer('created_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  companyIdIdx: index('clients_company_id_idx').on(table.companyId),
+  clientNumberIdx: index('clients_client_number_idx').on(table.clientNumber),
+  statusIdx: index('clients_status_idx').on(table.status),
+}));
+
+export const clientDocuments = pgTable('client_documents', {
+  id: serial('id').primaryKey(),
+  clientId: integer('client_id').notNull(),
+  name: varchar('name', { length: 255 }).notNull(),
+  type: varchar('type', { length: 100 }).notNull(), // kyc, contract, sla, certificate, other
+  url: varchar('url', { length: 500 }).notNull(),
+  expiryDate: timestamp('expiry_date'),
+  verified: boolean('verified').default(false),
+  verifiedBy: integer('verified_by'),
+  verifiedAt: timestamp('verified_at'),
+  uploadedBy: integer('uploaded_by').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => ({
+  clientIdIdx: index('client_documents_client_id_idx').on(table.clientId),
 }));
 
 // Analytics and Reporting Tables
@@ -380,3 +524,17 @@ export type BulkUploadError = typeof bulkUploadErrors.$inferSelect;
 export type NewBulkUploadError = typeof bulkUploadErrors.$inferInsert;
 export type BulkUploadRecord = typeof bulkUploadRecords.$inferSelect;
 export type NewBulkUploadRecord = typeof bulkUploadRecords.$inferInsert;
+
+// Quote Types
+export type Quote = typeof quotes.$inferSelect;
+export type NewQuote = typeof quotes.$inferInsert;
+export type QuoteItem = typeof quoteItems.$inferSelect;
+export type NewQuoteItem = typeof quoteItems.$inferInsert;
+export type QuoteDocument = typeof quoteDocuments.$inferSelect;
+export type NewQuoteDocument = typeof quoteDocuments.$inferInsert;
+
+// Client Types
+export type Client = typeof clients.$inferSelect;
+export type NewClient = typeof clients.$inferInsert;
+export type ClientDocument = typeof clientDocuments.$inferSelect;
+export type NewClientDocument = typeof clientDocuments.$inferInsert;

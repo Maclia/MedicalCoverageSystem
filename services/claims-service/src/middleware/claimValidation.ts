@@ -64,3 +64,53 @@ export const validateClaimId = (req: Request, res: Response, next: NextFunction)
   (req as any).claimId = claimId;
   return next();
 };
+
+/**
+ * FR-09: Shift & Visit Window Rules Validation
+ * Validates claim submission time against allowed working windows
+ */
+export const validateVisitWindowRules = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const claim = (req as any).validatedClaim;
+    const visitDate = new Date(claim.serviceDate);
+    const claimDate = new Date(claim.claimDate || new Date());
+    
+    // Business Rule 1: Claims must be submitted within 30 days of visit date
+    const daysSinceVisit = Math.ceil((claimDate.getTime() - visitDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysSinceVisit > 30) {
+      return res.status(400).json({
+        success: false,
+        error: 'CLAIM_WINDOW_EXPIRED',
+        message: `Claim must be submitted within 30 days of visit. This visit was ${daysSinceVisit} days ago.`
+      });
+    }
+
+    // Business Rule 2: Claims cannot be backdated more than 90 days
+    const daysBackdated = Math.ceil((new Date().getTime() - visitDate.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysBackdated > 90) {
+      return res.status(400).json({
+        success: false,
+        error: 'BACKDATE_LIMIT_EXCEEDED',
+        message: `Claims cannot be backdated more than 90 days. Visit date is ${daysBackdated} days old.`
+      });
+    }
+
+    // Business Rule 3: Weekend / After-hours validation
+    const visitDay = visitDate.getDay();
+    const visitHour = visitDate.getHours();
+    const isWeekend = visitDay === 0 || visitDay === 6;
+    const isAfterHours = visitHour < 8 || visitHour >= 18;
+
+    if (isWeekend || isAfterHours) {
+      // Mark for special review
+      (req as any).requiresEscalation = true;
+      (req as any).reviewReason = 'OUTSIDE_WORKING_HOURS';
+    }
+
+    return next();
+  } catch (error) {
+    return next(error);
+  }
+};

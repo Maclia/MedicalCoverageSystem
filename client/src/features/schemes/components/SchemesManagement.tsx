@@ -13,7 +13,7 @@ import { Textarea } from "@/ui/textarea";
 import { Switch } from "@/ui/switch";
 import { Separator } from "@/ui/separator";
 import { Alert, AlertDescription } from "@/ui/alert";
-import { Plus, Edit, Eye, Settings, Users, Shield, TrendingUp, Layers, Gavel } from "lucide-react";
+import { Plus, Edit, Eye, Settings, Users, Shield, TrendingUp, Layers, Gavel, CheckCircle, XCircle, PauseCircle, PlayCircle, AlertTriangle } from "lucide-react";
 
 interface Scheme {
   id: number;
@@ -24,12 +24,16 @@ interface Scheme {
   targetMarket: string;
   pricingModel: string;
   isActive: boolean;
+  status: 'draft' | 'pending_approval' | 'approved' | 'suspended' | 'active';
+  approved: boolean;
   launchDate?: string;
   sunsetDate?: string;
   minAge: number;
   maxAge?: number;
   planTierCount: number;
   memberCount: number;
+  allowedClaimTypes: string[];
+  validationErrors?: string[];
 }
 
 interface PlanTier {
@@ -183,6 +187,65 @@ export default function SchemesManagement() {
       await fetchSchemesData();
     } catch (err) {
       console.error('Error adding corporate client:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const getStatusBadge = (scheme: Scheme) => {
+    switch (scheme.status) {
+      case 'draft': return <Badge variant="secondary">Draft</Badge>;
+      case 'pending_approval': return <Badge variant="outline" className="border-yellow-500 text-yellow-500">Pending Approval</Badge>;
+      case 'approved': return <Badge variant="default" className="bg-green-500">Approved</Badge>;
+      case 'suspended': return <Badge variant="destructive">Suspended</Badge>;
+      case 'active': return <Badge variant="default">Active</Badge>;
+      default: return <Badge variant="secondary">{scheme.status}</Badge>;
+    }
+  };
+
+  const handleApproveScheme = async (schemeId: number) => {
+    setSaving(true);
+    try {
+      await insuranceApi.approveScheme(schemeId);
+      await fetchSchemesData();
+    } catch (err) {
+      console.error('Error approving scheme:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleRejectScheme = async (schemeId: number) => {
+    setSaving(true);
+    try {
+      await insuranceApi.rejectScheme(schemeId);
+      await fetchSchemesData();
+    } catch (err) {
+      console.error('Error rejecting scheme:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSuspendScheme = async (schemeId: number) => {
+    setSaving(true);
+    try {
+      await insuranceApi.suspendScheme(schemeId);
+      await fetchSchemesData();
+    } catch (err) {
+      console.error('Error suspending scheme:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleActivateScheme = async (schemeId: number) => {
+    setSaving(true);
+    try {
+      await insuranceApi.activateScheme(schemeId);
+      await fetchSchemesData();
+    } catch (err) {
+      console.error('Error activating scheme:', err);
     } finally {
       setSaving(false);
     }

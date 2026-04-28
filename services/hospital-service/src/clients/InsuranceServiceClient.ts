@@ -302,6 +302,54 @@ export class InsuranceServiceClient {
       return null;
     }
   }
+
+  /**
+   * Get all pending pre-authorization requests for escalation processing
+   */
+  async getPendingPreAuthorizations(correlationId?: string): Promise<any[]> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/preauthorizations/pending`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'X-Correlation-ID': correlationId || '',
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        return [];
+      }
+
+      const result = await response.json();
+      return result.data || [];
+
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Update escalation level for pre-authorization request
+   */
+  async updatePreAuthEscalationLevel(preAuthId: string, level: number, correlationId?: string): Promise<boolean> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/v1/preauthorizations/${preAuthId}/escalation`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'X-Correlation-ID': correlationId || '',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ escalationLevel: level })
+      });
+
+      return response.ok;
+
+    } catch {
+      return false;
+    }
+  }
 }
 
 export const insuranceServiceClient = InsuranceServiceClient.getInstance();

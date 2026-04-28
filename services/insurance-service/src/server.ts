@@ -9,6 +9,7 @@ import { auditMiddleware } from './middleware/auditMiddleware.js';
 import { responseMiddleware, errorHandler, notFoundHandler } from './middleware/responseMiddleware.js';
 import { Database } from './models/Database.js';
 import { WinstonLogger } from './utils/WinstonLogger.js';
+import RenewalTriggerJob from './jobs/RenewalTriggerJob.js';
 
 export function createApp() {
   const logger = new WinstonLogger('insurance-service');
@@ -86,6 +87,10 @@ export async function bootstrap() {
     }
 
     logger.info('Database connected successfully');
+
+    // Start Background Jobs
+    RenewalTriggerJob.start();
+    logger.info('✅ All background jobs initialized');
 
     // Create Express app
     const app = createApp();

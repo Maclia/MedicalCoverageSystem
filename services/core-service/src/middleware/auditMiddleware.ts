@@ -101,6 +101,34 @@ export const auditDataModificationMiddleware = (resourceType: string, resourceId
             const resourceId = req.params[resourceIdParam] ||
                              (data.id ? data.id.toString() : undefined);
 
+            // Calculate field changes for update operations
+            let fieldChanges: any = undefined;
+            if (originalData && req.body) {
+              fieldChanges = {};
+              const allKeys = new Set([...Object.keys(originalData), ...Object.keys(req.body)]);
+              
+              for (const key of allKeys) {
+                const originalValue = originalData[key];
+                const newValue = req.body[key];
+                
+                if (JSON.stringify(originalValue) !== JSON.stringify(newValue)) {
+                  fieldChanges[key] = {
+                    from: originalValue,
+                    to: newValue
+                  };
+                }
+              }
+              
+              // Detect core scheme changes that require re-approval
+              const coreSchemeFields = ['schemeType', 'policyPeriodStart', 'policyPeriodEnd', 'benefits', 'providerPanels', 'tariffId'];
+              const hasCoreChanges = coreSchemeFields.some(field => fieldChanges[field]);
+              
+              if (hasCoreChanges && resourceType === 'scheme') {
+                fieldChanges._requiresReapproval = true;
+                fieldChanges._coreFieldsModified = coreSchemeFields.filter(field => fieldChanges[field]);
+              }
+            }
+
             await auditService.logDataModification(
               req.user.id,
               action,
@@ -108,7 +136,7 @@ export const auditDataModificationMiddleware = (resourceType: string, resourceId
               resourceId,
               originalData,
               data,
-              undefined, // TODO: Calculate specific field changes
+              fieldChanges,
               req.ip,
               req.get('User-Agent')
             );

@@ -33,7 +33,26 @@ export const CRMEvents = {
   BULK_MEMBER_IMPORTED: 'crm.bulk.member.imported',
 
   // Activity Events
-  ACTIVITY_LOGGED: 'crm.activity.logged'
+  ACTIVITY_LOGGED: 'crm.activity.logged',
+
+  // Quote Events
+  QUOTE_CREATED: 'crm.quote.created',
+  QUOTE_UPDATED: 'crm.quote.updated',
+  QUOTE_SENT_TO_INSURANCES: 'crm.quote.sent_to_insurances',
+  QUOTE_RESPONSE_RECEIVED: 'crm.quote.response_received',
+  QUOTE_APPROVED: 'crm.quote.approved',
+  QUOTE_REJECTED: 'crm.quote.rejected',
+  QUOTE_NEGOTIATION_UPDATED: 'crm.quote.negotiation_updated',
+  QUOTE_DOCUMENT_ATTACHED: 'crm.quote.document_attached',
+  QUOTE_LOCKED: 'crm.quote.locked',
+  QUOTE_CONVERTED_TO_CLIENT: 'crm.quote.converted_to_client',
+
+  // Client Events
+  CLIENT_CREATED: 'crm.client.created',
+  CLIENT_UPDATED: 'crm.client.updated',
+  CLIENT_DOCUMENT_UPLOADED: 'crm.client.document_uploaded',
+  CLIENT_SLA_ATTACHED: 'crm.client.sla_attached',
+  CLIENT_KYC_UPDATED: 'crm.client.kyc_updated'
 } as const;
 
 export type CRMEventType = typeof CRMEvents[keyof typeof CRMEvents];

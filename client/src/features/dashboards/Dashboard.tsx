@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import StatCards from "@/features/dashboard/StatCards";
-import RecentRegistrations from "@/features/dashboard/RecentRegistrations";
-import QuickActions from "@/features/dashboard/QuickActions";
-import PremiumPeriodCard from "@/features/dashboard/PremiumPeriodCard";
-import AdvancedAnalytics from "@/features/dashboard/AdvancedAnalytics";
+import StatCards from "@/features/dashboards/StatCards";
+import RecentRegistrations from "@/features/dashboards/RecentRegistrations";
+import QuickActions from "@/features/dashboards/QuickActions";
+import PremiumPeriodCard from "@/features/dashboards/PremiumPeriodCard";
+import AdvancedAnalytics from "@/features/dashboards/AdvancedAnalytics";
 import { Button } from "@/ui/button";
 import { Switch } from "@/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";

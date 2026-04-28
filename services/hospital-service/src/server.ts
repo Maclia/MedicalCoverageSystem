@@ -9,6 +9,7 @@ import routes from './routes/index.js';
 import { errorHandlerMiddleware, notFoundHandlerMiddleware } from './middleware/responseStandardizationMiddleware.js';
 import { validateEnvironmentVariables } from './utils/validation.js';
 import { auditMiddleware } from './middleware/auditMiddleware.js';
+import PreAuthEscalationService from './services/PreAuthEscalationService.js';
 
 const logger = createLogger();
 
@@ -157,12 +158,16 @@ async function bootstrap() {
 
     // Start server
     const server = app.listen(config.server.port, () => {
-      logger.info('Hospital service started successfully', {
-        port: config.server.port,
-        environment: config.server.environment,
-        nodeVersion: process.version,
-        pid: process.pid
-      });
+    logger.info('Hospital service started successfully', {
+      port: config.server.port,
+      environment: config.server.environment,
+      nodeVersion: process.version,
+      pid: process.pid
+    });
+
+    // Start background services
+    PreAuthEscalationService.start();
+    logger.info('✅ All background services initialized');
     });
 
     // Handle server errors
@@ -181,6 +186,10 @@ async function bootstrap() {
 
       server.close(async () => {
         logger.info('HTTP server closed');
+
+        // Stop background services
+        PreAuthEscalationService.stop();
+        logger.info('Background services stopped');
 
         // Close database connections
         try {

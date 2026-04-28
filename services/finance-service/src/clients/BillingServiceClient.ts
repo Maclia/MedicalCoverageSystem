@@ -115,6 +115,10 @@ class BillingServiceClient extends BaseServiceClient {
   }> {
     return this.get(`/api/billing/companies/${companyId}/stats`);
   }
+
+  async getSchemeBillingStats(schemeId: string): Promise<any> {
+    return this.get(`/api/billing/schemes/${schemeId}/stats`);
+  }
 }
 
 export const billingServiceClient = new BillingServiceClient();

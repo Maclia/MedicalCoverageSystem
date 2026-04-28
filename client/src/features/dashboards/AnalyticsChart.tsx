@@ -16,10 +16,7 @@ import {
   SelectValue,
 } from "@/ui/select";
 import { Badge } from "@/ui/badge";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import TrendingDownIcon from "@mui/icons-material/TrendingDown";
-import TrendingFlatIcon from "@mui/icons-material/TrendingFlat";
-import InsightsIcon from "@mui/icons-material/Insights";
+import { TrendingUp, TrendingDown, MoveRight, BarChart3 } from "lucide-react";
 
 interface AnalyticsChartProps {
   title: string;
@@ -322,9 +319,9 @@ export default function AnalyticsChart({
                 trendData.trend === 'up' ? 'text-green-600' :
                 trendData.trend === 'down' ? 'text-red-600' : 'text-gray-600'
               }`}>
-                {trendData.trend === 'up' ? <TrendingUpIcon className="mr-1" /> :
-                 trendData.trend === 'down' ? <TrendingDownIcon className="mr-1" /> :
-                 <TrendingFlatIcon className="mr-1" />}
+                {trendData.trend === 'up' ? <TrendingUp className="mr-1 w-4 h-4" /> :
+                 trendData.trend === 'down' ? <TrendingDown className="mr-1 w-4 h-4" /> :
+                 <MoveRight className="mr-1 w-4 h-4" />}
                 {trendData.trend === 'up' ? '+' :
                  trendData.trend === 'down' ? '-' : ''}
                 {trendData.changePercent.toFixed(1)}%
@@ -348,14 +345,14 @@ export default function AnalyticsChart({
         )}
 
         {/* Industry Benchmark Comparison */}
-        {benchmarks && (
+        {benchmarks && trendData && (
           <div className="mt-4 p-3 bg-blue-50 rounded">
             <h4 className="text-sm font-medium text-blue-800 mb-2">Industry Benchmark Comparison</h4>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <p className="text-xs text-blue-600">Your Performance</p>
                 <p className="text-lg font-bold text-blue-900">
-                  {trendData?.current.toLocaleString() || 'N/A'}
+                  {trendData.current.toLocaleString() || 'N/A'}
                 </p>
               </div>
               <div>
@@ -383,7 +380,7 @@ export default function AnalyticsChart({
         {showProjections && (
           <div className="mt-4 p-3 bg-purple-50 rounded">
             <div className="flex items-center text-sm text-purple-800">
-              <InsightsIcon className="mr-2 text-purple-600" />
+              <BarChart3 className="mr-2 w-4 h-4 text-purple-600" />
               <div>
                 <p className="font-medium">AI-Powered Projections</p>
                 <p className="text-xs mt-1">

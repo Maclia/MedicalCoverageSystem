@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { differenceInYears } from "date-fns";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { insertDependentMemberSchema } from "@shared/schema";
+import { insertMemberSchema } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Form, 
@@ -29,7 +29,7 @@ import { Checkbox } from "@/ui/checkbox";
 import { Textarea } from "@/ui/textarea";
 
 // Enhanced schema with validation rules for the new dependent fields
-const formSchema = insertDependentMemberSchema.extend({
+const formSchema = insertMemberSchema.extend({
   firstName: z.string().min(2, "First name is required").max(50, "First name must be less than 50 characters"),
   lastName: z.string().min(2, "Last name is required").max(50, "Last name must be less than 50 characters"),
   email: z.string().email("Please enter a valid email address").optional().or(z.literal("")),

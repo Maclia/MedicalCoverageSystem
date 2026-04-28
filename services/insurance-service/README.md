@@ -16,6 +16,7 @@ The Insurance Service is responsible for managing all insurance schemes, benefit
 | ✅ Benefits Management | **Complete** |
 | ✅ Insurance Schemes Management | **Complete** |
 | ✅ Company Benefits Assignments | **Complete** |
+| ✅ Scheme Renewal Automation Job | **Complete** |
 | ✅ Database Schema & Migrations | **Complete** |
 | ✅ Validation Middleware | **Complete** |
 | ✅ Correlation ID Logging | **Complete** |
@@ -24,6 +25,8 @@ The Insurance Service is responsible for managing all insurance schemes, benefit
 | ✅ Graceful Shutdown Handling | **Complete** |
 | ✅ Error Handling & Audit Logging | **Complete** |
 | ✅ Health Check Endpoint | **Complete** |
+| ✅ Automated Scheme Renewal System | **Complete** |
+| ✅ TypeScript Type Definitions | **Complete** |
 
 ---
 
@@ -51,6 +54,12 @@ npm run build
 
 # Start production server
 npm start
+
+# Run tests
+npm run test
+
+# Run linter
+npm run lint
 ```
 
 ✅ **Service will start on port: 3002**
@@ -65,6 +74,7 @@ npm start
 3. **scheme_benefits** - Benefit assignments for schemes
 4. **company_benefits** - Custom benefit assignments for companies
 5. **premiums** - Premium calculation rules
+6. **scheme_renewals** - Scheme renewal tracking and schedules
 
 ### Database Connection:
 The service automatically establishes database connection on startup. On successful connection you will see:
@@ -110,7 +120,17 @@ If there is a connection issue it will show:
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/company-benefits` | List company benefit assignments |
+| `GET` | `/company-benefits/:companyId` | Get benefits for specific company |
 | `POST` | `/company-benefits` | Assign benefits to a company |
+| `PUT` | `/company-benefits/:id` | Update company benefit assignment |
+| `DELETE` | `/company-benefits/:id` | Remove company benefit assignment |
+
+### Scheme Renewals API
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/renewals/schedule` | Get upcoming scheme renewals |
+| `POST` | `/renewals/trigger` | Manually trigger renewal process |
+|
 
 ---
 

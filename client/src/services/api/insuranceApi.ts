@@ -234,5 +234,36 @@ export const insuranceApi = {
 
   async getBenefit(benefitId: number) {
     return apiRequest(`/insurance/benefits/${benefitId}`);
+  },
+
+  // Scheme Operations
+  async approveScheme(schemeId: number) {
+    return apiRequest(`/insurance/schemes/${schemeId}/approve`, {
+      method: 'POST'
+    });
+  },
+
+  async rejectScheme(schemeId: number) {
+    return apiRequest(`/insurance/schemes/${schemeId}/reject`, {
+      method: 'POST'
+    });
+  },
+
+  async suspendScheme(schemeId: number) {
+    return apiRequest(`/insurance/schemes/${schemeId}/suspend`, {
+      method: 'POST'
+    });
+  },
+
+  async activateScheme(schemeId: number) {
+    return apiRequest(`/insurance/schemes/${schemeId}/activate`, {
+      method: 'POST'
+    });
+  },
+
+  async submitSchemeForApproval(schemeId: number) {
+    return apiRequest(`/insurance/schemes/${schemeId}/submit`, {
+      method: 'POST'
+    });
   }
 };

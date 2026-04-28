@@ -51,18 +51,24 @@ import {
   auditEntityTypeEnum,
   benefits,
   premiumRates,
+  periods,
   schemeBenefits,
-  periods
+  insuranceSchemes
 // @ts-ignore: Shared schema import path resolution
 } from "../../../shared/schemas/schema.js";
 
-// Re-export enums that are used externally
+// Re-export tables and enums that are used externally
 export {
   benefitCategoryEnum,
   memberTypeEnum,
   dependentTypeEnum,
   periodStatusEnum,
-  periodTypeEnum
+  periodTypeEnum,
+  benefits,
+  premiumRates,
+  periods,
+  schemeBenefits,
+  insuranceSchemes
 };
 
 // Companies table
@@ -348,107 +354,6 @@ export const eligibility = pgTable("eligibility", {
   usedLimits: jsonb("used_limits"),
   remainingLimits: jsonb("remaining_limits"),
   limitsResetDate: date("limits_reset_date"),
-  limitsResetType: text("limits_reset_type"),
-  isPreAuthorized: boolean("is_pre_authorized").default(false),
-  preAuthorizationRequired: boolean("pre_authorization_required").default(false),
-  preAuthorizationDate: date("pre_authorization_date"),
-  preAuthorizationNumber: text("pre_authorization_number"),
-  preAuthorizationApprovedBy: integer("pre_authorization_approved_by"),
-  preAuthorizationApprovedAt: timestamp("pre_authorization_approved_at"),
-  preAuthorizationNotes: text("pre_authorization_notes"),
-  isExempt: boolean("is_exempt").default(false),
-  exemptionReason: text("exemption_reason"),
-  exemptionDate: date("exemption_date"),
-  exemptionApprovedBy: integer("exemption_approved_by"),
-  exemptionApprovedAt: timestamp("exemption_approved_at"),
-  exemptionNotes: text("exemption_notes"),
-  status: approvalStatusEnum('status').notNull().default('pending'),
-  approvedBy: integer("approved_by"),
-  approvedAt: timestamp("approved_at"),
-  rejectedBy: integer("rejected_by"),
-  rejectedAt: timestamp("rejected_at"),
-  rejectionReason: text("rejection_reason"),
-  notes: text("notes"),
-  metadata: jsonb("metadata"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  memberIdIdx: index('eligibility_member_id_idx').on(table.memberId),
-  companyIdIdx: index('eligibility_company_id_idx').on(table.companyId),
-  benefitIdIdx: index('eligibility_benefit_id_idx').on(table.benefitId),
-  periodIdIdx: index('eligibility_period_id_idx').on(table.periodId),
-  isEligibleIdx: index('eligibility_is_eligible_idx').on(table.isEligible),
-  statusIdx: index('eligibility_status_idx').on(table.status),
-  createdAtIdx: index('eligibility_created_at_idx').on(table.createdAt),
-}));
-
-// Premiums table
-export const premiums = pgTable("premiums", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").references(() => companies.id).notNull(),
-  benefitId: integer("benefit_id").notNull(),
-  schemeId: integer("scheme_id"),
-  periodId: integer("period_id").notNull(),
-  amount: decimal("amount", { precision: 15, scale: 2 }).notNull(),
-  rate: real("rate").notNull(),
-  effectiveDate: date("effective_date").notNull(),
-  expiryDate: date("expiry_date"),
-  isActive: boolean("is_active").default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  companyIdIdx: index('premiums_company_id_idx').on(table.companyId),
-  benefitIdIdx: index('premiums_benefit_id_idx').on(table.benefitId),
-  isActiveIdx: index('premiums_is_active_idx').on(table.isActive),
-}));
-
-// Company Benefits table
-export const companyBenefits = pgTable("company_benefits", {
-  id: serial("id").primaryKey(),
-  companyId: integer("company_id").references(() => companies.id).notNull(),
-  benefitId: integer("benefit_id").notNull(),
-  premiumId: integer("premium_id").references(() => premiums.id).notNull(),
-  isActive: boolean("is_active").default(true),
-  additionalCoverage: boolean("additional_coverage").default(false),
-  additionalCoverageDetails: text("additional_coverage_details"),
-  limitAmount: text("limit_amount"),
-  limitClause: text("limit_clause"),
-  coverageRate: real("coverage_rate").default(100),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-}, (table) => ({
-  companyIdIdx: index('company_benefits_company_id_idx').on(table.companyId),
-  benefitIdIdx: index('company_benefits_benefit_id_idx').on(table.benefitId),
-  premiumIdIdx: index('company_benefits_premium_id_idx').on(table.premiumId),
-  isActiveIdx: index('company_benefits_is_active_idx').on(table.isActive),
-  uniqueCompanyBenefitPremium: index('company_benefits_unique_idx').on(table.companyId, table.benefitId, table.premiumId),
-}));
-
-// Export shared tables
-export { benefits, premiumRates, schemeBenefits, periods };
-
-// Export all tables
-export type Company = typeof companies.$inferSelect;
-export type NewCompany = typeof companies.$inferInsert;
-export type Member = typeof members.$inferSelect;
-export type NewMember = typeof members.$inferInsert;
-export type LifeEvent = typeof lifeEvents.$inferSelect;
-export type NewLifeEvent = typeof lifeEvents.$inferInsert;
-export type Document = typeof documents.$inferSelect;
-export type NewDocument = typeof documents.$inferInsert;
-export type Consent = typeof consents.$inferSelect;
-export type NewConsent = typeof consents.$inferInsert;
-export type Communication = typeof communications.$inferSelect;
-export type NewCommunication = typeof communications.$inferInsert;
-export type Eligibility = typeof eligibility.$inferSelect;
-export type NewEligibility = typeof eligibility.$inferInsert;
-
-// Export types for shared tables
-export type Benefit = typeof benefits.$inferSelect;
-export type NewBenefit = typeof benefits.$inferInsert;
-export type PremiumRate = typeof premiumRates.$inferSelect;
-export type NewPremiumRate = typeof premiumRates.$inferInsert;
-export type SchemeBenefit = typeof schemeBenefits.$inferSelect;
-export type NewSchemeBenefit = typeof schemeBenefits.$inferInsert;
-export type Period = typeof periods.$inferSelect;
-export type NewPeriod = typeof periods.$inferInsert;
+  updatedAt: timestamp("updated_at").defaultNow().notNull()
+});

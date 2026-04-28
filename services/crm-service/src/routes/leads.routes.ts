@@ -91,20 +91,78 @@ router.put('/:id',
 
 /**
  * @route   POST /leads/:id/convert
- * @desc    Convert lead to contact and company
+ * @desc    Convert lead to prospect
  * @access  Private
  */
 router.post('/:id/convert',
   leadLifecycleMiddleware('conversion'),
   crmOperationMiddleware('convert_lead', 'lead'),
   asyncHandler(async (req: Request, res: Response) => {
-    const result = await crmService.convertLead(parseInt(req.params.id), req.body, {
+    const result = await crmService.convertToProspect(parseInt(req.params.id), {
       userId: (req as any).user?.userId,
       ipAddress: req.ip,
       userAgent: req.headers['user-agent']
     });
 
     CrmResponseHelper.leadConverted(res, result);
+  })
+);
+
+/**
+ * @route   POST /leads/:id/activities
+ * @desc    Add activity/note to lead
+ * @access  Private
+ */
+router.post('/:id/activities',
+  crmOperationMiddleware('add_activity', 'lead'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const activity = await crmService.addActivity(
+      parseInt(req.params.id),
+      req.body,
+      {
+        userId: (req as any).user?.userId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      }
+    );
+
+    CrmResponseHelper.success(res, activity, 'Activity added successfully');
+  })
+);
+
+/**
+ * @route   GET /leads/:id/activities
+ * @desc    Get all activities for lead
+ * @access  Private
+ */
+router.get('/:id/activities',
+  crmDataAccessMiddleware('leads', 'read'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const activities = await crmService.getLeadActivities(parseInt(req.params.id));
+
+    CrmResponseHelper.success(res, activities, 'Activities retrieved successfully');
+  })
+);
+
+/**
+ * @route   POST /leads/:id/documents
+ * @desc    Attach document to lead
+ * @access  Private
+ */
+router.post('/:id/documents',
+  crmOperationMiddleware('attach_document', 'lead'),
+  asyncHandler(async (req: Request, res: Response) => {
+    const document = await crmService.attachDocument(
+      parseInt(req.params.id),
+      req.body,
+      {
+        userId: (req as any).user?.userId,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent']
+      }
+    );
+
+    CrmResponseHelper.success(res, document, 'Document attached successfully');
   })
 );
 

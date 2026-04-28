@@ -105,6 +105,22 @@ class InsuranceServiceClient extends BaseServiceClient {
     const queryParams = new URLSearchParams(filters as any).toString();
     return this.get(`/api/companies/${companyId}/scheme-breakdown${queryParams ? `?${queryParams}` : ''}`);
   }
+
+  async getSchemeDetails(schemeId: string): Promise<any> {
+    return this.get(`/api/schemes/${schemeId}`);
+  }
+
+  async getSchemeUtilizationBreakdown(schemeId: string): Promise<Array<any>> {
+    return this.get(`/api/schemes/${schemeId}/utilization-breakdown`);
+  }
+
+  async updateSchemeSetting(schemeId: string, settingKey: string, value: any, userId: number): Promise<boolean> {
+    return this.put(`/api/schemes/${schemeId}/settings`, {
+      settingKey,
+      value,
+      userId
+    });
+  }
 }
 
 export const insuranceServiceClient = new InsuranceServiceClient();

@@ -3,6 +3,8 @@ import { auditMiddleware } from '../middleware/auditMiddleware';
 
 import healthRoutes from './health';
 import leadRoutes from './leads.routes';
+import quoteRoutes from './quotes.routes';
+import clientRoutes from './clients.routes';
 import contactRoutes from './contacts.routes';
 import companyRoutes from './companies.routes';
 import opportunityRoutes from './opportunities.routes';
@@ -21,6 +23,8 @@ router.use(auditMiddleware);
 // Mount individual route modules
 router.use('/', healthRoutes);
 router.use('/leads', leadRoutes);
+router.use('/quotes', quoteRoutes);
+router.use('/clients', clientRoutes);
 router.use('/contacts', contactRoutes);
 router.use('/companies', companyRoutes);
 router.use('/opportunities', opportunityRoutes);

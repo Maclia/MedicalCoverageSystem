@@ -466,4 +466,28 @@ function getActionFromMethod(method: string): string {
 /**
  * Export audit logger for use in services
  */
+/**
+ * Middleware for logging quote lifecycle events
+ */
+export function quoteLifecycleMiddleware(eventType: string) {
+  return (req: Request, res: Response, next: NextFunction): void => {
+    const correlationId = (req as any).correlationId || generateCorrelationId();
+
+    logger.info('Quote lifecycle event', {
+      correlationId,
+      timestamp: new Date().toISOString(),
+      eventType,
+      quoteId: req.params.id || req.body.quoteId,
+      companyId: req.body.companyId || req.query.companyId,
+      userId: extractUserId(req),
+      ip: getClientIP(req),
+      previousStatus: req.body.previousStatus,
+      newStatus: req.body.status,
+      assignedTo: req.body.assignedTo
+    });
+
+    next();
+  };
+}
+
 export { logger as crmAuditLogger };
