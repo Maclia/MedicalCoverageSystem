@@ -141,6 +141,7 @@ services:
       FRAUD_DETECTION_SERVICE_URL: http://fraud-detection-service:5009
       CLAIMS_SERVICE_URL: http://claims-service:3010
       ANALYTICS_SERVICE_URL: http://analytics-service:3011
+      PREMIUM_CALCULATION_SERVICE_URL: http://premium-calculation-service:3012
     ports:
       - "3001:3001"
     networks:
@@ -375,6 +376,24 @@ services:
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3011/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
+
+  premium-calculation-service:
+    <<: *service-defaults
+    build:
+      context: ./services/premium-calculation-service
+      dockerfile: Dockerfile
+    container_name: medical_premium_calculation_service
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+      PORT: 3012
+      DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_premium_calculation
+    ports:
+      - "3012:3012"
+    healthcheck:
+      <<: *default-healthcheck
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3012/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
 
   # Nginx Reverse Proxy
   nginx:
