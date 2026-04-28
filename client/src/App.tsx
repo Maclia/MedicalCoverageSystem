@@ -65,6 +65,14 @@ import RiskAssessment from "@/features/risk-assessment/components/RiskAssessment
 // Finance Feature
 import Finance from "@/features/finance/components/Finance";
 
+// Provider Portal Pages
+import ProviderPortal from "@/features/providers/components/ProviderPortal";
+import ProviderVerification from "@/features/providers/components/ProviderVerification";
+
+// CRM Pages
+import LeadManagement from "@/features/crm/components/LeadManagement";
+import AgentPortal from "@/features/crm/components/AgentPortal";
+
 // Utility Pages
 import NotFound from "@/pages/not-found";
 import UserSettingsPage from "@/features/settings/UserSettingsPage";
@@ -185,6 +193,16 @@ function Router() {
                   <ProviderSchemesManagement />
                 </ProtectedRoute>
               )} />
+              <Route path="/provider-portal" component={() => (
+                <ProtectedRoute allowedRoles={['provider', 'institution']}>
+                  <ProviderPortal />
+                </ProtectedRoute>
+              )} />
+              <Route path="/provider-verification" component={() => (
+                <ProtectedRoute allowedRoles={['insurance', 'institution']}>
+                  <ProviderVerification />
+                </ProtectedRoute>
+              )} />
               <Route path="/appointments" component={() => (
                 <ProtectedRoute allowedRoles={['provider']}>
                   <Dashboard />
@@ -208,6 +226,18 @@ function Router() {
               <Route path="/messages" component={() => (
                 <ProtectedRoute allowedRoles={['provider']}>
                   <Communication />
+                </ProtectedRoute>
+              )} />
+
+              {/* CRM Routes */}
+              <Route path="/crm" component={() => (
+                <ProtectedRoute allowedRoles={['insurance']}>
+                  <AgentPortal />
+                </ProtectedRoute>
+              )} />
+              <Route path="/leads" component={() => (
+                <ProtectedRoute allowedRoles={['insurance']}>
+                  <LeadManagement />
                 </ProtectedRoute>
               )} />
 
@@ -247,6 +277,7 @@ function Router() {
                   <UserSettingsPage />
                 </ProtectedRoute>
               )} />
+
 
               {/* General Dashboard (legacy fallback) */}
               <Route path="/dashboard" component={Dashboard} />
