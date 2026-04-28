@@ -584,4 +584,32 @@ export const baseClaimsApi = {
       body: JSON.stringify(paymentData),
     });
   },
+
+  // Get claims for specific member
+  async getMemberClaims(memberId: number, params: {
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  } = {}) {
+    const searchParams = new URLSearchParams();
+    searchParams.append('memberId', memberId.toString());
+    if (params.startDate) searchParams.append('startDate', params.startDate);
+    if (params.endDate) searchParams.append('endDate', params.endDate);
+    if (params.status) searchParams.append('status', params.status);
+    
+    return apiRequest(`/claims/member?${searchParams}`);
+  },
+
+  // Get EOB documents for member
+  async getMemberEOBs(memberId: number, params: {
+    startDate?: string;
+    endDate?: string;
+  } = {}) {
+    const searchParams = new URLSearchParams();
+    searchParams.append('memberId', memberId.toString());
+    if (params.startDate) searchParams.append('startDate', params.startDate);
+    if (params.endDate) searchParams.append('endDate', params.endDate);
+    
+    return apiRequest(`/claims/eob/member?${searchParams}`);
+  },
 };

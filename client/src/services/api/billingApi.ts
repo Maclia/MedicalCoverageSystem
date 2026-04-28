@@ -210,4 +210,24 @@ export const billingApi = {
     });
     return apiRequest(`/billing/premiums?${searchParams}`);
   },
+
+  // Commission Tracker Endpoints
+  async getAgentCommission(agentId: string, period: string) {
+    return apiRequest(`/billing/commissions/agents/${agentId}?period=${period}`);
+  },
+
+  async getCommissionSummary(year: string) {
+    return apiRequest(`/billing/commissions/summary?year=${year}`);
+  },
+
+  async processCommissionPayments(year: string) {
+    return apiRequest(`/billing/commissions/process-payments`, {
+      method: 'POST',
+      body: JSON.stringify({ year }),
+    });
+  },
+
+  async getAgentList() {
+    return apiRequest(`/billing/commissions/agents`);
+  },
 };

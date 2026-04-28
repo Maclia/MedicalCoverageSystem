@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
 import { useAuth } from '@/features/actions/contexts/AuthContext';
+import { useRouter } from 'wouter';
 import {
   UserGroupIcon,
   ClipboardDocumentListIcon,
@@ -17,23 +19,35 @@ import {
   ChatBubbleLeftRightIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
-// import { useNavigate } from 'wouter';
+
+import { hospitalApi } from '../../services/api/hospitalApi';
 
 const ProviderDashboard: React.FC = () => {
   const { user } = useAuth();
-  // const navigate = useNavigate();
+  // @ts-ignore - wouter returns array but types are mismatched
+  const navigate = useRouter()[1];
 
-  // Mock data - in real app, this would come from API
-  const stats = {
-    totalPatients: 1247,
-    todayAppointments: 24,
-    pendingClaims: 18,
-    monthlyEarnings: 28450,
-    averageRating: 4.8,
-    satisfactionScore: 96,
+  const { data, isLoading } = useQuery<any>({
+    queryKey: ['providerDashboard'],
+    queryFn: async () => {
+      const response = await hospitalApi.getProviderDashboard();
+      return response.data;
+    },
+    staleTime: 60000,
+    gcTime: 300000,
+    retry: 3
+  });
+
+  const stats = data?.stats || {
+    totalPatients: 0,
+    todayAppointments: 0,
+    pendingClaims: 0,
+    monthlyEarnings: 0,
+    averageRating: 0,
+    satisfactionScore: 0,
   };
 
-  const quickActions = [
+  const quickActions = data?.quickActions || [
     {
       title: 'Schedule Appointment',
       description: 'Book new patient appointments',
@@ -78,27 +92,9 @@ const ProviderDashboard: React.FC = () => {
     },
   ];
 
-  const todayAppointments = [
-    { id: 1, patient: 'John Smith', time: '09:00 AM', type: 'Follow-up', status: 'confirmed' },
-    { id: 2, patient: 'Sarah Johnson', time: '10:00 AM', type: 'Initial Consultation', status: 'confirmed' },
-    { id: 3, patient: 'Robert Davis', time: '11:00 AM', type: 'Procedure', status: 'pending' },
-    { id: 4, patient: 'Maria Garcia', time: '02:00 PM', type: 'Follow-up', status: 'confirmed' },
-    { id: 5, patient: 'James Wilson', time: '03:00 PM', type: 'Emergency', status: 'confirmed' },
-  ];
-
-  const recentClaims = [
-    { id: 1, patient: 'Alice Brown', service: 'Annual Checkup', amount: 250, status: 'approved', submitted: '2 days ago' },
-    { id: 2, patient: 'Charles White', service: 'Blood Work', amount: 180, status: 'processing', submitted: '3 days ago' },
-    { id: 3, patient: 'Diana Prince', service: 'X-Ray', amount: 450, status: 'pending', submitted: '5 days ago' },
-    { id: 4, patient: 'Edward Stark', service: 'Consultation', amount: 350, status: 'approved', submitted: '1 week ago' },
-  ];
-
-  const upcomingTasks = [
-    { id: 1, task: 'Review lab results', patient: 'John Smith', priority: 'high', due: 'Today' },
-    { id: 2, task: 'Follow up on insurance authorization', patient: 'Sarah Johnson', priority: 'medium', due: 'Tomorrow' },
-    { id: 3, task: 'Complete treatment plan', patient: 'Robert Davis', priority: 'high', due: 'Today' },
-    { id: 4, task: 'Schedule follow-up appointment', patient: 'Maria Garcia', priority: 'low', due: 'Next Week' },
-  ];
+  const todayAppointments = data?.todayAppointments || [];
+  const recentClaims = data?.recentClaims || [];
+  const upcomingTasks = data?.upcomingTasks || [];
 
   const getActionColor = (color: string) => {
     const colors = {
@@ -108,7 +104,7 @@ const ProviderDashboard: React.FC = () => {
       yellow: 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100',
       indigo: 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100',
       red: 'bg-red-50 text-red-600 hover:bg-red-100',
-    };
+    } as Record<string, string>;
     return colors[color] || colors.blue;
   };
 
@@ -119,7 +115,7 @@ const ProviderDashboard: React.FC = () => {
       cancelled: 'bg-red-100 text-red-800',
       approved: 'bg-green-100 text-green-800',
       processing: 'bg-blue-100 text-blue-800',
-    };
+    } as Record<string, string>;
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
@@ -128,7 +124,7 @@ const ProviderDashboard: React.FC = () => {
       high: 'bg-red-100 text-red-800',
       medium: 'bg-yellow-100 text-yellow-800',
       low: 'bg-green-100 text-green-800',
-    };
+    } as Record<string, string>;
     return colors[priority] || colors.medium;
   };
 
@@ -238,7 +234,7 @@ const ProviderDashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {quickActions.map((action, index) => {
+                  {quickActions.map((action: any, index: number) => {
                     const Icon = action.icon;
                     return (
                       <Button
@@ -269,7 +265,7 @@ const ProviderDashboard: React.FC = () => {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {todayAppointments.map((appointment) => (
+                  {todayAppointments.map((appointment: any) => (
                     <div key={appointment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center space-x-3">
                         <ClockIcon className="h-5 w-5 text-gray-400" />
@@ -305,7 +301,7 @@ const ProviderDashboard: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {upcomingTasks.map((task) => (
+                  {upcomingTasks.map((task: any) => (
                 <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center space-x-3">
                     {task.priority === 'high' ? (
@@ -349,7 +345,7 @@ const ProviderDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentClaims.map((claim) => (
+                  {recentClaims.map((claim: any) => (
                     <tr key={claim.id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4 text-sm text-gray-900">{claim.patient}</td>
                       <td className="py-3 px-4 text-sm text-gray-600">{claim.service}</td>

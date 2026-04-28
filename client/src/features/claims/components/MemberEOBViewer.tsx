@@ -242,7 +242,7 @@ export const MemberEOBViewer: React.FC = () => {
       const response = await claimsApi.generateEOB(eob.claimId, format);
       if (response.success) {
         // Create download link
-        const blob = new Blob([response.data], { type: format === 'pdf' ? 'application/pdf' : 'text/html' });
+        const blob = new Blob([response.data as any], { type: format === 'pdf' ? 'application/pdf' : 'text/html' });
         const url = window.URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;

@@ -301,4 +301,14 @@ export const hospitalApi = {
     });
     return apiRequest(`/hospital/providers/notifications?${searchParams}`);
   },
+
+  // Provider Dashboard
+  async getProviderDashboard() {
+    return apiRequest('/hospital/providers/dashboard');
+  },
+
+  // Institution Dashboard
+  async getInstitutionDashboard() {
+    return apiRequest('/hospital/institutions/dashboard');
+  }
 };

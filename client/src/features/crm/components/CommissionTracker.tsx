@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePersistedMutation } from "@/hooks/usePersistedMutation";
+import { billingApi } from "@/services/api/billingApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { Button } from "@/ui/button";
 import { Badge } from "@/ui/badge";
@@ -106,71 +108,42 @@ export default function CommissionTracker({ agentId, isAdmin = false }: Commissi
   const queryClient = useQueryClient();
 
   // Fetch commission transactions
-  const { data: transactionsData, isLoading: transactionsLoading } = useQuery({
-    queryKey: ['/api/crm/agents', selectedAgent, 'commission', selectedPeriod],
+  const { data: transactionsData, isLoading: transactionsLoading, error: transactionsError } = useQuery({
+    queryKey: ['commissionTransactions', selectedAgent, selectedPeriod],
     queryFn: async () => {
-      const url = selectedAgent === 'all'
-        ? `/api/crm/commission-tiers/commission/summary?period=${selectedYear}`
-        : `/api/crm/agents/${selectedAgent}/commission?period=${selectedPeriod}`;
-
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Failed to fetch commission data');
+      if (selectedAgent === 'all') {
+        return billingApi.getCommissionSummary(selectedYear);
       }
-      return response.json();
+      return billingApi.getAgentCommission(selectedAgent, selectedPeriod);
     },
-    enabled: !!selectedAgent
+    enabled: !!selectedAgent,
+    staleTime: 5 * 60 * 1000,
+    retry: 3,
   });
 
-  // Process commission payments mutation
-  const processPaymentsMutation = useMutation({
-    mutationFn: async (period: string) => {
-      const response = await fetch('/api/crm/commission/process-payments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ period })
-      });
-      if (!response.ok) {
-        throw new Error('Failed to process payments');
-      }
-      return response.json();
-    },
-    onSuccess: (data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/crm/agents'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/crm/commission-tiers'] });
+  // Process commission payments mutation with offline persistence
+  const processPaymentsMutation = usePersistedMutation({
+    endpoint: '/api/billing/commissions/process-payments',
+    method: 'POST',
+    invalidates: ['commissionTransactions', 'commissionSummary', 'agentList'],
+    onSuccess: () => {
       setIsProcessDialogOpen(false);
     }
   });
 
-  // Mock agent data for admin view - in real app, this would come from API
-  const mockAgents: AgentCommissionData[] = [
-    {
-      agentId: '1',
-      agentName: 'agent1@company.com',
-      agentCode: 'AGT1234',
-      teamName: 'Sales Team A',
-      ytdPremium: 2500000,
-      ytdCommission: 125000,
-      targetAchievement: 83.3,
-      commissionRate: 5.0,
-      tierBonusEligible: true
-    },
-    {
-      agentId: '2',
-      agentName: 'agent2@company.com',
-      agentCode: 'AGT5678',
-      teamName: 'Sales Team B',
-      ytdPremium: 1800000,
-      ytdCommission: 90000,
-      targetAchievement: 72.0,
-      commissionRate: 5.0,
-      tierBonusEligible: false
-    }
-  ];
+  // Fetch agent list for admin view
+  const { data: agentsData } = useQuery({
+    queryKey: ['agentList'],
+    queryFn: () => billingApi.getAgentList(),
+    staleTime: 10 * 60 * 1000,
+    enabled: isAdmin
+  });
 
-  const transactions: CommissionTransaction[] = transactionsData?.transactions || [];
-  const performance = transactionsData?.performance;
-  const summary = transactionsData?.summary;
+  const agents: AgentCommissionData[] = (agentsData as any)?.data || [];
+
+  const transactions: CommissionTransaction[] = (transactionsData as any)?.transactions || [];
+  const performance = (transactionsData as any)?.performance;
+  const summary = (transactionsData as any)?.summary;
 
   // Generate chart data for commission trends
   const chartData = useMemo(() => {
@@ -297,7 +270,7 @@ export default function CommissionTracker({ agentId, isAdmin = false }: Commissi
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Agents</SelectItem>
-                  {mockAgents.map((agent) => (
+                  {agents.map((agent) => (
                     <SelectItem key={agent.agentId} value={agent.agentId}>
                       {agent.agentName} ({agent.agentCode})
                     </SelectItem>
@@ -552,7 +525,7 @@ export default function CommissionTracker({ agentId, isAdmin = false }: Commissi
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {mockAgents.map((agent) => (
+                  {agents.map((agent) => (
                     <div key={agent.agentId} className="flex items-center justify-between p-4 border rounded-lg">
                       <div className="flex items-center space-x-4">
                         <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">

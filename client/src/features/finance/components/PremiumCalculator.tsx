@@ -96,7 +96,7 @@ export const PremiumCalculator: React.FC = () => {
               value={basePremium}
               onChange={(e) => setBasePremium(Number(e.target.value))}
               fullWidth
-              inputProps={{ startAdornment: '$' }}
+              slotProps={{ input: { startAdornment: '$' } }}
             />
 
             <FormControl fullWidth>

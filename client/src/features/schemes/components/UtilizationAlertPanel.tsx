@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Box,
   Card,
@@ -21,6 +22,8 @@ import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
 
+import { insuranceApi } from '../../../services/api/insuranceApi';
+
 interface UtilizationAlert {
   schemeId: number;
   schemeName: string;
@@ -33,60 +36,22 @@ interface UtilizationAlert {
 }
 
 export const UtilizationAlertPanel: React.FC = () => {
-  const [alerts, setAlerts] = useState<UtilizationAlert[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const { data, isLoading, refetch, dataUpdatedAt } = useQuery({
+    queryKey: ['utilizationAlerts'],
+    queryFn: async () => {
+      const response = await insuranceApi.getUtilizationAlerts();
+      return response.data as UtilizationAlert[];
+    },
+    refetchInterval: 60000, // Auto refresh every minute
+    staleTime: 30000,
+    gcTime: 300000,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * attempt, 10000)
+  });
 
-  useEffect(() => {
-    loadAlerts();
-    const interval = setInterval(loadAlerts, 60000); // Refresh every minute
-    return () => clearInterval(interval);
-  }, []);
-
-  const loadAlerts = async () => {
-    try {
-      // API integration will be added here
-      const mockAlerts: UtilizationAlert[] = [
-        {
-          schemeId: 1,
-          schemeName: 'Corporate Health Plan 2026',
-          utilizationPercentage: 78,
-          threshold: 70,
-          severity: 'info',
-          alertName: 'WARNING',
-          triggeredAt: new Date(),
-          autoEscalate: false
-        },
-        {
-          schemeId: 3,
-          schemeName: 'Employee Wellness Program',
-          utilizationPercentage: 89,
-          threshold: 85,
-          severity: 'warning',
-          alertName: 'ALERT',
-          triggeredAt: new Date(),
-          autoEscalate: true
-        },
-        {
-          schemeId: 5,
-          schemeName: 'Executive Coverage Plan',
-          utilizationPercentage: 97,
-          threshold: 95,
-          severity: 'error',
-          alertName: 'CRITICAL',
-          triggeredAt: new Date(),
-          autoEscalate: true
-        }
-      ];
-      
-      setAlerts(mockAlerts);
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error('Failed to load utilization alerts');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const alerts = data || [];
+  const loading = isLoading;
+  const lastUpdated = new Date(dataUpdatedAt);
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -116,12 +81,12 @@ export const UtilizationAlertPanel: React.FC = () => {
   return (
     <Card>
       <CardContent>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
           <Typography variant="h6">
             Scheme Utilization Alerts
           </Typography>
           <Tooltip title="Refresh alerts">
-            <IconButton onClick={loadAlerts} size="small">
+            <IconButton onClick={() => refetch()} size="small">
               <RefreshIcon />
             </IconButton>
           </Tooltip>
@@ -142,9 +107,9 @@ export const UtilizationAlertPanel: React.FC = () => {
             {alerts.map((alert) => (
               <Card key={alert.schemeId} variant="outlined" sx={{ bgcolor: `${getSeverityColor(alert.severity)}.05` }}>
                 <CardContent sx={{ py: 1.5 }}>
-                  <Box display="flex" alignItems="center" gap={1} mb={1}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     {getSeverityIcon(alert.severity)}
-                    <Typography variant="subtitle2" fontWeight="bold">
+                    <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
                       {alert.schemeName}
                     </Typography>
                     <Chip 
@@ -162,12 +127,12 @@ export const UtilizationAlertPanel: React.FC = () => {
                     )}
                   </Box>
                   
-                  <Box mb={1}>
-                    <Box display="flex" justifyContent="space-between" mb={0.5}>
+                  <Box sx={{ mb: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                       <Typography variant="body2" color="text.secondary">
                         Utilization
                       </Typography>
-                      <Typography variant="body2" fontWeight="bold">
+                      <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
                         {alert.utilizationPercentage}%
                       </Typography>
                     </Box>

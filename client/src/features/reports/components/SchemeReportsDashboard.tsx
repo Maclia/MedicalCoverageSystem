@@ -68,7 +68,7 @@ export const SchemeReportsDashboard: React.FC = () => {
 
   return (
     <Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={3}>
+      <Stack direction="row" sx={{ justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
         <Typography variant="h5" component="h1">
           Scheme Reports Dashboard
         </Typography>
@@ -88,15 +88,15 @@ export const SchemeReportsDashboard: React.FC = () => {
         </FormControl>
       </Stack>
 
-      <Grid container spacing={2} mb={3}>
+      <Grid container spacing={2} sx={{ mb: 3 }}>
         {metrics.map((metric, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={index}>
             <Card>
               <CardContent>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   {metric.label}
                 </Typography>
-                <Stack direction="row" alignItems="baseline" spacing={1}>
+                <Stack direction="row" sx={{ alignItems: 'baseline' }} spacing={1}>
                   <Typography variant="h4">
                     {metric.value}{metric.unit}
                   </Typography>
@@ -113,7 +113,7 @@ export const SchemeReportsDashboard: React.FC = () => {
         ))}
       </Grid>
 
-      <Box mb={2}>
+      <Box sx={{ mb: 2 }}>
         <Tabs value={activeTab} onChange={(_, value) => setActiveTab(value)}>
           <Tab label="Scheme Overview" />
           <Tab label="Utilization Trends" />
@@ -146,7 +146,7 @@ export const SchemeReportsDashboard: React.FC = () => {
                       <TableCell align="right">{scheme.memberCount.toLocaleString()}</TableCell>
                       <TableCell align="right">
                         <Box sx={{ minWidth: 120 }}>
-                          <Box display="flex" justifyContent="space-between" mb={0.5}>
+                           <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
                             <Typography variant="caption">{scheme.utilization}%</Typography>
                           </Box>
                           <LinearProgress

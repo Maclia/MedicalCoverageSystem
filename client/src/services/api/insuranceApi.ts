@@ -265,5 +265,10 @@ export const insuranceApi = {
     return apiRequest(`/insurance/schemes/${schemeId}/submit`, {
       method: 'POST'
     });
+  },
+
+  // Scheme Utilization Alerts
+  async getUtilizationAlerts() {
+    return apiRequest('/insurance/schemes/alerts/utilization');
   }
 };

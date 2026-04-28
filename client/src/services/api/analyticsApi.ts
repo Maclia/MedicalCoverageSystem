@@ -293,4 +293,45 @@ export const analyticsApi = {
     if (params.limit) searchParams.append('limit', params.limit.toString());
     return apiRequest(`/analytics/activity/recent?${searchParams}`);
   },
+
+  // CRM Analytics Endpoints
+  async getCRMDashboardData(params: {
+    dateRange: string;
+    agentId?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    searchParams.append('dateRange', params.dateRange);
+    if (params.agentId) searchParams.append('agentId', params.agentId);
+    return apiRequest(`/analytics/crm/dashboard?${searchParams}`);
+  },
+
+  async getCRMLeadSources(params: { dateRange: string }) {
+    const searchParams = new URLSearchParams();
+    searchParams.append('dateRange', params.dateRange);
+    return apiRequest(`/analytics/crm/lead-sources?${searchParams}`);
+  },
+
+  async getCRMSalesPerformance(params: {
+    dateRange: string;
+    agentId?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    searchParams.append('dateRange', params.dateRange);
+    if (params.agentId) searchParams.append('agentId', params.agentId);
+    return apiRequest(`/analytics/crm/sales-performance?${searchParams}`);
+  },
+
+  async getCRMPipelineHealth() {
+    return apiRequest('/analytics/crm/pipeline-health');
+  },
+
+  async getCRMTrendData(params: {
+    days: number;
+    agentId?: string;
+  }) {
+    const searchParams = new URLSearchParams();
+    searchParams.append('days', params.days.toString());
+    if (params.agentId) searchParams.append('agentId', params.agentId);
+    return apiRequest(`/analytics/crm/trends?${searchParams}`);
+  },
 };

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import { useAuth } from '@/features/actions/contexts/AuthContext';
+import { hospitalApi } from '@/services/api/hospitalApi';
 import {
   BuildingLibraryIcon,
   UserGroupIcon,
@@ -16,22 +17,55 @@ import {
   UserCircleIcon,
   BellIcon,
   CheckCircleIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  ArrowPathIcon
 } from '@heroicons/react/24/outline';
-// import { useNavigate } from 'wouter';
+import { useRouter } from 'wouter';
 
 const InstitutionDashboard: React.FC = () => {
   const { user } = useAuth();
-  // const navigate = useNavigate();
+  // @ts-ignore - wouter returns array but types are mismatched
+  const navigate = useRouter()[1];
 
-  // Mock data - in real app, this would come from API
-  const stats = {
-    totalProviders: 342,
-    activePatients: 15847,
-    pendingClaims: 89,
-    monthlyRevenue: 1245892,
-    bedOccupancy: 87.3,
-    averageRating: 4.6,
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['institutionDashboard'],
+    queryFn: () => hospitalApi.getInstitutionDashboard(),
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    retry: 3,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <ArrowPathIcon className="h-12 w-12 animate-spin text-green-600 mx-auto mb-4" />
+          <p className="text-gray-600">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to load dashboard</h3>
+          <p className="text-gray-600 mb-4">{(error as Error).message}</p>
+          <Button onClick={() => refetch()}>Try Again</Button>
+        </div>
+      </div>
+    );
+  }
+
+  const dashboardData = (data as any)?.data || {};
+  const stats = dashboardData.stats || {
+    totalProviders: 0,
+    activePatients: 0,
+    pendingClaims: 0,
+    monthlyRevenue: 0,
+    bedOccupancy: 0,
+    averageRating: 0,
   };
 
   const quickActions = [
@@ -96,7 +130,7 @@ const InstitutionDashboard: React.FC = () => {
   ];
 
   const getActionColor = (color: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       blue: 'bg-blue-50 text-blue-600 hover:bg-blue-100',
       green: 'bg-green-50 text-green-600 hover:bg-green-100',
       purple: 'bg-purple-50 text-purple-600 hover:bg-purple-100',
@@ -108,7 +142,7 @@ const InstitutionDashboard: React.FC = () => {
   };
 
   const getStatusColor = (status: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       approved: 'bg-green-100 text-green-800',
       pending: 'bg-yellow-100 text-yellow-800',
       processing: 'bg-blue-100 text-blue-800',
