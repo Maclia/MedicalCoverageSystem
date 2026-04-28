@@ -4,11 +4,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --config vite.simple.config.ts",
+    "build": "vite build",
     "preview": "vite preview",
     "check": "tsc --noEmit",
     "test": "jest",
-    "vercel:build": "vite build --config vite.simple.config.ts"
+    "vercel:build": "vite build"
   },
   "dependencies": {
    "@heroicons/react": "^2.2.0",

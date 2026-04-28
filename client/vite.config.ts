@@ -55,11 +55,11 @@ export default defineConfig({
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
   },
   server: {
-    port: 3000,
+    port: parseInt(process.env.FRONTEND_PORT || '3000'),
     host: true,
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: process.env.VITE_API_URL || 'http://localhost:3001',
         changeOrigin: true
       }
     }
