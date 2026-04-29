@@ -1,16 +1,27 @@
 # update-dependencies.ps1
 # Medical Coverage System - Dependency Update Script
-# Run from: c:\Users\ADMIN\Documents\GitHub\MedicalCoverageSystem
+# Improved version with full monorepo support, auto-discovery and CI compatibility
 
 param(
     [switch]$SkipClean,
     [switch]$SkipInstall,
-    [switch]$Verbose
+    [switch]$CiMode,
+    [switch]$NoVerify,
+    [switch]$Verbose,
+    [switch]$DryRun
 )
 
-$ErrorActionPreference = "Continue"
-$ProjectRoot = "c:\Users\ADMIN\Documents\GitHub\MedicalCoverageSystem"
+$ErrorActionPreference = "Stop"
 
+# Auto-detect project root (works on any machine)
+$ProjectRoot = Split-Path $PSScriptRoot -Parent
+if (-not (Test-Path (Join-Path $ProjectRoot "package.json"))) {
+    $ProjectRoot = $PSScriptRoot
+}
+
+# -----------------------------------------------------------------------------
+# Helper Functions
+# -----------------------------------------------------------------------------
 function Write-Section {
     param([string]$Message)
     Write-Host ""
@@ -34,141 +45,204 @@ function Write-Error {
     Write-Host "[ERROR] $Message" -ForegroundColor Red
 }
 
-# Navigate to project root
+function Write-Info {
+    param([string]$Message)
+    if ($Verbose) {
+        Write-Host "[INFO] $Message" -ForegroundColor Gray
+    }
+}
+
+function Invoke-SafeCommand {
+    param([string]$Command, [string]$ErrorMessage)
+    
+    Write-Info "Executing: $Command"
+    
+    if ($DryRun) {
+        Write-Success "[DRY RUN] Would execute: $Command"
+        return 0
+    }
+    
+    & cmd /c $Command
+    $exitCode = $LASTEXITCODE
+    
+    if ($exitCode -ne 0) {
+        Write-Error "$ErrorMessage (exit code: $exitCode)"
+        exit $exitCode
+    }
+    
+    return $exitCode
+}
+
+# -----------------------------------------------------------------------------
+# Initialization
+# -----------------------------------------------------------------------------
 Set-Location $ProjectRoot
 
 Write-Section "Medical Coverage System - Dependency Update"
-
-# Step 1: Clean old node_modules
-if (-not $SkipClean) {
-    Write-Section "Step 1: Cleaning old node_modules directories"
-    
-    $modulesToClean = @(
-        "node_modules",
-        "services\core-service\node_modules",
-        "services\shared\node_modules",
-        "services\fraud-detection-service\node_modules"
-    )
-    
-    foreach ($module in $modulesToClean) {
-        $fullPath = Join-Path $ProjectRoot $module
-        if (Test-Path $fullPath) {
-            if ($Verbose) { Write-Host "Removing: $module" }
-            Remove-Item -Recurse -Force $fullPath -ErrorAction SilentlyContinue
-            Write-Success "Removed: $module"
-        } else {
-            Write-Warning "Not found (skipping): $module"
-        }
-    }
+Write-Host "Project Root: $ProjectRoot"
+if ($CiMode) {
+    Write-Host "Mode: CI"
 } else {
+    Write-Host "Mode: Development"
+}
+Write-Host ""
+
+# -----------------------------------------------------------------------------
+# Step 1: Clean dependencies
+# -----------------------------------------------------------------------------
+if (-not $SkipClean) {
+    Write-Section "Step 1: Cleaning old dependencies"
+    
+    # Auto-discover ALL node_modules directories
+    $nodeModules = Get-ChildItem -Path $ProjectRoot -Recurse -Directory -Filter "node_modules" -Depth 3 |
+                   Where-Object { $_.FullName -notmatch 'node_modules[\\/]' } |
+                   Select-Object -ExpandProperty FullName
+    
+    Write-Host "Found $($nodeModules.Count) node_modules directories"
+    
+    foreach ($dir in $nodeModules) {
+        $relativePath = $dir.Substring($ProjectRoot.Length + 1)
+        Write-Info "Removing: $relativePath"
+        
+        if (-not $DryRun) {
+            Remove-Item -Recurse -Force $dir -ErrorAction SilentlyContinue
+        }
+        
+        Write-Success "Removed: $relativePath"
+    }
+    
+    # Clean package locks and cache
+    if (Test-Path "package-lock.json") {
+        Remove-Item "package-lock.json" -ErrorAction SilentlyContinue
+        Write-Success "Removed package-lock.json"
+    }
+    
+    Invoke-SafeCommand "npm cache clean --force" "Failed to clean npm cache"
+}
+else {
     Write-Warning "Skipping clean step"
 }
 
+# -----------------------------------------------------------------------------
 # Step 2: Install dependencies
+# -----------------------------------------------------------------------------
 if (-not $SkipInstall) {
-    Write-Section "Step 2: Installing npm dependencies"
+    Write-Section "Step 2: Installing dependencies"
     
-    Write-Host "Running: npm install" -ForegroundColor Gray
-    npm install
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-Success "npm install completed successfully"
-    } else {
-        Write-Error "npm install failed with exit code $LASTEXITCODE"
-        exit 1
+    if ($CiMode) {
+        Write-Host "Running: npm ci (CI Mode)" -ForegroundColor Gray
+        Invoke-SafeCommand "npm ci" "npm ci failed"
     }
-} else {
+    else {
+        Write-Host "Running: npm install" -ForegroundColor Gray
+        Invoke-SafeCommand "npm install" "npm install failed"
+    }
+    
+    Write-Success "Dependencies installed successfully"
+    
+    # Deduplicate dependencies
+    Write-Host "Running: npm dedupe" -ForegroundColor Gray
+    Invoke-SafeCommand "npm dedupe" "npm dedupe failed"
+    Write-Success "Dependencies deduplicated"
+}
+else {
     Write-Warning "Skipping install step"
 }
 
-# Step 3: Verify versions
-Write-Section "Step 3: Verifying drizzle-orm versions"
-
-$versions = @{}
-
-Write-Host ""
-Write-Host "Checking versions..." -ForegroundColor Gray
-
-# Root
-$rootVersion = npm list drizzle-orm --depth=0 2>$null | Select-Object -First 1
-if ($rootVersion -match "drizzle-orm@(.+)") {
-    $versions["Root"] = $Matches[1]
-}
-
-# Core Service
-$coreVersion = npm list drizzle-orm --workspace=services/core-service --depth=0 2>$null | Select-Object -First 1
-if ($coreVersion -match "drizzle-orm@(.+)") {
-    $versions["Core Service"] = $Matches[1]
-}
-
-# Shared
-$sharedVersion = npm list drizzle-orm --workspace=services/shared --depth=0 2>$null | Select-Object -First 1
-if ($sharedVersion -match "drizzle-orm@(.+)") {
-    $versions["Shared"] = $Matches[1]
-}
-
-# Fraud Detection Service
-$fraudVersion = npm list drizzle-orm --workspace=services/fraud-detection-service --depth=0 2>$null | Select-Object -First 1
-if ($fraudVersion -match "drizzle-orm@(.+)") {
-    $versions["Fraud Detection"] = $Matches[1]
-}
-
-# Display results
-Write-Host ""
-$allMatch = $true
-$firstVersion = $null
-foreach ($service in $versions.Keys) {
-    $version = $versions[$service]
-    if ($null -eq $firstVersion) { $firstVersion = $version }
-    if ($version -eq $firstVersion) {
-        Write-Success "$service`: $version"
-    } else {
-        Write-Error "$service`: $version (mismatch!)"
-        $allMatch = $false
+# -----------------------------------------------------------------------------
+# Step 3: Version consistency verification
+# -----------------------------------------------------------------------------
+if (-not $NoVerify) {
+    Write-Section "Step 3: Verifying library versions"
+    
+    $packagesToCheck = @("drizzle-orm", "typescript", "react", "@types/node")
+    $allConsistent = $true
+    
+    # Get all workspaces from package.json
+    $packageJson = Get-Content "package.json" | ConvertFrom-Json
+    $workspaces = $packageJson.workspaces
+    
+    foreach ($package in $packagesToCheck) {
+        Write-Host "`nChecking $package versions..." -ForegroundColor Gray
+        
+        $versions = @{}
+        
+        # Check root
+        $rootVersion = npm list $package --depth=0 2>$null | Select-Object -First 1
+        if ($rootVersion -match "$package@(.+)") {
+            $versions["Root"] = $Matches[1]
+        }
+        
+        # Check all workspaces
+        foreach ($workspace in $workspaces) {
+            $wsVersion = npm list $package --workspace=$workspace --depth=0 2>$null | Select-Object -First 1
+            if ($wsVersion -match "$package@(.+)") {
+                $versions[$workspace] = $Matches[1]
+            }
+        }
+        
+        # Display results
+        $firstVersion = $versions.Values | Select-Object -First 1
+        $packageConsistent = $true
+        
+        foreach ($name in $versions.Keys) {
+            $version = $versions[$name]
+            if ($version -eq $firstVersion) {
+                Write-Success "  $name`: $version"
+            }
+            else {
+                Write-Error "  $name`: $version (MISMATCH expected $firstVersion)"
+                $packageConsistent = $false
+                $allConsistent = $false
+            }
+        }
+        
+        if ($packageConsistent) {
+            Write-Success "$package is consistent across all workspaces"
+        }
+        else {
+            Write-Warning "$package has version mismatches!"
+        }
     }
 }
 
-if ($allMatch) {
-    Write-Host ""
-    Write-Success "All services have consistent drizzle-orm versions!"
-} else {
-    Write-Host ""
-    Write-Warning "Version mismatch detected. Run: npm install drizzle-orm@0.30.10 --workspaces"
-}
-
+# -----------------------------------------------------------------------------
 # Step 4: TypeScript compilation check
-Write-Section "Step 4: TypeScript compilation check"
-
-$originalLocation = Get-Location
-Set-Location "$ProjectRoot\services\core-service"
-
-Write-Host "Running: npx tsc --noEmit" -ForegroundColor Gray
-$tscOutput = npx tsc --noEmit 2>&1
-$tscExitCode = $LASTEXITCODE
-
-Set-Location $originalLocation
-
-if ($tscExitCode -eq 0) {
-    Write-Success "TypeScript compilation passed - No errors!"
-} else {
-    Write-Error "TypeScript compilation failed"
-    Write-Host ""
-    Write-Host "First 20 errors:" -ForegroundColor Yellow
-    $tscOutput | Select-Object -First 20
+# -----------------------------------------------------------------------------
+if (-not $NoVerify) {
+    Write-Section "Step 4: TypeScript compilation check"
+    
+    Write-Host "Running full TypeScript check..." -ForegroundColor Gray
+    $tscExitCode = Invoke-SafeCommand "npx tsc --noEmit" "TypeScript compilation failed"
+    
+    if ($tscExitCode -eq 0) {
+        Write-Success "TypeScript compilation passed - No errors!"
+    }
 }
 
+# -----------------------------------------------------------------------------
 # Summary
+# -----------------------------------------------------------------------------
 Write-Section "Summary"
 Write-Host ""
 Write-Host "Project Root: $ProjectRoot" -ForegroundColor White
-Write-Host "Drizzle ORM Version: $($versions.Values | Select-Object -First 1)" -ForegroundColor White
-Write-Host "TypeScript Status: $(if ($tscExitCode -eq 0) { 'PASSED' } else { 'FAILED' })" -ForegroundColor $(if ($tscExitCode -eq 0) { 'Green' } else { 'Red' })
-Write-Host ""
-
-if ($tscExitCode -eq 0 -and $allMatch) {
-    Write-Success "All done! Dependencies are consistent and TypeScript compiles successfully."
+if ($CiMode) {
+    Write-Host "Mode:         CI" -ForegroundColor White
 } else {
-    Write-Warning "Some issues were found. Review the output above."
+    Write-Host "Mode:         Development" -ForegroundColor White
 }
-
+if ($allConsistent -and $tscExitCode -eq 0) {
+    Write-Host "Status:       ✅ PASSED" -ForegroundColor Green
+} else {
+    Write-Host "Status:       ⚠️  WARNINGS" -ForegroundColor Yellow
+}
 Write-Host ""
+
+if ($allConsistent -and $tscExitCode -eq 0) {
+    Write-Success "All done! Dependencies are consistent and TypeScript compiles successfully."
+    exit 0
+}
+else {
+    Write-Warning "Some issues were found. Review the output above."
+    exit 1
+}
