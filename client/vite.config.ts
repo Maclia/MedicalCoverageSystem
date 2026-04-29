@@ -4,7 +4,16 @@ import path from 'path'
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      jsxImportSource: 'react',
+      babel: {
+        parserOpts: {
+          plugins: ['decorators-legacy', 'classProperties']
+        }
+      }
+    })
+  ],
   root: '.',
   base: '/',
   build: {
@@ -44,23 +53,44 @@ export default defineConfig({
     minify: 'esbuild',
     target: 'es2015'
   },
-  resolve: {
-     alias: {
-       "@": path.resolve(__dirname, "./src"),
-       "@shared": path.resolve(__dirname, "../shared"),
-       "@components": path.resolve(__dirname, "./src/components"),
-       "@pages": path.resolve(__dirname, "./src/pages"),
-       "@utils": path.resolve(__dirname, "./src/utils"),
-       "@types": path.resolve(__dirname, "./src/types"),
-       "@hooks": path.resolve(__dirname, "./src/hooks"),
-       "@api": path.resolve(__dirname, "./src/services/api"),
-       "@services": path.resolve(__dirname, "./src/services"),
-       "@lib": path.resolve(__dirname, "./src/lib"),
-       "@contexts": path.resolve(__dirname, "./src/contexts")
-     },
-    // Ensure extensions are properly resolved
-    extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
-  },
+   resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "./src"),
+        "@shared": path.resolve(__dirname, "../shared"),
+        "@components": path.resolve(__dirname, "./src/components"),
+        "@pages": path.resolve(__dirname, "./src/pages"),
+        "@utils": path.resolve(__dirname, "./src/utils"),
+        "@types": path.resolve(__dirname, "./src/types"),
+        "@hooks": path.resolve(__dirname, "./src/hooks"),
+        "@api": path.resolve(__dirname, "./src/services/api"),
+        "@services": path.resolve(__dirname, "./src/services"),
+        "@lib": path.resolve(__dirname, "./src/lib"),
+        "@contexts": path.resolve(__dirname, "./src/contexts"),
+        // Backward compatibility aliases for refactored directories
+        "@/components/claims": path.resolve(__dirname, "./src/features/claims/components"),
+        "@/components/companies": path.resolve(__dirname, "./src/features/companies/components"),
+        "@/components/premiums": path.resolve(__dirname, "./src/features/pricing/components"),
+        "@/components/dependents": path.resolve(__dirname, "./src/features/dependents/components"),
+        "@/components/providers": path.resolve(__dirname, "./src/features/providers/components"),
+        "@/components/members": path.resolve(__dirname, "./src/features/members/components"),
+        "@/components/finance": path.resolve(__dirname, "./src/features/finance/components"),
+        "@/components/dashboards": path.resolve(__dirname, "./src/features/dashboards/components"),
+        "@/components/insurance": path.resolve(__dirname, "./src/features/insurance/components")
+      },
+      // Ensure extensions are properly resolved
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
+      // Automatically resolve extensions for imports
+      extensionAlias: {
+        '.js': ['.js', '.ts', '.tsx'],
+        '.mjs': ['.mjs', '.mts']
+      },
+      // Try all extensions when resolving imports
+      tryIndex: true,
+      preserveSymlinks: true,
+      // Force extension resolution for Vite 8 Rolldown bundler
+      fullySpecified: false,
+      conditions: ['import', 'module', 'browser', 'default']
+   },
   server: {
     port: parseInt(process.env.FRONTEND_PORT || '3000'),
     host: true,
