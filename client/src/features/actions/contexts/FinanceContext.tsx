@@ -47,19 +47,19 @@ interface FinanceState {
 type FinanceAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_ERROR'; payload: string | null }
-  | { type: 'SET_DASHBOARD_ANALYTICS'; payload: DashboardAnalytics }
-  | { type: 'SET_MODULE_HEALTH'; payload: ModuleHealth }
-  | { type: 'SET_INVOICES'; payload: Invoice[] }
+  | { type: 'SET_DASHBOARD_ANALYTICS'; payload: DashboardAnalytics | undefined | null }
+  | { type: 'SET_MODULE_HEALTH'; payload: ModuleHealth | undefined | null }
+  | { type: 'SET_INVOICES'; payload: Invoice[] | undefined }
   | { type: 'SET_BILLING_FILTERS'; payload: any }
-  | { type: 'SET_PAYMENTS'; payload: Payment[] }
-  | { type: 'SET_FAILED_PAYMENTS'; payload: Payment[] }
+  | { type: 'SET_PAYMENTS'; payload: Payment[] | undefined }
+  | { type: 'SET_FAILED_PAYMENTS'; payload: Payment[] | undefined }
   | { type: 'SET_PAYMENT_FILTERS'; payload: any }
   | { type: 'SET_COMMISSIONS'; payload: Commission[] }
-  | { type: 'SET_PAYMENT_RUNS'; payload: any[] }
-  | { type: 'SET_LEADERBOARD'; payload: any[] }
+  | { type: 'SET_PAYMENT_RUNS'; payload: any[] | undefined }
+  | { type: 'SET_LEADERBOARD'; payload: any[] | undefined }
   | { type: 'SET_COMMISSION_FILTERS'; payload: any }
-  | { type: 'SET_CLAIM_RESERVES'; payload: ClaimReserve[] }
-  | { type: 'SET_CLAIM_PAYMENTS'; payload: ClaimPayment[] }
+  | { type: 'SET_CLAIM_RESERVES'; payload: ClaimReserve[] | undefined }
+  | { type: 'SET_CLAIM_PAYMENTS'; payload: ClaimPayment[] | undefined }
   | { type: 'SET_CLAIM_ANALYSIS'; payload: any }
   | { type: 'REFRESH_DATA' }
   | { type: 'CLEAR_ERROR' };
@@ -97,7 +97,7 @@ function financeReducer(state: FinanceState, action: FinanceAction): FinanceStat
     case 'SET_DASHBOARD_ANALYTICS':
       return {
         ...state,
-        dashboardAnalytics: action.payload,
+        dashboardAnalytics: action.payload ?? null,
         loading: false,
         error: null,
         lastUpdated: new Date()
@@ -106,7 +106,7 @@ function financeReducer(state: FinanceState, action: FinanceAction): FinanceStat
     case 'SET_MODULE_HEALTH':
       return {
         ...state,
-        moduleHealth: action.payload,
+        moduleHealth: action.payload ?? null,
         loading: false,
         error: null
       };
@@ -114,7 +114,7 @@ function financeReducer(state: FinanceState, action: FinanceAction): FinanceStat
     case 'SET_INVOICES':
       return {
         ...state,
-        invoices: action.payload,
+        invoices: action.payload ?? [],
         loading: false,
         error: null,
         lastUpdated: new Date()
@@ -126,7 +126,7 @@ function financeReducer(state: FinanceState, action: FinanceAction): FinanceStat
     case 'SET_PAYMENTS':
       return {
         ...state,
-        payments: action.payload,
+        payments: action.payload ?? [],
         loading: false,
         error: null,
         lastUpdated: new Date()
@@ -135,7 +135,7 @@ function financeReducer(state: FinanceState, action: FinanceAction): FinanceStat
     case 'SET_FAILED_PAYMENTS':
       return {
         ...state,
-        failedPayments: action.payload,
+        failedPayments: action.payload ?? [],
         loading: false,
         error: null
       };
@@ -155,7 +155,7 @@ function financeReducer(state: FinanceState, action: FinanceAction): FinanceStat
     case 'SET_PAYMENT_RUNS':
       return {
         ...state,
-        paymentRuns: action.payload,
+        paymentRuns: action.payload ?? [],
         loading: false,
         error: null,
         lastUpdated: new Date()
@@ -164,7 +164,7 @@ function financeReducer(state: FinanceState, action: FinanceAction): FinanceStat
     case 'SET_LEADERBOARD':
       return {
         ...state,
-        leaderboard: action.payload,
+        leaderboard: action.payload ?? [],
         loading: false,
         error: null
       };
@@ -175,7 +175,7 @@ function financeReducer(state: FinanceState, action: FinanceAction): FinanceStat
     case 'SET_CLAIM_RESERVES':
       return {
         ...state,
-        claimReserves: action.payload,
+        claimReserves: action.payload ?? [],
         loading: false,
         error: null,
         lastUpdated: new Date()
@@ -184,7 +184,7 @@ function financeReducer(state: FinanceState, action: FinanceAction): FinanceStat
     case 'SET_CLAIM_PAYMENTS':
       return {
         ...state,
-        claimPayments: action.payload,
+        claimPayments: action.payload ?? [],
         loading: false,
         error: null,
         lastUpdated: new Date()
@@ -268,6 +268,9 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const response = await financeApi.billing.getDashboardAnalytics();
+      if (!response.data) {
+        throw new Error('Dashboard analytics payload was empty');
+      }
       dispatch({ type: 'SET_DASHBOARD_ANALYTICS', payload: response.data });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to fetch dashboard data' });
@@ -277,6 +280,9 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
   const refreshModuleHealth = async () => {
     try {
       const response = await financeApi.module.getSystemHealth();
+      if (!response.data) {
+        throw new Error('Module health payload was empty');
+      }
       dispatch({ type: 'SET_MODULE_HEALTH', payload: response.data });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to fetch module health' });
@@ -291,7 +297,7 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
         dispatch({ type: 'SET_BILLING_FILTERS', payload: filters });
       }
       const response = await financeApi.billing.getInvoices(filters || state.billingFilters);
-      dispatch({ type: 'SET_INVOICES', payload: response.data });
+      dispatch({ type: 'SET_INVOICES', payload: response.data ?? [] });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to fetch invoices' });
     }
@@ -332,7 +338,7 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
         dispatch({ type: 'SET_PAYMENT_FILTERS', payload: filters });
       }
       const response = await financeApi.payments.getPaymentHistory(filters || state.paymentFilters);
-      dispatch({ type: 'SET_PAYMENTS', payload: response.data });
+      dispatch({ type: 'SET_PAYMENTS', payload: response.data ?? [] });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to fetch payments' });
     }
@@ -341,7 +347,7 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
   const fetchFailedPayments = async () => {
     try {
       const response = await financeApi.payments.getFailedPayments();
-      dispatch({ type: 'SET_FAILED_PAYMENTS', payload: response.data });
+      dispatch({ type: 'SET_FAILED_PAYMENTS', payload: response.data ?? [] });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to fetch failed payments' });
     }
@@ -382,7 +388,7 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
         dispatch({ type: 'SET_COMMISSION_FILTERS', payload: filters });
       }
       const response = await financeApi.commissions.getPaymentRuns(filters || state.commissionFilters);
-      dispatch({ type: 'SET_PAYMENT_RUNS', payload: response.data });
+      dispatch({ type: 'SET_PAYMENT_RUNS', payload: response.data ?? [] });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to fetch commissions' });
     }
@@ -391,7 +397,7 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
   const fetchLeaderboard = async () => {
     try {
       const response = await financeApi.commissions.getLeaderboard();
-      dispatch({ type: 'SET_LEADERBOARD', payload: response.data });
+      dispatch({ type: 'SET_LEADERBOARD', payload: response.data ?? [] });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to fetch leaderboard' });
     }
@@ -427,7 +433,7 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const response = await financeApi.claimsFinancial.getClaimReserves(claimId);
-      dispatch({ type: 'SET_CLAIM_RESERVES', payload: response.data });
+      dispatch({ type: 'SET_CLAIM_RESERVES', payload: response.data ?? [] });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to fetch claim reserves' });
     }
@@ -437,7 +443,7 @@ export function FinanceProvider({ children }: FinanceProviderProps) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       const response = await financeApi.claimsFinancial.getClaimPayments(claimId);
-      dispatch({ type: 'SET_CLAIM_PAYMENTS', payload: response.data });
+      dispatch({ type: 'SET_CLAIM_PAYMENTS', payload: response.data ?? [] });
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: error.message || 'Failed to fetch claim payments' });
     }

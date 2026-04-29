@@ -66,7 +66,7 @@ import type {
   WellnessStats,
   HealthGoal,
   AvailableSlot
-} from '../../../../../shared/types/wellness';
+} from '../../../shared/types/wellness';
 
 const WellnessPage: React.FC = () => {
   const { id } = useParams();
@@ -387,7 +387,7 @@ const WellnessPage: React.FC = () => {
                     <div className="mt-4 flex items-center space-x-3">
                       <Badge className="bg-white/20 hover:bg-white/30 text-white border-0">
                         <Trophy className="h-3 w-3 mr-1" />
-                        Level {Math.floor(wellnessStats.totalPointsEarned / 1000) + 1}
+Level {Math.floor((wellnessStats?.totalPointsEarned ?? 0) / 1000) + 1}
                       </Badge>
                       <Badge className="bg-white/20 hover:bg-white/30 text-white border-0">
                         <Zap className="h-3 w-3 mr-1" />
@@ -490,23 +490,23 @@ const WellnessPage: React.FC = () => {
                 <CardContent className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span>Active Incentives</span>
-                    <Badge variant="outline">{wellnessStats?.activeIncentives || 0}</Badge>
+                    <Badge variant="outline">{String(wellnessStats?.activeIncentives ?? 0)}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Completed Challenges</span>
-                    <Badge variant="outline">{wellnessStats?.completedIncentives || 0}</Badge>
+                    <Badge variant="outline">{String(wellnessStats?.completedIncentives ?? 0)}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Connected Devices</span>
-                    <Badge variant="outline">{wellnessStats?.connectedDevices || 0}</Badge>
+                    <Badge variant="outline">{String(wellnessStats?.connectedDevices ?? 0)}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Upcoming Sessions</span>
-                    <Badge variant="outline">{wellnessStats?.upcomingSessions || 0}</Badge>
+                    <Badge variant="outline">{String(wellnessStats?.upcomingSessions ?? 0)}</Badge>
                   </div>
                   <div className="flex items-center justify-between">
                     <span>Points to Next Reward</span>
-                    <Badge className="bg-yellow-100 text-yellow-800">{wellnessStats?.pointsToNextReward || 0}</Badge>
+                    <Badge className="bg-yellow-100 text-yellow-800">{String(wellnessStats?.pointsToNextReward ?? 0)}</Badge>
                   </div>
                 </CardContent>
               </Card>
@@ -600,7 +600,7 @@ const WellnessPage: React.FC = () => {
                 <Card key={goal.id}>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg">{goal.title}</CardTitle>
-                    <CardDescription>{goal.description}</CardDescription>
+                  <CardDescription>{String(goal.description ?? '')}</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
@@ -612,7 +612,7 @@ const WellnessPage: React.FC = () => {
                       </div>
                       <Progress value={getProgressPercentage(goal.currentValue, goal.targetValue)} className="h-2" />
                       <div className="flex items-center justify-between text-xs text-gray-500">
-                        <span>Due: {new Date(goal.deadline).toLocaleDateString()}</span>
+                        <span>Due: {goal.deadline ? new Date(goal.deadline).toLocaleDateString() : 'Not set'}</span>
                         <Badge>{goal.status}</Badge>
                       </div>
                     </div>
@@ -640,7 +640,7 @@ const WellnessPage: React.FC = () => {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-sm">Progress</span>
-                        <span className="font-medium">{Math.round(incentive.progress)}%</span>
+                        <span className="font-medium">{Math.round(incentive.progress ?? 0)}%</span>
                       </div>
                       <Progress value={incentive.progress} className="h-2" />
                       <div className="flex items-center justify-between">
@@ -649,7 +649,7 @@ const WellnessPage: React.FC = () => {
                           {incentive.points} points
                         </Badge>
                         <span className="text-xs text-gray-500">
-                          Ends: {new Date(incentive.endDate).toLocaleDateString()}
+                        Ends: {incentive.endDate ? new Date(incentive.endDate).toLocaleDateString() : 'Not set'}
                         </span>
                       </div>
                     </div>
@@ -692,7 +692,7 @@ const WellnessPage: React.FC = () => {
                       <Button
                         size="sm"
                         onClick={() => handleClaimReward(reward.id)}
-                        disabled={saving || !reward.available || (wellnessStats?.totalPointsEarned || 0) < reward.pointsCost}
+                        disabled={saving || !reward.available || (wellnessStats?.totalPointsEarned ?? 0) < (reward.pointsCost ?? 0)}
                       >
                         Claim
                       </Button>
@@ -780,7 +780,7 @@ const WellnessPage: React.FC = () => {
                         <div>
                           <p className="font-medium">{session.type}</p>
                           <p className="text-sm text-gray-500">
-                            {new Date(session.startTime).toLocaleDateString()} at {new Date(session.startTime).toLocaleTimeString()}
+                             {session.startTime ? new Date(session.startTime).toLocaleDateString() : 'TBD'} at {session.startTime ? new Date(session.startTime).toLocaleTimeString() : ''}
                           </p>
                         </div>
                         <Badge>{session.status}</Badge>
@@ -804,14 +804,14 @@ const WellnessPage: React.FC = () => {
                       <div key={coach.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex items-center space-x-4">
                           <Avatar className="h-12 w-12">
-                            <img src={coach.image} alt={coach.name} />
+                           <img src={String(coach.image ?? '')} alt={String(coach.name ?? 'Coach')} />
                           </Avatar>
                           <div>
                             <h4 className="font-medium">{coach.name}</h4>
-                            <p className="text-sm text-gray-500">{coach.specialties.join(', ')}</p>
+                             <p className="text-sm text-gray-500">{(coach.specialties ?? []).join(', ')}</p>
                             <div className="flex items-center mt-1">
                               <Star className="h-4 w-4 text-yellow-500" />
-                              <span className="text-sm ml-1">{coach.rating} ({coach.reviewCount} reviews)</span>
+                               <span className="text-sm ml-1">{String(coach.rating ?? 0)} ({String(coach.reviewCount ?? 0)} reviews)</span>
                             </div>
                           </div>
                         </div>
@@ -838,11 +838,11 @@ const WellnessPage: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
                 <Avatar className="h-16 w-16">
-                  <img src={selectedCoach.image} alt={selectedCoach.name} />
+                           <img src={String(selectedCoach.image ?? '')} alt={String(selectedCoach.name ?? 'Coach')} />
                 </Avatar>
                 <div>
                   <h4 className="font-medium text-lg">{selectedCoach.name}</h4>
-                  <p className="text-gray-500">{selectedCoach.specialties.join(', ')}</p>
+                   <p className="text-gray-500">{(selectedCoach.specialties ?? []).join(', ')}</p>
                 </div>
               </div>
               <Separator />
