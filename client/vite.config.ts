@@ -51,17 +51,17 @@ export default defineConfig({
    },
    resolve: {
       alias: [
-        // Keep legacy feature aliases ahead of the generic @/ matcher.
-        { find: /^@\/components\/claims/, replacement: path.resolve(rootDir, "./src/features/claims/components") },
-        { find: /^@\/components\/companies/, replacement: path.resolve(rootDir, "./src/features/companies/components") },
-        { find: /^@\/components\/premiums/, replacement: path.resolve(rootDir, "./src/features/finance/components") },
-        { find: /^@\/components\/dependents/, replacement: path.resolve(rootDir, "./src/features/dependents/components") },
-        { find: /^@\/components\/providers/, replacement: path.resolve(rootDir, "./src/features/providers/components") },
-        { find: /^@\/components\/members/, replacement: path.resolve(rootDir, "./src/features/members/components") },
-        { find: /^@\/components\/finance/, replacement: path.resolve(rootDir, "./src/features/finance/components") },
-        { find: /^@\/components\/dashboards/, replacement: path.resolve(rootDir, "./src/features/dashboards/components") },
-        { find: /^@\/components\/insurance/, replacement: path.resolve(rootDir, "./src/features/insurance/components") },
-        { find: /^@\/services\/api$/, replacement: path.resolve(rootDir, "./src/services/api/index.ts") },
+        // Keep legacy feature aliases ahead of the generic @ matcher.
+        { find: '@/components/claims', replacement: path.resolve(rootDir, "./src/features/claims/components") },
+        { find: '@/components/companies', replacement: path.resolve(rootDir, "./src/features/companies/components") },
+        { find: '@/components/premiums', replacement: path.resolve(rootDir, "./src/features/finance/components") },
+        { find: '@/components/dependents', replacement: path.resolve(rootDir, "./src/features/dependents/components") },
+        { find: '@/components/providers', replacement: path.resolve(rootDir, "./src/features/providers/components") },
+        { find: '@/components/members', replacement: path.resolve(rootDir, "./src/features/members/components") },
+        { find: '@/components/finance', replacement: path.resolve(rootDir, "./src/features/finance/components") },
+        { find: '@/components/dashboards', replacement: path.resolve(rootDir, "./src/features/dashboards/components") },
+        { find: '@/components/insurance', replacement: path.resolve(rootDir, "./src/features/insurance/components") },
+        { find: '@/services/api', replacement: path.resolve(rootDir, "./src/services/api") },
         { find: "@shared", replacement: path.resolve(rootDir, "../shared") },
         { find: "@components", replacement: path.resolve(rootDir, "./src/components") },
         { find: "@pages", replacement: path.resolve(rootDir, "./src/pages") },
@@ -72,7 +72,7 @@ export default defineConfig({
         { find: "@services", replacement: path.resolve(rootDir, "./src/services") },
         { find: "@lib", replacement: path.resolve(rootDir, "./src/lib") },
         { find: "@contexts", replacement: path.resolve(rootDir, "./src/contexts") },
-        { find: /^@\//, replacement: `${path.resolve(rootDir, "./src")}/` },
+        { find: "@", replacement: path.resolve(rootDir, "./src") },
       ],
       // Ensure extensions are properly resolved
       extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
