@@ -22,35 +22,42 @@ export default defineConfig({
         'crypto',
         'util'
       ],
-      output: {
-        // Ensure consistent chunk naming
-        manualChunks: {
-          vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-tabs', '@radix-ui/react-dialog', '@radix-ui/react-select'],
-          router: ['wouter']
-        },
-        globals: {
-          '@shared/schema': 'SharedSchema'
-        }
-      }
+       output: {
+         // Ensure consistent chunk naming
+         manualChunks(id) {
+           if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
+             return 'vendor';
+           }
+           if (id.includes('@radix-ui')) {
+             return 'ui';
+           }
+           if (id.includes('wouter')) {
+             return 'router';
+           }
+         },
+         globals: {
+           '@shared/schema': 'SharedSchema'
+         }
+       }
     },
     // Optimize for production
     minify: 'esbuild',
     target: 'es2015'
   },
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      "@shared": path.resolve(__dirname, "../shared"),
-      "@components": path.resolve(__dirname, "./src/components"),
-      "@pages": path.resolve(__dirname, "./src/pages"),
-      "@utils": path.resolve(__dirname, "./src/utils"),
-      "@types": path.resolve(__dirname, "./src/types"),
-      "@hooks": path.resolve(__dirname, "./src/hooks"),
-      "@api": path.resolve(__dirname, "./src/api"),
-      "@lib": path.resolve(__dirname, "./src/lib"),
-      "@contexts": path.resolve(__dirname, "./src/contexts")
-    },
+     alias: {
+       "@": path.resolve(__dirname, "./src"),
+       "@shared": path.resolve(__dirname, "../shared"),
+       "@components": path.resolve(__dirname, "./src/components"),
+       "@pages": path.resolve(__dirname, "./src/pages"),
+       "@utils": path.resolve(__dirname, "./src/utils"),
+       "@types": path.resolve(__dirname, "./src/types"),
+       "@hooks": path.resolve(__dirname, "./src/hooks"),
+       "@api": path.resolve(__dirname, "./src/api"),
+       "@services": path.resolve(__dirname, "./src/services"),
+       "@lib": path.resolve(__dirname, "./src/lib"),
+       "@contexts": path.resolve(__dirname, "./src/contexts")
+     },
     // Ensure extensions are properly resolved
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
   },
