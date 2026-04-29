@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/ui/dialog";
-import CompanyForm from "@/components/companies/CompanyForm";
-import MemberForm from "@/components/members/MemberForm";
-import DependentForm from "@/components/dependents/DependentForm";
-import PremiumCalculator from "@/components/premiums/PremiumCalculator";
+import CompanyForm from "@/features/companies/components/CompanyForm";
+import MemberForm from "@/features/members/MemberForm";
+import DependentForm from "@/features/dependents/components/DependentForm";
+import PremiumCalculator from "@/features/pricing/components/PremiumCalculator";
 
 export default function QuickActions() {
   const [dialogContent, setDialogContent] = useState<{

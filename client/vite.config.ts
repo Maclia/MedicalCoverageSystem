@@ -66,16 +66,16 @@ export default defineConfig({
         "@services": path.resolve(__dirname, "./src/services"),
         "@lib": path.resolve(__dirname, "./src/lib"),
         "@contexts": path.resolve(__dirname, "./src/contexts"),
-        // Backward compatibility aliases for refactored directories
-        "@/components/claims": path.resolve(__dirname, "./src/features/claims/components"),
-        "@/components/companies": path.resolve(__dirname, "./src/features/companies/components"),
-        "@/components/premiums": path.resolve(__dirname, "./src/features/pricing/components"),
-        "@/components/dependents": path.resolve(__dirname, "./src/features/dependents/components"),
-        "@/components/providers": path.resolve(__dirname, "./src/features/providers/components"),
-        "@/components/members": path.resolve(__dirname, "./src/features/members/components"),
-        "@/components/finance": path.resolve(__dirname, "./src/features/finance/components"),
-        "@/components/dashboards": path.resolve(__dirname, "./src/features/dashboards/components"),
-        "@/components/insurance": path.resolve(__dirname, "./src/features/insurance/components")
+      // Backward compatibility aliases for refactored directories
+      "@/components/claims": path.resolve(__dirname, "./src/features/claims/components"),
+      "@/components/companies": path.resolve(__dirname, "./src/features/companies/components"),
+      "@/components/premiums": path.resolve(__dirname, "./src/features/finance/components"),
+      "@/components/dependents": path.resolve(__dirname, "./src/features/dependents/components"),
+      "@/components/providers": path.resolve(__dirname, "./src/features/providers/components"),
+      "@/components/members": path.resolve(__dirname, "./src/features/members/components"),
+      "@/components/finance": path.resolve(__dirname, "./src/features/finance/components"),
+      "@/components/dashboards": path.resolve(__dirname, "./src/features/dashboards/components"),
+      "@/components/insurance": path.resolve(__dirname, "./src/features/insurance/components")
       },
       // Ensure extensions are properly resolved
       extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
@@ -86,10 +86,11 @@ export default defineConfig({
       },
       // Try all extensions when resolving imports
       tryIndex: true,
-      preserveSymlinks: true,
+      preserveSymlinks: false,
       // Force extension resolution for Vite 8 Rolldown bundler
       fullySpecified: false,
-      conditions: ['import', 'module', 'browser', 'default']
+      conditions: ['import', 'module', 'browser', 'default'],
+      mainFields: ['module', 'browser', 'main']
    },
   server: {
     port: parseInt(process.env.FRONTEND_PORT || '3000'),

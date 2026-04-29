@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/ui/select";
-import PremiumCalculator from "@/components/premiums/PremiumCalculator";
+import PremiumCalculator from "@/features/pricing/components/PremiumCalculator";
 import { formatCurrency } from "@/utils/format";
 import { billingApi } from '@/services/api/billingApi';
 

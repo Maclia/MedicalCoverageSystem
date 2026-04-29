@@ -13,7 +13,7 @@ import { Textarea } from "@/ui/textarea";
 import { Switch } from "@/ui/switch";
 import { Separator } from "@/ui/separator";
 import { Alert, AlertDescription } from "@/ui/alert";
-import { Plus, Edit, Eye, Settings, Users, Shield, TrendingUp, Layers, Gavel, CheckCircle, XCircle, PauseCircle, PlayCircle, AlertTriangle } from "lucide-react";
+import { Plus, Edit, Eye, Settings, Users, Shield, TrendingUp, Layers, Gavel, CheckCircle, XCircle, PauseCircle, PlayCircle, AlertTriangle, DollarSign, Table as TableIcon } from "lucide-react";
 
 interface Scheme {
   id: number;
@@ -507,6 +507,8 @@ export default function SchemesManagement() {
           <TabsTrigger value="schemes">Schemes</TabsTrigger>
           <TabsTrigger value="tiers">Plan Tiers</TabsTrigger>
           <TabsTrigger value="benefits">Benefits</TabsTrigger>
+          <TabsTrigger value="pricing">Pricing Configuration</TabsTrigger>
+          <TabsTrigger value="ratetables">Rate Tables</TabsTrigger>
           <TabsTrigger value="rules">Rules Engine</TabsTrigger>
           <TabsTrigger value="corporate">Corporate</TabsTrigger>
         </TabsList>
@@ -721,6 +723,280 @@ export default function SchemesManagement() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Pricing Configuration Tab */}
+        <TabsContent value="pricing" className="space-y-4">
+          <Alert>
+            <DollarSign className="h-4 w-4" />
+            <AlertDescription>
+              Configure scheme pricing models, premium calculation rules, and rate structures.
+            </AlertDescription>
+          </Alert>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card className="lg:col-span-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Scheme Pricing Configuration</CardTitle>
+                  <Button size="sm">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Pricing Rule
+                  </Button>
+                </div>
+                <CardDescription>
+                  Define pricing models, premium calculation logic, and adjustment factors for each scheme
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Scheme</TableHead>
+                      <TableHead>Pricing Model</TableHead>
+                      <TableHead>Base Rate</TableHead>
+                      <TableHead>Adjustment Factors</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {schemes.map((scheme) => (
+                      <TableRow key={scheme.id}>
+                        <TableCell className="font-medium">{scheme.name}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{getPricingModelLabel(scheme.pricingModel)}</Badge>
+                        </TableCell>
+                        <TableCell>$0.00</TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">Age</Badge>
+                          <Badge variant="secondary" className="ml-1">Region</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={scheme.isActive ? "default" : "secondary"}>
+                            {scheme.isActive ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-1">
+                            <Button variant="ghost" size="sm">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="sm">
+                              <TableIcon className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Pricing Models</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Age Rated</p>
+                        <p className="text-sm text-muted-foreground">Premium increases with age</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Community Rated</p>
+                        <p className="text-sm text-muted-foreground">Fixed rate for all members</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Experience Rated</p>
+                        <p className="text-sm text-muted-foreground">Based on claims history</p>
+                      </div>
+                      <Switch />
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">Group Rated</p>
+                        <p className="text-sm text-muted-foreground">Discounted group pricing</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <Button className="w-full" variant="outline">
+                    Import Pricing Matrix
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    Export Rate Schedule
+                  </Button>
+                  <Button className="w-full" variant="outline">
+                    Bulk Price Adjustment
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Rate Tables Tab */}
+        <TabsContent value="ratetables" className="space-y-4">
+          <Alert>
+            <TableIcon className="h-4 w-4" />
+            <AlertDescription>
+              Manage rate tables, age bands, regional pricing, and tiered premium schedules.
+            </AlertDescription>
+          </Alert>
+
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Rate Table Types</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button className="w-full justify-start" variant="ghost">
+                  Age Band Rates
+                </Button>
+                <Button className="w-full justify-start" variant="ghost">
+                  Regional Rates
+                </Button>
+                <Button className="w-full justify-start" variant="ghost">
+                  Tier Multipliers
+                </Button>
+                <Button className="w-full justify-start" variant="ghost">
+                  Group Discounts
+                </Button>
+                <Button className="w-full justify-start" variant="ghost">
+                  Loading Factors
+                </Button>
+                <Button className="w-full justify-start" variant="ghost">
+                  Deductible Tables
+                </Button>
+                <Separator className="my-2" />
+                <Button className="w-full" size="sm">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Rate Table
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="lg:col-span-3">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle>Age Band Rate Table</CardTitle>
+                  <div className="flex gap-2">
+                    <Select defaultValue="scheme_all">
+                      <SelectTrigger className="w-[200px]">
+                        <SelectValue placeholder="Select Scheme" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="scheme_all">All Schemes</SelectItem>
+                        {schemes.map(scheme => (
+                          <SelectItem key={scheme.id} value={`scheme_${scheme.id}`}>{scheme.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button size="sm">
+                      <Edit className="mr-2 h-4 w-4" />
+                      Edit Rates
+                    </Button>
+                  </div>
+                </div>
+                <CardDescription>
+                  Premium rates by age band for standard coverage
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Age Band</TableHead>
+                      <TableHead>Individual Rate</TableHead>
+                      <TableHead>Spouse Rate</TableHead>
+                      <TableHead>Child Rate</TableHead>
+                      <TableHead>Family Rate</TableHead>
+                      <TableHead>Effective Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>0 - 17</TableCell>
+                      <TableCell>$125.00</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>$85.00</TableCell>
+                      <TableCell>$320.00</TableCell>
+                      <TableCell>01/01/2026</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>18 - 25</TableCell>
+                      <TableCell>$180.00</TableCell>
+                      <TableCell>$165.00</TableCell>
+                      <TableCell>$85.00</TableCell>
+                      <TableCell>$450.00</TableCell>
+                      <TableCell>01/01/2026</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>26 - 35</TableCell>
+                      <TableCell>$225.00</TableCell>
+                      <TableCell>$210.00</TableCell>
+                      <TableCell>$95.00</TableCell>
+                      <TableCell>$540.00</TableCell>
+                      <TableCell>01/01/2026</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>36 - 45</TableCell>
+                      <TableCell>$295.00</TableCell>
+                      <TableCell>$275.00</TableCell>
+                      <TableCell>$105.00</TableCell>
+                      <TableCell>$680.00</TableCell>
+                      <TableCell>01/01/2026</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>46 - 55</TableCell>
+                      <TableCell>$380.00</TableCell>
+                      <TableCell>$360.00</TableCell>
+                      <TableCell>$115.00</TableCell>
+                      <TableCell>$870.00</TableCell>
+                      <TableCell>01/01/2026</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>56 - 65</TableCell>
+                      <TableCell>$520.00</TableCell>
+                      <TableCell>$490.00</TableCell>
+                      <TableCell>$125.00</TableCell>
+                      <TableCell>$1,150.00</TableCell>
+                      <TableCell>01/01/2026</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>65+</TableCell>
+                      <TableCell>$685.00</TableCell>
+                      <TableCell>$645.00</TableCell>
+                      <TableCell>-</TableCell>
+                      <TableCell>$1,420.00</TableCell>
+                      <TableCell>01/01/2026</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Rules Engine Tab */}

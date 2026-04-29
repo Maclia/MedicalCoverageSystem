@@ -3,8 +3,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/
 import { Button } from '@/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
 import { Badge } from '@/ui/badge';
-import { ClaimsProcessingDashboard } from '@/components/claims/ClaimsProcessingDashboard';
-import { MemberEOBViewer } from '@/components/claims/MemberEOBViewer';
+import { ClaimsProcessingDashboard } from '@/features/claims/components/ClaimsProcessingDashboard';
+import { MemberEOBViewer } from '@/features/claims/components/MemberEOBViewer';
 import {
   FileText,
   Settings,

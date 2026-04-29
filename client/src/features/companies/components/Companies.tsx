@@ -1,4 +1,4 @@
-import CompanyList from "@/components/companies/CompanyList";
+import CompanyList from "./CompanyList";
 
 export default function Companies() {
   return (
