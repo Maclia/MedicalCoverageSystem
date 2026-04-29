@@ -15,7 +15,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
-    sourcemap: true,
+    sourcemap: false,
     rollupOptions: {
       external: [
         // External shared modules that aren't part of the client build
@@ -47,7 +47,7 @@ export default defineConfig({
     },
     // Optimize for production
     minify: 'esbuild',
-    target: 'es2015'
+    target: 'es2020'
    },
    resolve: {
       alias: [
