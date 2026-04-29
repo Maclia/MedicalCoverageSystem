@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json.schemastore.org/package.json",
   "name": "claims-service",
   "version": "1.0.0",
   "description": "Claims processing microservice for Medical Coverage System",

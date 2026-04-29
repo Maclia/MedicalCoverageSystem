@@ -38,7 +38,8 @@
       "@config/*": ["./src/config/*"],
       "@contexts/*": ["./src/contexts/*"],
       "@guards/*": ["./src/guards/*"],
-      "@system/*": ["../services/shared/*"]
+      "@system/*": ["../services/shared/*"],
+      "@api/*": ["./src/services/api/*"]
     }
   },
   "include": [
