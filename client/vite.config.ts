@@ -1,18 +1,14 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const rootDir = fileURLToPath(new URL('.', import.meta.url))
 
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
-    react({
-      jsxImportSource: 'react',
-      babel: {
-        parserOpts: {
-          plugins: ['decorators-legacy', 'classProperties']
-        }
-      }
-    })
+    react()
   ],
   root: '.',
   base: '/',
@@ -33,7 +29,7 @@ export default defineConfig({
       ],
        output: {
          // Ensure consistent chunk naming
-         manualChunks(id) {
+         manualChunks(id: string) {
            if (id.includes('node_modules/react') || id.includes('node_modules/react-dom')) {
              return 'vendor';
            }
@@ -52,43 +48,35 @@ export default defineConfig({
     // Optimize for production
     minify: 'esbuild',
     target: 'es2015'
-  },
+   },
    resolve: {
-      alias: {
-        "@": path.resolve(__dirname, "./src"),
-        "@shared": path.resolve(__dirname, "../shared"),
-        "@components": path.resolve(__dirname, "./src/components"),
-        "@pages": path.resolve(__dirname, "./src/pages"),
-        "@utils": path.resolve(__dirname, "./src/utils"),
-        "@types": path.resolve(__dirname, "./src/types"),
-        "@hooks": path.resolve(__dirname, "./src/hooks"),
-        "@api": path.resolve(__dirname, "./src/services/api"),
-        "@services": path.resolve(__dirname, "./src/services"),
-        "@lib": path.resolve(__dirname, "./src/lib"),
-        "@contexts": path.resolve(__dirname, "./src/contexts"),
-      // Backward compatibility aliases for refactored directories
-      "@/components/claims": path.resolve(__dirname, "./src/features/claims/components"),
-      "@/components/companies": path.resolve(__dirname, "./src/features/companies/components"),
-      "@/components/premiums": path.resolve(__dirname, "./src/features/finance/components"),
-      "@/components/dependents": path.resolve(__dirname, "./src/features/dependents/components"),
-      "@/components/providers": path.resolve(__dirname, "./src/features/providers/components"),
-      "@/components/members": path.resolve(__dirname, "./src/features/members/components"),
-      "@/components/finance": path.resolve(__dirname, "./src/features/finance/components"),
-      "@/components/dashboards": path.resolve(__dirname, "./src/features/dashboards/components"),
-      "@/components/insurance": path.resolve(__dirname, "./src/features/insurance/components")
-      },
+      alias: [
+        // Keep legacy feature aliases ahead of the generic @/ matcher.
+        { find: /^@\/components\/claims/, replacement: path.resolve(rootDir, "./src/features/claims/components") },
+        { find: /^@\/components\/companies/, replacement: path.resolve(rootDir, "./src/features/companies/components") },
+        { find: /^@\/components\/premiums/, replacement: path.resolve(rootDir, "./src/features/finance/components") },
+        { find: /^@\/components\/dependents/, replacement: path.resolve(rootDir, "./src/features/dependents/components") },
+        { find: /^@\/components\/providers/, replacement: path.resolve(rootDir, "./src/features/providers/components") },
+        { find: /^@\/components\/members/, replacement: path.resolve(rootDir, "./src/features/members/components") },
+        { find: /^@\/components\/finance/, replacement: path.resolve(rootDir, "./src/features/finance/components") },
+        { find: /^@\/components\/dashboards/, replacement: path.resolve(rootDir, "./src/features/dashboards/components") },
+        { find: /^@\/components\/insurance/, replacement: path.resolve(rootDir, "./src/features/insurance/components") },
+        { find: /^@\/services\/api$/, replacement: path.resolve(rootDir, "./src/services/api/index.ts") },
+        { find: "@shared", replacement: path.resolve(rootDir, "../shared") },
+        { find: "@components", replacement: path.resolve(rootDir, "./src/components") },
+        { find: "@pages", replacement: path.resolve(rootDir, "./src/pages") },
+        { find: "@utils", replacement: path.resolve(rootDir, "./src/utils") },
+        { find: "@types", replacement: path.resolve(rootDir, "./src/types") },
+        { find: "@hooks", replacement: path.resolve(rootDir, "./src/hooks") },
+        { find: "@api", replacement: path.resolve(rootDir, "./src/services/api") },
+        { find: "@services", replacement: path.resolve(rootDir, "./src/services") },
+        { find: "@lib", replacement: path.resolve(rootDir, "./src/lib") },
+        { find: "@contexts", replacement: path.resolve(rootDir, "./src/contexts") },
+        { find: /^@\//, replacement: `${path.resolve(rootDir, "./src")}/` },
+      ],
       // Ensure extensions are properly resolved
       extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
-      // Automatically resolve extensions for imports
-      extensionAlias: {
-        '.js': ['.js', '.ts', '.tsx'],
-        '.mjs': ['.mjs', '.mts']
-      },
-      // Try all extensions when resolving imports
-      tryIndex: true,
       preserveSymlinks: false,
-      // Force extension resolution for Vite 8 Rolldown bundler
-      fullySpecified: false,
       conditions: ['import', 'module', 'browser', 'default'],
       mainFields: ['module', 'browser', 'main']
    },

@@ -20,7 +20,7 @@ import {
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 
-import { hospitalApi } from '../../services/api/hospitalApi';
+import { hospitalApi } from '@/services/api/hospitalApi';
 
 const ProviderDashboard: React.FC = () => {
   const { user } = useAuth();
