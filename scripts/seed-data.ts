@@ -29,28 +29,28 @@ async function seedCompanies() {
     console.log('Seeding companies...');
     const companyData: schema.InsertCompany[] = [
       {
-        name: 'Acme Corporation',
-        registrationNumber: 'ACM12345',
-        contactPerson: 'John Smith',
-        contactEmail: 'john.smith@acme.com',
-        contactPhone: '123-456-7890',
-        address: '123 Business St, Business City, 12345'
+        name: 'Safaricom PLC',
+        registrationNumber: 'PVT-12345',
+        contactPerson: 'James Mwangi',
+        contactEmail: 'james.mwangi@safaricom.co.ke',
+        contactPhone: '+254 722 000 000',
+        address: 'Safaricom House, Waiyaki Way, Nairobi 00100'
       },
       {
-        name: 'TechNova Inc',
-        registrationNumber: 'TNI78901',
-        contactPerson: 'Jane Doe',
-        contactEmail: 'jane.doe@technova.com',
-        contactPhone: '987-654-3210',
-        address: '456 Innovation Ave, Tech City, 67890'
+        name: 'Equity Bank Kenya',
+        registrationNumber: 'PVT-67890',
+        contactPerson: 'Mary Wanjiru',
+        contactEmail: 'mary.wanjiru@equitybank.co.ke',
+        contactPhone: '+254 711 000 000',
+        address: 'Equity Centre, Upper Hill, Nairobi 00200'
       },
       {
-        name: 'Global Enterprises',
-        registrationNumber: 'GLE24680',
-        contactPerson: 'Robert Johnson',
-        contactEmail: 'robert.johnson@global.com',
-        contactPhone: '555-123-4567',
-        address: '789 Global Blvd, Metro City, 13579'
+        name: 'Kenya Airways',
+        registrationNumber: 'PVT-24680',
+        contactPerson: 'David Omondi',
+        contactEmail: 'david.omondi@kenya-airways.com',
+        contactPhone: '+254 733 000 000',
+        address: 'KQ Pride Centre, Embakasi, Nairobi 00500'
       }
     ];
 
@@ -194,10 +194,10 @@ async function seedPremiumRates(periods: schema.Period[]) {
     console.log('Seeding premium rates...');
     const premiumRateData: schema.InsertPremiumRate[] = periods.map(period => ({
       periodId: period.id,
-      principalRate: faker.number.float({ min: 5000, max: 8000, fractionDigits: 2 }),
-      spouseRate: faker.number.float({ min: 3000, max: 5000, fractionDigits: 2 }),
-      childRate: faker.number.float({ min: 1500, max: 3000, fractionDigits: 2 }),
-      specialNeedsRate: faker.number.float({ min: 4000, max: 6000, fractionDigits: 2 }),
+      principalRate: faker.number.float({ min: 15000, max: 35000, fractionDigits: 2 }),
+      spouseRate: faker.number.float({ min: 8000, max: 20000, fractionDigits: 2 }),
+      childRate: faker.number.float({ min: 4000, max: 12000, fractionDigits: 2 }),
+      specialNeedsRate: faker.number.float({ min: 12000, max: 25000, fractionDigits: 2 }),
       taxRate: 0.15 // 15% tax
     }));
 
@@ -220,7 +220,7 @@ async function seedBenefits() {
         description: 'Coverage for general doctor consultations',
         category: 'medical',
         coverageDetails: 'Covers up to 12 consultations per year',
-        limitAmount: 5000,
+        limitAmount: 10000,
         isStandard: true
       },
       {
@@ -228,7 +228,7 @@ async function seedBenefits() {
         description: 'Coverage for hospital stays',
         category: 'hospital',
         coverageDetails: 'Covers room charges, nursing care, and other hospital services',
-        limitAmount: 50000,
+        limitAmount: 250000,
         isStandard: true
       },
       {
@@ -236,7 +236,7 @@ async function seedBenefits() {
         description: 'Regular dental check-ups and basic treatments',
         category: 'dental',
         coverageDetails: 'Covers two check-ups per year and basic treatments',
-        limitAmount: 3000,
+        limitAmount: 7500,
         isStandard: true
       },
       {
@@ -244,7 +244,7 @@ async function seedBenefits() {
         description: 'Eye examinations and prescription glasses',
         category: 'vision',
         coverageDetails: 'Covers one eye exam per year and glasses/contacts up to limit',
-        limitAmount: 2000,
+        limitAmount: 5000,
         isStandard: true
       },
       {
@@ -252,7 +252,7 @@ async function seedBenefits() {
         description: 'Coverage for prescribed medications',
         category: 'prescription',
         coverageDetails: 'Covers 80% of prescription medication costs',
-        limitAmount: 10000,
+        limitAmount: 40000,
         isStandard: true
       },
       {
@@ -260,7 +260,7 @@ async function seedBenefits() {
         description: 'Prenatal, delivery, and postnatal care',
         category: 'maternity',
         coverageDetails: 'Covers prenatal visits, normal delivery, and postnatal care',
-        limitAmount: 25000,
+        limitAmount: 100000,
         hasWaitingPeriod: true,
         waitingPeriodDays: 270, // Approximately 9 months
         isStandard: false
@@ -270,7 +270,7 @@ async function seedBenefits() {
         description: 'Consultations with medical specialists',
         category: 'specialist',
         coverageDetails: 'Covers consultations with specialists upon referral',
-        limitAmount: 8000,
+        limitAmount: 20000,
         isStandard: false
       },
       {
@@ -278,7 +278,7 @@ async function seedBenefits() {
         description: 'Coverage for emergency medical services',
         category: 'emergency',
         coverageDetails: 'Covers emergency room visits and ambulance services',
-        limitAmount: 15000,
+        limitAmount: 75000,
         isStandard: true
       },
       {
@@ -286,7 +286,7 @@ async function seedBenefits() {
         description: 'Preventive healthcare services',
         category: 'wellness',
         coverageDetails: 'Covers annual health screenings and vaccinations',
-        limitAmount: 3000,
+        limitAmount: 7500,
         isStandard: false
       }
     ];
@@ -441,32 +441,39 @@ async function seedRegions() {
     console.log('Seeding regions...');
     const regionData: schema.InsertRegion[] = [
       {
-        name: 'Northern Region',
-        country: 'United States',
-        state: 'New York',
-        city: 'New York City',
-        postalCode: '10001'
+        name: 'Nairobi Region',
+        country: 'Kenya',
+        state: 'Nairobi',
+        city: 'Nairobi',
+        postalCode: '00100'
       },
       {
         name: 'Central Region',
-        country: 'United States',
-        state: 'Illinois',
-        city: 'Chicago',
-        postalCode: '60601'
+        country: 'Kenya',
+        state: 'Kiambu',
+        city: 'Thika',
+        postalCode: '01000'
       },
       {
-        name: 'Southern Region',
-        country: 'United States',
-        state: 'Texas',
-        city: 'Houston',
-        postalCode: '77001'
+        name: 'Coastal Region',
+        country: 'Kenya',
+        state: 'Mombasa',
+        city: 'Mombasa',
+        postalCode: '80100'
       },
       {
         name: 'Western Region',
-        country: 'United States',
-        state: 'California',
-        city: 'Los Angeles',
-        postalCode: '90001'
+        country: 'Kenya',
+        state: 'Kisumu',
+        city: 'Kisumu',
+        postalCode: '40100'
+      },
+      {
+        name: 'Rift Valley Region',
+        country: 'Kenya',
+        state: 'Nakuru',
+        city: 'Nakuru',
+        postalCode: '20100'
       }
     ];
 
