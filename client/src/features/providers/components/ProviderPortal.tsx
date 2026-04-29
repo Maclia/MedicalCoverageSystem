@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { hospitalApi } from '@/services/api/hospitalApi';
-import { claimsApi, baseClaimsApi } from '@/services/api/claimsApi';
-import { analyticsApi } from '@/services/api/analyticsApi';
+import { hospitalApi } from '@api/hospitalApi';
+import { claimsApi, baseClaimsApi } from '@api/claimsApi';
+import { analyticsApi } from '@api/analyticsApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';

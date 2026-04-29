@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
 import { useAuth } from '@/features/actions/contexts/AuthContext';
-import { hospitalApi } from '@/services/api/hospitalApi';
+import { hospitalApi } from '@api/hospitalApi';
 import {
   BuildingLibraryIcon,
   UserGroupIcon,

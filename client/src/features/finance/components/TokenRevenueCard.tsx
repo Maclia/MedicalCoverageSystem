@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { Badge } from "@/ui/badge";
 import { Coins, TrendingUp, TrendingDown } from "lucide-react";
-import { tokensAPI } from "@/services/api/tokensApi";
+import { tokensAPI } from "@api/tokensApi";
 
 interface TokenRevenueCardProps {
   organizationId?: number;
@@ -144,3 +144,4 @@ export default function TokenRevenueCard({ organizationId, dateRange }: TokenRev
     </Card>
   );
 }
+

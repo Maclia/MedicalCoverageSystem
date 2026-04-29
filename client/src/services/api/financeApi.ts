@@ -1,4 +1,13 @@
 // API service for finance management backend integration
+import type {
+  ClaimFinancialAnalysis,
+  ClaimPayment,
+  ClaimReserve,
+  DashboardAnalytics,
+  Invoice,
+  ModuleHealth,
+  Payment
+} from '@/types/finance';
 
 const API_BASE_URL = '/api';
 
@@ -40,7 +49,7 @@ async function apiRequest<T>(
 export const moduleApi = {
   // Get module system health
   async getSystemHealth() {
-    return apiRequest('/modules/health');
+    return apiRequest<ModuleHealth>('/modules/health');
   },
 
   // Get module overview
@@ -153,7 +162,7 @@ export const billingApi = {
       });
     }
     const query = params.toString() ? `?${params}` : '';
-    return apiRequest(`/billing/invoices${query}`);
+    return apiRequest<Invoice[]>(`/billing/invoices${query}`);
   },
 
   // Process billing cycle
@@ -210,7 +219,7 @@ export const billingApi = {
       });
     }
     const query = params.toString() ? `?${params}` : '';
-    return apiRequest(`/billing/analytics/dashboard${query}`);
+    return apiRequest<DashboardAnalytics>(`/billing/analytics/dashboard${query}`);
   },
 
   // Get revenue analytics
@@ -386,7 +395,7 @@ export const paymentsApi = {
       });
     }
     const query = params.toString() ? `?${params}` : '';
-    return apiRequest(`/payments/history${query}`);
+    return apiRequest<Payment[]>(`/payments/history${query}`);
   },
 
   // Get payment analytics
@@ -423,7 +432,7 @@ export const paymentsApi = {
       });
     }
     const query = params.toString() ? `?${params}` : '';
-    return apiRequest(`/payments/failed${query}`);
+    return apiRequest<Payment[]>(`/payments/failed${query}`);
   },
 
   // Retry failed payment
@@ -519,7 +528,7 @@ export const commissionsApi = {
       });
     }
     const query = params.toString() ? `?${params}` : '';
-    return apiRequest(`/commissions/leaderboard${query}`);
+    return apiRequest<any[]>(`/commissions/leaderboard${query}`);
   },
 
   // Get commission statements
@@ -555,7 +564,7 @@ export const commissionsApi = {
       });
     }
     const query = params.toString() ? `?${params}` : '';
-    return apiRequest(`/commissions/payment-runs${query}`);
+    return apiRequest<any[]>(`/commissions/payment-runs${query}`);
   },
 
   // Get commission analytics
@@ -610,7 +619,7 @@ export const commissionsApi = {
 export const claimsFinancialApi = {
   // Get claim reserves
   async getClaimReserves(claimId: number) {
-    return apiRequest(`/claims-financial/reserves/${claimId}`);
+    return apiRequest<ClaimReserve[]>(`/claims-financial/reserves/${claimId}`);
   },
 
   // Create reserve
@@ -653,7 +662,7 @@ export const claimsFinancialApi = {
       });
     }
     const query = params.toString() ? `?${params}` : '';
-    return apiRequest(`/claims-financial/payments/${claimId}${query}`);
+    return apiRequest<ClaimPayment[]>(`/claims-financial/payments/${claimId}${query}`);
   },
 
   // Create claim payment
@@ -677,7 +686,7 @@ export const claimsFinancialApi = {
 
   // Get financial analysis
   async getClaimFinancialAnalysis(claimId: number) {
-    return apiRequest(`/claims-financial/analysis/${claimId}`);
+    return apiRequest<ClaimFinancialAnalysis>(`/claims-financial/analysis/${claimId}`);
   },
 
   // Generate reserve adequacy report

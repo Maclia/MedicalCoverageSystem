@@ -14,7 +14,7 @@ import {
 } from "@/ui/select";
 import PremiumCalculator from "@/features/pricing/components/PremiumCalculator";
 import { formatCurrency } from "@/utils/format";
-import { billingApi } from '@/services/api/billingApi';
+import { billingApi } from '@api/billingApi';
 
 export default function Premiums() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -242,3 +242,4 @@ export default function Premiums() {
     </>
   );
 }
+

@@ -42,14 +42,14 @@ import { Skeleton } from "@/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 // ✅ ALL BACKEND SERVICE INTEGRATIONS
-import { hospitalApi } from "@/services/api/hospitalApi";
-import { billingApi } from "@/services/api/billingApi";
-import { baseClaimsApi as claimsApi } from "@/services/api/claimsApi";
-import { insuranceApi } from "@/services/api/insuranceApi";
-import { fraudApi } from "@/services/api/fraudApi";
-import { analyticsApi } from "@/services/api/analyticsApi";
-import { crmApi } from "@/services/api/crmApi";
-import financeApi from "@/services/api/financeApi";
+import { hospitalApi } from "@api/hospitalApi";
+import { billingApi } from "@api/billingApi";
+import { baseClaimsApi as claimsApi } from "@api/claimsApi";
+import { insuranceApi } from "@api/insuranceApi";
+import { fraudApi } from "@api/fraudApi";
+import { analyticsApi } from "@api/analyticsApi";
+import { crmApi } from "@api/crmApi";
+import financeApi from "@api/financeApi";
 
 import {
   Plus,

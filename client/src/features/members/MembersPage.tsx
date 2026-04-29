@@ -7,15 +7,15 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/ui/card";
-import { membershipApi } from "@/services/api/memberApi";
-import { billingApi } from "@/services/api/billingApi";
-import { baseClaimsApi as claimsApi } from "@/services/api/claimsApi";
-import { insuranceApi } from "@/services/api/insuranceApi";
-import { fraudApi } from "@/services/api/fraudApi";
-import { analyticsApi } from "@/services/api/analyticsApi";
-import { hospitalApi } from "@/services/api/hospitalApi";
-import { crmApi } from "@/services/api/crmApi";
-import financeApi from "@/services/api/financeApi";
+import { membershipApi } from "@api/memberApi";
+import { billingApi } from "@api/billingApi";
+import { baseClaimsApi as claimsApi } from "@api/claimsApi";
+import { insuranceApi } from "@api/insuranceApi";
+import { fraudApi } from "@api/fraudApi";
+import { analyticsApi } from "@api/analyticsApi";
+import { hospitalApi } from "@api/hospitalApi";
+import { crmApi } from "@api/crmApi";
+import financeApi from "@api/financeApi";
 import { Button } from "@/ui/button";
 import { Badge } from "@/ui/badge";
 import {
@@ -764,3 +764,4 @@ export default function Members() {
     </div>
   );
 }
+

@@ -5,7 +5,7 @@ import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
 import { formatCurrency } from '@/utils/format';
 import { useQuery } from '@tanstack/react-query';
-import financeApi, { billingApi, paymentsApi, commissionsApi, claimsFinancialApi } from '@/services/api/financeApi';
+import financeApi, { billingApi, paymentsApi, commissionsApi, claimsFinancialApi } from '@api/financeApi';
 import type { DashboardAnalytics, MetricCard } from '@/types/finance';
 
 // Import module components

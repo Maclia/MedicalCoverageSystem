@@ -9,7 +9,7 @@ import { Textarea } from '@/ui/textarea';
 import { Alert, AlertDescription } from '@/ui/alert';
 import { Progress } from '@/ui/progress';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { claimsFinancialApi } from '@/services/api/financeApi';
+import { claimsFinancialApi } from '@api/financeApi';
 import { formatCurrency, formatDate } from '@/utils/format';
 import type {
   ClaimReserve,

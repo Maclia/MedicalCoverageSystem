@@ -29,9 +29,9 @@ import { Calendar } from '@/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/ui/popover';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { hospitalApi } from '@/services/api/hospitalApi';
-import { membershipApi } from '@/services/api/memberApi';
-import { insuranceApi } from '@/services/api/insuranceApi';
+import { hospitalApi } from '@api/hospitalApi';
+import { membershipApi } from '@api/memberApi';
+import { insuranceApi } from '@api/insuranceApi';
 
 interface ProcedureItem {
   id?: number;
@@ -672,3 +672,4 @@ export default function ProviderClaimSubmission() {
     </div>
   );
 }
+

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { wellnessApi } from '@/services/api/wellnessApi';
+import { wellnessApi } from '@api/wellnessApi';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
@@ -740,3 +740,4 @@ export const WellnessJourney: React.FC<WellnessJourneyProps> = ({ memberId, memb
     </div>
   );
 };
+

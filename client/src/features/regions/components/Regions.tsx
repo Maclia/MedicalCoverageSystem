@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { hospitalApi } from '@/services/api/hospitalApi';
-import { insuranceApi } from '@/services/api/insuranceApi';
-import { membershipApi } from '@/services/api/memberApi';
-import { analyticsApi } from '@/services/api/analyticsApi';
-import { claimsApi } from '@/services/api/claimsApi';
-import { billingApi } from '@/services/api/billingApi';
-import { fraudApi } from '@/services/api/fraudApi';
-import { wellnessApi } from '@/services/api/wellnessApi';
+import { hospitalApi } from '@api/hospitalApi';
+import { insuranceApi } from '@api/insuranceApi';
+import { membershipApi } from '@api/memberApi';
+import { analyticsApi } from '@api/analyticsApi';
+import { claimsApi } from '@api/claimsApi';
+import { billingApi } from '@api/billingApi';
+import { fraudApi } from '@api/fraudApi';
+import { wellnessApi } from '@api/wellnessApi';
 
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
@@ -807,3 +807,4 @@ export default function RegionsPage() {
     </div>
   );
 }
+

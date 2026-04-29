@@ -39,10 +39,10 @@ import { Skeleton } from "@/ui/skeleton";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { hospitalApi } from "@/services/api/hospitalApi";
-import { baseClaimsApi } from "@/services/api/claimsApi";
-import { analyticsApi } from "@/services/api/analyticsApi";
-import { crmApi } from "@/services/api/crmApi";
+import { hospitalApi } from "@api/hospitalApi";
+import { baseClaimsApi } from "@api/claimsApi";
+import { analyticsApi } from "@api/analyticsApi";
+import { crmApi } from "@api/crmApi";
 import {
   Users,
   ShieldCheck,

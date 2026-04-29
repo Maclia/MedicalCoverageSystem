@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { billingApi } from '@/services/api/billingApi';
-import { claimsApi } from '@/services/api/claimsApi';
-import financeApi from '@/services/api/financeApi';
-import { membershipApi } from '@/services/api/memberApi';
-import { analyticsApi } from '@/services/api/analyticsApi';
-import { fraudApi } from '@/services/api/fraudApi';
-import { insuranceApi } from '@/services/api/insuranceApi';
+import { billingApi } from '@api/billingApi';
+import { claimsApi } from '@api/claimsApi';
+import financeApi from '@api/financeApi';
+import { membershipApi } from '@api/memberApi';
+import { analyticsApi } from '@api/analyticsApi';
+import { fraudApi } from '@api/fraudApi';
+import { insuranceApi } from '@api/insuranceApi';
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import { Badge } from "@/ui/badge";
@@ -763,3 +763,4 @@ export default function Periods() {
     </div>
   );
 }
+

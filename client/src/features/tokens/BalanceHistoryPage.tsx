@@ -13,8 +13,8 @@ import {
   TableRow,
 } from "@/ui/table";
 import { TrendingUp, TrendingDown, ChevronLeft, ChevronRight } from "lucide-react";
-import { tokensAPI } from "@/services/api/tokensApi";
-import type { BalanceHistory } from "@/services/api/tokensApi";
+import { tokensAPI } from "@api/tokensApi";
+import type { BalanceHistory } from "@api/tokensApi";
 
 export default function BalanceHistoryPage() {
   const search = useSearch();
@@ -170,3 +170,4 @@ export default function BalanceHistoryPage() {
     </div>
   );
 }
+

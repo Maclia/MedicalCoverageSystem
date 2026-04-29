@@ -30,15 +30,15 @@ import { Progress } from "@/ui/progress";
 import { AvatarWithInitials } from "@/ui/avatar-with-initials";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { useToast } from "@/hooks/use-toast";
-import { membershipApi } from "@/services/api/memberApi";
-import { billingApi } from "@/services/api/billingApi";
-import { baseClaimsApi } from "@/services/api/claimsApi";
-import { insuranceApi } from "@/services/api/insuranceApi";
-import { fraudApi } from "@/services/api/fraudApi";
-import { analyticsApi } from "@/services/api/analyticsApi";
-import { hospitalApi } from "@/services/api/hospitalApi";
-import { crmApi } from "@/services/api/crmApi";
-import financeApi from "@/services/api/financeApi";
+import { membershipApi } from "@api/memberApi";
+import { billingApi } from "@api/billingApi";
+import { baseClaimsApi } from "@api/claimsApi";
+import { insuranceApi } from "@api/insuranceApi";
+import { fraudApi } from "@api/fraudApi";
+import { analyticsApi } from "@api/analyticsApi";
+import { hospitalApi } from "@api/hospitalApi";
+import { crmApi } from "@api/crmApi";
+import financeApi from "@api/financeApi";
 import {
   Heart,
   Activity,
@@ -668,3 +668,4 @@ export default function MemberDashboard() {
     </div>
   );
 }
+

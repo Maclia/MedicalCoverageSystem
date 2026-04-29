@@ -4,7 +4,7 @@ import { Button } from "@/ui/button";
 import { Badge } from "@/ui/badge";
 import { Progress } from "@/ui/progress";
 import { Coins, TrendingDown, Clock, AlertTriangle } from "lucide-react";
-import { tokensAPI } from "@/services/api/tokensApi";
+import { tokensAPI } from "@api/tokensApi";
 import { Link } from "wouter";
 
 interface TokenWalletWidgetProps {
@@ -243,3 +243,4 @@ export function TokenWalletWidget({
 }
 
 export default TokenWalletWidget;
+

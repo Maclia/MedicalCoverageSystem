@@ -32,11 +32,11 @@ import { Label } from "@/ui/label";
 import { Progress } from "@/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { billingApi } from "@/services/api/billingApi";
-import { baseClaimsApi } from "@/services/api/claimsApi";
-import { fraudApi } from "@/services/api/fraudApi";
-import { analyticsApi } from "@/services/api/analyticsApi";
-import { insuranceApi } from "@/services/api/insuranceApi";
+import { billingApi } from "@api/billingApi";
+import { baseClaimsApi } from "@api/claimsApi";
+import { fraudApi } from "@api/fraudApi";
+import { analyticsApi } from "@api/analyticsApi";
+import { insuranceApi } from "@api/insuranceApi";
 import {
   DollarSign,
   CreditCard,

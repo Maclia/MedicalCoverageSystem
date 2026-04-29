@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "wouter";
-import { fraudApi } from '@/services/api/fraudApi';
-import { insuranceApi } from '@/services/api/insuranceApi';
-import { analyticsApi } from '@/services/api/analyticsApi';
-import { claimsApi } from '@/services/api/claimsApi';
-import { billingApi } from '@/services/api/billingApi';
-import { wellnessApi } from '@/services/api/wellnessApi';
+import { fraudApi } from '@api/fraudApi';
+import { insuranceApi } from '@api/insuranceApi';
+import { analyticsApi } from '@api/analyticsApi';
+import { claimsApi } from '@api/claimsApi';
+import { billingApi } from '@api/billingApi';
+import { wellnessApi } from '@api/wellnessApi';
 
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";

@@ -18,7 +18,7 @@ import {
   RiskPrediction,
   RiskDashboard
 } from '../../../shared/types/riskAssessment';
-import { riskApi } from '@/services/api/riskApi';
+import { riskApi } from '@api/riskApi';
 import {
   AlertTriangle,
   TrendingUp,

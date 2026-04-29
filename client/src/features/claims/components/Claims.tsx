@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { baseClaimsApi } from "@/services/api/claimsApi";
-import { hospitalApi } from "@/services/api/hospitalApi";
-import { membershipApi } from "@/services/api/memberApi";
-import { insuranceApi } from "@/services/api/insuranceApi";
+import { baseClaimsApi } from "@api/claimsApi";
+import { hospitalApi } from "@api/hospitalApi";
+import { membershipApi } from "@api/memberApi";
+import { insuranceApi } from "@api/insuranceApi";
 import { 
   Card, 
   CardContent, 
@@ -973,3 +973,4 @@ export default function Claims() {
     </div>
   );
 }
+

@@ -49,7 +49,7 @@ import {
   Plus,
   Droplet
 } from 'lucide-react';
-import { wellnessApi } from '@/services/api/wellnessApi';
+import { wellnessApi } from '@api/wellnessApi';
 import {
   WellnessIntegration as IWellnessIntegration,
   HealthData as IHealthData,

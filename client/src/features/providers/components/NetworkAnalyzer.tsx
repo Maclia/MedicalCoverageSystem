@@ -19,7 +19,7 @@ import {
   Filter
 } from 'lucide-react';
 import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts';
-import { providersApi } from '@/services/api/providersApi';
+import { providersApi } from '@api/providersApi';
 
 interface NetworkAnalysis {
   totalProviders: number;
@@ -512,3 +512,4 @@ const NetworkAnalyzer: React.FC = () => {
 };
 
 export default NetworkAnalyzer;
+

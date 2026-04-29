@@ -40,7 +40,7 @@ import {
   Shield,
   Zap
 } from 'lucide-react';
-import { communicationApi } from '@/services/api/communicationApi';
+import { communicationApi } from '@api/communicationApi';
 import {
   Communication,
   MessageThread,

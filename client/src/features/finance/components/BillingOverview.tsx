@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/ui/textarea';
 import { Switch } from '@/ui/switch';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { billingApi } from '@/services/api/financeApi';
+import { billingApi } from '@api/financeApi';
 import { formatCurrency, formatDate } from '@/utils/format';
 import type { Invoice, InvoiceFilters, InvoiceFormData } from '@/types/finance';
 

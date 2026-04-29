@@ -24,7 +24,7 @@ import {
   SchemeOverride,
   getRateTables,
   getSchemeOverrides
-} from '@/services/api/premiumCalculatorApi';
+} from '@api/premiumCalculatorApi';
 
 import { useQuery } from '@tanstack/react-query';
 

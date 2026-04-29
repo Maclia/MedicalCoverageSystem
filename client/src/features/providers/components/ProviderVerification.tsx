@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { hospitalApi } from '@/services/api/hospitalApi';
-import { claimsApi } from '@/services/api/claimsApi';
-import { billingApi } from '@/services/api/billingApi';
-import { fraudApi } from '@/services/api/fraudApi';
-import { crmApi } from '@/services/api/crmApi';
-import { membershipApi } from '@/services/api/memberApi';
-import { insuranceApi } from '@/services/api/insuranceApi';
+import { hospitalApi } from '@api/hospitalApi';
+import { claimsApi } from '@api/claimsApi';
+import { billingApi } from '@api/billingApi';
+import { fraudApi } from '@api/fraudApi';
+import { crmApi } from '@api/crmApi';
+import { membershipApi } from '@api/memberApi';
+import { insuranceApi } from '@api/insuranceApi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
@@ -875,3 +875,4 @@ const ProviderVerification: React.FC = () => {
 };
 
 export default ProviderVerification;
+

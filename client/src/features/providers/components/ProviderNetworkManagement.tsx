@@ -37,7 +37,7 @@ import { Label } from "@/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";
 import { toast } from "sonner";
 import { Plus, Edit, Trash2, Users, MapPin, TrendingUp, Search, Filter } from "lucide-react";
-import { hospitalApi } from '@/services/api/hospitalApi';
+import { hospitalApi } from '@api/hospitalApi';
 
 interface ProviderNetwork {
   id: number;

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from "wouter";
-import { wellnessApi } from '@/services/api/wellnessApi';
+import { wellnessApi } from '@api/wellnessApi';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/ui/card';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';

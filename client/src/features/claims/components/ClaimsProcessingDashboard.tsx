@@ -44,7 +44,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { claimsApi, workflowApi, batchApi, analyticsApi, baseClaimsApi } from '@/services/api/claimsApi';
+import { claimsApi, workflowApi, batchApi, analyticsApi, baseClaimsApi } from '@api/claimsApi';
 
 interface Claim {
   id: number;

@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { hospitalApi } from '@/services/api/hospitalApi';
-import { insuranceApi } from '@/services/api/insuranceApi';
-import { claimsApi } from '@/services/api/claimsApi';
-import { billingApi } from '@/services/api/billingApi';
+import { hospitalApi } from '@api/hospitalApi';
+import { insuranceApi } from '@api/insuranceApi';
+import { claimsApi } from '@api/claimsApi';
+import { billingApi } from '@api/billingApi';
 import { Button } from "@/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/ui/tabs";

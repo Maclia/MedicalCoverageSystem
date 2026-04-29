@@ -42,10 +42,10 @@ import { Progress } from "@/ui/progress";
 import { Alert, AlertDescription } from "@/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
-import { membershipApi } from "@/services/api/memberApi";
-import { insuranceApi } from "@/services/api/insuranceApi";
-import { claimsApi } from "@/services/api/claimsApi";
-import { billingApi } from "@/services/api/billingApi";
+import { membershipApi } from "@api/memberApi";
+import { insuranceApi } from "@api/insuranceApi";
+import { claimsApi } from "@api/claimsApi";
+import { billingApi } from "@api/billingApi";
 import {
   Users,
   UserPlus,
@@ -911,3 +911,4 @@ function formatCurrency(amount: number) {
     currency: 'KES'
   }).format(amount);
 }
+

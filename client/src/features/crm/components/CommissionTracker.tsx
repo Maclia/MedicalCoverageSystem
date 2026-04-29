@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { usePersistedMutation } from "@/hooks/usePersistedMutation";
-import { billingApi } from "@/services/api/billingApi";
+import { billingApi } from "@api/billingApi";
 import { Card, CardContent, CardHeader, CardTitle } from "@/ui/card";
 import { Button } from "@/ui/button";
 import { Badge } from "@/ui/badge";

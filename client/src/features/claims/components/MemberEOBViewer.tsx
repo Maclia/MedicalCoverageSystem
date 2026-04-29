@@ -45,7 +45,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { claimsApi, notificationApi } from '@/services/api/claimsApi';
+import { claimsApi, notificationApi } from '@api/claimsApi';
 
 interface EOBDocument {
   id: string;
@@ -702,3 +702,4 @@ export const MemberEOBViewer: React.FC = () => {
     </div>
   );
 };
+

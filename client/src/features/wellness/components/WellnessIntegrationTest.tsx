@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
 import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
-import { wellnessApi } from '@/services/api/wellnessApi';
+import { wellnessApi } from '@api/wellnessApi';
 import { CheckCircle, AlertCircle, RefreshCw } from 'lucide-react';
 
 export const WellnessIntegrationTest: React.FC = () => {
