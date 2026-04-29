@@ -12,7 +12,7 @@
     "dev": "tsx server/index.ts",
     "dev:client": "cd client && vite",
     "build": "npm run build:client && npm run build:server",
-    "build:client": "cd client && vite build --config vite.simple.config.ts",
+    "build:client": "cd client && vite build",
     "build:server": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
     "build:prod": "NODE_ENV=production npm run build:client && npm run build:server",
     "start": "NODE_ENV=production node dist/index.js",
