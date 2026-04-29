@@ -1,4 +1,4 @@
-import BaseApiClient from '../../lib/baseApiClient';
+import BaseApiClient from '@/lib/baseApiClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const premiumCalculatorApi = new BaseApiClient('premium-calculator', '/api');

@@ -17,11 +17,14 @@
     "baseUrl": ".",
     "paths": {
       "@medical-system/shared-business-rules": ["../shared/business-rules/src/index.ts"],
-      "@medical-system/shared-business-rules/*": ["../shared/business-rules/src/*"]
+      "@medical-system/shared-business-rules/*": ["../shared/business-rules/src/*"],
+      "@medical-system/message-queue": ["../shared/message-queue/src/index.ts"],
+      "@medical-system/message-queue/*": ["../shared/message-queue/src/*"]
     }
   },
   "references": [
-    { "path": "../shared/business-rules" }
+    { "path": "../shared/business-rules" },
+    { "path": "../shared/message-queue" }
   ],
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "src/tests/**/*"]

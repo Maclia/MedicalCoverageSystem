@@ -79,4 +79,69 @@ router.put('/schemes/:schemeId/carry-forward', async (req: Request, res: Respons
   }
 });
 
+/**
+ * FR-17: Fund Replenishment - Process fund replenishment request
+ */
+router.post('/schemes/:schemeId/replenish', async (req: Request, res: Response) => {
+  try {
+    const { schemeId } = req.params;
+    const { amount, referenceNumber, userId, notes } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid positive amount is required'
+      });
+    }
+
+    if (!userId || typeof userId !== 'number') {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid userId is required'
+      });
+    }
+
+    const result = await companyBalanceService.processFundReplenishment(schemeId, {
+      amount,
+      referenceNumber,
+      userId,
+      notes
+    });
+
+    res.status(200).json({
+      success: true,
+      data: result
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to process fund replenishment', { error: error.message, schemeId: req.params.schemeId });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process fund replenishment'
+    });
+  }
+});
+
+/**
+ * FR-17: Fund Replenishment - Get replenishment history
+ */
+router.get('/schemes/:schemeId/replenishment-history', async (req: Request, res: Response) => {
+  try {
+    const { schemeId } = req.params;
+    const history = await companyBalanceService.getReplenishmentHistory(schemeId);
+
+    res.status(200).json({
+      success: true,
+      data: history
+    });
+
+  } catch (error: any) {
+    logger.error('Failed to retrieve replenishment history', { error: error.message, schemeId: req.params.schemeId });
+    res.status(500).json({
+      success: false,
+      error: 'Failed to retrieve replenishment history'
+    });
+  }
+});
+
 export default router;

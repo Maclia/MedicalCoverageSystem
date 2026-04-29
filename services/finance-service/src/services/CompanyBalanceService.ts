@@ -2,6 +2,7 @@ import { WinstonLogger } from '../utils/WinstonLogger.js';
 import { billingServiceClient } from '../clients/BillingServiceClient.js';
 import { insuranceServiceClient } from '../clients/InsuranceServiceClient.js';
 import { coreServiceClient } from '../clients/CoreServiceClient.js';
+import { eventBus, EventFactory } from '@medical-system/message-queue/events/EventBus.js';
 import { CompanyBalance, CompanyPremiumUtilization, CompanyTransaction, CompanyReportFilters } from '../types/index.js';
 
 const logger = new WinstonLogger('CompanyBalanceService');
@@ -223,6 +224,83 @@ class CompanyBalanceService {
       return [];
     } catch (error) {
       logger.error('Failed to fetch company transactions', { error: error as Error, filters });
+      throw error;
+    }
+  }
+
+  /**
+   * FR-17: Process fund replenishment request for company schemes
+   * Updates allocated fund balance and creates audit trail
+   */
+  async processFundReplenishment(schemeId: string, replenishmentData: {
+    amount: number;
+    referenceNumber?: string;
+    userId: number;
+    notes?: string;
+  }): Promise<any> {
+    logger.info('Processing fund replenishment', { schemeId, data: replenishmentData });
+
+    try {
+      // Verify scheme exists and is funded type
+      const schemeDetails = await insuranceServiceClient.getSchemeDetails(schemeId);
+      
+      if (!schemeDetails || schemeDetails.schemeType !== 'Funded') {
+        throw new Error('Scheme not found or not a Funded scheme');
+      }
+
+      // Update scheme fund allocation
+      const updateResult = await insuranceServiceClient.addSchemeFundAllocation(
+        schemeId, 
+        replenishmentData.amount,
+        replenishmentData.userId,
+        replenishmentData.referenceNumber
+      );
+
+      // Publish replenishment event
+      await eventBus.publish(EventFactory.createEvent({
+        type: 'scheme.fund.replenished',
+        aggregateId: schemeId,
+        aggregateType: 'scheme',
+        data: {
+          schemeId,
+          amount: replenishmentData.amount,
+          referenceNumber: replenishmentData.referenceNumber,
+          userId: replenishmentData.userId,
+          notes: replenishmentData.notes,
+          replenishedAt: new Date().toISOString()
+        }
+      }));
+
+      logger.info('Fund replenishment completed successfully', { 
+        schemeId, 
+        amount: replenishmentData.amount 
+      });
+
+      return {
+        success: true,
+        schemeId,
+        amount: replenishmentData.amount,
+        referenceNumber: replenishmentData.referenceNumber,
+        processedAt: new Date().toISOString()
+      };
+
+    } catch (error) {
+      logger.error('Failed to process fund replenishment', { error: error as Error, schemeId });
+      throw error;
+    }
+  }
+
+  /**
+   * FR-17: Get fund replenishment history for scheme
+   */
+  async getReplenishmentHistory(schemeId: string): Promise<any[]> {
+    logger.info('Fetching replenishment history', { schemeId });
+
+    try {
+      // TODO: Implement proper history tracking when audit tables are migrated
+      return [];
+    } catch (error) {
+      logger.error('Failed to fetch replenishment history', { error: error as Error, schemeId });
       throw error;
     }
   }

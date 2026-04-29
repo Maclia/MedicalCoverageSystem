@@ -121,6 +121,14 @@ class InsuranceServiceClient extends BaseServiceClient {
       userId
     });
   }
+
+  async addSchemeFundAllocation(schemeId: string, amount: number, userId: number, referenceNumber?: string): Promise<any> {
+    return this.post(`/api/schemes/${schemeId}/fund-allocation`, {
+      amount,
+      userId,
+      referenceNumber
+    });
+  }
 }
 
 export const insuranceServiceClient = new InsuranceServiceClient();
