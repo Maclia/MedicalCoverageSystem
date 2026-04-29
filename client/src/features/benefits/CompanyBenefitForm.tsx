@@ -4,8 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
-import { insertCompanyBenefitSchema } from "@shared/schema";
-import { useCreateCompanyBenefitMutation } from "../../services/api/benefitsApi";
+import { useCreateCompanyBenefitMutation } from "@api/benefitsApi";
 import {
   Form,
   FormControl,
@@ -29,9 +28,20 @@ import { Separator } from "@/ui/separator";
 import { Slider } from "@/ui/slider";
 import { Textarea } from "@/ui/textarea";
 
-// Extend the schema with any additional validation
-const formSchema = insertCompanyBenefitSchema.extend({
-  // Add any custom validations here
+const baseCompanyBenefitSchema = z.object({
+  companyId: z.coerce.number(),
+  benefitId: z.coerce.number(),
+  premiumId: z.coerce.number(),
+  isActive: z.boolean().default(true),
+  additionalCoverage: z.boolean().default(false),
+  additionalCoverageDetails: z.string().optional(),
+  limitAmount: z.coerce.number().optional(),
+  limitClause: z.string().optional(),
+  coverageRate: z.coerce.number().optional(),
+});
+
+// Extend the schema with UI-specific validation
+const formSchema = baseCompanyBenefitSchema.extend({
   companyId: z.coerce.number().positive("Company is required"),
   benefitId: z.coerce.number().positive("Benefit is required"),
   premiumId: z.coerce.number().positive("Premium is required"),
@@ -46,33 +56,50 @@ interface CompanyBenefitFormProps {
   onSuccess?: () => void;
 }
 
-const unwrapArray = async (url: string) => {
-  const response = await fetch(url, { credentials: "include" });
-  const payload = await response.json();
-  if (!response.ok) {
-    throw new Error(payload?.error?.message || `Failed to fetch ${url}`);
-  }
-  return payload?.data ?? payload ?? [];
-};
+interface CompanyOption {
+  id: number;
+  name: string;
+  industry?: string | null;
+}
+
+interface BenefitOption {
+  id: number;
+  name: string;
+}
+
+interface PremiumOption {
+  id: number;
+  total: number;
+}
+
 
 export default function CompanyBenefitForm({ onSuccess }: CompanyBenefitFormProps) {
   const { toast } = useToast();
   const companyBenefitMutation = useCreateCompanyBenefitMutation();
 
+  const unwrapArray = async <T,>(url: string): Promise<T[]> => {
+    const response = await fetch(url, { credentials: "include" });
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(payload?.error?.message || `Failed to fetch ${url}`);
+    }
+    return (payload?.data ?? payload ?? []) as T[];
+  };
+
   // Fetch companies, benefits, and premiums for the select inputs
-  const { data: companies, isLoading: isLoadingCompanies } = useQuery({
+  const { data: companies, isLoading: isLoadingCompanies } = useQuery<CompanyOption[]>({
     queryKey: ["/api/companies"],
-    queryFn: () => unwrapArray("/api/companies"),
+    queryFn: () => unwrapArray<CompanyOption>("/api/companies"),
   });
 
-  const { data: benefits, isLoading: isLoadingBenefits } = useQuery({
+  const { data: benefits, isLoading: isLoadingBenefits } = useQuery<BenefitOption[]>({
     queryKey: ["/api/benefits"],
-    queryFn: () => unwrapArray("/api/benefits?limit=100"),
+    queryFn: () => unwrapArray<BenefitOption>("/api/benefits?limit=100"),
   });
 
-  const { data: premiums, isLoading: isLoadingPremiums } = useQuery({
+  const { data: premiums, isLoading: isLoadingPremiums } = useQuery<PremiumOption[]>({
     queryKey: ["/api/premiums"],
-    queryFn: () => unwrapArray("/api/premiums"),
+    queryFn: () => unwrapArray<PremiumOption>("/api/premiums"),
   });
 
   // Set up default values
@@ -127,10 +154,10 @@ export default function CompanyBenefitForm({ onSuccess }: CompanyBenefitFormProp
 
   // Get the selected company and premium to show more information
   const selectedCompanyId = form.watch("companyId");
-  const selectedCompany = companies?.find(c => c.id === Number(selectedCompanyId));
+  const selectedCompany = companies?.find((c: CompanyOption) => c.id === Number(selectedCompanyId));
   
   const selectedPremiumId = form.watch("premiumId");
-  const selectedPremium = premiums?.find(p => p.id === Number(selectedPremiumId));
+  const selectedPremium = premiums?.find((p: PremiumOption) => p.id === Number(selectedPremiumId));
 
   const isLoading = isLoadingCompanies || isLoadingBenefits || isLoadingPremiums;
 
@@ -162,7 +189,7 @@ export default function CompanyBenefitForm({ onSuccess }: CompanyBenefitFormProp
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {companies?.map(company => (
+                      {companies?.map((company: CompanyOption) => (
                         <SelectItem key={company.id} value={company.id.toString()}>
                           {company.name}
                         </SelectItem>
@@ -203,7 +230,7 @@ export default function CompanyBenefitForm({ onSuccess }: CompanyBenefitFormProp
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {benefits?.map(benefit => (
+                      {benefits?.map((benefit: BenefitOption) => (
                         <SelectItem key={benefit.id} value={benefit.id.toString()}>
                           {benefit.name}
                         </SelectItem>
@@ -232,7 +259,7 @@ export default function CompanyBenefitForm({ onSuccess }: CompanyBenefitFormProp
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {premiums?.map(premium => (
+                      {premiums?.map((premium: PremiumOption) => (
                         <SelectItem key={premium.id} value={premium.id.toString()}>
                           {`Premium #${premium.id} - $${premium.total.toFixed(2)}`}
                         </SelectItem>

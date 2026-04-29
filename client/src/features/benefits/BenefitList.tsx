@@ -21,7 +21,7 @@ import {
 import { Badge } from "@/ui/badge";
 import { Label } from "@/ui/label";
 import { formatCurrency } from "@/utils/format";
-import { useBenefits } from "../../services/api/benefitsApi";
+import { useBenefits } from "@api/benefitsApi";
 
 export default function BenefitList() {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -89,7 +89,10 @@ export default function BenefitList() {
                     {benefit.category}
                   </Badge>
                 </TableCell>
-                <TableCell className="max-w-[300px] truncate" title={benefit.coverageDetails}>
+                <TableCell
+                  className="max-w-[300px] truncate"
+                  title={benefit.coverageDetails ?? undefined}
+                >
                   {benefit.coverageDetails}
                 </TableCell>
                 <TableCell>

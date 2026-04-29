@@ -3,8 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { insertBenefitSchema } from "@shared/schema";
-import { useCreateBenefitMutation } from "../../services/api/benefitsApi";
+import { useCreateBenefitMutation } from "@api/benefitsApi";
 import {
   Form,
   FormControl,
@@ -26,9 +25,19 @@ import { Button } from "@/ui/button";
 import { Textarea } from "@/ui/textarea";
 import { Switch } from "@/ui/switch";
 
-// Extend the schema with any additional validation
-const formSchema = insertBenefitSchema.extend({
-  // Add any custom validations here
+const baseBenefitSchema = z.object({
+  name: z.string().min(1, "Benefit name is required"),
+  description: z.string().optional(),
+  category: z.string().min(1, "Category is required"),
+  coverageDetails: z.string().optional(),
+  limitAmount: z.coerce.number(),
+  hasWaitingPeriod: z.boolean().default(false),
+  waitingPeriodDays: z.coerce.number().optional(),
+  isStandard: z.boolean().default(true),
+});
+
+// Extend the schema with UI-specific validation
+const formSchema = baseBenefitSchema.extend({
   limitAmount: z.coerce.number().min(0, "Limit amount must be positive"),
   waitingPeriodDays: z.coerce.number().min(0, "Waiting period must be positive").optional(),
 });

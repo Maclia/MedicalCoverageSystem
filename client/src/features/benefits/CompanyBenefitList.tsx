@@ -29,7 +29,7 @@ import {
 } from "@/ui/tooltip";
 import { formatDate } from "@/utils/format";
 import { CompanyBenefit, Company } from "@shared/schema";
-import { useCompanyBenefits } from "../../services/api/benefitsApi";
+import { useCompanyBenefits } from "@api/benefitsApi";
 
 type EnhancedCompanyBenefit = CompanyBenefit & {
   benefitName?: string;

@@ -5,7 +5,7 @@ import { Button } from '@/ui/button';
 import { Badge } from '@/ui/badge';
 import { Progress } from '@/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/ui/tabs';
-import { useBenefits, useCompanyBenefits } from '../../services/api/benefitsApi';
+import { useBenefits, useCompanyBenefits } from '@api/benefitsApi';
 import {
   Brain,
   TrendingUp,
