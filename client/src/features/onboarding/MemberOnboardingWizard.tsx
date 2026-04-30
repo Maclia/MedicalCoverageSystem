@@ -267,16 +267,16 @@ export default function MemberOnboardingWizard({ companyId }: { companyId?: numb
   const validateStep = (stepId: string): boolean => {
     switch (stepId) {
       case 'basic-info':
-        return formData.firstName && formData.lastName && formData.email &&
-               formData.phone && formData.dateOfBirth && formData.employeeId;
+        return !!(formData.firstName && formData.lastName && formData.email &&
+               formData.phone && formData.dateOfBirth && formData.employeeId);
       case 'dependents':
-        return formData.memberType === 'principal' ||
-               (formData.memberType === 'dependent' && formData.principalId);
+        return !!(formData.memberType === 'principal' ||
+               (formData.memberType === 'dependent' && formData.principalId));
       case 'health-assessment':
         return formData.riskFactors && formData.riskFactors.length > 0;
       case 'benefits-selection':
-        return formData.preferredCoverage && formData.preferredCoverage.length > 0 &&
-               formData.coverageLevel;
+        return !!(formData.preferredCoverage && formData.preferredCoverage.length > 0 &&
+               formData.coverageLevel);
       case 'document-upload':
         return formData.documents && formData.documents.length > 0;
       case 'review-consent':

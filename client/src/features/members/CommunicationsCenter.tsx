@@ -38,6 +38,7 @@ import {
 import {
   Label,
 } from "@/ui/label";
+import { CreditCard, FileText } from 'lucide-react';
 import {
   Textarea,
 } from "@/ui/textarea";
@@ -586,8 +587,8 @@ export default function CommunicationsCenter({ memberId, companyId }: Communicat
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="save-template"
-                      checked={composeData.saveAsTemplate}
-                      onCheckedChange={(checked) => setComposeData({ ...composeData, saveAsTemplate: checked })}
+                      checked={!!composeData.saveAsTemplate}
+                      onCheckedChange={(checked) => setComposeData({ ...composeData, saveAsTemplate: !!checked })}
                     />
                     <Label htmlFor="save-template" className="text-sm">
                       Save as template for future use
@@ -718,10 +719,10 @@ export default function CommunicationsCenter({ memberId, companyId }: Communicat
                     <TableBody>
                       {filteredCommunications.map((communication: CommunicationLog) => {
                         const typeConfig = communicationTypeConfig[communication.communicationType as keyof typeof communicationTypeConfig];
-                        const channelConfig = channelConfig[communication.channel as keyof typeof channelConfig];
+                        const channelConf = channelConfig[communication.channel as keyof typeof channelConfig];
                         const statusConfig = deliveryStatusConfig[communication.deliveryStatus as keyof typeof deliveryStatusConfig];
                         const TypeIcon = typeConfig?.icon || MessageSquare;
-                        const ChannelIcon = channelConfig?.icon || Mail;
+                        const ChannelIcon = channelConf?.icon || Mail;
                         const StatusIcon = statusConfig?.icon || Clock;
 
                         return (
@@ -743,7 +744,7 @@ export default function CommunicationsCenter({ memberId, companyId }: Communicat
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <ChannelIcon className="h-4 w-4 text-muted-foreground" />
-                                <span>{channelConfig?.label || communication.channel}</span>
+                                <span>{channelConf?.label || communication.channel}</span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -819,7 +820,7 @@ export default function CommunicationsCenter({ memberId, companyId }: Communicat
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-green-600">
-                      {filteredCommunications.filter(c => c.deliveryStatus === 'delivered').length}
+                      {filteredCommunications.filter((c: CommunicationLog) => c.deliveryStatus === 'delivered').length}
                     </div>
                     <p className="text-sm text-muted-foreground">Successfully delivered</p>
                   </CardContent>
@@ -831,7 +832,7 @@ export default function CommunicationsCenter({ memberId, companyId }: Communicat
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-red-600">
-                      {filteredCommunications.filter(c => c.deliveryStatus === 'failed').length}
+                      {filteredCommunications.filter((c: CommunicationLog) => c.deliveryStatus === 'failed').length}
                     </div>
                     <p className="text-sm text-muted-foreground">Delivery failed</p>
                   </CardContent>
@@ -843,7 +844,7 @@ export default function CommunicationsCenter({ memberId, companyId }: Communicat
                   </CardHeader>
                   <CardContent>
                     <div className="text-3xl font-bold text-yellow-600">
-                      {filteredCommunications.filter(c => c.deliveryStatus === 'pending').length}
+                      {filteredCommunications.filter((c: CommunicationLog) => c.deliveryStatus === 'pending').length}
                     </div>
                     <p className="text-sm text-muted-foreground">Awaiting delivery</p>
                   </CardContent>
@@ -861,13 +862,13 @@ export default function CommunicationsCenter({ memberId, companyId }: Communicat
                 <CardContent>
                   <div className="space-y-4">
                     {Object.entries(
-                      filteredCommunications.reduce((acc, comm) => {
+                      filteredCommunications.reduce((acc: Record<string, number>, comm: CommunicationLog) => {
                         acc[comm.channel] = (acc[comm.channel] || 0) + 1;
                         return acc;
                       }, {} as Record<string, number>)
                     ).map(([channel, count]) => {
                       const channelConf = channelConfig[channel as keyof typeof channelConfig];
-                      const percentage = (count / filteredCommunications.length) * 100;
+                      const percentage = ((count as number) / filteredCommunications.length) * 100;
                       const ChannelIcon = channelConf?.icon || Mail;
 
                       return (
@@ -878,7 +879,7 @@ export default function CommunicationsCenter({ memberId, companyId }: Communicat
                               <span className="font-medium">{channelConf?.label || channel}</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-muted-foreground">{count}</span>
+                              <span className="text-sm text-muted-foreground">{count as number}</span>
                               <span className="text-sm text-muted-foreground">({percentage.toFixed(1)}%)</span>
                             </div>
                           </div>

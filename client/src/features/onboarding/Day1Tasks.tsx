@@ -10,6 +10,7 @@ import { Checkbox } from '@/ui/checkbox';
 import { Progress } from '@/ui/progress';
 import { Alert, AlertDescription } from '@/ui/alert';
 import { Badge } from '@/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/ui/tabs';
 import {
   User,
   Phone,
@@ -276,7 +277,7 @@ export const Day1Tasks: React.FC<Day1TasksProps> = ({ memberId, onTaskComplete }
       {/* Main Content Tabs */}
       <Card>
         <CardHeader>
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'profile' | 'documents')}>
+          <Tabs value={activeTab} onValueChange={(value: string) => setActiveTab(value as 'profile' | 'documents')}>
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="profile" className="flex items-center space-x-2">
                 <User className="h-4 w-4" />
