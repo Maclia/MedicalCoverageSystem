@@ -35,7 +35,8 @@ COPY package*.json tsconfig.json ./
 COPY src ./src
 
 # Build TypeScript (with increased memory limit for Docker environment)
-RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
+# Direct node execution avoids ESM module loader issues with NODE_OPTIONS in Alpine
+RUN node --max-old-space-size=4096 ./node_modules/typescript/bin/tsc
 
 # ================================================
 # PRODUCTION STAGE
