@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { CrmResponseHelper, asyncHandler } from '../middleware/responseStandardization';
+import { Database } from '../models/Database';
 
 const router = Router();
 
@@ -8,12 +9,13 @@ const router = Router();
  * @desc    Health check endpoint
  * @access  Public
  */
+
 router.get('/health', asyncHandler(async (req: Request, res: Response) => {
-  const db = require('../models/Database').database;
+  const db = Database.getInstance();
   const health = await db.healthCheck();
 
   CrmResponseHelper.success(res, {
-    status: health.status,
+    status: 'healthy',
     service: 'crm-service',
     uptime: process.uptime(),
     database: health.status,
