@@ -9,7 +9,7 @@ import {
   Survey,
   CommunicationDashboard,
   DeliveryReceipt
-} from '@shared/types/communication';
+} from '@/shared/types/communication';
 
 const API_BASE = '/api/communication';
 

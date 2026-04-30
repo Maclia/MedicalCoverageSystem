@@ -48,7 +48,7 @@ import {
   ChatSession,
   Announcement,
   Survey
-} from '@shared/types/communication';
+} from '@/shared/types/communication';
 
 interface CommunicationDashboardProps {
   memberId: string;
