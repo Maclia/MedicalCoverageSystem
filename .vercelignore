@@ -134,6 +134,10 @@ vercel.json
 # EXCEPTIONS - FILES WE NEED TO KEEP
 # ------------------------------
 !client/
+!client/src/services/
+!client/src/services/**
+!client/src/shared/
+!client/src/shared/**
 !package.json
 !tsconfig.json
 !tsconfig.node.json
