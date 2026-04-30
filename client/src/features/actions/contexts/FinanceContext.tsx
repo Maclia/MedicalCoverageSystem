@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import financeApi from '@api/financeApi';
+import financeApi from '../../../services/api/financeApi';
 import type {
   Invoice,
   Payment,
