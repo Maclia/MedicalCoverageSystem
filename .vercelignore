@@ -134,6 +134,8 @@ vercel.json
 # EXCEPTIONS - FILES WE NEED TO KEEP
 # ------------------------------
 !client/
+!client/src/config/
+!client/src/config/**
 !client/src/services/
 !client/src/services/**
 !client/src/shared/
