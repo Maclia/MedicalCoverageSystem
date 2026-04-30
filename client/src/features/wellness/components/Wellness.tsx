@@ -66,7 +66,7 @@ import type {
   WellnessStats,
   HealthGoal,
   AvailableSlot
-} from '../../../shared/types/wellness';
+} from '@shared/types/wellness';
 
 const WellnessPage: React.FC = () => {
   const { id } = useParams();

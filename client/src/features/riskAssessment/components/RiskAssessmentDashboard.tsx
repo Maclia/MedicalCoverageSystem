@@ -17,7 +17,7 @@ import {
   RiskFactor,
   RiskPrediction,
   RiskDashboard
-} from '../../../shared/types/riskAssessment';
+} from '@shared/types/riskAssessment';
 import { riskApi } from '@api/riskApi';
 import {
   AlertTriangle,

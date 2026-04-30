@@ -58,7 +58,7 @@ import {
   CoachingSession,
   AvailableSlot,
   HealthMetrics
-} from '../../../shared/types/wellness';
+} from '@shared/types/wellness';
 
 interface WellnessIntegration {
   id: string;

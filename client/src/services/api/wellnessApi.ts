@@ -1,4 +1,14 @@
-import { WellnessIntegration, HealthData, HealthMetrics, WellnessIncentive, WellnessReward, WellnessCoach, CoachingSession, AvailableSlot, WellnessStats } from '../../../../shared/types/wellness';
+import type {
+  AvailableSlot,
+  CoachingSession,
+  HealthData,
+  HealthMetrics,
+  WellnessCoach,
+  WellnessIncentive,
+  WellnessIntegration,
+  WellnessReward,
+  WellnessStats
+} from '@shared/types/wellness';
 
 const API_BASE = '/api/wellness';
 

@@ -4,10 +4,9 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const rootDir = fileURLToPath(new URL('.', import.meta.url))
-const toPosixPath = (value: string) => value.replace(/\\/g, '/')
-const srcDir = toPosixPath(path.resolve(rootDir, 'src'))
-const sharedDir = toPosixPath(path.resolve(rootDir, '../shared'))
-const servicesApiDir = `${srcDir}/services/api`
+const srcDir = path.resolve(rootDir, 'src')
+const sharedDir = path.resolve(rootDir, '../shared')
+const servicesApiDir = path.resolve(srcDir, 'services/api')
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -64,35 +63,32 @@ export default defineConfig({
     // Optimize for production
     minify: 'esbuild',
     target: 'es2020',
-    chunkSizeWarningLimit: 900
+   chunkSizeWarningLimit: 900
    },
    resolve: {
-      alias: [
-        // Keep legacy feature aliases ahead of the generic @/ matcher.
-        { find: /^@\/components\/claims\/(.*)$/, replacement: `${srcDir}/features/claims/components/$1` },
-        { find: /^@\/components\/companies\/(.*)$/, replacement: `${srcDir}/features/companies/components/$1` },
-        { find: /^@\/components\/premiums\/(.*)$/, replacement: `${srcDir}/features/finance/components/$1` },
-        { find: /^@\/components\/dependents\/(.*)$/, replacement: `${srcDir}/features/dependents/components/$1` },
-        { find: /^@\/components\/providers\/(.*)$/, replacement: `${srcDir}/features/providers/components/$1` },
-        { find: /^@\/components\/members\/(.*)$/, replacement: `${srcDir}/features/members/components/$1` },
-        { find: /^@\/components\/finance\/(.*)$/, replacement: `${srcDir}/features/finance/components/$1` },
-        { find: /^@\/components\/dashboards\/(.*)$/, replacement: `${srcDir}/features/dashboards/components/$1` },
-        { find: /^@\/components\/insurance\/(.*)$/, replacement: `${srcDir}/features/insurance/components/$1` },
-        { find: /^@api\/(.*)$/, replacement: `${servicesApiDir}/$1` },
-        { find: /^@api$/, replacement: servicesApiDir },
-        { find: /^@\/services\/api\/(.*)$/, replacement: `${servicesApiDir}/$1` },
-        { find: /^@shared\/(.*)$/, replacement: `${sharedDir}/$1` },
-        { find: /^@shared$/, replacement: sharedDir },
-        { find: /^@components\/(.*)$/, replacement: `${srcDir}/components/$1` },
-        { find: /^@pages\/(.*)$/, replacement: `${srcDir}/pages/$1` },
-        { find: /^@utils\/(.*)$/, replacement: `${srcDir}/utils/$1` },
-        { find: /^@types\/(.*)$/, replacement: `${srcDir}/types/$1` },
-        { find: /^@hooks\/(.*)$/, replacement: `${srcDir}/hooks/$1` },
-        { find: /^@services\/(.*)$/, replacement: `${srcDir}/services/$1` },
-        { find: /^@lib\/(.*)$/, replacement: `${srcDir}/lib/$1` },
-        { find: /^@contexts\/(.*)$/, replacement: `${srcDir}/contexts/$1` },
-        { find: /^@\/(.*)$/, replacement: `${srcDir}/$1` },
-      ],
+      alias: {
+        '@/components/claims': path.resolve(srcDir, 'features/claims/components'),
+        '@/components/companies': path.resolve(srcDir, 'features/companies/components'),
+        '@/components/premiums': path.resolve(srcDir, 'features/finance/components'),
+        '@/components/dependents': path.resolve(srcDir, 'features/dependents/components'),
+        '@/components/providers': path.resolve(srcDir, 'features/providers/components'),
+        '@/components/members': path.resolve(srcDir, 'features/members/components'),
+        '@/components/finance': path.resolve(srcDir, 'features/finance/components'),
+        '@/components/dashboards': path.resolve(srcDir, 'features/dashboards/components'),
+        '@/components/insurance': path.resolve(srcDir, 'features/insurance/components'),
+        '@/services/api': servicesApiDir,
+        '@api': servicesApiDir,
+        '@services': path.resolve(srcDir, 'services'),
+        '@components': path.resolve(srcDir, 'components'),
+        '@pages': path.resolve(srcDir, 'pages'),
+        '@utils': path.resolve(srcDir, 'utils'),
+        '@types': path.resolve(srcDir, 'types'),
+        '@hooks': path.resolve(srcDir, 'hooks'),
+        '@lib': path.resolve(srcDir, 'lib'),
+        '@contexts': path.resolve(srcDir, 'contexts'),
+        '@shared': sharedDir,
+        '@': srcDir,
+      },
       // Ensure extensions are properly resolved
       extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
       preserveSymlinks: false,
