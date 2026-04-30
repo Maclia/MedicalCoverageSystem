@@ -181,8 +181,8 @@ services:
   core-service:
     <<: *service-defaults
     build:
-      context: ./services/core-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./services/core-service/Dockerfile
     container_name: medical_core_service
     environment:
       NODE_ENV: ${NODE_ENV:-production}
