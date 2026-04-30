@@ -10,7 +10,7 @@ export interface User {
   lastName?: string;
   phone?: string;
   avatarUrl?: string;
-  userType: 'insurance' | 'institution' | 'provider';
+  userType: 'insurance' | 'institution' | 'provider' | 'company' | 'member';
   entityId: number;
   isActive: boolean;
   lastLogin?: Date;
@@ -27,7 +27,7 @@ export interface AuthState {
 export interface LoginCredentials {
   email: string;
   password: string;
-  userType?: 'insurance' | 'institution' | 'provider';
+  userType?: 'insurance' | 'institution' | 'provider' | 'company' | 'member';
 }
 
 export interface AuthTokens {
@@ -97,7 +97,7 @@ interface AuthContextType extends AuthState {
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
   clearError: () => void;
-  hasRole: (role: 'insurance' | 'institution' | 'provider') => boolean;
+  hasRole: (role: 'insurance' | 'institution' | 'provider' | 'company' | 'member') => boolean;
   isAdmin: () => boolean;
 }
 
@@ -238,7 +238,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'CLEAR_ERROR' });
   };
 
-  const hasRole = (role: 'insurance' | 'institution' | 'provider'): boolean => {
+  const hasRole = (role: 'insurance' | 'institution' | 'provider' | 'company' | 'member'): boolean => {
     return state.user?.userType === role;
   };
 

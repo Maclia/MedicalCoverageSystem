@@ -288,6 +288,14 @@ export const analyticsApi = {
     return apiRequest('/analytics/dashboard/insurance');
   },
 
+  async getCompanyDashboardStats() {
+    return apiRequest('/analytics/dashboard/company');
+  },
+
+  async getMemberDashboardStats() {
+    return apiRequest('/analytics/dashboard/member');
+  },
+
   async getRecentActivity(params: { limit?: number } = {}) {
     const searchParams = new URLSearchParams();
     if (params.limit) searchParams.append('limit', params.limit.toString());

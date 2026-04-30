@@ -23,6 +23,8 @@ const Dashboard = lazy(() => import("@/features/dashboards/Dashboard"));
 const InsuranceDashboard = lazy(() => import("@/features/dashboards/InsuranceDashboard"));
 const InstitutionDashboard = lazy(() => import("@/features/dashboards/InstitutionDashboard"));
 const ProviderDashboard = lazy(() => import("@/features/dashboards/ProviderDashboard"));
+const CompanyDashboard = lazy(() => import("@/features/dashboards/CompanyDashboard"));
+const MemberDashboard = lazy(() => import("@/features/dashboards/MemberDashboard"));
 const Companies = lazy(() => import("@/features/companies/components/Companies"));
 const CompanyDetail = lazy(() => import("@/features/companies/components/CompanyDetail"));
 const Benefits = lazy(() => import("@/features/companies/components/Benefits"));
@@ -30,7 +32,6 @@ const MedicalInstitutions = lazy(() => import("@/features/companies/components/M
 const Communication = lazy(() => import("@/features/companies/components/Communication"));
 const Members = lazy(() => import("@/features/members/Members"));
 const Dependents = lazy(() => import("@/features/members/Dependents"));
-const MemberDashboard = lazy(() => import("@/features/members/MemberDashboard"));
 const Premiums = lazy(() => import("@/features/premiums/components/Premiums"));
 const Periods = lazy(() => import("@/features/periods/components/Periods"));
 const Regions = lazy(() => import("@/features/regions/components/Regions"));
@@ -166,6 +167,12 @@ function Router() {
 
               {/* Healthcare Provider Routes */}
               <Route path="/dashboard/provider" component={() => <ProviderDashboard />} />
+
+              {/* Company / Employer Routes */}
+              <Route path="/dashboard/company" component={() => <CompanyDashboard />} />
+
+              {/* Member / Employee Routes */}
+              <Route path="/dashboard/member" component={() => <MemberDashboard />} />
               <Route path="/provider-claim-submission" component={() => (
                 <ProtectedRoute allowedRoles={['provider', 'institution']}>
                   <ProviderClaimSubmission />

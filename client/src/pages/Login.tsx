@@ -16,7 +16,7 @@ import {
   EyeSlashIcon
 } from '@heroicons/react/24/outline';
 
-type UserRole = 'insurance' | 'institution' | 'provider';
+type UserRole = 'insurance' | 'institution' | 'provider' | 'company' | 'member';
 
 interface RoleInfo {
   type: UserRole;
@@ -35,6 +35,22 @@ const roleInfos: RoleInfo[] = [
     icon: BuildingOfficeIcon,
     color: 'blue',
     features: ['Member Management', 'Premium Calculation', 'Claims Processing', 'Analytics Dashboard', 'System Administration'],
+  },
+  {
+    type: 'company',
+    title: 'Company / Employer',
+    description: 'Monitor fund utilization, view employee benefits, and manage scheme contributions',
+    icon: BuildingOfficeIcon,
+    color: 'orange',
+    features: ['Fund Utilization Dashboard', 'Employee Benefits Management', 'Claim Reports', 'Premium Payments', 'Scheme Management'],
+  },
+  {
+    type: 'member',
+    title: 'Member / Employee',
+    description: 'Check benefits utilization, view claims status, and access wellness programs',
+    icon: UserGroupIcon,
+    color: 'teal',
+    features: ['Benefits Balance', 'Claim History', 'Wellness Programs', 'Card Management', 'Provider Search'],
   },
   {
     type: 'institution',
@@ -133,6 +149,20 @@ const Login: React.FC = () => {
         badge: 'bg-blue-100 text-blue-800',
         selected: 'border-blue-500 bg-blue-50 ring-blue-200',
       },
+      company: {
+        bg: 'bg-orange-50',
+        border: 'border-orange-200',
+        text: 'text-orange-900',
+        badge: 'bg-orange-100 text-orange-800',
+        selected: 'border-orange-500 bg-orange-50 ring-orange-200',
+      },
+      member: {
+        bg: 'bg-teal-50',
+        border: 'border-teal-200',
+        text: 'text-teal-900',
+        badge: 'bg-teal-100 text-teal-800',
+        selected: 'border-teal-500 bg-teal-50 ring-teal-200',
+      },
       institution: {
         bg: 'bg-green-50',
         border: 'border-green-200',
@@ -159,7 +189,7 @@ const Login: React.FC = () => {
       <div className="w-full max-w-6xl">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Medical Coverage System
+            MedCare Kenya
           </h1>
           <p className="text-xl text-gray-600">
             Comprehensive Healthcare Management Platform
