@@ -13,14 +13,10 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": "../../",
-    "typeRoots": ["../../node_modules/@types"],
-    "resolveJsonModule": true,
-    "paths": {
-      "@shared/*": ["../shared/*"],
-      "@/*": ["./src/*"]
-    }
+    "rootDir": "./src",
+    "typeRoots": ["./node_modules/@types"],
+    "resolveJsonModule": true
   },
-  "include": ["src/**/*", "../../shared/**/*"],
+  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
 }

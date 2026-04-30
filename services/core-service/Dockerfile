@@ -34,8 +34,8 @@ COPY package*.json tsconfig.json ./
 # Copy source code
 COPY src ./src
 
-# Build TypeScript
-RUN npm run build
+# Build TypeScript (with increased memory limit for Docker environment)
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 # ================================================
 # PRODUCTION STAGE
