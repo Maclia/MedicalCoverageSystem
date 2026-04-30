@@ -93,6 +93,8 @@ migrations/
 
 # Cache
 .cache/
+.npm-cache/
+npm-cache/
 .parcel-cache/
 .eslintcache
 .stylelintcache
@@ -161,4 +163,4 @@ client/src/features/tokens/.local
 *.old
 *.orig
 *.rej
-.npm-cache/_cacache/content-v2/sha512/2a/fa/78e7d1eb576144275080b22d4abbe318de46ac1f5f53172913cf6c5698c7aae9b936354dd75ef7c9f90eb59b4c64b56c2dfb51d261fdc966c4e6b3769126
+
