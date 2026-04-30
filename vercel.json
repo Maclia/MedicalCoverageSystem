@@ -1,37 +1,13 @@
 {
   "version": 2,
-  "buildCommand": "cd client && npm run build",
+  "buildCommand": "npm --prefix client run build",
   "outputDirectory": "client/dist",
-  "installCommand": "cd client && npm install",
-  "framework": null,
+  "installCommand": "npm --prefix client install",
+  "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/server/:path*"
-    },
-    {
       "source": "/(.*)",
-      "destination": "/client/$1"
-    }
-  ],
-
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
-        }
-      ]
+      "destination": "/index.html"
     }
   ],
   "env": {

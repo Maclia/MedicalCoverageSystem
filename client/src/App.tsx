@@ -1,4 +1,5 @@
 // 3rd Party Libraries
+import { Suspense, lazy } from "react";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 
@@ -15,67 +16,48 @@ import { FinanceProvider } from "@/features/actions/contexts/FinanceContext";
 
 // Auth & Layout
 import ProtectedRoute from "@/features/auth/ProtectedRoute";
-import Login from "@/pages/Login";
 import AppLayout from "@/features/layout/AppLayout";
+import Login from "@/pages/Login";
 
-// Dashboard Components
-import Dashboard from "@/features/dashboards/Dashboard";
-import InsuranceDashboard from "@/features/dashboards/InsuranceDashboard";
-import InstitutionDashboard from "@/features/dashboards/InstitutionDashboard";
-import ProviderDashboard from "@/features/dashboards/ProviderDashboard";
+const Dashboard = lazy(() => import("@/features/dashboards/Dashboard"));
+const InsuranceDashboard = lazy(() => import("@/features/dashboards/InsuranceDashboard"));
+const InstitutionDashboard = lazy(() => import("@/features/dashboards/InstitutionDashboard"));
+const ProviderDashboard = lazy(() => import("@/features/dashboards/ProviderDashboard"));
+const Companies = lazy(() => import("@/features/companies/components/Companies"));
+const CompanyDetail = lazy(() => import("@/features/companies/components/CompanyDetail"));
+const Benefits = lazy(() => import("@/features/companies/components/Benefits"));
+const MedicalInstitutions = lazy(() => import("@/features/companies/components/MedicalInstitutions"));
+const Communication = lazy(() => import("@/features/companies/components/Communication"));
+const Members = lazy(() => import("@/features/members/Members"));
+const Dependents = lazy(() => import("@/features/members/Dependents"));
+const MemberDashboard = lazy(() => import("@/features/members/MemberDashboard"));
+const Premiums = lazy(() => import("@/features/premiums/components/Premiums"));
+const Periods = lazy(() => import("@/features/periods/components/Periods"));
+const Regions = lazy(() => import("@/features/regions/components/Regions"));
+const MedicalPersonnel = lazy(() => import("@/features/providers/components/MedicalPersonnel"));
+const PanelDocumentation = lazy(() => import("@/features/providers/components/PanelDocumentation"));
+const ProviderClaimSubmission = lazy(() => import("@/features/providers/components/ProviderClaimSubmission"));
+const ProviderSchemesManagement = lazy(() => import("@/features/providers/components/ProviderSchemesManagement"));
+const Claims = lazy(() => import("@/features/claims/components/Claims"));
+const ClaimsManagement = lazy(() =>
+  import("@/features/claims-management/components/ClaimsManagement").then((module) => ({
+    default: module.ClaimsManagement,
+  }))
+);
+const SchemesManagement = lazy(() => import("@/features/schemes/components/SchemesManagement"));
+const Wellness = lazy(() => import("@/features/wellness/components/Wellness"));
+const RiskAssessment = lazy(() => import("@/features/risk-assessment/components/RiskAssessment"));
+const Finance = lazy(() => import("@/features/finance/components/Finance"));
+const ProviderPortal = lazy(() => import("@/features/providers/components/ProviderPortal"));
+const ProviderVerification = lazy(() => import("@/features/providers/components/ProviderVerification"));
+const LeadManagement = lazy(() => import("@/features/crm/components/LeadManagement"));
+const AgentPortal = lazy(() => import("@/features/crm/components/AgentPortal"));
+const NotFound = lazy(() => import("@/pages/not-found"));
+const UserSettingsPage = lazy(() => import("@/features/settings/UserSettingsPage"));
 
-// Companies Feature
-import Companies from "@/features/companies/components/Companies";
-import CompanyDetail from "@/features/companies/components/CompanyDetail";
-import Benefits from "@/features/companies/components/Benefits";
-import MedicalInstitutions from "@/features/companies/components/MedicalInstitutions";
-import Communication from "@/features/companies/components/Communication";
-
-// Members Feature
-import Members from "@/features/members/Members";
-import Dependents from "@/features/members/Dependents";
-import MemberDashboard from "@/features/members/MemberDashboard";
-
-// Premiums & Periods
-import Premiums from "@/features/premiums/components/Premiums";
-import Periods from "@/features/periods/components/Periods";
-
-// Regions Feature
-import Regions from "@/features/regions/components/Regions";
-
-// Providers Feature
-import MedicalPersonnel from "@/features/providers/components/MedicalPersonnel";
-import PanelDocumentation from "@/features/providers/components/PanelDocumentation";
-import ProviderClaimSubmission from "@/features/providers/components/ProviderClaimSubmission";
-import ProviderSchemesManagement from "@/features/providers/components/ProviderSchemesManagement";
-
-// Claims Feature
-import Claims from "@/features/claims/components/Claims";
-import { ClaimsManagement } from "@/features/claims-management/components/ClaimsManagement";
-
-// Schemes Feature
-import SchemesManagement from "@/features/schemes/components/SchemesManagement";
-
-// Wellness Feature
-import Wellness from "@/features/wellness/components/Wellness";
-
-// Risk Assessment
-import RiskAssessment from "@/features/risk-assessment/components/RiskAssessment";
-
-// Finance Feature
-import Finance from "@/features/finance/components/Finance";
-
-// Provider Portal Pages
-import ProviderPortal from "@/features/providers/components/ProviderPortal";
-import ProviderVerification from "@/features/providers/components/ProviderVerification";
-
-// CRM Pages
-import LeadManagement from "@/features/crm/components/LeadManagement";
-import AgentPortal from "@/features/crm/components/AgentPortal";
-
-// Utility Pages
-import NotFound from "@/pages/not-found";
-import UserSettingsPage from "@/features/settings/UserSettingsPage";
+function RouteFallback() {
+  return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+}
 
 function Router() {
   return (
@@ -87,7 +69,8 @@ function Router() {
       <Route path="/">
         <ProtectedRoute>
           <AppLayout>
-            <Switch>
+            <Suspense fallback={<RouteFallback />}>
+              <Switch>
               {/* Default Dashboard - redirects to role-specific dashboard */}
               <Route path="/" component={Dashboard} />
 
@@ -284,7 +267,8 @@ function Router() {
 
               {/* 404 Not Found */}
               <Route component={NotFound} />
-            </Switch>
+              </Switch>
+            </Suspense>
           </AppLayout>
         </ProtectedRoute>
       </Route>

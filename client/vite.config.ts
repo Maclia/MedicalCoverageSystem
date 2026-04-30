@@ -36,6 +36,18 @@ export default defineConfig({
            if (id.includes('@radix-ui')) {
              return 'ui';
            }
+           if (id.includes('@mui') || id.includes('@emotion')) {
+             return 'mui';
+           }
+           if (id.includes('recharts')) {
+             return 'charts';
+           }
+           if (id.includes('framer-motion')) {
+             return 'motion';
+           }
+           if (id.includes('@stripe')) {
+             return 'stripe';
+           }
            if (id.includes('wouter')) {
              return 'router';
            }
@@ -47,7 +59,8 @@ export default defineConfig({
     },
     // Optimize for production
     minify: 'esbuild',
-    target: 'es2020'
+    target: 'es2020',
+    chunkSizeWarningLimit: 900
    },
    resolve: {
       alias: [
