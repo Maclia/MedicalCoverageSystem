@@ -61,7 +61,7 @@ export default defineConfig({
        }
     },
     // Optimize for production
-    minify: 'esbuild',
+    minify: 'oxc',
     target: 'es2020',
    chunkSizeWarningLimit: 900
    },
