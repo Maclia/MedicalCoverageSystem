@@ -51,14 +51,13 @@ RUN apk add --no-cache dumb-init
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nodejs
 
-# Copy package files
+# Copy built application and node_modules from builder stage
+COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
 COPY package*.json ./
 
-# Install production only dependencies
-RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
-
-# Copy built application from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+# Prune development dependencies (already installed, just remove dev ones)
+RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Create logs directory with proper permissions
 RUN mkdir -p logs && chown -R nodejs:nodejs /app
