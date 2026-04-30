@@ -19,7 +19,6 @@ import {
   Eye,
   Download,
   Trash2,
-  Camera,
   FolderOpen
 } from 'lucide-react';
 
@@ -37,6 +36,22 @@ interface MemberDocument {
   verificationStatus: 'pending' | 'approved' | 'rejected' | 'expired';
   fileSize?: number;
   mimeType?: string;
+  filePath?: string;
+}
+
+interface MemberDocumentRecord {
+  id: number;
+  documentType: string;
+  documentNumber?: string | null;
+  documentUrl?: string | null;
+  documentData?: {
+    originalName?: string;
+    fileName?: string;
+    fileSize?: number;
+    mimeType?: string;
+  } | null;
+  status?: string;
+  createdAt?: string;
 }
 
 interface UploadedFile {
@@ -56,6 +71,17 @@ const documentTypes = [
 
 const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
 const maxFileSize = 10 * 1024 * 1024; // 10MB
+
+const normalizeDocument = (record: MemberDocumentRecord): MemberDocument => ({
+  id: record.id,
+  documentType: (record.documentType || 'dependent_document') as MemberDocument['documentType'],
+  originalFileName: record.documentData?.originalName || record.documentData?.fileName || record.documentNumber || 'Document',
+  uploadDate: record.createdAt || new Date().toISOString(),
+  verificationStatus: (record.status || 'pending') as MemberDocument['verificationStatus'],
+  fileSize: record.documentData?.fileSize,
+  mimeType: record.documentData?.mimeType,
+  filePath: record.documentUrl || undefined,
+});
 
 export const DocumentUpload: React.FC<DocumentUploadProps> = ({
   memberId,
@@ -77,13 +103,19 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
   const fetchExistingDocuments = async () => {
     try {
-      const response = await fetch(`/api/onboarding/${memberId}/documents`);
+      setIsLoading(true);
+      const response = await fetch(`/api/members/${memberId}/documents`, {
+        credentials: 'include',
+      });
       if (response.ok) {
-        const documents = await response.json();
+        const payload = await response.json();
+        const documents = Array.isArray(payload?.data) ? payload.data.map(normalizeDocument) : [];
         setExistingDocuments(documents);
       }
     } catch (err) {
       console.error('Failed to fetch existing documents:', err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -162,17 +194,20 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
       reader.onload = async () => {
         const base64Data = reader.result as string;
 
-        const response = await fetch(`/api/onboarding/${memberId}/documents`, {
+        const response = await fetch(`/api/members/${memberId}/documents`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
             documentType: selectedType,
+            documentName: uploadedFile.file.name,
             fileName: uploadedFile.file.name,
-            fileData: base64Data,
-            mimeType: uploadedFile.file.type
+            filePath: base64Data,
+            mimeType: uploadedFile.file.type,
+            fileSize: uploadedFile.file.size
           }),
+          credentials: 'include',
         });
 
         if (!response.ok) {
@@ -193,8 +228,8 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
         // Update existing documents
         fetchExistingDocuments();
 
-        if (onUploadComplete) {
-          onUploadComplete(result.document);
+        if (onUploadComplete && result?.data) {
+          onUploadComplete(normalizeDocument(result.data));
         }
 
         // Remove completed file after a delay
@@ -240,8 +275,9 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
 
   const deleteDocument = async (documentId: number) => {
     try {
-      const response = await fetch(`/api/onboarding/documents/${documentId}`, {
+      const response = await fetch(`/api/members/${memberId}/documents/${documentId}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -276,6 +312,37 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const previewDocument = (document: MemberDocument) => {
+    if (!document.filePath) {
+      setError('Document preview path is missing');
+      return;
+    }
+
+    if (document.mimeType?.startsWith('image/')) {
+      setShowPreview({
+        url: document.filePath,
+        name: document.originalFileName
+      });
+      return;
+    }
+
+    window.open(document.filePath, '_blank', 'noopener,noreferrer');
+  };
+
+  const downloadDocument = (document: MemberDocument) => {
+    if (!document.filePath) {
+      setError('Document download path is missing');
+      return;
+    }
+
+    const anchor = window.document.createElement('a');
+    anchor.href = document.filePath;
+    anchor.download = document.originalFileName;
+    window.document.body.appendChild(anchor);
+    anchor.click();
+    window.document.body.removeChild(anchor);
   };
 
   return (
@@ -514,10 +581,10 @@ export const DocumentUpload: React.FC<DocumentUploadProps> = ({
                     <div className="flex items-center space-x-2">
                       {getStatusBadge(document.verificationStatus)}
                       <div className="flex items-center space-x-1">
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => previewDocument(document)}>
                           <Eye className="h-3 w-3" />
                         </Button>
-                        <Button size="sm" variant="outline">
+                        <Button size="sm" variant="outline" onClick={() => downloadDocument(document)}>
                           <Download className="h-3 w-3" />
                         </Button>
                         {document.verificationStatus === 'rejected' && (

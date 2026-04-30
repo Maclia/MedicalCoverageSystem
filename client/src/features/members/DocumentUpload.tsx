@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
   Card,
@@ -14,7 +14,6 @@ import {
 } from "@/ui/button";
 import {
   Badge,
-  badgeVariants,
 } from "@/ui/badge";
 import {
   Select,
@@ -108,6 +107,27 @@ interface DocumentUploadProps {
   memberName: string;
 }
 
+interface MemberDocumentRecord {
+  id: number;
+  memberId: number;
+  documentType: MemberDocument["documentType"];
+  documentNumber?: string | null;
+  documentUrl?: string | null;
+  documentData?: {
+    originalName?: string;
+    fileName?: string;
+    fileSize?: number;
+    mimeType?: string;
+    uploadedBy?: number;
+    expiresAt?: string | null;
+  } | null;
+  expiryDate?: string | null;
+  status?: string;
+  notes?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 const documentTypeConfig = {
   national_id: {
     label: 'National ID',
@@ -186,6 +206,55 @@ function formatFileSize(bytes: number): string {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+function normalizeDocument(record: MemberDocumentRecord): MemberDocument {
+  const documentData = record.documentData || {};
+
+  return {
+    id: record.id,
+    memberId: record.memberId,
+    documentType: record.documentType,
+    documentName: record.notes || documentData.originalName || record.documentNumber || 'Document',
+    fileName: documentData.fileName || record.documentNumber || 'document',
+    filePath: record.documentUrl || '',
+    fileSize: Number(documentData.fileSize || 0),
+    mimeType: documentData.mimeType || 'application/octet-stream',
+    uploadedAt: record.createdAt || record.updatedAt || new Date().toISOString(),
+    expiresAt: record.expiryDate || documentData.expiresAt || undefined,
+    isActive: record.status !== 'rejected',
+    uploadedBy: documentData.uploadedBy,
+  };
+}
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = () => reject(new Error(`Failed to read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
+function getDocumentStatus(document: MemberDocument) {
+  if (!document.isActive) {
+    return { color: 'secondary' as const, label: 'Inactive', icon: Clock };
+  }
+
+  if (document.expiresAt) {
+    const expiryDate = new Date(document.expiresAt);
+    const today = new Date();
+    const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysUntilExpiry < 0) {
+      return { color: 'destructive' as const, label: 'Expired', icon: AlertCircle };
+    }
+    if (daysUntilExpiry <= 30) {
+      return { color: 'outline' as const, label: 'Expiring Soon', icon: Clock };
+    }
+  }
+
+  return { color: 'default' as const, label: 'Active', icon: CheckCircle };
+}
+
 export default function DocumentUpload({ memberId, memberName }: DocumentUploadProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -203,14 +272,24 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
     queryKey: ['/api/members', memberId, 'documents'],
     queryFn: async () => {
       const response = await apiRequest("GET", `/api/members/${memberId}/documents`);
-      return response.json();
+      const payload = await response.json();
+      const records = Array.isArray(payload?.data) ? payload.data : [];
+      return records.map(normalizeDocument) as MemberDocument[];
     },
   });
 
   // Upload document mutation
   const uploadMutation = useMutation({
-    mutationFn: async (data: FormData) => {
-      const response = await apiRequest("POST", `/api/members/${memberId}/documents`, data, false);
+    mutationFn: async (data: {
+      documentType: string;
+      documentName: string;
+      fileName: string;
+      filePath: string;
+      fileSize: number;
+      mimeType: string;
+      expiresAt?: string;
+    }) => {
+      const response = await apiRequest("POST", `/api/members/${memberId}/documents`, data);
       return response.json();
     },
     onMutate: () => {
@@ -242,8 +321,7 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
   // Delete document mutation
   const deleteMutation = useMutation({
     mutationFn: async (documentId: number) => {
-      const response = await apiRequest("DELETE", `/api/members/${memberId}/documents/${documentId}`);
-      return response.json();
+      await apiRequest("DELETE", `/api/members/${memberId}/documents/${documentId}`);
     },
     onSuccess: () => {
       toast({
@@ -315,35 +393,40 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
       return;
     }
 
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('documentType', documentType);
-    formData.append('documentName', documentName);
-    if (expiresAt) {
-      formData.append('expiresAt', expiresAt);
-    }
-
     try {
-      uploadMutation.mutate(formData);
+      const filePath = await readFileAsDataUrl(selectedFile);
+      uploadMutation.mutate({
+        documentType,
+        documentName,
+        fileName: selectedFile.name,
+        filePath,
+        fileSize: selectedFile.size,
+        mimeType: selectedFile.type,
+        expiresAt: expiresAt || undefined,
+      });
+      setUploadProgress(100);
     } catch (error) {
       console.error('Upload error:', error);
+      toast({
+        title: "Upload Failed",
+        description: error instanceof Error ? error.message : "Failed to prepare document upload",
+        variant: "destructive",
+      });
     }
   };
 
   const handleDownload = async (document: MemberDocument) => {
     try {
-      const response = await apiRequest("GET", `/api/members/${memberId}/documents/${document.id}/download`);
+      if (!document.filePath) {
+        throw new Error("Document file path is missing");
+      }
 
-      // Create blob from response
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = document.fileName;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      const anchor = window.document.createElement('a');
+      anchor.href = document.filePath;
+      anchor.download = document.fileName;
+      window.document.body.appendChild(anchor);
+      anchor.click();
+      window.document.body.removeChild(anchor);
     } catch (error) {
       toast({
         title: "Download Failed",
@@ -355,10 +438,11 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
 
   const handlePreview = async (document: MemberDocument) => {
     try {
-      const response = await apiRequest("GET", `/api/members/${memberId}/documents/${document.id}/download`);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, '_blank');
+      if (!document.filePath) {
+        throw new Error("Document file path is missing");
+      }
+
+      window.open(document.filePath, '_blank', 'noopener,noreferrer');
     } catch (error) {
       toast({
         title: "Preview Failed",
@@ -368,25 +452,7 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
     }
   };
 
-  const getDocumentStatus = (document: MemberDocument) => {
-    if (!document.isActive) {
-      return { color: 'secondary' as const, label: 'Inactive', icon: Clock };
-    }
-
-    if (document.expiresAt) {
-      const expiryDate = new Date(document.expiresAt);
-      const today = new Date();
-      const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-
-      if (daysUntilExpiry < 0) {
-        return { color: 'destructive' as const, label: 'Expired', icon: AlertCircle };
-      } else if (daysUntilExpiry <= 30) {
-        return { color: 'outline' as const, label: 'Expiring Soon', icon: Clock };
-      }
-    }
-
-    return { color: 'default' as const, label: 'Active', icon: CheckCircle };
-  };
+  const documentList = documents ?? [];
 
   return (
     <div className="space-y-6">
@@ -456,7 +522,10 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
 
                   {selectedFile && (
                     <div className="flex items-center gap-3 p-3 bg-muted rounded-md">
-                      {getFileIcon(selectedFile.type)}
+                      {(() => {
+                        const SelectedFileIcon = getFileIcon(selectedFile.type);
+                        return <SelectedFileIcon className="h-5 w-5 text-muted-foreground" />;
+                      })()}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{selectedFile.name}</p>
                         <p className="text-xs text-muted-foreground">
@@ -542,33 +611,30 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
             {/* Documents Summary */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-2xl font-bold">{documents?.data?.length || 0}</div>
+                <div className="text-2xl font-bold">{documentList.length}</div>
                 <div className="text-sm text-muted-foreground">Total Documents</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {documents?.data?.filter((d: MemberDocument) => d.isActive).length || 0}
+                  {documentList.filter((d) => d.isActive).length}
                 </div>
                 <div className="text-sm text-muted-foreground">Active</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-orange-600">
-                  {documents?.data?.filter((d: MemberDocument) => {
-                    if (!d.expiresAt) return 0;
+                  {documentList.filter((d) => {
+                    if (!d.expiresAt) return false;
                     const expiryDate = new Date(d.expiresAt);
                     const today = new Date();
                     const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
                     return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
-                  }).length || 0}
+                  }).length}
                 </div>
                 <div className="text-sm text-muted-foreground">Expiring Soon</div>
               </div>
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600">
-                  {documents?.data?.filter((d: MemberDocument) => {
-                    if (!d.expiresAt) return 0;
-                    return new Date(d.expiresAt) < new Date();
-                  }).length || 0}
+                  {documentList.filter((d) => d.expiresAt && new Date(d.expiresAt) < new Date()).length}
                 </div>
                 <div className="text-sm text-muted-foreground">Expired</div>
               </div>
@@ -590,7 +656,7 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : documents?.data?.length > 0 ? (
+          ) : documentList.length > 0 ? (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -605,7 +671,7 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {documents.data.map((document: MemberDocument) => {
+                  {documentList.map((document) => {
                     const status = getDocumentStatus(document);
                     const StatusIcon = status.icon;
                     const DocIcon = getFileIcon(document.mimeType);
@@ -670,7 +736,10 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
                               <DropdownMenuSeparator />
                               <AlertDialog>
                                 <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem className="text-destructive">
+                                  <DropdownMenuItem
+                                    className="text-destructive"
+                                    onSelect={(event) => event.preventDefault()}
+                                  >
                                     <Trash2 className="h-4 w-4 mr-2" />
                                     Delete
                                   </DropdownMenuItem>
@@ -714,3 +783,4 @@ export default function DocumentUpload({ memberId, memberName }: DocumentUploadP
     </div>
   );
 }
+

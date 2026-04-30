@@ -1,59 +1,64 @@
 /**
  * Pages Index
- * Central export point for all page components
- * Organized by functional domain
+ * Central export point for routable screens and feature entry components.
  */
 
-// ===== Core Pages =====
-export { default as Dashboard } from '../../../pages/Dashboard';
-export { default as NotFound } from '../../../pages/not-found';
+// Core pages
+export { default as Login } from './Login';
+export { default as NotFound } from './not-found';
 
-// ===== Company & Member Management =====
-export { default as Companies } from '../../../pages/Companies';
-export { default as CompanyDetail } from '../../../pages/CompanyDetail';
-export { default as Members } from '../../../pages/Members';
-export { default as Dependents } from '../../../pages/Dependents';
-export { default as MemberDashboard } from '../../../pages/MemberDashboard';
+// Dashboards
+export { default as Dashboard } from '../features/dashboards/Dashboard';
+export { default as InsuranceDashboard } from '../features/dashboards/InsuranceDashboard';
+export { default as InstitutionDashboard } from '../features/dashboards/InstitutionDashboard';
+export { default as ProviderDashboard } from '../features/dashboards/ProviderDashboard';
 
-// ===== Financial Management =====
-export { default as Finance } from '../../../pages/Finance';
-export { default as Premiums } from '../../../pages/Premiums';
-export { default as Periods } from '../../periods/components/Periods';
+// Company and member management
+export { default as Companies } from '../features/companies/components/Companies';
+export { default as CompanyDetail } from '../features/companies/components/CompanyDetail';
+export { default as Members } from '../features/members/Members';
+export { default as MemberDashboard } from '../features/members/MemberDashboard';
+export { default as Dependents } from '../features/members/Dependents';
 
-// ===== Benefits & Schemes =====
-export { default as Benefits } from '../../../pages/Benefits';
-export { default as SchemesManagement } from '../../schemes/components/SchemesManagement';
-export { default as ProviderSchemesManagement } from './ProviderSchemesManagement';
+// Financial management
+export { default as Finance } from '../features/finance/components/Finance';
+export { default as Premiums } from '../features/premiums/components/Premiums';
+export { default as Periods } from '../features/periods/components/Periods';
 
-// ===== Claims Management =====
-export { default as Claims } from '../../claims/components/Claims';
-export { ClaimsManagement } from '../../claims/components/ClaimsManagement';
-export { default as ProviderClaimSubmission } from './ProviderClaimSubmission';
+// Benefits and schemes
+export { default as Benefits } from '../features/companies/components/Benefits';
+export { default as SchemesManagement } from '../features/schemes/components/SchemesManagement';
+export { default as ProviderSchemesManagement } from '../features/providers/components/ProviderSchemesManagement';
 
-// ===== Provider Network =====
-export { default as ProviderNetworkManagement } from './ProviderNetworkManagement';
-export { default as ProviderPortal } from './ProviderPortal';
-export { default as ProviderVerification } from './ProviderVerification';
-export { default as ContractManagement } from '../../../pages/ContractManagement';
+// Claims
+export { default as Claims } from '../features/claims/components/Claims';
+export { ClaimsManagement } from '../features/claims-management/components/ClaimsManagement';
+export { default as ProviderClaimSubmission } from '../features/providers/components/ProviderClaimSubmission';
 
-// ===== Medical Panel =====
-export { default as MedicalInstitutions } from '../../../pages/MedicalInstitutions';
-export { default as MedicalPersonnel } from '../../../pages/MedicalPersonnel';
-export { default as PanelDocumentation } from '../../../pages/PanelDocumentation';
-export { default as Regions } from '../../../pages/Regions';
+// Provider network
+export { default as ProviderNetworkManagement } from '../features/providers/components/ProviderNetworkManagement';
+export { default as ProviderPortal } from '../features/providers/components/ProviderPortal';
+export { default as ProviderVerification } from '../features/providers/components/ProviderVerification';
+export { default as ContractManagement } from '../features/companies/components/ContractManagement';
 
-// ===== Communication & Wellness =====
-export { default as Communication } from '../../../pages/Communication';
-export { default as Wellness } from '../../wellness/components/Wellness';
-export { default as RiskAssessment } from '../../risk-assessment/components/RiskAssessment';
+// Medical panel
+export { default as MedicalInstitutions } from '../features/companies/components/MedicalInstitutions';
+export { default as MedicalPersonnel } from '../features/providers/components/MedicalPersonnel';
+export { default as PanelDocumentation } from '../features/providers/components/PanelDocumentation';
+export { default as Regions } from '../features/regions/components/Regions';
 
-// ===== Token Management =====
-export { default as TokenPurchasePage } from '../../auth/tokens/TokenPurchasePage';
-export { default as PurchaseHistoryPage } from '../../auth/tokens/PurchaseHistoryPage';
-export { default as BalanceHistoryPage } from '../../auth/tokens/BalanceHistoryPage';
-export { default as SubscriptionManagementPage } from '../../auth/tokens/SubscriptionManagementPage';
-export { default as TokenSettingsPage } from '../../auth/tokens/TokenSettingsPage';
+// Communication and wellness
+export { default as Communication } from '../features/companies/components/Communication';
+export { default as Wellness } from '../features/wellness/components/Wellness';
+export { default as RiskAssessment } from '../features/risk-assessment/components/RiskAssessment';
 
-// ===== CRM =====
-export { default as LeadManagement } from '../../crm/components/LeadManagement';
-export { default as AgentPortal } from '../../crm/components/AgentPortal';
+// Token management
+export { default as TokenPurchasePage } from '../features/tokens/TokenPurchasePage';
+export { default as PurchaseHistoryPage } from '../features/tokens/PurchaseHistoryPage';
+export { default as BalanceHistoryPage } from '../features/tokens/BalanceHistoryPage';
+export { default as SubscriptionManagementPage } from '../features/tokens/SubscriptionManagementPage';
+export { default as TokenSettingsPage } from '../features/tokens/TokenSettingsPage';
+
+// CRM
+export { default as LeadManagement } from '../features/crm/components/LeadManagement';
+export { default as AgentPortal } from '../features/crm/components/AgentPortal';
