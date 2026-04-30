@@ -9,12 +9,14 @@ export interface HealthMetrics {
   exercise: number;
   sleep: number;
   heartRate?: number;
+  weight?: number;
 }
 
 export interface HealthData {
   id: string;
-  type: 'steps' | 'calories' | 'active' | 'sleep' | 'heartRate';
+  type: 'steps' | 'calories' | 'active' | 'sleep' | 'heartRate' | 'exercise' | 'weight';
   value: number;
+  unit?: string;
   timestamp: string | Date;
   source: string;
 }
@@ -23,20 +25,41 @@ export interface WellnessIntegration {
   id: string;
   provider: string;
   isConnected: boolean;
-  lastSync?: string | Date;
+  lastSync?: string | Date | null;
   syncStatus?: 'connected' | 'syncing' | 'error' | 'disconnected';
   dataTypes: string[];
+  permissions?: string[];
+  settings?: {
+    autoSync: boolean;
+    syncFrequency: number;
+    notifications: boolean;
+    dataRetention: number;
+  };
 }
 
 export interface WellnessIncentive {
   id: string;
   title: string;
   description: string;
-  status: 'active' | 'completed' | 'expired';
+  status: 'active' | 'completed' | 'expired' | 'in_progress';
   progress: number;
   points: number;
   startDate?: string | Date;
   endDate?: string | Date;
+  type?: 'points' | 'premium_discount' | 'gift_card' | 'wellness_credit' | 'cash_reward';
+  value?: number;
+  currency?: string;
+  requirements?: {
+    metricType: string;
+    target: number;
+    timeframe: string;
+    frequency: string;
+  }[] | any;
+  targetValue?: number;
+  currentValue?: number;
+  unit?: string;
+  isActive?: boolean;
+  rewards?: any[];
 }
 
 export interface WellnessReward {
@@ -53,10 +76,13 @@ export interface WellnessCoach {
   name: string;
   image?: string;
   specialties?: string[];
+  specialty?: string;
   rating?: number;
   reviewCount?: number;
   sessionPrice?: number;
   bio?: string;
+  availability?: string[];
+  nextAvailableSlot?: string | Date;
 }
 
 export interface CoachingSession {
