@@ -344,11 +344,13 @@ const Login: React.FC = () => {
                   <p className="text-sm text-gray-600">
                     Demo Accounts:
                   </p>
-                  <div className="mt-2 space-y-1 text-xs text-gray-500">
-                    <p>Insurance: admin@medicover.com / admin123</p>
-                    <p>Institution: hospital@medicover.com / hospital123</p>
-                    <p>Provider: doctor@medicover.com / doctor123</p>
-                  </div>
+                   <div className="mt-2 space-y-1 text-xs text-gray-500">
+                     <p>Insurance: admin@medicover.com / admin123</p>
+                     <p>Company: company@medicover.com / company123</p>
+                     <p>Member: member@medicover.com / member123</p>
+                     <p>Institution: hospital@medicover.com / hospital123</p>
+                     <p>Provider: doctor@medicover.com / doctor123</p>
+                   </div>
                 </div>
               </CardContent>
             </Card>

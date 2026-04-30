@@ -95,16 +95,17 @@ export default defineConfig({
       conditions: ['import', 'module', 'browser', 'default'],
       mainFields: ['module', 'browser', 'main']
    },
-  server: {
-    port: parseInt(process.env.FRONTEND_PORT || '3000'),
-    host: true,
-    proxy: {
-      '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:3001',
-        changeOrigin: true
-      }
-    }
-  },
+   server: {
+     port: parseInt(process.env.FRONTEND_PORT || '3000'),
+     host: true,
+     proxy: {
+       '/api': {
+         target: process.env.VITE_API_URL || 'http://localhost:3001',
+         changeOrigin: true,
+         ws: true
+       }
+     }
+   },
   // Optimize dependencies
   optimizeDeps: {
     include: [
