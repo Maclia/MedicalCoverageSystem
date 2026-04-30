@@ -81,7 +81,7 @@ export default defineConfig({
         { find: /^@utils(\/.*)?$/, replacement: path.resolve(rootDir, "src/utils") + "$1" },
         { find: /^@types(\/.*)?$/, replacement: path.resolve(rootDir, "src/types") + "$1" },
         { find: /^@hooks(\/.*)?$/, replacement: path.resolve(rootDir, "src/hooks") + "$1" },
-         { find: /^@api\/?(.*)$/, replacement: path.resolve(rootDir, "src/services/api") + "/$1" },
+         { find: /^@api(\/.*)?$/, replacement: path.resolve(rootDir, "src/services/api") + "$1" },
         { find: /^@services(\/.*)?$/, replacement: path.resolve(rootDir, "src/services") + "$1" },
         { find: /^@lib(\/.*)?$/, replacement: path.resolve(rootDir, "src/lib") + "$1" },
         { find: /^@contexts(\/.*)?$/, replacement: path.resolve(rootDir, "src/contexts") + "$1" },
