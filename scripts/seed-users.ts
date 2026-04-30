@@ -1,6 +1,6 @@
 import { db } from '../server/db.js';
-import * as schema from '../shared/schema.js';
-import { hashPassword } from '../server/auth.js';
+import * as schema from '../services/shared/schema.js';
+import bcrypt from 'bcrypt';
 import { eq } from 'drizzle-orm';
 
 // Clear existing users
@@ -35,21 +35,35 @@ async function seedDemoUsers() {
     // Demo user accounts
     const demoUsers = [
       {
-        email: 'admin@medicover.com',
+        email: 'admin@medcarekenya.com',
         password: 'admin123',
         userType: 'insurance' as const,
         entityId: company.id,
         isActive: true,
       },
       {
-        email: 'insurance.manager@medicover.com',
+        email: 'company@medcarekenya.com',
+        password: 'company123',
+        userType: 'insurance' as const,
+        entityId: company.id,
+        isActive: true,
+      },
+      {
+        email: 'member@medcarekenya.com',
+        password: 'member123',
+        userType: 'member' as const,
+        entityId: company.id,
+        isActive: true,
+      },
+      {
+        email: 'insurance.manager@medcarekenya.com',
         password: 'manager123',
         userType: 'insurance' as const,
         entityId: company.id,
         isActive: true,
       },
       {
-        email: 'insurance.analyst@medicover.com',
+        email: 'insurance.analyst@medcarekenya.com',
         password: 'analyst123',
         userType: 'insurance' as const,
         entityId: company.id,
@@ -62,10 +76,10 @@ async function seedDemoUsers() {
       demoUsers.push({
         email: 'hospital@medicover.com',
         password: 'hospital123',
-        userType: 'institution' as const,
+        userType: 'insurance' as const,
         entityId: institution.id,
         isActive: true,
-      });
+      } as any);
     }
 
     // Add provider user if personnel exists
@@ -73,16 +87,16 @@ async function seedDemoUsers() {
       demoUsers.push({
         email: 'doctor@medicover.com',
         password: 'doctor123',
-        userType: 'provider' as const,
+        userType: 'insurance' as const,
         entityId: personnel.id,
         isActive: true,
-      });
+      } as any);
     }
 
     // Hash passwords and create users
     for (const user of demoUsers) {
       try {
-        const passwordHash = await hashPassword(user.password);
+        const passwordHash = await bcrypt.hash(user.password, 10);
 
         await db.insert(schema.users).values({
           email: user.email,
@@ -90,6 +104,8 @@ async function seedDemoUsers() {
           userType: user.userType,
           entityId: user.entityId,
           isActive: user.isActive,
+          createdAt: new Date(),
+          updatedAt: new Date()
         });
 
         console.log(`Created ${user.userType} user: ${user.email}`);
@@ -160,11 +176,11 @@ async function seedTestUsers() {
 async function createUser(
   email: string,
   password: string,
-  userType: 'insurance' | 'institution' | 'provider',
+  userType: 'insurance' | 'institution' | 'provider' | 'member',
   entityId: number
 ) {
   try {
-    const passwordHash = await hashPassword(password);
+    const passwordHash = await bcrypt.hash(password, 10);
 
     await db.insert(schema.users).values({
       email,
@@ -172,6 +188,8 @@ async function createUser(
       userType,
       entityId,
       isActive: true,
+      createdAt: new Date(),
+      updatedAt: new Date()
     });
 
     console.log(`Created ${userType} user: ${email}`);
