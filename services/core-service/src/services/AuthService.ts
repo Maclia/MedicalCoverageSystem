@@ -6,6 +6,7 @@ import { users, userSessions, companies, medicalInstitutions, medicalPersonnel, 
 import { config } from '../config';
 import { createLogger, generateCorrelationId } from '../utils/logger';
 import { auditService } from '../services/AuditService';
+import type { SystemPermission } from '@shared/types/permissions';
 import {
   AuthenticationError,
   AuthorizationError,
@@ -23,7 +24,7 @@ export interface JWTPayload {
   entityId: number;
   email: string;
   role: string;
-  permissions: string[];
+  permissions: SystemPermission[];
 }
 
 export interface AuthTokens {
@@ -93,7 +94,8 @@ export class AuthService {
           .select()
           .from(companies)
           .where(eq(companies.id, entityId))
-          .limit(1);
+          .limit(1)
+          .execute();
         return companiesData[0] || null;
 
       case 'institution':
@@ -101,7 +103,8 @@ export class AuthService {
           .select()
           .from(medicalInstitutions)
           .where(eq(medicalInstitutions.id, entityId))
-          .limit(1);
+          .limit(1)
+          .execute();
         return institutionsData[0] || null;
 
       case 'provider':
@@ -109,7 +112,8 @@ export class AuthService {
           .select()
           .from(medicalPersonnel)
           .where(eq(medicalPersonnel.id, entityId))
-          .limit(1);
+          .limit(1)
+          .execute();
         return personnelData[0] || null;
 
       case 'member':
@@ -117,7 +121,8 @@ export class AuthService {
           .select()
           .from(members)
           .where(eq(members.id, entityId))
-          .limit(1);
+          .limit(1)
+          .execute();
         return memberData[0] || null;
 
       default:
@@ -150,7 +155,8 @@ export class AuthService {
         .select()
         .from(users)
         .where(eq(users.email, userData.email))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (existingUser.length > 0) {
         throw ErrorFactory.userNotFound(userData.email);
@@ -177,7 +183,8 @@ export class AuthService {
           createdAt: new Date(),
           updatedAt: new Date()
         })
-        .returning();
+        .returning()
+        .execute();
 
       await auditService.logAuthEvent(
         'LOGIN_SUCCESS',
@@ -235,7 +242,7 @@ export class AuthService {
         query = query.where(eq(users.userType, userType as UserRole));
       }
 
-      const userRecords = await query.limit(1);
+      const userRecords = await query.limit(1).execute();
 
       if (!userRecords.length) {
         await auditService.logAuthEvent('LOGIN_FAILED', undefined, email, ipAddress, userAgent, 'User not found');
@@ -341,7 +348,8 @@ export class AuthService {
         .select()
         .from(userSessions)
         .where(eq(userSessions.token, refreshToken))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!sessionRecords.length) {
         throw new AuthenticationError('Invalid refresh token');
@@ -360,7 +368,8 @@ export class AuthService {
         .select()
         .from(users)
         .where(eq(users.id, payload.userId))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!userRecords.length) {
         throw new AuthenticationError('User not found');
@@ -445,7 +454,8 @@ export class AuthService {
         .select()
         .from(userSessions)
         .where(eq(userSessions.token, refreshToken))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (sessionRecords.length > 0) {
         const session = sessionRecords[0];
@@ -491,7 +501,8 @@ export class AuthService {
         .select()
         .from(users)
         .where(eq(users.id, userId))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!userRecords.length) {
         throw ErrorFactory.userNotFound();
@@ -537,7 +548,8 @@ export class AuthService {
         .select()
         .from(users)
         .where(eq(users.id, userId))
-        .limit(1);
+        .limit(1)
+        .execute();
 
       if (!userRecords.length) {
         return null;

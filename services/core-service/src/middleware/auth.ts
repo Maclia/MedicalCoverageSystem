@@ -2,12 +2,14 @@ import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/AuthService';
 import { AuthenticationError, AuthorizationError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
+import type { SystemPermission, ModuleAccess, Module } from '@shared/types/permissions';
+import { isValidPermission, validatePermissions } from '@shared/types/permissions';
 
 const logger = createLogger();
 
 import { UserRole } from '../services/AuthService';
 
-// Extend Request interface to include user information
+// Extend Request interface to include user information with full UserRole support
 declare global {
   namespace Express {
     interface Request {
@@ -18,7 +20,7 @@ declare global {
         entityId: number;
         email: string;
         role: string;
-        permissions: string[];
+        permissions: SystemPermission[];
       };
       correlationId?: string;
       startTime?: number;
@@ -41,6 +43,10 @@ export const authenticateToken = async (
 
     const payload = await authService.validateAccessToken(token);
 
+    // Validate permissions at runtime
+    const permissions = payload.permissions || [];
+    const validPermissions = validatePermissions(permissions) ? permissions : [];
+
     req.user = {
       id: payload.userId,
       userId: payload.userId,
@@ -48,7 +54,7 @@ export const authenticateToken = async (
       entityId: payload.entityId,
       email: payload.email,
       role: payload.role,
-      permissions: payload.permissions || []
+      permissions: validPermissions
     };
 
     logger.debug('Token authentication successful', {
@@ -75,7 +81,8 @@ export const requireUserType = (allowedTypes: UserRole[]) => {
       throw new AuthenticationError('Authentication required');
     }
 
-    if (!allowedTypes.includes(req.user.userType)) {
+    const userType = req.user.userType;
+    if (!userType || !allowedTypes.includes(userType as UserRole)) {
       throw new AuthorizationError(
         `Access denied. Required user type: ${allowedTypes.join(', ')}`
       );
@@ -131,10 +138,19 @@ export const requireRole = (allowedRoles: string[]) => {
 };
 
 // Permission-based access control middleware
-export const requirePermission = (requiredPermissions: string[]) => {
+export const requirePermission = (requiredPermissions: SystemPermission[]) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AuthenticationError('Authentication required');
+    }
+
+    // Validate requested permissions first
+    if (!validatePermissions(requiredPermissions)) {
+      logger.warn('Invalid permissions requested', {
+        requiredPermissions,
+        correlationId: req.correlationId
+      });
+      throw new AuthorizationError('Invalid permission format requested');
     }
 
     const userPermissions = req.user.permissions || [];
@@ -167,7 +183,7 @@ export const requirePermission = (requiredPermissions: string[]) => {
 };
 
 // Module access restriction middleware
-export const requireModuleAccess = (moduleName: string) => {
+export const requireModuleAccess = (moduleName: Module) => {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       throw new AuthenticationError('Authentication required');
@@ -176,7 +192,7 @@ export const requireModuleAccess = (moduleName: string) => {
     const modulePermission = `module:${moduleName}`;
     const userPermissions = req.user.permissions || [];
 
-    if (!userPermissions.includes(modulePermission) && req.user.role !== 'admin') {
+    if (!userPermissions.includes(modulePermission as `${string}:${string}`) && req.user.role !== 'admin') {
       logger.warn('Access denied - module access restricted', {
         userId: req.user.userId,
         module: moduleName,

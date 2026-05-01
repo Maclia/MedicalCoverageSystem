@@ -11,22 +11,20 @@
     "strict": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "declaration": true,
+    "declaration": false,
     "outDir": "./dist",
-    "rootDir": "..",
-    "typeRoots": ["./node_modules/@types"],
+    "rootDir": "../..",
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
-      "@shared/schema": ["../shared/schema.ts"],
-      "@shared/*": ["./shared/*", "../shared/*"],
-      "drizzle-orm": ["./node_modules/drizzle-orm"],
-      "drizzle-orm/*": ["./node_modules/drizzle-orm/*"],
-      "drizzle-zod": ["./node_modules/drizzle-zod"],
-      "zod": ["./node_modules/zod"],
+      "@shared/*": ["../../shared/*"],
+      "@shared/schema": ["../../shared/schema.ts"],
       "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*", "shared/**/*"],
+  "include": [
+    "src/**/*",
+    "../../shared/**/*"
+  ],
   "exclude": ["node_modules", "dist"]
 }
