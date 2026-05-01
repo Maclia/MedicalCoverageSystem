@@ -9,42 +9,40 @@
 
 FROM node:20-alpine AS dependencies
 
-WORKDIR /app
+WORKDIR /app/services/core-service
 
 # Copy package files first (for proper Docker layer caching)
-COPY package*.json ./
+COPY services/core-service/package*.json ./
 
 # Install all dependencies (including dev for build)
-RUN npm install --legacy-peer-deps && npm cache clean --force
+RUN npm ci --legacy-peer-deps && npm cache clean --force
 
 # ================================================
 # BUILD STAGE
 # ================================================
 FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /app/services/core-service
 
 # Install system dependencies
 RUN apk add --no-cache dumb-init
 
 # Copy from dependencies stage
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY package*.json tsconfig.json ./
+COPY --from=dependencies /app/services/core-service/node_modules ./node_modules
+COPY services/core-service/package*.json services/core-service/tsconfig.json ./
 
 # Copy source code
-COPY src ./src
+COPY services/core-service/src ./src
+COPY services/shared/schema.ts ./shared/schema.ts
 
-    # Build TypeScript (optimized memory for Docker Alpine environment)
-    # 2048MB is optimal for Alpine Linux 3.18+ / Node 20 combination
-    # Enable incremental builds and disable type checking for faster Docker builds
-    # Use --transpile-only flag to skip type checking during container build
-    RUN node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --incremental false --skipLibCheck --transpile-only
+# Build TypeScript with a bounded heap for Alpine-based containers
+RUN node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --incremental false --skipLibCheck
 # ================================================
 # PRODUCTION STAGE
 # ================================================
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /app/services/core-service
 
 # Install system dependencies
 RUN apk add --no-cache dumb-init
@@ -54,9 +52,9 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nodejs
 
 # Copy built application and node_modules from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
-COPY --from=builder --chown=nodejs:nodejs /app/node_modules ./node_modules
-COPY package*.json ./
+COPY --from=builder --chown=nodejs:nodejs /app/services/core-service/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/services/core-service/node_modules ./node_modules
+COPY services/core-service/package*.json ./
 
 # Prune development dependencies (already installed, just remove dev ones)
 RUN npm prune --omit=dev --legacy-peer-deps && npm cache clean --force

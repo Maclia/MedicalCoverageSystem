@@ -306,7 +306,7 @@ export class ErrorHandler {
    * Create standardized error response
    */
   static createErrorResponse(error: AppError, correlationId?: string): any {
-    const response = error.toJSON();
+    const response: any = error.toJSON();
 
     if (correlationId) {
       response.correlationId = correlationId;

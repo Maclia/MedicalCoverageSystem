@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { AuthController } from './authController';
+import { AuthController } from '../api/authController';
 import { validate, validationSchemas } from '../utils/validation';
 import { authenticateToken, requireUserType, rateLimitHeaders } from '../middleware/auth';
 import { auditDataAccessMiddleware } from '../middleware/auditMiddleware';
