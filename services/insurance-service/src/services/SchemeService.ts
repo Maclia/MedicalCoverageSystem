@@ -2,7 +2,7 @@ import { eq, and, desc, asc, ilike, count, gte, lte } from 'drizzle-orm';
 import { SCHEME_APPROVAL_ROLES } from '../types/enums.js';
 import { db } from '../config/database.js';
 import { companies, benefits, premiumRates, schemeBenefits, periods } from '../models/schema.js';
-import { insuranceSchemes as schemes, schemeNetworks } from '../../../shared/schemas/schemes.js';
+import { insuranceSchemes as schemes, schemeNetworks } from '../../../shared/schemas/schemes';
 import { config } from '../config/index.js';
 import { createLogger, generateCorrelationId } from '../utils/logger.js';
 import {
