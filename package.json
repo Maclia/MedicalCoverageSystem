@@ -9,12 +9,18 @@
     "shared"
   ],
   "scripts": {
-    "dev": "tsx server/index.ts",
+    "dev": "turbo run dev",
     "dev:client": "cd client && vite",
-    "build": "npm run build:client && npm run build:server",
-    "build:client": "cd client && vite build",
-    "build:server": "esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
-    "build:prod": "NODE_ENV=production npm run build:client && npm run build:server",
+    "build": "turbo run build",
+    "build:client": "turbo run build --filter=medical-coverage-client",
+    "build:server": "turbo run build --filter=./server",
+    "build:services": "turbo run build --filter=./services/*",
+    "build:prod": "NODE_ENV=production turbo run build",
+    "turbo": "turbo",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean",
+    "typecheck": "turbo run typecheck",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "check:client": "cd client && tsc --noEmit",
@@ -25,7 +31,7 @@
     "migrate:auto": "node scripts/run-migrations.js",
     "migrate:auto:shell": "bash scripts/run-migrations.sh",
     "migrate:auto:batch": "scripts\\run-migrations.bat",
-    "test": "jest",
+    "test:jest": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:ci": "jest --ci --coverage --watchAll=false",
@@ -115,5 +121,9 @@
   },
   "engines": {
     "node": "20.x"
+  },
+  "packageManager": "npm@10.8.1",
+  "turbo": {
+    "enabled": true
   }
 }
