@@ -117,7 +117,15 @@ if (-not $SkipClean) {
         Write-Success "Removed package-lock.json"
     }
     
-    Invoke-SafeCommand "npm cache clean --force" "Failed to clean npm cache"
+    # Fix Windows ENOTEMPTY npm cache errors - manually delete cache folder first
+    $npmCachePath = Join-Path $env:LOCALAPPDATA "npm-cache\_cacache"
+    if (Test-Path $npmCachePath) {
+        Write-Host "Manually clearing npm cache folder..." -ForegroundColor Gray
+        Remove-Item -Recurse -Force $npmCachePath -ErrorAction SilentlyContinue
+        Write-Success "Cleared npm cache folder"
+    }
+    
+    Invoke-SafeCommand "npm cache verify" "Failed to verify npm cache"
 }
 else {
     Write-Warning "Skipping clean step"
@@ -134,11 +142,11 @@ if (-not $SkipInstall) {
         Invoke-SafeCommand "npm ci" "npm ci failed"
     }
     else {
-        Write-Host "Running: npm install" -ForegroundColor Gray
-        Invoke-SafeCommand "npm install" "npm install failed"
+        Write-Host "Running: npm update with legacy peer dependencies" -ForegroundColor Gray
+        Invoke-SafeCommand "npm update --legacy-peer-deps" "npm update failed"
     }
     
-    Write-Success "Dependencies installed successfully"
+    Write-Success "Dependencies updated successfully"
     
     # Deduplicate dependencies
     Write-Host "Running: npm dedupe" -ForegroundColor Gray
