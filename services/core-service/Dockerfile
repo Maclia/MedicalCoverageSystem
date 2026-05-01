@@ -38,7 +38,7 @@ COPY src ./src
     # 2048MB is optimal for Alpine Linux 3.18+ / Node 20 combination
     # Enable incremental builds and disable type checking for faster Docker builds
     # Use --transpile-only flag to skip type checking during container build
-    RUN node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --incremental false --skipLibCheck
+    RUN node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --incremental false --skipLibCheck --transpile-only
 # ================================================
 # PRODUCTION STAGE
 # ================================================
