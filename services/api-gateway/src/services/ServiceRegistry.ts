@@ -29,6 +29,10 @@ export class ServiceRegistry {
 
   private constructor() {
     this.initializeServices();
+    // Health checks will be started explicitly after server is listening
+  }
+
+  public startHealthMonitoring(): void {
     this.startHealthChecks();
   }
 
@@ -69,7 +73,7 @@ export class ServiceRegistry {
     });
   }
 
-  private startHealthChecks(): void {
+  public startHealthChecks(): void {
     // Initial health check
     this.performHealthChecks();
 

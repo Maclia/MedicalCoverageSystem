@@ -178,6 +178,9 @@ const server = app.listen(config.port, '0.0.0.0', () => {
     healthyServices: healthyServices.length,
     services: serviceRegistry.getAllServices()
   });
+
+  // Start health checks AFTER server is fully listening
+  serviceRegistry.startHealthMonitoring();
 });
 
 // Handle shutdown signals
