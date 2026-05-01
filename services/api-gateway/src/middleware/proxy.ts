@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { createProxyMiddleware, Options } from 'http-proxy-middleware';
-import { serviceRegistry } from '../services/ServiceRegistry';
-import { createLogger } from '../utils/logger';
+import { serviceRegistry } from '../services/ServiceRegistry.js';
+import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 

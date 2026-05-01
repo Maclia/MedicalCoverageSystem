@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../config';
-import { serviceRegistry } from '../services/ServiceRegistry';
-import { createLogger } from '../utils/logger';
+import { config } from '../config/index.js';
+import { serviceRegistry } from '../services/ServiceRegistry.js';
+import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 
@@ -77,10 +77,13 @@ export const authenticateToken = async (
       }
 
       req.user = {
+        id: payload.userId,
         userId: payload.userId,
         userType: payload.userType,
         entityId: payload.entityId,
-        email: payload.email
+        email: payload.email,
+        role: 'user',
+        permissions: []
       };
 
       logger.debug('Token authentication successful', {
@@ -293,10 +296,13 @@ export const optionalAuth = async (
 
           if (response.data.success) {
             req.user = {
+              id: payload.userId,
               userId: payload.userId,
               userType: payload.userType,
               entityId: payload.entityId,
-              email: payload.email
+              email: payload.email,
+              role: 'user',
+              permissions: []
             };
 
             logger.debug('Optional authentication successful', {

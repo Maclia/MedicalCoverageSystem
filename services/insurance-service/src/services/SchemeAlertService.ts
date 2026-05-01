@@ -1,7 +1,7 @@
 import { db, schema } from '../config/database.js';
 import { eq } from 'drizzle-orm';
 import { createLogger } from '../utils/logger.js';
-import { eventBus, EventFactory } from '../../../shared/message-queue/src/events/EventBus';
+import { eventBus, EventFactory } from '../../../shared/message-queue/src/events/EventBus.js';
 
 const logger = createLogger();
 

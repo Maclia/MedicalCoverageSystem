@@ -5,6 +5,7 @@
     "moduleResolution": "NodeNext",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
+    "ignoreDeprecations":"6.0",
     "strict": false,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,

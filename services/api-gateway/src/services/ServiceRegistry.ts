@@ -1,7 +1,7 @@
 import axios, { AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { config } from '../config';
-import { createLogger, generateCorrelationId } from '../utils/logger';
-import { CircuitBreaker } from './CircuitBreaker';
+import { config } from '../config/index.js';
+import { createLogger, generateCorrelationId } from '../utils/logger.js';
+import { CircuitBreaker } from './CircuitBreaker.js';
 
 const logger = createLogger();
 
@@ -42,7 +42,8 @@ export class ServiceRegistry {
   private initializeServices(): void {
     // Register all services from configuration
     Object.entries(config.services).forEach(([name, serviceConfig]) => {
-      this.services.set(name, serviceConfig);
+      // Type cast to ensure serviceConfig matches ServiceConfig interface
+      this.services.set(name, serviceConfig as ServiceConfig);
 
       // Initialize circuit breaker for each service
       this.circuitBreakers.set(name, new CircuitBreaker(
