@@ -1,5 +1,5 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { eq, lte } from 'drizzle-orm';
 import { db } from '../config/database';
 import { users, userSessions, companies, medicalInstitutions, medicalPersonnel, members } from '@shared/schema';

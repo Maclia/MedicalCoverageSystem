@@ -1,5 +1,4 @@
 import { Router } from 'express';
-import { StatusCodes } from 'http-status-codes';
 import { createLogger } from '../utils/logger';
 import { checkDatabaseConnection } from '../config/database';
 
@@ -41,10 +40,10 @@ router.get('/health', async (req, res) => {
     const responseTime = Date.now() - startTime;
     logger.info(`Health check completed in ${responseTime}ms`);
 
-    res.status(StatusCodes.OK).json(response);
+    res.status(200).json(response);
   } catch (error) {
     logger.error('Health check failed:', error as Error);
-    res.status(StatusCodes.INTERNAL_SERVER_ERROR).json({
+    res.status(500).json({
       status: 'error',
       service: 'core-service',
       timestamp: new Date().toISOString(),

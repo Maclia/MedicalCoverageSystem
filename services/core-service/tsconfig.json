@@ -13,12 +13,17 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": true,
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "..",
     "typeRoots": ["./node_modules/@types"],
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
+      "@shared/schema": ["../shared/schema.ts"],
       "@shared/*": ["./shared/*", "../shared/*"],
+      "drizzle-orm": ["./node_modules/drizzle-orm"],
+      "drizzle-orm/*": ["./node_modules/drizzle-orm/*"],
+      "drizzle-zod": ["./node_modules/drizzle-zod"],
+      "zod": ["./node_modules/zod"],
       "@/*": ["./src/*"]
     }
   },

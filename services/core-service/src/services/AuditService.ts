@@ -6,8 +6,8 @@ import { loggerInstance, generateCorrelationId } from '../utils/logger';
 export interface AuditEventData {
   userId?: number | string;
   action: string;
-  resource: string;
-  resourceId?: string;
+  entityType: string;
+  entityId?: string;
   changes?: any;
   oldValue?: any;
   newValue?: any;
@@ -38,11 +38,11 @@ export class AuditService {
       const auditRecord = {
         userId: data.userId ? Number(data.userId) : null,
         action: data.action,
-        resource: data.resource,
-        resourceId: data.resourceId,
+        entityType: data.entityType,
+        entityId: data.entityId,
         ipAddress: data.ipAddress,
         userAgent: data.userAgent,
-        timestamp: new Date()
+        createdAt: new Date()
       };
 
       await db.insert(auditLogs).values(auditRecord);
@@ -76,8 +76,8 @@ export class AuditService {
    */
   async logDataAccess(
     userId: number,
-    resourceType: string,
-    resourceId: string,
+    entityType: string,
+    entityId: string,
     accessType: string = 'VIEW',
     ipAddress?: string,
     userAgent?: string
@@ -85,12 +85,12 @@ export class AuditService {
     await this.logAuditEvent({
       userId,
       action: `DATA_${accessType.toUpperCase()}`,
-      resource: resourceType,
-      resourceId,
+      entityType,
+      entityId,
       metadata: { accessType },
       ipAddress,
       userAgent,
-      severity: resourceType.includes('medical') || resourceType.includes('patient') ? 'MEDIUM' : 'LOW'
+      severity: entityType.includes('medical') || entityType.includes('patient') ? 'MEDIUM' : 'LOW'
     });
   }
 
@@ -110,7 +110,7 @@ export class AuditService {
     await this.logAuditEvent({
       userId,
       action,
-      resource: 'Authentication',
+      entityType: 'Authentication',
       metadata: {
         email: email ? email.substring(0, 3) + '***' : undefined,
         reason
@@ -127,8 +127,8 @@ export class AuditService {
   async logFinancialTransaction(
     userId: number,
     transactionType: string,
-    resourceType: string,
-    resourceId: string,
+    entityType: string,
+    entityId: string,
     amount?: number,
     currency?: string,
     status?: string,
@@ -138,8 +138,8 @@ export class AuditService {
     await this.logAuditEvent({
       userId,
       action: `FINANCIAL_${transactionType.toUpperCase()}`,
-      resource: resourceType,
-      resourceId,
+      entityType,
+      entityId,
       metadata: {
         transactionType,
         amount,
@@ -158,8 +158,8 @@ export class AuditService {
   async logDataModification(
     userId: number,
     action: 'CREATE' | 'UPDATE' | 'DELETE',
-    resourceType: string,
-    resourceId: string,
+    entityType: string,
+    entityId: string,
     oldValue?: any,
     newValue?: any,
     changes?: string[],
@@ -167,13 +167,13 @@ export class AuditService {
     userAgent?: string
   ): Promise<void> {
     const sensitiveResources = ['member', 'patient', 'medical', 'claim', 'benefit', 'payment'];
-    const severity = sensitiveResources.some(sr => resourceType.toLowerCase().includes(sr)) ? 'HIGH' : 'MEDIUM';
+    const severity = sensitiveResources.some(sr => entityType.toLowerCase().includes(sr)) ? 'HIGH' : 'MEDIUM';
 
     await this.logAuditEvent({
       userId,
       action: `DATA_${action}`,
-      resource: resourceType,
-      resourceId,
+      entityType,
+      entityId,
       oldValue,
       newValue,
       metadata: { changes },
@@ -197,8 +197,8 @@ export class AuditService {
     await this.logAuditEvent({
       userId,
       action: 'CONFIG_CHANGE',
-      resource: 'SystemConfiguration',
-      resourceId: configurationType,
+      entityType: 'SystemConfiguration',
+      entityId: configurationType,
       oldValue,
       newValue,
       metadata: { configurationType },
@@ -212,8 +212,8 @@ export class AuditService {
    * Get audit trail for a specific resource
    */
   async getAuditTrail(
-    resourceType: string,
-    resourceId: string,
+    entityType: string,
+    entityId: string,
     limit: number = 100,
     offset: number = 0
   ): Promise<any[]> {
@@ -222,18 +222,18 @@ export class AuditService {
         .select()
         .from(auditLogs)
         .where(and(
-          eq(auditLogs.resource, resourceType),
-          eq(auditLogs.resourceId, resourceId)
+          eq(auditLogs.entityType, entityType),
+          eq(auditLogs.entityId, entityId)
         ))
-        .orderBy(desc(auditLogs.timestamp))
+        .orderBy(desc(auditLogs.createdAt))
         .limit(limit)
         .offset(offset);
 
       return records;
     } catch (error) {
       loggerInstance.error('Failed to retrieve audit trail', error as Error, {
-        resourceType,
-        resourceId
+        entityType,
+        entityId
       });
       throw error;
     }
@@ -253,14 +253,14 @@ export class AuditService {
 
       // Add date filters if provided
       if (startDate) {
-        query = query.where(gte(auditLogs.timestamp, startDate));
+        query = query.where(gte(auditLogs.createdAt, startDate));
       }
       if (endDate) {
-        query = query.where(lte(auditLogs.timestamp, endDate));
+        query = query.where(lte(auditLogs.createdAt, endDate));
       }
 
       const records = await query
-        .orderBy(desc(auditLogs.timestamp))
+        .orderBy(desc(auditLogs.createdAt))
         .limit(limit);
 
       return records;

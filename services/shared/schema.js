@@ -1261,9 +1261,9 @@ export const onboardingPreferences = pgTable("onboarding_preferences", {
 // ---------- Audit ----------
 export const auditLogs = pgTable("audit_logs", {
     id: serial("id").primaryKey(),
-    entityType: auditEntityTypeEnum("entity_type").notNull(),
-    entityId: integer("entity_id").notNull(),
-    action: auditActionEnum("action").notNull(),
+    entityType: text("entity_type").notNull(),
+    entityId: text("entity_id"),
+    action: text("action").notNull(),
     userId: integer("user_id"),
     oldValues: text("old_values"),
     newValues: text("new_values"),
