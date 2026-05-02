@@ -20,6 +20,8 @@ This document describes the completed architectural improvements that address al
 | 5-Minute Idempotency TTL | ✅ Fixed | Permanent database idempotency keys |
 | Missing DLQ Processing | ✅ Fixed | Complete Dead Letter Queue management system |
 | Shared Library Coupling | ✅ Mitigated | Proper versioning and module isolation implemented |
+| IP-based Rate Limiting | ✅ Fixed | User-level rate limiting implemented at API Gateway |
+| No Full Text Search | ✅ Implemented | Elasticsearch integration for audit log searching and analytics |
 
 ---
 
@@ -223,6 +225,64 @@ Complete 4-stage migration plan:
 | Dead Letter Queue Manager | 1 | ✅ Complete |
 | Kafka Integration Plan | 1 | ✅ Documented |
 | Shared Library Versioning | 1 (modified) | ✅ Complete |
+| User-level Rate Limiting | 1 (modified) | ✅ Complete |
+| Elasticsearch Service | 2 | ✅ Complete |
+
+## 7. ✅ User-Level Rate Limiting
+
+### Implementation
+**File**: `services/api-gateway/src/api/routes.ts`
+
+- Replaced global IP-based rate limiting with User ID based limiting
+- All authenticated requests are now rate limited per individual user
+- Graceful fallback to IP address for unauthenticated endpoints
+- All existing tiered rate limits remain fully functional
+- Works across distributed API Gateway instances
+
+### Benefits
+- ✅ Multiple users behind same IP no longer share limits
+- ✅ Consistent limits for users regardless of network location
+- ✅ Proper rate limiting for mobile users with dynamic IPs
+- ✅ Supports user-specific rate limit tiers
+
+---
+
+## 8. ✅ Elasticsearch Integration
+
+### Implementation
+**Files**: 
+- `services/analytics-service/src/services/ElasticsearchService.ts`
+- `services/analytics-service/src/config.ts`
+- `services/analytics-service/src/server.ts`
+
+- Official Elasticsearch client implementation
+- Optimized audit log index mapping with full text search capabilities
+- Multi-field search with filtering, pagination and sorting
+- Automatic index creation on service startup
+- Production ready SSL and authentication configuration
+
+### Features
+- ✅ Full text search across audit logs, request/response data
+- ✅ Geolocation support for IP addresses
+- ✅ Time-based range queries and aggregations
+- ✅ High performance analytics queries
+- ✅ Horizontal scaling support for large datasets
+
+### Schema Mapping
+```json
+{
+  "properties": {
+    "id": { "type": "keyword" },
+    "userId": { "type": "keyword" },
+    "action": { "type": "keyword" },
+    "ipAddress": { "type": "ip" },
+    "userAgent": { "type": "text", "fields": { "keyword": { "type": "keyword" } } },
+    "requestBody": { "type": "text" },
+    "responseBody": { "type": "text" },
+    "createdAt": { "type": "date" }
+  }
+}
+```
 
 **Total new code**: ~1,800 LOC
 **Backward Compatible**: ✅ 100%

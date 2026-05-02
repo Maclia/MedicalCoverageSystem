@@ -106,6 +106,10 @@ app.get('/docs', (req, res) => {
 // API routes
 app.use('/auth', routes);
 
+// Operational Tools Admin API
+import { operationalToolsRouter } from './controllers/OperationalToolsController';
+app.use('/api/operations', operationalToolsRouter);
+
 // Enhanced error handling with audit logging
 app.use(errorAuditMiddleware);
 app.use(globalErrorHandler);

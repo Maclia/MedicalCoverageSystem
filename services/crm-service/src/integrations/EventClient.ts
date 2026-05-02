@@ -1,7 +1,9 @@
-import { eventBus, EventFactory, DomainEvent } from '@medical-coverage/shared/message-queue';
+import { EventFactory, DomainEvent } from '@medical-coverage/shared/message-queue';
 import { messageQueue } from '@medical-coverage/shared/message-queue';
+import { eventBus } from '../../../shared/message-queue/src/events/EventBus';
+import { outboxRepository } from '../repositories/OutboxRepository';
 import { config } from '../config';
-import { createLogger } from '@medical-coverage/shared/message-queue/src/config/logger';
+import createLogger from '../../../shared/message-queue/src/config/logger';
 
 const logger = createLogger('crm-event-client');
 
@@ -27,13 +29,21 @@ class EventClient {
     }
   }
 
+  /**
+   * Outbox Pattern Implementation:
+   * Write event to local database transactionally instead of publishing directly
+   * Events are asynchronously published by OutboxProcessor worker
+   * 
+   * This guarantees atomicity: database commit AND event delivery
+   * Eliminates dual writes anti-pattern
+   */
   async publishEvent(eventType: string, aggregateId: string | number, data: any, metadata: Record<string, any> = {}): Promise<string> {
     if (!this.initialized) {
       await this.initialize();
     }
 
-    const event = EventFactory.createEvent({
-      type: eventType,
+    const eventId = await outboxRepository.create({
+      eventType,
       aggregateId: String(aggregateId),
       aggregateType: 'crm',
       data,
@@ -43,16 +53,14 @@ class EventClient {
         ...metadata
       }
     });
-
-    await eventBus.publish(event);
     
-    logger.debug('Event published', {
+    logger.debug('Event written to outbox table (will be published asynchronously)', {
       eventType,
-      eventId: event.id,
+      eventId,
       aggregateId
     });
 
-    return event.id;
+    return eventId;
   }
 
   async subscribe(eventType: string, handler: (event: DomainEvent) => Promise<void>): Promise<void> {

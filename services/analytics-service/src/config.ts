@@ -15,5 +15,11 @@ export const config = {
       keepAlive: true
     }
   },
-  redisUrl: process.env.REDIS_URL
+  redisUrl: process.env.REDIS_URL,
+  elasticsearch: {
+    node: process.env.ELASTICSEARCH_NODE || 'http://localhost:9200',
+    username: process.env.ELASTICSEARCH_USERNAME,
+    password: process.env.ELASTICSEARCH_PASSWORD,
+    indexPrefix: process.env.ELASTICSEARCH_INDEX_PREFIX || 'medical_coverage'
+  }
 };

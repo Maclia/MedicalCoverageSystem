@@ -499,6 +499,27 @@ export const bulkUploadRecords = pgTable('bulk_upload_records', {
   statusIdx: index('bulk_upload_records_status_idx').on(table.status),
 }));
 
+// =============================================
+// Transaction Outbox Pattern - Architecture Standard AV-001
+// =============================================
+
+export const crmOutbox = pgTable('crm_outbox', {
+  id: varchar('id', { length: 36 }).primaryKey(),
+  eventType: varchar('event_type', { length: 255 }).notNull(),
+  aggregateId: varchar('aggregate_id', { length: 255 }).notNull(),
+  aggregateType: varchar('aggregate_type', { length: 255 }).notNull(),
+  data: jsonb('data').notNull(),
+  metadata: jsonb('metadata').notNull(),
+  status: varchar('status', { length: 50 }).notNull().default('PENDING'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  publishedAt: timestamp('published_at'),
+  failedAttempts: integer('failed_attempts').notNull().default(0),
+  lastError: text('last_error')
+}, (table) => ({
+  statusIdx: index('crm_outbox_status_idx').on(table.status),
+  createdAtIdx: index('crm_outbox_created_at_idx').on(table.createdAt),
+}));
+
 // Export all tables
 export type Lead = typeof leads.$inferSelect;
 export type NewLead = typeof leads.$inferInsert;

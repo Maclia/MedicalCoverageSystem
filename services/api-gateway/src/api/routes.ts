@@ -25,8 +25,8 @@ const requireAdminUser = (req: any, res: any, next: any) => {
   next();
 };
 
-// Apply rate limiting to all routes
-router.use(standardRateLimit);
+// Apply user-level rate limiting (uses user ID when authenticated, falls back to IP for unauthenticated)
+router.use(userRateLimit);
 
 // Health check endpoint (no auth required)
 router.get('/health', (req, res) => {

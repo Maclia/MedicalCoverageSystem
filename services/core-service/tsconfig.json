@@ -3,7 +3,7 @@
     "ignoreDeprecations": "6.0",
     "target": "ES2020",
     "module": "ESNext",
-    "moduleResolution": "Bundler",
+    "moduleResolution": "NodeNext",
     "rewriteRelativeImportExtensions": true,
     "allowImportingTsExtensions": true,
     "esModuleInterop": true,
@@ -13,18 +13,18 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": false,
     "outDir": "./dist",
-    "rootDir": "../..",
+    "rootDir": ".",
     "resolveJsonModule": true,
     "baseUrl": ".",
     "paths": {
       "@shared/*": ["../../shared/*"],
       "@shared/schema": ["../../shared/schema.ts"],
       "@/*": ["./src/*"]
-    }
+    },
+    "typeRoots": ["./node_modules/@types", "../../node_modules/@types"]
   },
   "include": [
-    "src/**/*",
-    "../../shared/**/*"
+    "src/**/*"
   ],
   "exclude": ["node_modules", "dist"]
 }

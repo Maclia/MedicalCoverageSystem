@@ -10,6 +10,7 @@ import { pino } from 'pino';
 import { MetricsCollector } from './services/MetricsCollector.js';
 import { AnalyticsAggregator } from './services/AnalyticsAggregator.js';
 import { DatabaseConnection } from './services/DatabaseConnection.js';
+import { elasticsearchService } from './services/ElasticsearchService.js';
 
 const app = express();
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
@@ -32,6 +33,14 @@ async function startServer() {
     const metricsCollector = new MetricsCollector(db, logger);
     const analyticsAggregator = new AnalyticsAggregator(db, logger);
     analyticsAggregator.startAggregationSchedule(5 * 60 * 1000);
+
+    // Initialize Elasticsearch indices
+    try {
+      await elasticsearchService.initializeIndices();
+      logger.info('Elasticsearch indices initialized successfully');
+    } catch (error) {
+      logger.warn('Failed to initialize Elasticsearch indices:', error);
+    }
 
     // ROUTES - pass initialized dependencies
     app.use('/api', createRoutes(metricsCollector, analyticsAggregator, logger));
