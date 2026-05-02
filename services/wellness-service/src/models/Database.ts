@@ -526,6 +526,5 @@ export class Database {
   }
 }
 
-export const database = Database.getInstance();
 export type DatabaseType = Database;
 export * from './schema';

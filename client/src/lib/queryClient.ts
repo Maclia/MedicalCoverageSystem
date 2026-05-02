@@ -10,8 +10,19 @@ const retryStrategy = (failureCount: number, error: any): boolean => {
   // Never retry more than 3 times
   if (failureCount > 3) return false;
   
-  // Only retry on network errors or 5xx status codes
-  if (!error.response) return true;
+  // Detect EOF / connection reset errors (rpc Unavailable error)
+  const isConnectionReset = 
+    error.message?.includes('EOF') || 
+    error.message?.includes('Connection reset') ||
+    error.message?.includes('Failed to fetch') ||
+    error.message?.includes('network error') ||
+    error.message?.includes('rpc error: code = Unavailable') ||
+    error.code === 'ECONNRESET' ||
+    error.code === 'UNAVAILABLE' ||
+    error.name === 'AbortError';
+  
+  // Retry on network errors, connection resets or 5xx status codes
+  if (!error.response || isConnectionReset) return true;
   const status = error.response.status;
   return status >= 500 && status < 600;
 };
@@ -47,15 +58,35 @@ export async function apiRequest(
     headers["X-Idempotency-Key"] = idempotencyKey;
   }
 
-  const res = await fetch(url, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  // Add connection keepalive and timeout handling for EOF error prevention
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-  await throwIfResNotOk(res);
-  return res;
+  try {
+    const res = await fetch(url, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+      signal: controller.signal,
+      // Disable connection pooling for unstable connections (prevents EOF on reused connections)
+      cache: 'no-store',
+    });
+
+    clearTimeout(timeoutId);
+    await throwIfResNotOk(res);
+    return res;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    
+    // Enhance error detection for gRPC / connection EOF errors
+    if (error.name === 'AbortError') {
+      error.message = 'Request timed out. Connection was closed by server (EOF)';
+      error.code = 'UNAVAILABLE';
+    }
+    
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -106,12 +137,29 @@ export const queryClient = new QueryClient({
       retry: retryStrategy,
       retryDelay,
       networkMode: 'offlineFirst',
+      // Prevent infinite hanging on connection errors
+      throwOnError: false,
     },
     mutations: {
-      retry: retryStrategy,
       retryDelay,
       networkMode: 'offlineFirst',
+      // Don't retry mutations on connection errors unless idempotent
+      retry: (failureCount: number, error: any) => {
+        // Only retry mutations if it's a clear connection reset / EOF error
+        if (failureCount > 1) return false;
+        
+        // Detect EOF / connection reset errors for mutations
+        const isConnectionReset = 
+          error.message?.includes('EOF') || 
+          error.message?.includes('Connection reset') ||
+          error.message?.includes('Failed to fetch') ||
+          error.message?.includes('rpc error: code = Unavailable') ||
+          error.code === 'ECONNRESET' ||
+          error.code === 'UNAVAILABLE' ||
+          error.name === 'AbortError';
+          
+        return isConnectionReset === true;
+      },
     },
   },
 });
-

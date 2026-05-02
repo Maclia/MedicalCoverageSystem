@@ -187,9 +187,6 @@ export class Database {
   }
 }
 
-// Export singleton instance
-export const database = Database.getInstance();
-
 // Export types
 export type DatabaseType = ReturnType<typeof Database.getInstance>;
 

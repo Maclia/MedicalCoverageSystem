@@ -4,7 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
-import { Database } from './models/Database';
+import { Database } from './models/Database.js';
 import { WinstonLogger as Logger } from './utils/WinstonLogger';
 import { WellnessService } from './services/WellnessService';
 import { auditMiddleware } from './middleware/auditMiddleware.js';
@@ -27,12 +27,12 @@ function createApp() {
   }));
 
   // CORS configuration
-  // app.use(cors({
-  //   origin: config.allowedOrigins,
-  //   credentials: true,
-  //   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  //   allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-ID', 'X-Company-ID'],
-  // }));
+  app.use(cors({
+    origin: config.allowedOrigins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Correlation-ID', 'X-User-ID', 'X-Company-ID'],
+  }));
 
   // Compression
   app.use(compression());
