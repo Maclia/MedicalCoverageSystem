@@ -1,0 +1,47 @@
+declare module 'recharts' {
+  export const LineChart: any;
+  export const Line: any;
+  export const AreaChart: any;
+  export const Area: any;
+  export const BarChart: any;
+  export const Bar: any;
+  export const PieChart: any;
+  export const Pie: any;
+  export const Cell: any;
+  export const XAxis: any;
+  export const YAxis: any;
+  export const CartesianGrid: any;
+  export const Tooltip: any;
+  export const Legend: any;
+  export const ResponsiveContainer: any;
+}
+
+declare module 'lucide-react' {
+  export const User: any;
+  export const FileText: any;
+  export const TrendingUp: any;
+  export const TrendingDown: any;
+  export const AlertTriangle: any;
+  export const CheckCircle: any;
+  export const Clock: any;
+  export const DollarSign: any;
+  export const Users: any;
+  export const Award: any;
+  export const Calendar: any;
+  export const Download: any;
+  export const Settings: any;
+  export const Bell: any;
+  export const Search: any;
+  export const Filter: any;
+  export const Plus: any;
+  export const Eye: any;
+  export const Edit: any;
+  export const Trash2: any;
+  export const Mail: any;
+  export const Phone: any;
+  export const MapPin: any;
+  export const Star: any;
+  export const Target: any;
+  export const Activity: any;
+  export const DollarSignIcon: any;
+}

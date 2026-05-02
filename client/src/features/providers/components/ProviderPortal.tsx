@@ -591,7 +591,7 @@ const ProviderPortal: React.FC = () => {
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
-                    <Tooltip formatter={(value) => formatCurrency(Number(value))} />
+<Tooltip formatter={(value: number) => formatCurrency(Number(value))} />
                     <Area type="monotone" dataKey="revenue" stroke="#3b82f6" fill="#93c5fd" />
                   </AreaChart>
                 </ResponsiveContainer>

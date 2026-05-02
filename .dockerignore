@@ -126,7 +126,10 @@ replit.nix
 !config/
 !package.json
 !package-lock.json
+!**/package.json
+!**/package-lock.json
 !tsconfig.json
+!**/tsconfig.json
 !vite.config.ts
 !tailwind.config.js
 !jest.config.js
