@@ -15,7 +15,7 @@ WORKDIR /app/services/core-service
 COPY services/core-service/package*.json ./
 
 # Install all dependencies (including dev for build)
-RUN npm ci --legacy-peer-deps && npm cache clean --force
+RUN npm install --legacy-peer-deps && npm cache clean --force
 
 # ================================================
 # BUILD STAGE
