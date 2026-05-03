@@ -48,8 +48,8 @@ async function startServer() {
     // ERROR HANDLER - ALWAYS LAST
     app.use(errorHandler);
 
-    app.listen(config.port, () => {
-      logger.info(`Analytics Service running on port ${config.port}`);
+    app.listen(config.port, '0.0.0.0', () => {
+      logger.info(`Analytics Service running on port ${config.port} (bound to 0.0.0.0)`);
     });
   } catch (error) {
     logger.error('Failed to start server:', error);

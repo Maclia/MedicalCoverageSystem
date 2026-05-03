@@ -43,7 +43,7 @@ export const wellnessPrograms = pgTable('wellness_programs', {
   endDate: timestamp('end_date'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   nameIdx: index('wellness_programs_name_idx').on(table.name),
   programTypeIdx: index('wellness_programs_program_type_idx').on(table.programType),
   categoryIdx: index('wellness_programs_category_idx').on(table.category),
@@ -74,7 +74,7 @@ export const userProgramEnrollments = pgTable('user_program_enrollments', {
   achievements: jsonb('achievements'), // Achievements and milestones
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   userIdIdx: index('user_program_enrollments_user_id_idx').on(table.userId),
   programIdIdx: index('user_program_enrollments_program_id_idx').on(table.programId),
   statusIdx: index('user_program_enrollments_status_idx').on(table.status),
@@ -109,7 +109,7 @@ export const wellnessActivities = pgTable('wellness_activities', {
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   programIdIdx: index('wellness_activities_program_id_idx').on(table.programId),
   activityTypeIdx: index('wellness_activities_activity_type_idx').on(table.activityType),
   difficultyLevelIdx: index('wellness_activities_difficulty_level_idx').on(table.difficultyLevel),
@@ -142,7 +142,7 @@ export const userActivities = pgTable('user_activities', {
   badgesEarned: jsonb('badges_earned'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   userIdIdx: index('user_activities_user_id_idx').on(table.userId),
   activityIdIdx: index('user_activities_activity_id_idx').on(table.activityId),
   programIdIdx: index('user_activities_program_id_idx').on(table.programId),
@@ -168,7 +168,7 @@ export const wellnessTracking = pgTable('wellness_tracking', {
   geoLocation: jsonb('geo_location'),
   dataQuality: varchar('data_quality', { length: 20 }).default('good'), // excellent, good, fair, poor
   createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   userIdIdx: index('wellness_tracking_user_id_idx').on(table.userId),
   metricTypeIdx: index('wellness_tracking_metric_type_idx').on(table.metricType),
   recordedAtIdx: index('wellness_tracking_recorded_at_idx').on(table.recordedAt),
@@ -196,7 +196,7 @@ export const healthMetrics = pgTable('health_metrics', {
   healthStatus: varchar('health_status', { length: 20 }), // normal, warning, critical
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   userIdIdx: index('health_metrics_user_id_idx').on(table.userId),
   metricTypeIdx: index('health_metrics_metric_type_idx').on(table.metricType),
   recordedAtIdx: index('health_metrics_recorded_at_idx').on(table.recordedAt),
@@ -230,7 +230,7 @@ export const wellnessGoals = pgTable('wellness_goals', {
   strategies: jsonb('strategies'), // Strategies to achieve goal
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   userIdIdx: index('wellness_goals_user_id_idx').on(table.userId),
   goalTypeIdx: index('wellness_goals_goal_type_idx').on(table.goalType),
   statusIdx: index('wellness_goals_status_idx').on(table.status),
@@ -259,7 +259,7 @@ export const wellnessRewards = pgTable('wellness_rewards', {
   celebrationMessage: text('celebration_message'),
   metadata: jsonb('metadata'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   userIdIdx: index('wellness_rewards_user_id_idx').on(table.userId),
   rewardTypeIdx: index('wellness_rewards_reward_type_idx').on(table.rewardType),
   categoryIdx: index('wellness_rewards_category_idx').on(table.category),
@@ -289,7 +289,7 @@ export const wellnessChallenges = pgTable('wellness_challenges', {
   createdBy: integer('created_by').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   challengeTypeIdx: index('wellness_challenges_challenge_type_idx').on(table.challengeType),
   categoryIdx: index('wellness_challenges_category_idx').on(table.category),
   startDateIdx: index('wellness_challenges_start_date_idx').on(table.startDate),
@@ -312,7 +312,7 @@ export const userChallengeParticipation = pgTable('user_challenge_participation'
   notes: text('notes'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
-}, (table) => ({
+}, (table: any) => ({
   userIdIdx: index('user_challenge_participation_user_id_idx').on(table.userId),
   challengeIdIdx: index('user_challenge_participation_challenge_id_idx').on(table.challengeId),
   statusIdx: index('user_challenge_participation_status_idx').on(table.status),

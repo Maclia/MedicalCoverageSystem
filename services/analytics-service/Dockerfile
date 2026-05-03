@@ -14,8 +14,14 @@ WORKDIR /app
 # Copy package files first (for proper Docker layer caching)
 COPY package*.json ./
 
+# Install system dependencies for native builds
+RUN apk add --no-cache python3 make gcc g++
+
 # Install all dependencies (including dev for build)
-RUN npm install --legacy-peer-deps && npm cache clean --force
+RUN npm_config_network_timeout=600000 npm install --legacy-peer-deps --force
+
+# Clean npm cache separately
+RUN npm cache clean --force
 
 # ================================================
 # BUILD STAGE
@@ -24,8 +30,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apk add --no-cache dumb-init
+# Install system dependencies + native build tools
+RUN apk add --no-cache dumb-init python3 make gcc g++
 
 # Copy from dependencies stage
 COPY --from=dependencies /app/node_modules ./node_modules
@@ -34,8 +40,8 @@ COPY package*.json tsconfig.json ./
 # Copy source code
 COPY src ./src
 
-# Build TypeScript
-RUN npm run build
+# Build TypeScript - handle ESM module system properly
+RUN NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
 # ================================================
 # PRODUCTION STAGE
@@ -55,7 +61,10 @@ RUN addgroup --system --gid 1001 nodejs && \
 COPY package*.json ./
 
 # Install production only dependencies
-RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
+RUN npm_config_network_timeout=600000 npm install --omit=dev --legacy-peer-deps --force
+
+# Clean npm cache separately
+RUN npm cache clean --force
 
 # Copy built application from builder stage
 COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist

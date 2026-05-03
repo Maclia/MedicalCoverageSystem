@@ -60,24 +60,27 @@ services:
     image: edoburu/pgbouncer:latest
     container_name: medical_pgbouncer
     environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_USER: ${DB_USER:-postgres}
-      DB_PASSWORD: ${DB_PASSWORD:-postgres_password_2024}
-      POOL_MODE: transaction
-      MAX_CLIENT_CONN: 2000
-      DEFAULT_POOL_SIZE: 50
-      RESERVE_POOL_SIZE: 25
-      RESERVE_POOL_TIMEOUT: 5
-      MAX_DB_CONNECTIONS: 120
-      MAX_USER_CONNECTIONS: 120
-      QUERY_TIMEOUT: 0
-      IGNORE_STARTUP_PARAMETERS: extra_float_digits
-      AUTH_TYPE: scram-sha-256
-      LOG_CONNECTIONS: 0
-      LOG_DISCONNECTIONS: 0
-      LOG_POOLER_ERRORS: 1
-      STATS_PERIOD: 60
+      PGBOUNCER_DATABASE: '*'
+      PGBOUNCER_HOST: postgres
+      PGBOUNCER_PORT: 5432
+      PGBOUNCER_USER: ${DB_USER:-postgres}
+      PGBOUNCER_PASSWORD: ${DB_PASSWORD:-postgres_password_2024}
+      PGBOUNCER_POOL_MODE: transaction
+      PGBOUNCER_MAX_CLIENT_CONN: 2000
+      PGBOUNCER_DEFAULT_POOL_SIZE: 50
+      PGBOUNCER_RESERVE_POOL_SIZE: 25
+      PGBOUNCER_RESERVE_POOL_TIMEOUT: 5
+      PGBOUNCER_MAX_DB_CONNECTIONS: 120
+      PGBOUNCER_MAX_USER_CONNECTIONS: 120
+      PGBOUNCER_QUERY_TIMEOUT: 0
+      PGBOUNCER_IGNORE_STARTUP_PARAMETERS: extra_float_digits
+      PGBOUNCER_AUTH_TYPE: scram-sha-256
+      PGBOUNCER_LOG_CONNECTIONS: 0
+      PGBOUNCER_LOG_DISCONNECTIONS: 0
+      PGBOUNCER_LOG_POOLER_ERRORS: 1
+      PGBOUNCER_STATS_PERIOD: 60
+      PGBOUNCER_LISTEN_ADDR: 0.0.0.0
+      PGBOUNCER_LISTEN_PORT: 6432
     ports:
       - "${PGBOUNCER_PORT:-6432}:6432"
     networks:
@@ -87,7 +90,7 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "psql -h localhost -p 6432 -U ${DB_USER:-postgres} -c 'SHOW POOLS;' || exit 1"]
+      test: ["CMD-SHELL", "/opt/bitnami/pgbouncer/bin/pgbouncer -V || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -163,8 +166,8 @@ services:
   billing-service:
     <<: *service-defaults
     build:
-      context: ./services/billing-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: /services/billing-service/Dockerfile
     container_name: medical_billing_service
     environment:
       NODE_ENV: ${NODE_ENV:-production}
@@ -181,8 +184,8 @@ services:
   core-service:
     <<: *service-defaults
     build:
-      context: .
-      dockerfile: ./services/core-service/Dockerfile
+      context: ./services/core-service
+      dockerfile: Dockerfile
     container_name: medical_core_service
     environment:
       NODE_ENV: ${NODE_ENV:-production}

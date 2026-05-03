@@ -1,5 +1,5 @@
 import { config } from './config/index.js';
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -56,7 +56,7 @@ function createApp() {
   app.use(responseMiddleware);
 
   // Health check endpoint
-  app.get('/health', async (req, res) => {
+  app.get('/health', async (req: Request, res: Response) => {
     const healthStatus = await Database.getInstance().healthCheck();
     res.json({
       service: 'wellness-service',
@@ -72,7 +72,7 @@ function createApp() {
   app.use('/api/wellness', wellnessRoutes);
 
   // Root endpoint
-  app.get('/', (_req, res) => {
+  app.get('/', (_req: Request, res: Response) => {
     res.json({
       service: 'wellness-service',
       status: 'running',

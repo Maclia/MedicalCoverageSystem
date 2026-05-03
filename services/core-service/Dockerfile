@@ -33,7 +33,13 @@ COPY services/core-service/package*.json services/core-service/tsconfig.json ./
 
 # Copy source code
 COPY services/core-service/src ./src
-COPY services/shared/schema.ts ./shared/schema.ts
+# Copy all shared files required for build (including types, schemas, utilities)
+# Path is relative to docker build context (project root)
+RUN mkdir -p /app/services/shared
+COPY services/shared /app/services/shared
+# Copy root shared types directory (used for @shared/types imports)
+RUN mkdir -p /app/shared
+COPY shared /app/shared
 
 # Build TypeScript with a bounded heap for Alpine-based containers
 RUN node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --incremental false --skipLibCheck

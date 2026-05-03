@@ -121,6 +121,8 @@ replit.nix
 # Keep essential files for deployment
 !deployment/
 !shared/
+!services/shared/
+!services/shared/**/*
 !server/
 !client/
 !config/
@@ -134,3 +136,7 @@ replit.nix
 !tailwind.config.js
 !jest.config.js
 !drizzle.config.ts
+# Explicitly keep schema files (fixes cache key calculation failure)
+!services/shared/schema.ts
+!services/shared/schema.d.ts
+!services/shared/schema.js

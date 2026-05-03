@@ -1,0 +1,34 @@
+import { createClient } from 'redis';
+import { createLogger } from './logger.js';
+const logger = createLogger();
+class RedisManager {
+    constructor() {
+        this.isConnected = false;
+        this.client = createClient({
+            url: process.env.REDIS_URL || 'redis://localhost:6379'
+        });
+        this.client.on('error', (err) => {
+            logger.error('Redis client error', err);
+        });
+        this.client.on('connect', () => {
+            this.isConnected = true;
+            logger.info('Redis client connected');
+        });
+        this.client.on('end', () => {
+            this.isConnected = false;
+            logger.warn('Redis client disconnected');
+        });
+        this.connect().catch(err => {
+            logger.error('Failed to connect to Redis on startup', err);
+        });
+    }
+    async connect() {
+        if (!this.isConnected) {
+            await this.client.connect();
+        }
+    }
+    getClient() {
+        return this.client;
+    }
+}
+export const redisManager = new RedisManager();

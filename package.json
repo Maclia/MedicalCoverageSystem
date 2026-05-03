@@ -83,6 +83,7 @@
     "zod-validation-error": "^3.4.0"
   },
   "devDependencies": {
+    "turbo": "^2.3.3",
     "@replit/vite-plugin-cartographer": "^0.0.11",
     "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@testing-library/jest-dom": "^6.9.1",
@@ -124,8 +125,5 @@
   "engines": {
     "node": "20.x"
   },
-  "packageManager": "npm@10.8.1",
-  "turbo": {
-    "enabled": true
-  }
+  "packageManager": "npm@10.8.1"
 }
