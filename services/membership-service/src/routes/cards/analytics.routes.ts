@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { cardManagementService } from '../../../../membership-service/src/services/CardManagementService';
+import { cardManagementService } from '../../services/CardManagementService.js';
 import { WinstonLogger } from '../../utils/WinstonLogger';
 
 const router = Router();

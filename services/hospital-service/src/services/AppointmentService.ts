@@ -1,20 +1,20 @@
 import { eq, and, desc, asc, ilike, count, or, gte, lte, lt, gt } from 'drizzle-orm';
-import { db } from '../config/database';
+import { db } from '../config/database.js';
 import {
   appointments,
   patients,
   medicalPersonnel,
   medicalInstitutions,
   appointmentStatusEnum
-} from '../models/schema';
-import { config } from '../config';
-import { createLogger } from '../utils/logger';
+} from '../models/schema.js';
+import { config } from '../config/index.js';
+import { createLogger } from '../utils/logger.js';
 import {
   ResponseFactory,
   ErrorCodes,
   createValidationErrorResponse,
   createBusinessRuleErrorResponse
-} from '../utils/api-standardization';
+} from '../utils/api-standardization.js';
 import moment from 'moment';
 
 const logger = createLogger();

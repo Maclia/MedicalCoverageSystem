@@ -9,10 +9,10 @@
 
 FROM node:20-alpine AS dependencies
 
-WORKDIR /app
+WORKDIR /app/services/wellness-service
 
 # Copy package files first (for proper Docker layer caching)
-COPY package*.json ./
+COPY services/wellness-service/package*.json ./
 
 # Install all dependencies (including dev for build)
 RUN npm install --legacy-peer-deps && npm cache clean --force
@@ -22,17 +22,17 @@ RUN npm install --legacy-peer-deps && npm cache clean --force
 # ================================================
 FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /app/services/wellness-service
 
 # Install system dependencies
 RUN apk add --no-cache dumb-init
 
 # Copy from dependencies stage
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY package*.json tsconfig.json ./
+COPY --from=dependencies /app/services/wellness-service/node_modules ./node_modules
+COPY services/wellness-service/package*.json services/wellness-service/tsconfig.json ./
 
 # Copy source code
-COPY src ./src
+COPY services/wellness-service/src ./src
 
 # Build TypeScript
 RUN npm run build
@@ -42,7 +42,7 @@ RUN npm run build
 # ================================================
 FROM node:20-alpine
 
-WORKDIR /app
+WORKDIR /app/services/wellness-service
 
 # Install system dependencies
 RUN apk add --no-cache dumb-init
@@ -52,13 +52,13 @@ RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nodejs
 
 # Copy package files
-COPY package*.json ./
+COPY services/wellness-service/package*.json ./
 
 # Install production only dependencies
 RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/services/wellness-service/dist ./dist
 
 # Create logs directory with proper permissions
 RUN mkdir -p logs && chown -R nodejs:nodejs /app
@@ -73,5 +73,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Use dumb-init for proper signal handling
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
-# Standard start command - ALL services use dist/server.js
-CMD ["node", "dist/server.js"]
+# Wellness service entrypoint
+CMD ["node", "dist/index.js"]

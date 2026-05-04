@@ -8,9 +8,9 @@ x-service-defaults: &service-defaults
     redis:
       condition: service_healthy
   environment:
-    NODE_ENV: ${NODE_ENV:-production}
-    REDIS_URL: ${REDIS_URL:-redis://redis:6379}
-    JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
+    NODE_ENV: ${NODE_ENV}
+    REDIS_URL: ${REDIS_URL}
+    JWT_SECRET: ${JWT_SECRET}
 
 x-default-healthcheck: &default-healthcheck
   interval: 30s
@@ -42,15 +42,14 @@ services:
   redis:
     image: redis:7-alpine
     container_name: medical_redis
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD} --appendonly yes
     volumes:
       - redis_data:/data
     networks:
       - medical-services-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "--pass", "${REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -63,8 +62,8 @@ services:
       PGBOUNCER_DATABASE: '*'
       PGBOUNCER_HOST: postgres
       PGBOUNCER_PORT: 5432
-      PGBOUNCER_USER: ${DB_USER:-postgres}
-      PGBOUNCER_PASSWORD: ${DB_PASSWORD:-postgres_password_2024}
+      PGBOUNCER_USER: ${DB_USER}
+      PGBOUNCER_PASSWORD: ${DB_PASSWORD}
       PGBOUNCER_POOL_MODE: transaction
       PGBOUNCER_MAX_CLIENT_CONN: 2000
       PGBOUNCER_DEFAULT_POOL_SIZE: 50
@@ -175,8 +174,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3002
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_billing
-    ports:
-      - "3002:3002"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3002/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -193,8 +190,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3003
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_core
-    ports:
-      - "3003:3003"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3003/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -211,8 +206,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3004
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_finance
-    ports:
-      - "3004:3004"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3004/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -229,8 +222,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3005
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_crm
-    ports:
-      - "3005:3005"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3005/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -247,8 +238,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3006
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_membership
-    ports:
-      - "3006:3006"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3006/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -265,8 +254,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3007
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_hospital
-    ports:
-      - "3007:3007"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3007/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -283,8 +270,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3008
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_insurance
-    ports:
-      - "3008:3008"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3008/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -301,8 +286,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3009
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_wellness
-    ports:
-      - "3009:3009"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3009/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -338,8 +321,6 @@ services:
       AUTO_DECLINE_THRESHOLD: ${AUTO_DECLINE_THRESHOLD:-75}
       IMPOSSIBLE_TRAVEL_THRESHOLD_KM: ${IMPOSSIBLE_TRAVEL_THRESHOLD_KM:-900}
       AUTOMATED_FLAGGING_ENABLED: ${AUTOMATED_FLAGGING_ENABLED:-true}
-    ports:
-      - "5009:5009"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:5009/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -356,8 +337,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3010
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_claims
-    ports:
-      - "3010:3010"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3010/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -374,8 +353,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3011
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_analytics
-    ports:
-      - "3011:3011"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3011/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]
@@ -392,8 +369,6 @@ services:
       JWT_SECRET: ${JWT_SECRET:-change_me_in_production}
       PORT: 3012
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres_password_2024}@pgbouncer:6432/medical_coverage_premium_calculation
-    ports:
-      - "3012:3012"
     healthcheck:
       <<: *default-healthcheck
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:3012/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1))"]

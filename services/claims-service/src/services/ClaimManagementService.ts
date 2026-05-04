@@ -3,9 +3,6 @@ import { claims } from '../models/schema.js';
 import { createLogger } from '../utils/logger.js';
 import { eq, sql } from 'drizzle-orm';
 
-// @ts-ignore: Drizzle ORM count function import
-const count = sql`count(*)`;
-
 const logger = createLogger('claim-management-service');
 
 /**
@@ -20,7 +17,7 @@ export class ClaimManagementService {
     try {
       // @ts-ignore: Drizzle ORM table type compatibility issue
       const result = await drizzle.insert(claims as any).values(claimData).returning();
-      return result[0];
+      return Array.isArray(result) ? result[0] : null;
     } catch (error) {
       logger.error('Error creating claim:', error);
       throw error;
@@ -46,9 +43,11 @@ export class ClaimManagementService {
       const [claimsData, totalResult] = await Promise.all([
         query,
         // @ts-ignore: Drizzle ORM table type compatibility issue
-        drizzle.select({ count: count() }).from(claims as any).where(filters)
+        drizzle.select({ count: sql<number>`count(*)` }).from(claims as any).where(filters)
       ]);
-      const totalCount = totalResult[0]?.count || 0;
+      const totalCount = Array.isArray(totalResult)
+        ? Number(totalResult[0]?.count || 0)
+        : 0;
 
       return {
         claims: claimsData,

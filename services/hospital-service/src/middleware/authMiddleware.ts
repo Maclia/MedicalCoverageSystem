@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { config } from '../config';
-import { createLogger } from '../utils/logger';
-import { ResponseFactory, ErrorCodes } from '../utils/api-standardization';
+import { config } from '../config/index.js';
+import { createLogger } from '../utils/logger.js';
+import { ResponseFactory, ErrorCodes } from '../utils/api-standardization.js';
 
 const logger = createLogger();
 

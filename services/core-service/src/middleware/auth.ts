@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/AuthService';
 import { AuthenticationError, AuthorizationError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
-import type { SystemPermission, ModuleAccess, Module } from '@shared/types/permissions';
-import { isValidPermission, validatePermissions } from '@shared/types/permissions';
+import type { SystemPermission, ModuleAccess, Module } from '../../../../shared/types/permissions';
+import { isValidPermission, validatePermissions } from '../../../../shared/types/permissions';
 
 const logger = createLogger();
 

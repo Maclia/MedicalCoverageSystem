@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { cardManagementService } from '../../../../membership-service/src/services/CardManagementService';
-import { createLogger } from '../../utils/logger';
+import { cardManagementService } from '../../services/CardManagementService.js';
+import { WinstonLogger } from '../../utils/WinstonLogger';
 
 const router = Router();
-const logger = createLogger();
+const logger = new WinstonLogger('membership-service');
 
 /**
  * Helper function to safely convert unknown error to Error
@@ -19,7 +19,7 @@ function toError(error: unknown): Error {
  * Get all cards
  * GET /api/core/cards
  */
-router.get('/', async (_req: Request, res: Response) => {
+router.get('/', async (_req: Request, res: Response): Promise<void> => {
   try {
     const cards = await cardManagementService.listCards();
 
@@ -40,15 +40,16 @@ router.get('/', async (_req: Request, res: Response) => {
  * Get a specific card by ID
  * GET /api/core/cards/:cardId
  */
-router.get('/:cardId(\\d+)', async (req: Request, res: Response) => {
+router.get('/:cardId(\\d+)', async (req: Request, res: Response): Promise<void> => {
   try {
     const cardId = parseInt(req.params.cardId);
 
     if (isNaN(cardId)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid card ID',
       });
+      return;
     }
 
     const card = await cardManagementService.getCard(cardId);
@@ -70,16 +71,17 @@ router.get('/:cardId(\\d+)', async (req: Request, res: Response) => {
  * Update card status
  * PUT /api/core/cards/:cardId/status
  */
-router.put('/:cardId(\\d+)/status', async (req: Request, res: Response) => {
+router.put('/:cardId(\\d+)/status', async (req: Request, res: Response): Promise<void> => {
   try {
     const cardId = parseInt(req.params.cardId);
     const { status, reason } = req.body;
 
     if (isNaN(cardId) || !status) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid card ID or missing status',
       });
+      return;
     }
 
     const result = await cardManagementService.updateCardStatus({
@@ -105,16 +107,17 @@ router.put('/:cardId(\\d+)/status', async (req: Request, res: Response) => {
  * Request card replacement
  * POST /api/core/cards/:cardId/replace
  */
-router.post('/:cardId(\\d+)/replace', async (req: Request, res: Response) => {
+router.post('/:cardId(\\d+)/replace', async (req: Request, res: Response): Promise<void> => {
   try {
     const cardId = parseInt(req.params.cardId);
     const { reason, expedited } = req.body;
 
     if (isNaN(cardId)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid card ID',
       });
+      return;
     }
 
     const result = await cardManagementService.requestCardReplacement(cardId, reason || 'Member requested', expedited || false);
@@ -136,16 +139,17 @@ router.post('/:cardId(\\d+)/replace', async (req: Request, res: Response) => {
  * Get card verification history
  * GET /api/core/cards/history/:cardId
  */
-router.get('/history/:cardId', async (req: Request, res: Response) => {
+router.get('/history/:cardId', async (req: Request, res: Response): Promise<void> => {
   try {
     const cardId = parseInt(req.params.cardId);
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (isNaN(cardId)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid card ID',
       });
+      return;
     }
 
     const history = await cardManagementService.getCardVerificationHistory(cardId, limit);
@@ -167,7 +171,7 @@ router.get('/history/:cardId', async (req: Request, res: Response) => {
  * Get recent verification events across all cards
  * GET /api/core/cards/verifications
  */
-router.get('/verifications', async (req: Request, res: Response) => {
+router.get('/verifications', async (req: Request, res: Response): Promise<void> => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
     const history = await cardManagementService.getRecentVerificationEvents(limit);

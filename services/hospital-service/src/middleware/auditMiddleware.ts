@@ -1,22 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
-import { createLogger, generateCorrelationId } from '../utils/logger';
-import { AuditService } from '../services/AuditService';
+import { createLogger, generateCorrelationId } from '../utils/logger.js';
+import { AuditService } from '../services/AuditService.js';
 
 const logger = createLogger();
 
-// Extend Request interface to include correlationId
-declare global {
-  namespace Express {
-    interface Request {
-      correlationId?: string;
-      user?: any;
-    }
-  }
-}
 
 export const auditMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   // Generate correlation ID if not present
-  const correlationId = req.correlationId || generateCorrelationId();
+  const correlationId = req.correlationId ?? generateCorrelationId();
   req.correlationId = correlationId;
 
   // Start time for performance tracking
@@ -27,7 +18,7 @@ export const auditMiddleware = async (req: Request, res: Response, next: NextFun
     method: req.method,
     url: req.url,
     userAgent: req.get('User-Agent'),
-    ip: req.ip,
+         ip: req.ip || 'unknown',
     correlationId
   });
 
@@ -78,7 +69,7 @@ export const auditMiddleware = async (req: Request, res: Response, next: NextFun
 
         // Extract relevant data for audit
         const auditData = {
-          userId: req.user?.id || 'anonymous',
+          userId: String(req.user?.id || 'anonymous'),
           userEmail: req.user?.email || 'anonymous',
           action: `${req.method} ${req.path}`,
           resource: req.path.split('/')[1] || 'unknown',
@@ -87,10 +78,10 @@ export const auditMiddleware = async (req: Request, res: Response, next: NextFun
           endpoint: req.path,
           statusCode,
           duration,
-          ip: req.ip,
+          ip: req.ip || 'unknown',
           userAgent: req.get('User-Agent'),
           requestBody: req.method !== 'GET' ? sanitizeRequestBody(req.body) : undefined,
-          responseStatus: statusCode >= 400 ? 'failure' : 'success',
+          responseStatus: (statusCode >= 400 ? 'failure' : 'success') as 'failure' | 'success',
           timestamp: new Date(),
           correlationId
         };

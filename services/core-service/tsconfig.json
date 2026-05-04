@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "Node16",
-    "moduleResolution": "Node16",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "allowImportingTsExtensions": false,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
@@ -12,7 +12,7 @@
     "forceConsistentCasingInFileNames": true,
     "declaration": false,
     "outDir": "./dist",
-    "rootDir": "./src",
+    "rootDir": "../../",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "skipDefaultLibCheck": true,
@@ -21,7 +21,10 @@
     "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@shared/schema": ["../../services/shared/schema.ts"],
+      "@/*": ["./src/*"],
+      "@shared/*": ["../../shared/*"],
+      "@services/shared/*": ["../../services/shared/*"]
     },
     "typeRoots": ["./node_modules/@types", "../../node_modules/@types"]
   },
@@ -32,6 +35,17 @@
     "node_modules",
     "dist",
     "**/*.spec.ts",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "../../client",
+    "../../services/!(core-service)",
+    "../../server",
+    "../../config",
+    "../../scripts",
+    "../../database",
+    "../../deployment",
+    "../../docs",
+    "../../.git",
+    "../../.github",
+    "../../.vercel"
   ]
 }

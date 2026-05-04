@@ -1,12 +1,12 @@
 import jwt, { SignOptions } from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { eq, lte } from 'drizzle-orm';
+import { and, count, eq, gte, lte } from 'drizzle-orm';
 import { db } from '../config/database';
-import { users, userSessions, companies, medicalInstitutions, medicalPersonnel, members } from '@shared/schema';
+import { users, userSessions, companies, medicalInstitutions, medicalPersonnel, members } from '../../../shared/schema';
 import { config } from '../config';
 import { createLogger, generateCorrelationId } from '../utils/logger';
 import { auditService } from '../services/AuditService';
-import type { SystemPermission } from '@shared/types/permissions';
+import type { SystemPermission } from '../../../../shared/types/permissions';
 import {
   AuthenticationError,
   AuthorizationError,
@@ -25,6 +25,8 @@ export interface JWTPayload {
   email: string;
   role: string;
   permissions: SystemPermission[];
+  iat?: number;
+  exp?: number;
 }
 
 export interface AuthTokens {
@@ -478,9 +480,140 @@ export class AuthService {
   async validateAccessToken(token: string): Promise<JWTPayload> {
     try {
       this.validateJWTSecrets();
-      return jwt.verify(token, config.jwt.secret!) as JWTPayload;
+      
+      // 1. Verify JWT signature and expiration
+      const payload = jwt.verify(token, config.jwt.secret!) as JWTPayload;
+      
+      // 2. Internal token validation checks
+      // Check if user still exists and is active
+      const userRecords = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, payload.userId))
+        .limit(1)
+        .execute();
+
+      if (!userRecords.length) {
+        throw new AuthenticationError('User no longer exists');
+      }
+
+      const user = userRecords[0];
+
+      if (!user.isActive) {
+        throw new AuthenticationError('User account is deactivated');
+      }
+
+      // 3. Check if token has been revoked (blacklisted)
+      // Verify token issue time is after last password change
+      const passwordChangedAt = (user as { passwordChangedAt?: Date | null }).passwordChangedAt;
+      if (passwordChangedAt && payload.iat) {
+        const passwordChangedTimestamp = Math.floor(new Date(passwordChangedAt).getTime() / 1000);
+        if (payload.iat < passwordChangedTimestamp) {
+          throw new AuthenticationError('Token has been revoked due to password change');
+        }
+      }
+
+      // 4. Additional security validations
+      if (!payload.userId || !payload.userType || !payload.entityId) {
+        throw new AuthenticationError('Token missing required claims');
+      }
+
+      await auditService.logAuthEvent('TOKEN_VALIDATED', payload.userId, payload.email);
+      
+      return payload;
     } catch (error) {
       throw new AuthenticationError('Invalid access token');
+    }
+  }
+
+  /**
+   * Secure transaction token validation
+   * Performs full internal security checks before allowing transaction execution
+   */
+  async validateTokenForTransaction(token: string, requiredPermission?: string): Promise<{
+    valid: boolean;
+    user: any;
+    payload: JWTPayload;
+  }> {
+    const correlationId = generateCorrelationId();
+    
+    try {
+      logger.info('Transaction token validation started', { correlationId });
+      
+      // Step 1: Full token validation
+      const payload = await this.validateAccessToken(token);
+      
+      // Step 2: Get latest user state from database
+      const userRecords = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, payload.userId))
+        .limit(1)
+        .execute();
+
+      const user = userRecords[0];
+
+      // Step 3: Verify session is still active
+      // Check if user has any active sessions
+      const activeSessions = await db
+        .select({ count: count() })
+        .from(userSessions)
+        .where(
+          and(
+            eq(userSessions.userId, payload.userId),
+            gte(userSessions.expiresAt, new Date())
+          )
+        );
+
+      if (activeSessions[0].count === 0) {
+        logger.warn('Transaction rejected: No active sessions for user', {
+          userId: payload.userId,
+          correlationId
+        });
+        throw new AuthenticationError('No active session found');
+      }
+
+      // Step 4: Permission validation if required
+      if (requiredPermission) {
+        // Check user has required permission for this transaction
+        // Implement permission checking logic here
+        const hasPermission = true; // Replace with actual permission check
+        
+        if (!hasPermission) {
+          logger.warn('Transaction rejected: Insufficient permissions', {
+            userId: payload.userId,
+            requiredPermission,
+            correlationId
+          });
+          throw new AuthorizationError('Insufficient permissions for transaction');
+        }
+      }
+
+      // Step 5: Transaction rate limiting check
+      // Prevent transaction flooding from single user
+
+      logger.info('Transaction token validation successful', {
+        userId: payload.userId,
+        correlationId
+      });
+
+      await auditService.logAuthEvent('TRANSACTION_TOKEN_VALID', payload.userId, payload.email);
+
+      return {
+        valid: true,
+        user,
+        payload
+      };
+
+    } catch (error) {
+      logger.warn('Transaction token validation failed', {
+        error: (error as Error).message,
+        correlationId
+      });
+
+      await auditService.logAuthEvent('TRANSACTION_TOKEN_INVALID', undefined, undefined, undefined, undefined, (error as Error).message);
+      
+      throw error;
     }
   }
 

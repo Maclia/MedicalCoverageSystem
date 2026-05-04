@@ -1,5 +1,5 @@
-import { redisManager } from '../../message-queue/src/config/redis';
-import { createLogger } from '../../message-queue/src/config/logger';
+import { redisManager } from '../../message-queue/src/config/redis.js';
+import { createLogger } from '../../message-queue/src/config/logger.js';
 import { EventEmitter } from 'events';
 
 const logger = createLogger();

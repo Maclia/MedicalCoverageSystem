@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { cardManagementService } from '../../../../membership-service/src/services/CardManagementService';
-import { createLogger } from '../../utils/logger';
+import { cardManagementService } from '../../services/CardManagementService.js';
+import { WinstonLogger } from '../../utils/WinstonLogger';
 
 const router = Router();
-const logger = createLogger();
+const logger = new WinstonLogger('membership-service');
 
 /**
  * Helper function to safely convert unknown error to Error
@@ -19,15 +19,16 @@ function toError(error: unknown): Error {
  * Generate a new member card
  * POST /api/core/cards/generate
  */
-router.post('/generate', async (req: Request, res: Response) => {
+router.post('/generate', async (req: Request, res: Response): Promise<void> => {
   try {
     const { memberId, cardType, templateId, expeditedShipping, deliveryAddress } = req.body;
 
     if (!memberId || !cardType) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Missing required fields: memberId, cardType',
       });
+      return;
     }
 
     const result = await cardManagementService.generateMemberCard({

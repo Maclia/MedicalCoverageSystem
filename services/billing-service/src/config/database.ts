@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import { config } from './index';
-import { createLogger } from '../utils/logger';
+import { config } from './index.js';
+import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 
@@ -9,7 +9,6 @@ const logger = createLogger();
 const connectionString = config.database.url;
 const client = postgres(connectionString, {
   max: config.database.pool.max,
-  min: config.database.pool.min,
   idle_timeout: config.database.pool.idleTimeoutMillis,
   connect_timeout: config.database.pool.connectionTimeoutMillis,
   ssl: config.database.ssl ? { rejectUnauthorized: false } : false,

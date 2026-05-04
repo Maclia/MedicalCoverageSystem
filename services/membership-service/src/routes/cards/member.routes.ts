@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { cardManagementService } from '../../../../membership-service/src/services/CardManagementService';
-import { createLogger } from '../../utils/logger';
+import { cardManagementService } from '../../services/CardManagementService.js';
+import { WinstonLogger } from '../../utils/WinstonLogger';
 
 const router = Router();
-const logger = createLogger();
+const logger = new WinstonLogger('membership-service');
 
 /**
  * Helper function to safely convert unknown error to Error
@@ -19,16 +19,17 @@ function toError(error: unknown): Error {
  * Get all cards for a member
  * GET /api/core/cards/member/:memberId
  */
-router.get('/:memberId', async (req: Request, res: Response) => {
+router.get('/:memberId', async (req: Request, res: Response): Promise<void> => {
   try {
     const memberId = parseInt(req.params.memberId);
     const activeOnly = req.query.activeOnly === 'true';
 
     if (isNaN(memberId)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid member ID',
       });
+      return;
     }
 
     const cards = await cardManagementService.getMemberCards(memberId, activeOnly);
@@ -50,15 +51,16 @@ router.get('/:memberId', async (req: Request, res: Response) => {
  * Get active cards for a member
  * GET /api/core/cards/member/:memberId/active
  */
-router.get('/:memberId/active', async (req: Request, res: Response) => {
+router.get('/:memberId/active', async (req: Request, res: Response): Promise<void> => {
   try {
     const memberId = parseInt(req.params.memberId);
 
     if (isNaN(memberId)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid member ID',
       });
+      return;
     }
 
     const cards = await cardManagementService.getMemberCards(memberId, true);
@@ -80,15 +82,16 @@ router.get('/:memberId/active', async (req: Request, res: Response) => {
  * Downloadable digital card payload
  * GET /api/core/cards/member/download-card/:cardId
  */
-router.get('/download-card/:cardId', async (req: Request, res: Response) => {
+router.get('/download-card/:cardId', async (req: Request, res: Response): Promise<void> => {
   try {
     const cardId = parseInt(req.params.cardId);
 
     if (isNaN(cardId)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid card ID',
       });
+      return;
     }
 
     const payload = await cardManagementService.getDownloadableCard(cardId);

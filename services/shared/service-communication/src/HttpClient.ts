@@ -1,5 +1,5 @@
-import { serviceRegistry } from './ServiceRegistry';
-import { createLogger } from '../../redis-cache/src/config/logger';
+import { serviceRegistry } from './ServiceRegistry.js';
+import { createLogger } from '../../redis-cache/src/config/logger.js';
 import { EventEmitter } from 'events';
 import * as http from 'http';
 import * as https from 'https';

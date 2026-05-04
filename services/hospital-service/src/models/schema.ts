@@ -119,8 +119,8 @@ export const hospitals = pgTable('hospitals', {
   specializations: jsonb('specializations'),
   equipment: jsonb('equipment'),
   facilities: jsonb('facilities'),
-  qualityScore: decimal('quality_score', { precision: 3, scale: 2 }).default(0.0),
-  rating: decimal('rating', { precision: 3, scale: 2 }).default(0.0),
+  qualityScore: decimal('quality_score', { precision: 3, scale: 2 }).default('0.0'),
+  rating: decimal('rating', { precision: 3, scale: 2 }).default('0.0'),
   reviewCount: integer('review_count').default(0),
   isActive: boolean('is_active').default(true),
   isVerified: boolean('is_verified').default(false),
@@ -191,9 +191,9 @@ export const hospitalStaff = pgTable('hospital_staff', {
   isConsultant: boolean('is_consultant').default(false),
   isAvailable: boolean('is_available').default(true),
   availability: jsonb('availability'),
-  consultationFee: decimal('consultation_fee', { precision: 10, scale: 2 }),
+  consultationFee: decimal('consultation_fee', { precision: 10, scale: 2 }).default('0'),
   consultationDuration: integer('consultation_duration').default(30),
-  rating: decimal('rating', { precision: 3, scale: 2 }).default(0.0),
+  rating: decimal('rating', { precision: 3, scale: 2 }).default('0.0'),
   reviewCount: integer('review_count').default(0),
   isActive: boolean('is_active').default(true),
   isVerified: boolean('is_verified').default(false),
@@ -255,7 +255,7 @@ export const hospitalAppointments = pgTable('hospital_appointments', {
   followUpDate: timestamp('follow_up_date'),
   followUpNotes: text('follow_up_notes'),
   billingAmount: decimal('billing_amount', { precision: 10, scale: 2 }),
-  paidAmount: decimal('paid_amount', { precision: 10, scale: 2 }).default(0),
+  paidAmount: decimal('paid_amount', { precision: 10, scale: 2 }).default('0'),
   paymentStatus: varchar('payment_status', { length: 20 }).default('pending'),
   paymentMethod: varchar('payment_method', { length: 50 }),
   paymentReference: varchar('payment_reference', { length: 100 }),
@@ -345,6 +345,78 @@ export const hospitalInventory = pgTable('hospital_inventory', {
   minQuantityIdx: index('hospital_inventory_min_quantity_idx').on(table.minQuantity),
 }));
 
+// Patients schema
+export const genderEnum = pgEnum('gender', ['male', 'female', 'other']);
+export const membershipStatusEnum = pgEnum('membership_status', ['active', 'inactive', 'pending', 'suspended']);
+
+export const patients = pgTable('patients', {
+  id: serial('id').primaryKey(),
+  medicalRecordNumber: varchar('medical_record_number', { length: 50 }).notNull().unique(),
+  firstName: varchar('first_name', { length: 100 }).notNull(),
+  lastName: varchar('last_name', { length: 100 }).notNull(),
+  dateOfBirth: timestamp('date_of_birth').notNull(),
+  gender: genderEnum('gender').notNull(),
+  email: varchar('email', { length: 255 }),
+  phone: varchar('phone', { length: 20 }).notNull(),
+  address: text('address'),
+  city: varchar('city', { length: 100 }),
+  postalCode: varchar('postal_code', { length: 20 }),
+  country: varchar('country', { length: 100 }).default('Kenya'),
+  nationalId: varchar('national_id', { length: 50 }),
+  passportNumber: varchar('passport_number', { length: 50 }),
+  emergencyContactName: varchar('emergency_contact_name', { length: 255 }),
+  emergencyContactPhone: varchar('emergency_contact_phone', { length: 20 }),
+  emergencyContactRelationship: varchar('emergency_contact_relationship', { length: 100 }),
+  bloodType: varchar('blood_type', { length: 10 }),
+  allergies: jsonb('allergies').default([]),
+  chronicConditions: jsonb('chronic_conditions').default([]),
+  medications: jsonb('medications').default([]),
+  insuranceProvider: varchar('insurance_provider', { length: 255 }),
+  insurancePolicyNumber: varchar('insurance_policy_number', { length: 100 }),
+  preferredLanguage: varchar('preferred_language', { length: 50 }).default('English'),
+  registrationDate: timestamp('registration_date').defaultNow(),
+  isActive: boolean('is_active').default(true),
+  deactivationReason: text('deactivation_reason'),
+  deactivationDate: timestamp('deactivation_date'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  medicalRecordNumberIdx: index('patients_mrn_idx').on(table.medicalRecordNumber),
+  nameIdx: index('patients_name_idx').on(table.firstName, table.lastName),
+  phoneIdx: index('patients_phone_idx').on(table.phone),
+  nationalIdIdx: index('patients_national_id_idx').on(table.nationalId),
+  isActiveIdx: index('patients_active_idx').on(table.isActive),
+}));
+
+// Medical Records schema
+export const medicalRecords = pgTable('medical_records', {
+  id: serial('id').primaryKey(),
+  patientId: integer('patient_id').references(() => patients.id).notNull(),
+  recordDate: timestamp('record_date').notNull(),
+  chiefComplaint: text('chief_complaint'),
+  diagnosis: jsonb('diagnosis').default([]),
+  treatment: jsonb('treatment').default([]),
+  medications: jsonb('medications').default([]),
+  vitals: jsonb('vitals'),
+  notes: text('notes'),
+  followUpRequired: boolean('follow_up_required').default(false),
+  followUpDate: timestamp('follow_up_date'),
+  referredTo: integer('referred_to').references(() => hospitalStaff.id),
+  referredFrom: integer('referred_from').references(() => hospitalStaff.id),
+  attachmentPaths: jsonb('attachment_paths').default([]),
+  createdBy: integer('created_by'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  patientIdIdx: index('medical_records_patient_idx').on(table.patientId),
+  recordDateIdx: index('medical_records_date_idx').on(table.recordDate),
+}));
+
+// Export aliases for compatibility
+export const appointments = hospitalAppointments;
+export const medicalInstitutions = hospitals;
+export const medicalPersonnel = hospitalStaff;
+
 // Export all tables
 export type Hospital = typeof hospitals.$inferSelect;
 export type NewHospital = typeof hospitals.$inferInsert;
@@ -358,3 +430,7 @@ export type HospitalBed = typeof hospitalBeds.$inferSelect;
 export type NewHospitalBed = typeof hospitalBeds.$inferInsert;
 export type HospitalInventory = typeof hospitalInventory.$inferSelect;
 export type NewHospitalInventory = typeof hospitalInventory.$inferInsert;
+export type Patient = typeof patients.$inferSelect;
+export type NewPatient = typeof patients.$inferInsert;
+export type MedicalRecord = typeof medicalRecords.$inferSelect;
+export type NewMedicalRecord = typeof medicalRecords.$inferInsert;

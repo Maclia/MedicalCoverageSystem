@@ -30,6 +30,7 @@ RUN apk add --no-cache dumb-init
 # Copy from dependencies stage
 COPY --from=dependencies /app/services/core-service/node_modules ./node_modules
 COPY services/core-service/package*.json services/core-service/tsconfig.json ./
+COPY services/core-service/build.mjs ./
 # Copy root tsconfig.json which contains global path aliases and base configuration
 COPY tsconfig.json /app/tsconfig.json
 
@@ -43,9 +44,9 @@ COPY services/shared /app/services/shared
 RUN mkdir -p /app/shared
 COPY shared /app/shared
 
-# Build TypeScript with a bounded heap for Alpine-based containers
-# Explicitly use local service tsconfig to avoid root repository tsconfig being loaded
-RUN node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --project tsconfig.json --incremental false --skipLibCheck
+# Build the service as a bundled CommonJS artifact so shared workspace imports
+# and runtime module resolution stay consistent in both Docker and local runs.
+RUN node --max-old-space-size=4096 build.mjs
 # ================================================
 # PRODUCTION STAGE
 # ================================================
@@ -82,4 +83,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 
 # Standard start command - ALL services use dist/server.js
-CMD ["node", "dist/server.js"]
+CMD ["node", "dist/services/core-service/src/server.js"]

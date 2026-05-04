@@ -1,20 +1,23 @@
 # ================================================
-# ✅ STANDARD DOCKERFILE - ALL SERVICES MUST USE THIS
+# ✅ FINANCE SERVICE DOCKERFILE - WITH SHARED DEPENDENCIES
 # ================================================
 # Multi-stage optimized production build
-# 
-# ALL SERVICES FOLLOW THIS EXACT SAME DOCKERFILE
-# No customizations allowed - this ensures 100% consistency
-# Ports, commands and environment are handled at runtime
 
 FROM node:20-alpine AS dependencies
 
 WORKDIR /app
 
-# Copy package files first (for proper Docker layer caching)
+# Copy root package files first
 COPY package*.json ./
 
-# Install all dependencies (including dev for build)
+# Copy shared packages package files
+COPY services/shared/business-rules/package*.json ./services/shared/business-rules/
+COPY services/shared/message-queue/package*.json ./services/shared/message-queue/
+
+# Copy finance service package files
+COPY services/finance-service/package*.json ./services/finance-service/
+
+# Install all dependencies at root level
 RUN npm install --legacy-peer-deps && npm cache clean --force
 
 # ================================================
@@ -27,15 +30,14 @@ WORKDIR /app
 # Install system dependencies
 RUN apk add --no-cache dumb-init
 
-# Copy from dependencies stage
-COPY --from=dependencies /app/node_modules ./node_modules
-COPY package*.json tsconfig.json ./
+# Copy entire monorepo structure
+COPY . .
 
-# Copy source code
-COPY src ./src
+# Install dependencies
+RUN npm install --legacy-peer-deps --no-save && npm cache clean --force
 
-# Build TypeScript
-RUN npm run build
+# Build only finance service and its dependencies
+RUN cd services/finance-service && npm run build
 
 # ================================================
 # PRODUCTION STAGE
@@ -58,7 +60,7 @@ COPY package*.json ./
 RUN npm install --omit=dev --legacy-peer-deps && npm cache clean --force
 
 # Copy built application from builder stage
-COPY --from=builder --chown=nodejs:nodejs /app/dist ./dist
+COPY --from=builder --chown=nodejs:nodejs /app/services/finance-service/dist ./dist
 
 # Create logs directory with proper permissions
 RUN mkdir -p logs && chown -R nodejs:nodejs /app

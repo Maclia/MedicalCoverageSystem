@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { createLogger, generateCorrelationId } from '../utils/logger';
-import { db } from '../config/database';
-import { billingAuditLogs } from '../models/schema';
+import { createLogger, generateCorrelationId } from '../utils/logger.js';
+import { db } from '../config/database.js';
+import { billingAuditLogs } from '../models/schema.js';
 
 const logger = createLogger();
 

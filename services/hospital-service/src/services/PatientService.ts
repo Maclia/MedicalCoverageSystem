@@ -1,5 +1,5 @@
-import { eq, and, desc, asc, ilike, count, or } from 'drizzle-orm';
-import { db } from '../config/database';
+import { eq, and, desc, asc, ilike, count, or, lte, gte } from 'drizzle-orm';
+import { db } from '../config/database.js';
 import {
   patients,
   medicalRecords,
@@ -8,15 +8,14 @@ import {
   medicalPersonnel,
   genderEnum,
   membershipStatusEnum
-} from '../models/schema';
-import { config } from '../config';
-import { createLogger, generateCorrelationId } from '../utils/logger';
+} from '../models/schema.js';
+import { config } from '../config/index.js';
+import { createLogger, generateCorrelationId } from '../utils/logger.js';
 import {
   ResponseFactory,
   ErrorCodes,
   createValidationErrorResponse
-} from '../utils/api-standardization';
-import bcrypt from 'bcryptjs';
+} from '../utils/api-standardization.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const logger = createLogger();
@@ -26,25 +25,25 @@ export interface PatientData {
   lastName: string;
   dateOfBirth: Date;
   gender: string;
-  email?: string;
+  email?: string | null;
   phone: string;
-  address?: string;
-  city?: string;
-  postalCode?: string;
-  country?: string;
-  nationalId?: string;
-  passportNumber?: string;
-  emergencyContactName?: string;
-  emergencyContactPhone?: string;
-  emergencyContactRelationship?: string;
-  bloodType?: string;
-  allergies?: string[];
-  chronicConditions?: string[];
-  medications?: string[];
-  insuranceProvider?: string;
-  insurancePolicyNumber?: string;
-  preferredLanguage?: string;
-  medicalRecordNumber?: string;
+  address?: string | null;
+  city?: string | null;
+  postalCode?: string | null;
+  country?: string | null;
+  nationalId?: string | null;
+  passportNumber?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+  emergencyContactRelationship?: string | null;
+  bloodType?: string | null;
+  allergies?: string[] | null;
+  chronicConditions?: string[] | null;
+  medications?: string[] | null;
+  insuranceProvider?: string | null;
+  insurancePolicyNumber?: string | null;
+  preferredLanguage?: string | null;
+  medicalRecordNumber?: string | null;
 }
 
 export interface MedicalRecordData {
@@ -367,7 +366,7 @@ export class PatientService {
     correlationId?: string
   ): Promise<any> {
     try {
-      let query = db.select().from(patients);
+      let query = db.select().from(patients).$dynamic();
 
       // Apply filters
       if (filters.search) {
@@ -391,10 +390,11 @@ export class PatientService {
         query = query.where(eq(patients.isActive, filters.isActive));
       }
 
+      let minDate: Date | undefined;
+      let maxDate: Date | undefined;
+
       if (filters.ageRange) {
         const today = new Date();
-        let minDate: Date | undefined;
-        let maxDate: Date | undefined;
 
         if (filters.ageRange.max !== undefined) {
           maxDate = new Date(today.getFullYear() - filters.ageRange.max, today.getMonth(), today.getDate());
@@ -405,17 +405,36 @@ export class PatientService {
         }
 
         if (minDate) {
-          query = query.where(patients.dateOfBirth <= minDate);
+          query = query.where(lte(patients.dateOfBirth, minDate));
         }
 
         if (maxDate) {
-          query = query.where(patients.dateOfBirth >= maxDate);
+          query = query.where(gte(patients.dateOfBirth, maxDate));
         }
       }
 
       // Get total count for pagination
-      const totalCountQuery = query;
-      const [totalResult] = await totalCountQuery.select({ count: count() });
+      const totalCountQuery = db.select({ count: count() }).from(patients).$dynamic();
+      
+      // Apply same filters to count query
+      if (filters.search) {
+        const searchTerm = `%${filters.search}%`;
+        totalCountQuery.where(
+          or(
+            ilike(patients.firstName, searchTerm),
+            ilike(patients.lastName, searchTerm),
+            ilike(patients.medicalRecordNumber, searchTerm),
+            ilike(patients.phone, searchTerm),
+            ilike(patients.email, searchTerm)
+          )
+        );
+      }
+      if (filters.gender) totalCountQuery.where(eq(patients.gender, filters.gender as any));
+      if (filters.isActive !== undefined) totalCountQuery.where(eq(patients.isActive, filters.isActive));
+      if (minDate) totalCountQuery.where(lte(patients.dateOfBirth, minDate));
+      if (maxDate) totalCountQuery.where(gte(patients.dateOfBirth, maxDate));
+
+      const [totalResult] = await totalCountQuery;
       const total = totalResult.count;
 
       // Apply pagination and ordering
@@ -486,7 +505,7 @@ export class PatientService {
       }
 
       // Validate update data
-      const validationErrors = this.validatePatientData({ ...existingPatient[0], ...data });
+      const validationErrors = this.validatePatientData({ ...existingPatient[0], ...data } as any);
       if (validationErrors.length > 0) {
         return createValidationErrorResponse(
           validationErrors.map(error => ({ field: 'general', message: error })),
@@ -543,7 +562,7 @@ export class PatientService {
 
       const searchTerm = `%${query.trim()}%`;
 
-      const patients = await db
+      const patientResults = await db
         .select()
         .from(patients)
         .where(and(
@@ -560,7 +579,7 @@ export class PatientService {
         .limit(limit);
 
       // Add calculated age to each patient
-      const patientsWithAge = patients.map(patient => ({
+      const patientsWithAge = patientResults.map((patient: any) => ({
         ...patient,
         age: this.calculateAge(patient.dateOfBirth)
       }));

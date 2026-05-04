@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../config/database';
-import { auditLogs } from '../models/schema';
-import { createLogger } from '../utils/logger';
+import { db } from '../config/database.js';
+import { auditLogs } from '../models/schema.js';
+import { createLogger } from '../utils/logger.js';
 
 const logger = createLogger();
 

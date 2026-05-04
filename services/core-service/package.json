@@ -2,12 +2,11 @@
   "name": "medical-core-service",
   "version": "1.0.0",
   "description": "Core authentication and user management service",
-  "main": "dist/server.js",
-  "type": "module",
+  "main": "dist/services/core-service/src/server.js",
   "scripts": {
     "dev": "tsx src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
+    "build": "node build.mjs",
+    "start": "node dist/services/core-service/src/server.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
@@ -16,6 +15,7 @@
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
+    "async": "^3.2.6",
     "bcryptjs": "^3.0.3",
     "compression": "^1.7.4",
     "cors": "^2.8.5",

@@ -7,12 +7,12 @@
  */
 
 import crypto from 'crypto';
-import { database } from '../models/Database.js';
+import { Database } from '../models/Database.js';
 import { memberCards, cardTemplates, cardVerificationEvents, cardProductionBatches } from '../models/schema.js';
 import { eq, and, desc, gte, lte, count, sum, sql } from 'drizzle-orm';
 import { auditLogger } from '../middleware/auditMiddleware.js';
 
-const db = database.getDb();
+const db = Database.getInstance().getDb();
 const auditService = auditLogger;
 
 export interface CardGenerationRequest {

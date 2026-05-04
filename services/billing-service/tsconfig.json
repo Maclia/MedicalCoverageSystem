@@ -21,6 +21,8 @@
     "emitDecoratorMetadata": true,
     "baseUrl": ".",
     "paths": {
+      "redis": ["./node_modules/redis"],
+      "winston": ["./node_modules/winston"],
       "@shared/*": ["../../shared/*"],
       "@/*": ["./src/*"]
     }

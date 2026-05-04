@@ -3,6 +3,7 @@
     "ignoreDeprecations": "6.0",
     "target": "ES2022",
     "module": "commonjs",
+    "moduleResolution": "node",
     "lib": ["ES2022"],
     "outDir": "./dist",
     "rootDir": "../..",
@@ -31,7 +32,8 @@
     "baseUrl": ".",
     "paths": {
       "@medical-system/shared-business-rules": ["../shared/business-rules/src/index.ts"],
-      "@medical-system/shared-business-rules/*": ["../shared/business-rules/src/*"]
+      "@medical-system/shared-business-rules/*": ["../shared/business-rules/src/*"],
+      "@shared/*": ["../../shared/*"]
     }
   },
   "include": [

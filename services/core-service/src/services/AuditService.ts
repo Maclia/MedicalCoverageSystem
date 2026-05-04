@@ -1,6 +1,6 @@
 import { eq, and, desc, lte, gte } from 'drizzle-orm';
 import { db } from '../config/database';
-import { auditLogs } from '@shared/schema';
+import { auditLogs } from '../../../shared/schema';
 import { loggerInstance, generateCorrelationId } from '../utils/logger';
 
 export interface AuditEventData {
@@ -17,6 +17,16 @@ export interface AuditEventData {
   sessionId?: string;
   severity?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
+
+export type AuthAuditAction =
+  | 'LOGIN_SUCCESS'
+  | 'LOGIN_FAILED'
+  | 'LOGOUT'
+  | 'PASSWORD_CHANGE'
+  | 'ACCOUNT_LOCKED'
+  | 'TOKEN_VALIDATED'
+  | 'TRANSACTION_TOKEN_VALID'
+  | 'TRANSACTION_TOKEN_INVALID';
 
 export class AuditService {
   private static instance: AuditService;
@@ -45,7 +55,7 @@ export class AuditService {
         createdAt: new Date()
       };
 
-      await db.insert(auditLogs).values(auditRecord);
+      await db.insert(auditLogs).values(auditRecord as any);
 
       // Log to structured logger for additional tracking
       loggerInstance.info('AUDIT_EVENT', {
@@ -98,14 +108,16 @@ export class AuditService {
    * Log authentication events
    */
   async logAuthEvent(
-    action: 'LOGIN_SUCCESS' | 'LOGIN_FAILED' | 'LOGOUT' | 'PASSWORD_CHANGE' | 'ACCOUNT_LOCKED',
+    action: AuthAuditAction,
     userId?: number,
     email?: string,
     ipAddress?: string,
     userAgent?: string,
     reason?: string
   ): Promise<void> {
-    const severity = action === 'LOGIN_FAILED' || action === 'ACCOUNT_LOCKED' ? 'HIGH' : 'MEDIUM';
+    const severity = action === 'LOGIN_FAILED' || action === 'ACCOUNT_LOCKED' || action === 'TRANSACTION_TOKEN_INVALID'
+      ? 'HIGH'
+      : 'MEDIUM';
 
     await this.logAuditEvent({
       userId,
@@ -222,8 +234,8 @@ export class AuditService {
         .select()
         .from(auditLogs)
         .where(and(
-          eq(auditLogs.entityType, entityType),
-          eq(auditLogs.entityId, entityId)
+          eq(auditLogs.entityType as any, entityType as any),
+          eq(auditLogs.entityId as any, Number(entityId) as any)
         ))
         .orderBy(desc(auditLogs.createdAt))
         .limit(limit)

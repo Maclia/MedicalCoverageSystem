@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { cardManagementService } from '../../../../membership-service/src/services/CardManagementService';
-import { createLogger } from '../../utils/logger';
+import { cardManagementService } from '../../services/CardManagementService.js';
+import { WinstonLogger } from '../../utils/WinstonLogger';
 
 const router = Router();
-const logger = createLogger();
+const logger = new WinstonLogger('membership-service');
 
 /**
  * Helper function to safely convert unknown error to Error
@@ -19,7 +19,7 @@ function toError(error: unknown): Error {
  * Get production batches
  * GET /api/core/cards/batches
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const status = req.query.status as string;
 
@@ -42,7 +42,7 @@ router.get('/', async (req: Request, res: Response) => {
  * Get batch details
  * GET /api/core/cards/batches/:batchId
  */
-router.get('/:batchId', async (req: Request, res: Response) => {
+router.get('/:batchId', async (req: Request, res: Response): Promise<void> => {
   try {
     const batchId = req.params.batchId;
 
@@ -65,16 +65,17 @@ router.get('/:batchId', async (req: Request, res: Response) => {
  * Update batch status
  * PUT /api/core/cards/batches/:batchId/status
  */
-router.put('/:batchId/status', async (req: Request, res: Response) => {
+router.put('/:batchId/status', async (req: Request, res: Response): Promise<void> => {
   try {
     const batchId = req.params.batchId;
     const { status, ...additionalData } = req.body;
 
     if (!status) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Missing required field: status',
       });
+      return;
     }
 
     const batch = await cardManagementService.updateBatchStatus(batchId, status, additionalData);

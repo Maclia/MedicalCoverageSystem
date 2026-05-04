@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { cardManagementService } from '../../../../membership-service/src/services/CardManagementService';
-import { createLogger } from '../../utils/logger';
+import { cardManagementService } from '../../services/CardManagementService.js';
+import { WinstonLogger } from '../../utils/WinstonLogger';
 
 const router = Router();
-const logger = createLogger();
+const logger = new WinstonLogger('membership-service');
 
 /**
  * Helper function to safely convert unknown error to Error
@@ -19,7 +19,7 @@ function toError(error: unknown): Error {
  * Get card templates
  * GET /api/core/cards/templates
  */
-router.get('/', async (req: Request, res: Response) => {
+router.get('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const activeOnly = req.query.activeOnly !== 'false';
 
@@ -42,15 +42,16 @@ router.get('/', async (req: Request, res: Response) => {
  * Create card template
  * POST /api/core/cards/templates
  */
-router.post('/', async (req: Request, res: Response) => {
+router.post('/', async (req: Request, res: Response): Promise<void> => {
   try {
     const templateData = req.body;
 
     if (!templateData.templateType) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Missing required field: templateType',
       });
+      return;
     }
 
     const template = await cardManagementService.upsertCardTemplate(templateData);
@@ -72,16 +73,17 @@ router.post('/', async (req: Request, res: Response) => {
  * Update card template
  * PUT /api/core/cards/templates/:templateId
  */
-router.put('/:templateId', async (req: Request, res: Response) => {
+router.put('/:templateId', async (req: Request, res: Response): Promise<void> => {
   try {
     const templateId = parseInt(req.params.templateId);
     const templateData = { ...req.body, id: templateId };
 
     if (isNaN(templateId)) {
-      return res.status(400).json({
+      res.status(400).json({
         success: false,
         error: 'Invalid template ID',
       });
+      return;
     }
 
     const template = await cardManagementService.upsertCardTemplate(templateData);

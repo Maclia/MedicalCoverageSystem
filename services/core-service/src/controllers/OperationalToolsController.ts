@@ -1,14 +1,15 @@
 import { Router, Request, Response } from 'express';
-import { SagaStateRepository } from '../../shared/message-queue/src/orchestrator/SagaStateRepository';
-import { DeadLetterQueueManager } from '../../shared/message-queue/src/queue/DeadLetterQueueManager';
-import { EventStore } from '../../shared/message-queue/src/events/EventStore';
-import { createLogger } from '../../shared/message-queue/src/config/logger';
+import { SagaStateRepository } from '../../../shared/message-queue/src/orchestrator/SagaStateRepository';
+import { DeadLetterQueueManager } from '../../../shared/message-queue/src/queue/DeadLetterQueueManager';
+import { EventStore } from '../../../shared/message-queue/src/events/EventStore';
+import { createLogger } from '../../../shared/message-queue/src/config/logger';
 import { errorAuditMiddleware as auditMiddleware } from '../middleware/auditMiddleware';
 import { authenticateToken as authMiddleware } from '../middleware/auth';
 import { db } from '../config/database.js';
 
 const logger = createLogger();
 const router = Router();
+type SagaStatus = 'pending' | 'failed' | 'completed' | 'running' | 'compensating' | 'compensated';
 
 // Initialize repositories
 const sagaRepository = new SagaStateRepository(db);
@@ -38,7 +39,7 @@ router.get('/sagas', authMiddleware, auditMiddleware, async (req: Request, res: 
     
     let sagas;
     if (status) {
-      sagas = await sagaRepository.getSagasByStatus(status as string);
+      sagas = await sagaRepository.getSagasByStatus(status as SagaStatus);
     } else if (correlationId) {
       sagas = await sagaRepository.getSagasByCorrelation(correlationId as string);
     } else {
@@ -314,7 +315,8 @@ router.post('/events/replay', authMiddleware, auditMiddleware, async (req: Reque
       limit = 1000, 
       dryRun = true, 
       correlationId,
-      aggregateId
+      aggregateId,
+      aggregateType
     } = req.body;
 
     // Safety Guards
@@ -327,7 +329,14 @@ router.post('/events/replay', authMiddleware, auditMiddleware, async (req: Reque
     if (correlationId) {
       events = await eventStore.getEventsByCorrelationId(correlationId);
     } else if (aggregateId) {
-      events = await eventStore.getEventsByAggregateId(aggregateId);
+      if (!aggregateType) {
+        return res.status(400).json({
+          success: false,
+          error: 'aggregateType is required when aggregateId is provided'
+        });
+      }
+
+      events = await eventStore.getEventsForAggregate(aggregateId, aggregateType);
     } else {
       events = await eventStore.getEventsAfterSequence(fromSequence || 0, safeLimit);
     }

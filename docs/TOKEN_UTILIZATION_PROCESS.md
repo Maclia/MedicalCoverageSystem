@@ -278,6 +278,62 @@ When client operates in offline mode:
 
 ---
 
-**Document Version**: 1.1
-**Last Updated**: 27 April 2026
+---
+
+## 14. TOKEN SECURITY VALIDATION
+
+### 14.1 Transaction Security Flow
+All operations now implement multi-level token validation before transaction execution:
+
+```
+┌───────────────────────────────────────────────────────────┐
+│                     TOKEN VALIDATION                      │
+└─────────────────────────────┬─────────────────────────────┘
+                              │
+┌─────────────────────────────▼─────────────────────────────┐
+│  ✅ JWT Signature Verification                            │
+│  ✅ Token Expiration Check                                │
+│  ✅ Required Claims Validation                            │
+└─────────────────────────────┬─────────────────────────────┘
+                              │
+┌─────────────────────────────▼─────────────────────────────┐
+│  ✅ User Existence Verification (Database)                │
+│  ✅ User Active Status Confirmation                       │
+│  ✅ Token Revocation Check (Password change detection)    │
+└─────────────────────────────┬─────────────────────────────┘
+                              │
+┌─────────────────────────────▼─────────────────────────────┐
+│  ✅ Active Session Validation                             │
+│  ✅ Transaction Permission Check                          │
+│  ✅ Rate Limiting Verification                            │
+└─────────────────────────────┬─────────────────────────────┘
+                              │
+┌─────────────────────────────▼─────────────────────────────┐
+│  ✅ Security Audit Event Logged                           │
+│  ✅ Transaction Allowed to Execute                        │
+└───────────────────────────────────────────────────────────┘
+```
+
+### 14.2 Security Features
+| Security Check | Description | Enforcement |
+|----------------|-------------|-------------|
+| Real-time user validation | User status is verified against live database on every transaction | Mandatory |
+| Token revocation | Tokens are automatically invalidated after password change | Mandatory |
+| Active session requirement | User must have at least one active valid session | Mandatory |
+| Permission checking | Transaction-specific permissions are verified | Optional per operation |
+| Audit logging | All validation attempts are permanently logged | Mandatory |
+
+### 14.3 Implementation Methods
+```typescript
+// Standard token validation
+authService.validateAccessToken(token)
+
+// Transaction-level security validation
+authService.validateTokenForTransaction(token, requiredPermission)
+```
+
+---
+
+**Document Version**: 1.2
+**Last Updated**: 4 May 2026
 **Applies To**: All Platform Services v2.5+
