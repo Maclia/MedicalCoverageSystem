@@ -121,6 +121,7 @@ replit.nix
 # Keep essential files for deployment
 !deployment/
 !shared/
+!shared/**/*
 !services/shared/
 !services/shared/**/*
 !server/
@@ -130,12 +131,14 @@ replit.nix
 !package-lock.json
 !**/package.json
 !**/package-lock.json
-!tsconfig.json
 !**/tsconfig.json
 !vite.config.ts
 !tailwind.config.js
 !jest.config.js
 !drizzle.config.ts
+# Keep ALL service source code directories (FIXES Docker cache key /src not found error)
+!services/**/src
+!services/**/src/**/*
 # Explicitly keep schema files (fixes cache key calculation failure)
 !services/shared/schema.ts
 !services/shared/schema.d.ts

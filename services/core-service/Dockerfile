@@ -30,6 +30,8 @@ RUN apk add --no-cache dumb-init
 # Copy from dependencies stage
 COPY --from=dependencies /app/services/core-service/node_modules ./node_modules
 COPY services/core-service/package*.json services/core-service/tsconfig.json ./
+# Copy root tsconfig.json which contains global path aliases and base configuration
+COPY tsconfig.json /app/tsconfig.json
 
 # Copy source code
 COPY services/core-service/src ./src
@@ -42,7 +44,8 @@ RUN mkdir -p /app/shared
 COPY shared /app/shared
 
 # Build TypeScript with a bounded heap for Alpine-based containers
-RUN node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --incremental false --skipLibCheck
+# Explicitly use local service tsconfig to avoid root repository tsconfig being loaded
+RUN node --max-old-space-size=2048 ./node_modules/typescript/bin/tsc --project tsconfig.json --incremental false --skipLibCheck
 # ================================================
 # PRODUCTION STAGE
 # ================================================

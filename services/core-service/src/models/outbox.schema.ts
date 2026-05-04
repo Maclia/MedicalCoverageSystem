@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, integer, jsonb, timestamp, pgEnum } from 'drizzle-orm';
+import { pgTable, uuid, text, integer, jsonb, timestamp, pgEnum } from 'drizzle-orm/pg-core';
 
 export const outboxStatusEnum = pgEnum('outbox_status', [
   'PENDING',
